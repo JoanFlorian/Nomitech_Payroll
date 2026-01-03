@@ -11,7 +11,7 @@ class Banco extends Model
 
     protected $table = 'banco';
     protected $primaryKey = 'id_banco';
-    protected $fillable = ['nombre'];
+    protected $fillable = ['nombre', 'codigo'];
 
     public function cuentas()
     {

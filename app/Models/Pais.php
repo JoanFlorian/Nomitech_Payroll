@@ -11,7 +11,13 @@ class Pais extends Model
 
     protected $table = 'pais';
     protected $primaryKey = 'id_pais';
-    protected $fillable = ['nombre'];
+    protected $fillable = [
+        'nombre',
+        'nombre_oficial',
+        'codigo_alfa2',
+        'codigo_alfa3',
+        'codigo_numerico'
+    ];
 
     public function departamentos()
     {

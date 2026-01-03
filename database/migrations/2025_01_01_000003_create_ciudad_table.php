@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('ciudad', function (Blueprint $table) {
             $table->integer('id_ciudad')->autoIncrement();
             $table->string('nombre', 60); // VARCHAR(60) NOT NULL
+            $table->string('codigo', 10)->nullable();
             $table->integer('id_departamento'); // INT NOT NULL
 
             $table->foreign('id_departamento')->references('id_departamento')->on('departamento')->onDelete('restrict');

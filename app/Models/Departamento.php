@@ -11,7 +11,12 @@ class Departamento extends Model
 
     protected $table = 'departamento';
     protected $primaryKey = 'id_departamento';
-    protected $fillable = ['nombre', 'id_pais'];
+    protected $fillable = [
+        'nombre',
+        'codigo',
+        'codigo_iso',
+        'id_pais'
+    ];
 
     public function pais()
     {

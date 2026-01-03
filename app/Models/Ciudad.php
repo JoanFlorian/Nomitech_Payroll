@@ -11,7 +11,11 @@ class Ciudad extends Model
 
     protected $table = 'ciudad';
     protected $primaryKey = 'id_ciudad';
-    protected $fillable = ['nombre', 'id_departamento'];
+    protected $fillable = [
+        'nombre',
+        'codigo',
+        'id_departamento'
+    ];
 
     public function departamento()
     {

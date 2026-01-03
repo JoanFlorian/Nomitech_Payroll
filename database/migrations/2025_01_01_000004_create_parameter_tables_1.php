@@ -32,6 +32,7 @@ return new class extends Migration
         Schema::create('banco', function (Blueprint $table) {
             $table->integer('id_banco')->autoIncrement();
             $table->string('nombre', 60)->unique();
+            $table->string('codigo', 10)->unique();
             $table->dateTime('created_at')->useCurrent();
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
         });

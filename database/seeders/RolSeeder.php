@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Roles;
+use App\Models\Rol;
 
 class RolSeeder extends Seeder
 {
@@ -13,17 +13,17 @@ class RolSeeder extends Seeder
      */
     public function run(): void
     {
-         Roles::create([
+         Rol::create([
             'nombre' => 'Administrador',
             'descripcion' => 'Acceso total a todos los módulos y permisos del sistema'
         ]);
 
-        Roles::create([
+        Rol::create([
             'nombre' => 'Auxiliar RRHH',
             'descripcion' => 'Acceso a módulos y permisos asignados por el administrador'
         ]);
 
-        Roles::create([
+        Rol::create([
             'nombre' => 'Empleado',
             'descripcion' => 'Acceso únicamente al módulo de desprendibles'
         ]);

@@ -24,6 +24,11 @@ class DatabaseSeeder extends Seeder
             CiudadSeeder::class,
             RolSeeder::class,
             BancoSeeder::class,
+            TipoDocSeeder::class, 
+            TipoTrabajadorSeeder::class,
+            SubTipoTrabajadorSeeder::class,
+            TipoContratoSeeder::class,
+            TipoHoraRecargoSeeder::class,
         ]);
     }
 }

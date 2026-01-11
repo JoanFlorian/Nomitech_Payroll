@@ -23,7 +23,7 @@ class Usuario extends Model
         'id_tipo_doc',
         'contrasena',
         'primer_nombre',
-        // 'otros_nombres',
+        'otros_nombres',
         'primer_apellido',
         'segundo_apellido',
         'id_ciudad',

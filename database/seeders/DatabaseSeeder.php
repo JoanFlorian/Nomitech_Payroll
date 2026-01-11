@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             CiudadSeeder::class,
             RolSeeder::class,
             BancoSeeder::class,
+            Otros::class,
         ]);
     }
 }

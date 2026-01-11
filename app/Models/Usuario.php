@@ -21,18 +21,17 @@ class Usuario extends Model
     protected $fillable = [
         'doc',
         'id_tipo_doc',
-
         'contrasena',
         'primer_nombre',
-        'otros_nombres',
+        // 'otros_nombres',
         'primer_apellido',
         'segundo_apellido',
         'id_ciudad',
         'direccion',
-        'telefono',
-        'correo',
-        'id_rol',
-        'activo'
+        // 'telefono',
+        // 'correo',
+        // 'id_rol',
+        // 'activo'
     ];
     
     protected $hidden = [

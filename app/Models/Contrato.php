@@ -101,4 +101,5 @@ class Contrato extends Model
     {
         return $this->hasMany(Provision::class, 'id_contrato', 'id_contrato');
     }
+
 }

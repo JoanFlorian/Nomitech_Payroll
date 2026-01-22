@@ -16,15 +16,15 @@ return new class extends Migration
         });
 
         Schema::create('tipo_trabajador', function (Blueprint $table) {
-            $table->integer('id_tipo_trabajador')->autoIncrement();
-            $table->string('nombre', 60)->unique();
+            $table->integer('id_tipo_trabajador')->unique();
+            $table->string('nombre', 300)->unique();
             $table->dateTime('created_at')->useCurrent();
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
 
         Schema::create('sub_tipo_trabajador', function (Blueprint $table) {
             $table->integer('id_sub_tipo_trabajador')->autoIncrement();
-            $table->string('nombre', 100)->unique();
+            $table->string('nombre', 300)->unique();
             $table->dateTime('created_at')->useCurrent();
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
         });

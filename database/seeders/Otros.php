@@ -25,76 +25,76 @@ class Otros extends Seeder
      */
     public function run(): void
     {
-        $departamentos = Departamento::pluck('id_departamento');
+        // $departamentos = Departamento::pluck('id_departamento');
         
-        for ($i = 1; $i <= 10; $i++) {
-            Ciudad::insert([
-                'nombre' => "user$i@test.com",
-                'codigo' => "ABC$i",
-                'id_departamento' => $departamentos->random(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        // for ($i = 1; $i <= 10; $i++) {
+        //     Ciudad::insert([
+        //         'nombre' => "user$i@test.com",
+        //         'codigo' => "ABC$i",
+        //         'id_departamento' => $departamentos->random(),
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ]);
         
-        }
+        // }
 
 
-        $tipo_doc = [
-            'CC' => 'Cédula de Ciudadanía',
-            'CE' => 'Cedula de Extrangeria',
-            'TI' => 'Tarjeta de identidad'
-        ];
+        // $tipo_doc = [
+        //     'CC' => 'Cédula de Ciudadanía',
+        //     'CE' => 'Cedula de Extrangeria',
+        //     'TI' => 'Tarjeta de identidad'
+        // ];
 
-        foreach ($tipo_doc as $key => $value){
-            TipoDoc::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        // foreach ($tipo_doc as $key => $value){
+        //     TipoDoc::insert([
+        //         'nombre' => $value,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ]);
+        // }
 
-        $sub_tipo_trabajador = [
-        'Administrativo',
-        'Operativo',
-        ];
+        // $sub_tipo_trabajador = [
+        // 'Administrativo',
+        // 'Operativo',
+        // ];
 
-        foreach ($sub_tipo_trabajador as $value){
-            SubTipoTrabajador::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        // foreach ($sub_tipo_trabajador as $value){
+        //     SubTipoTrabajador::insert([
+        //         'nombre' => $value,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ]);
+        // }
 
 
-        $tipo_trabajador = [
-        'Dependiente',
-        'Independiente',
+        // $tipo_trabajador = [
+        // 'Dependiente',
+        // 'Independiente',
         
-        ];
+        // ];
 
-        foreach ($tipo_trabajador as $value){
-            TipoTrabajador::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        // foreach ($tipo_trabajador as $value){
+        //     TipoTrabajador::insert([
+        //         'nombre' => $value,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ]);
+        // }
 
-        $tipo_contrato = [
-        'Indefinido',
-        'Fijo',
-        'Prestacion de Servicios',
+        // $tipo_contrato = [
+        // 'Indefinido',
+        // 'Fijo',
+        // 'Prestacion de Servicios',
         
-        ];
+        // ];
 
-        foreach ($tipo_contrato as $value){
-            TipoContrato::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        // foreach ($tipo_contrato as $value){
+        //     TipoContrato::insert([
+        //         'nombre' => $value,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ]);
+        // }
 
         $arl = [
         'Colpatria',
@@ -130,6 +130,7 @@ class Otros extends Seeder
         'Transferencia',
         'Cheque',
         'Efectivo',
+        
         
         ];
 

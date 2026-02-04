@@ -46,7 +46,7 @@ class RegistroUsuarios extends Controller
                 'id_forma_pago'    => 'required|string',
                 'id_metodo_pago'   => 'required|string',
                 'tipo_cuenta'   => 'required|string',
-                'numero_cuenta' => 'required|string',
+                'numero_cuenta' => 'required|string|max:18',
                 'id_eps'           => 'required|string',
                 'id_afp'           => 'required',
             ]); 

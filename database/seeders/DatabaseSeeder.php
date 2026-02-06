@@ -17,22 +17,21 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        
+
         $this->call([
             PaisSeeder::class,
             DepartamentoSeeder::class,
             CiudadSeeder::class,
             RolSeeder::class,
             BancoSeeder::class,
-<<<<<<< HEAD
-            Otros::class,
-=======
-            TipoDocSeeder::class, 
+            TipoDocSeeder::class,
             TipoTrabajadorSeeder::class,
             SubTipoTrabajadorSeeder::class,
             TipoContratoSeeder::class,
             TipoHoraRecargoSeeder::class,
->>>>>>> 5c1c2bf2678d7c89186b6537f714773bead188a2
+            Otros::class,
+            PlanSeeder::class,
+
         ]);
     }
 }

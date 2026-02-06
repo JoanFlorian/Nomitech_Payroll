@@ -40,4 +40,17 @@ class Empresa extends Model
     {
         return $this->hasMany(Contrato::class, 'id_empresa', 'id_empresa');
     }
+
+    /**
+     * The active or current license of the company.
+     */
+    public function licencia()
+    {
+        return $this->hasOne(Licencia::class, 'empresa_id', 'id_empresa');
+    }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'empresa_id', 'id_empresa');
+    }
 }

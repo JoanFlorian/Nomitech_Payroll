@@ -26,7 +26,7 @@ class Otros extends Seeder
     public function run(): void
     {
         $departamentos = Departamento::pluck('id_departamento');
-        
+
         for ($i = 1; $i <= 10; $i++) {
             Ciudad::insert([
                 'nombre' => "user$i@test.com",
@@ -35,30 +35,18 @@ class Otros extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-        
+
         }
 
 
-        $tipo_doc = [
-            'CC' => 'Cédula de Ciudadanía',
-            'CE' => 'Cedula de Extrangeria',
-            'TI' => 'Tarjeta de identidad'
-        ];
 
-        foreach ($tipo_doc as $key => $value){
-            TipoDoc::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
 
         $sub_tipo_trabajador = [
-        'Administrativo',
-        'Operativo',
+            'Administrativo',
+            'Operativo',
         ];
 
-        foreach ($sub_tipo_trabajador as $value){
+        foreach ($sub_tipo_trabajador as $value) {
             SubTipoTrabajador::insert([
                 'nombre' => $value,
                 'created_at' => now(),
@@ -68,12 +56,12 @@ class Otros extends Seeder
 
 
         $tipo_trabajador = [
-        'Dependiente',
-        'Independiente',
-        
+            'Dependiente',
+            'Independiente',
+
         ];
 
-        foreach ($tipo_trabajador as $value){
+        foreach ($tipo_trabajador as $value) {
             TipoTrabajador::insert([
                 'nombre' => $value,
                 'created_at' => now(),
@@ -82,13 +70,13 @@ class Otros extends Seeder
         }
 
         $tipo_contrato = [
-        'Indefinido',
-        'Fijo',
-        'Prestacion de Servicios',
-        
+            'Indefinido',
+            'Fijo',
+            'Prestacion de Servicios',
+
         ];
 
-        foreach ($tipo_contrato as $value){
+        foreach ($tipo_contrato as $value) {
             TipoContrato::insert([
                 'nombre' => $value,
                 'created_at' => now(),
@@ -97,13 +85,13 @@ class Otros extends Seeder
         }
 
         $arl = [
-        'Colpatria',
-        'Sura',
-        'Bólivar',
-        
+            'Colpatria',
+            'Sura',
+            'Bólivar',
+
         ];
 
-        foreach ($arl as $value){
+        foreach ($arl as $value) {
             Arl::insert([
                 'nombre' => $value,
                 'created_at' => now(),
@@ -112,13 +100,13 @@ class Otros extends Seeder
         }
 
         $forma_pago = [
-        'Mensual',
-        'Quincenal',
-        'Semanal',
-        
+            'Mensual',
+            'Quincenal',
+            'Semanal',
+
         ];
 
-        foreach ($forma_pago as $value){
+        foreach ($forma_pago as $value) {
             FormaPago::insert([
                 'nombre' => $value,
                 'created_at' => now(),
@@ -127,13 +115,13 @@ class Otros extends Seeder
         }
 
         $metodo_pago = [
-        'Transferencia',
-        'Cheque',
-        'Efectivo',
-        
+            'Transferencia',
+            'Cheque',
+            'Efectivo',
+
         ];
 
-        foreach ($metodo_pago as $value){
+        foreach ($metodo_pago as $value) {
             MetodoPago::insert([
                 'nombre' => $value,
                 'created_at' => now(),
@@ -141,13 +129,13 @@ class Otros extends Seeder
             ]);
         }
         $tipo_cuenta = [
-        'Ahorros',
-        'Corriente',
-        
-        
+            'Ahorros',
+            'Corriente',
+
+
         ];
 
-        foreach ($tipo_cuenta as $value){
+        foreach ($tipo_cuenta as $value) {
             TipoCuenta::insert([
                 'nombre' => $value,
                 'created_at' => now(),
@@ -156,17 +144,17 @@ class Otros extends Seeder
         }
 
         $eps = [
-        'Sura',
-        'Sanitas',
-        'Coomeva',
-        'Salud Total',
-        'Compensar',
-        
-        
-        
+            'Sura',
+            'Sanitas',
+            'Coomeva',
+            'Salud Total',
+            'Compensar',
+
+
+
         ];
 
-        foreach ($eps as $value){
+        foreach ($eps as $value) {
             Eps::insert([
                 'nombre' => $value,
                 'created_at' => now(),
@@ -175,17 +163,17 @@ class Otros extends Seeder
         }
 
         $afp = [
-        'Protección',
-        'Colfondos',
-        'Porvenir',
-        'Old Mutua',
-        
-        
-        
-        
+            'Protección',
+            'Colfondos',
+            'Porvenir',
+            'Old Mutua',
+
+
+
+
         ];
 
-        foreach ($afp as $value){
+        foreach ($afp as $value) {
             Afp::insert([
                 'nombre' => $value,
                 'created_at' => now(),

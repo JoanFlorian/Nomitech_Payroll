@@ -15,6 +15,8 @@ Route::get('/empleados', function () {
     return view('empleados.index');
 })->name('empleados.index');
 
+
+
 /* Wizard registro empleado */
 Route::post('/employees/step-1', [RegistroUsuarios::class, 'storeStep1'])->name('employees.step1');
 Route::post('/employees/step-2', [RegistroUsuarios::class, 'storeStep2'])->name('employees.step2');

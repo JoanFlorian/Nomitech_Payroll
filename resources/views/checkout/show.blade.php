@@ -4,6 +4,13 @@
     <x-ui.card>
         <x-auth.form-header title="Resumen de tu pedido" description="Estás a un paso de activar tu cuenta Nomitech." />
 
+        <!-- Error Alert -->
+        @if (session('error'))
+            <div class="mb-4 p-4 text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800" role="alert">
+                <span class="font-medium">!Error!</span> {{ session('error') }}
+            </div>
+        @endif
+
         <div class="space-y-6">
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
                 <div class="flex justify-between items-center mb-2">

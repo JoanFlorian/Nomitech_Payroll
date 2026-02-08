@@ -14,10 +14,27 @@ class Licencia extends Model
     protected $fillable = [
         'empresa_id',
         'plan_id',
-        'estado',
+        // 'estado', // REMOVED: State is computed dynamically from dates
         'fecha_inicio',
-        'fecha_fin'
+        'fecha_fin',
     ];
+
+    /**
+     * Get the computed active status.
+     * The license is active ONLY if the current time is within the valid period.
+     */
+    public function getIsActiveAttribute(): bool
+    {
+        return $this->fecha_fin && now()->lessThanOrEqualTo($this->fecha_fin);
+    }
+
+    /**
+     * Scope a query to only include active licenses.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('fecha_fin', '>=', now());
+    }
 
     protected $casts = [
         'fecha_inicio' => 'date',
@@ -39,16 +56,6 @@ class Licencia extends Model
         return $this->hasMany(Pago::class, 'licencia_id', 'id');
     }
 
-    public function isActive()
-    {
-        if ($this->estado !== 'active') {
-            return false;
-        }
-
-        if ($this->fecha_fin && $this->fecha_fin->isPast()) {
-            return false;
-        }
-
-        return true;
-    }
+    // Legacy isActive() removed to prevent conflicting logic. 
+    // Use $licencia->is_active instead.
 }

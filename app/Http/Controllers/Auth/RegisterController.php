@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use App\Enums\PaymentStatus;
 // use Stripe\Stripe;
 // use Stripe\Checkout\Session;
 
@@ -64,10 +65,6 @@ class RegisterController extends Controller
                 'telefono' => $request->telefono,
             ]);
 
-            // 3. Update Usuario with id_empresa (if needed for your business logic)
-            // Note: Usuario model doesn't have id_empresa in fillable, so this might not be needed
-            // If you need it, add 'id_empresa' to Usuario fillable array first
-
             // 3. Get Plan (Assuming plan with id_plan = 1 exists)
             $plan = Plan::findOrFail(1);
 
@@ -77,7 +74,7 @@ class RegisterController extends Controller
                 'plan_id' => $plan->id,
                 'fecha_inicio' => null,
                 'fecha_fin' => null,
-                'estado' => 'inactiva',
+                // 'estado' removed - computed from dates
             ]);
 
             // 5. Create Pago (Pending)
@@ -88,7 +85,7 @@ class RegisterController extends Controller
                 'proveedor_pago' => 'STRIPE',
                 'valor' => $plan->valor,
                 'moneda' => 'COP',
-                'estado_pago' => 'pending',
+                'estado_pago' => PaymentStatus::PENDING->value,
                 'stripe_payment_intent_id' => null,
                 'stripe_subscription_id' => null,
                 'stripe_session_id' => null,

@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Pago;
 use App\Models\Plan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Auth;
 use Stripe\Stripe;
-use Stripe\Checkout\Session;
+use Stripe\Checkout\Session as StripeSession;
+use App\Enums\PaymentStatus;
 
 class CheckoutController extends Controller
 {
@@ -21,7 +23,7 @@ class CheckoutController extends Controller
             abort(403, 'Unauthorized access to this payment');
         }
 
-        if ($pago->estado_pago === 'paid') {
+        if ($pago->estado_pago === PaymentStatus::PAID->value) {
             return redirect()->route('empleados.index');
         }
 
@@ -43,10 +45,10 @@ class CheckoutController extends Controller
         }
 
         // 2. State Validation
-        if ($pago->estado_pago === 'paid') {
+        if ($pago->estado_pago === PaymentStatus::PAID->value) {
             return redirect()->route('empleados.index');
         }
-        if ($pago->estado_pago !== 'pending') {
+        if ($pago->estado_pago !== PaymentStatus::PENDING->value) {
             return redirect()->route('licencia.pending');
         }
 
@@ -68,7 +70,7 @@ class CheckoutController extends Controller
         try {
             $user = Auth::user();
 
-            $checkoutSession = Session::create([
+            $checkoutSession = StripeSession::create([
                 'payment_method_types' => ['card'],
                 'line_items' => [
                     [

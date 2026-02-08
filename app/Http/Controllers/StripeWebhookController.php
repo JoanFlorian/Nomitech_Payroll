@@ -8,6 +8,7 @@ use Stripe\Webhook;
 use Stripe\Exception\SignatureVerificationException;
 use App\Models\Pago;
 use App\Models\Licencia;
+use App\Enums\PaymentStatus;
 
 class StripeWebhookController extends Controller
 {
@@ -108,7 +109,7 @@ class StripeWebhookController extends Controller
 
             // 5. Update Pago
             $pago->update([
-                'estado_pago' => 'paid',
+                'estado_pago' => PaymentStatus::PAID->value,
                 'stripe_subscription_id' => $session->subscription,
                 'fecha_pago' => now(),
                 'stripe_session_id' => $session->id,
@@ -139,7 +140,7 @@ class StripeWebhookController extends Controller
                 }
 
                 $licencia->update([
-                    'estado' => 'active',
+                    // 'estado' => 'active', // REMOVED: State is computed dynamically
                     'fecha_inicio' => $startDate,
                     'fecha_fin' => $endDate,
                 ]);

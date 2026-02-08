@@ -23,7 +23,6 @@ return new class extends Migration {
             $table->integer('empresa_id'); // FK to empresa.id_empresa (which is integer)
             $table->foreignId('plan_id')->constrained('plan');
 
-            $table->string('estado')->default('inactive'); // active, inactive, expired
             $table->date('fecha_inicio')->nullable();
             $table->date('fecha_fin')->nullable();
             $table->timestamps();

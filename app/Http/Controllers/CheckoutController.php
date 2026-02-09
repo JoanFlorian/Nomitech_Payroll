@@ -56,10 +56,6 @@ class CheckoutController extends Controller
         $pago->load('licencia.plan');
         $plan = $pago->licencia->plan;
 
-        // ... rest of function ... keeping logic but I need to make sure I don't delete too much.
-        // I will use replace_file_content carefully.
-
-
         // 3. Validate Stripe Configuration
         if (!$plan || !$plan->stripe_price_id) {
             return back()->with('error', 'Plan not configured for Stripe (Missing Price ID)');
@@ -91,6 +87,7 @@ class CheckoutController extends Controller
                 'metadata' => [
                     'pago_id' => $pago->id,
                     'empresa_id' => $pago->empresa_id,
+                    'user_id' => $user->id, // Added user_id
                 ],
             ]);
 
@@ -106,14 +103,62 @@ class CheckoutController extends Controller
             return back()->with('error', 'Stripe Error: ' . $e->getMessage());
         }
     }
-    //Succes no debe hacer la logica de negocio
+
+    /**
+     * Show processing view while polling for payment confirmation.
+     */
     public function success(Request $request)
     {
-        if (!$request->has('session_id')) {
+        $sessionId = $request->query('session_id');
+
+        if (!$sessionId) {
             return redirect()->route('licencia.pending');
         }
 
-        return view('checkout.success');
+        // Store in session for potential reference
+        session(['stripe_session_id' => $sessionId]);
+
+        return view('checkout.success', compact('sessionId'));
+    }
+
+    /**
+     * API Endpoint to check payment status (Polling).
+     * STRICTLY READ-ONLY for Front-End Polling.
+     * Prevents 500 errors by avoiding deep nested property access on nulls.
+     * Delegates activation logic to Webhook or Fallback Job.
+     */
+    public function checkStatus($sessionId)
+    {
+        // 1. Eager Load Licencia
+        $pago = Pago::with('licencia')->where('stripe_session_id', $sessionId)->first();
+
+        // Safety check: Pago not found
+        if (!$pago) {
+            return response()->json(['status' => 'pending']);
+        }
+
+        // 2. Check Payment Status
+        $isPaid = $pago->estado_pago === PaymentStatus::PAID->value;
+
+        // 3. Check License Status (Explicitly check dates to avoid is_active attribute ambiguity)
+        $licencia = $pago->licencia;
+
+        // Safety check: Licencia might be null if relationship broken (should not happen but safe check)
+        $isLicenseActive = false;
+        if ($licencia) {
+            $isLicenseActive = $licencia->fecha_fin && $licencia->fecha_fin->gt(now());
+        }
+
+        // 4. Return 'paid' ONLY if both conditions met
+        if ($isPaid && $isLicenseActive) {
+            return response()->json([
+                'status' => 'paid'
+                // NO user_id returned (as requested for simplicity and safety)
+            ]);
+        }
+
+        // Default
+        return response()->json(['status' => 'pending']);
     }
 
     public function cancel()

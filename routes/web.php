@@ -29,12 +29,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout-status/success', [App\Http\Controllers\CheckoutController::class, 'success'])->name('checkout.success');
     Route::get('/checkout-status/cancel', [App\Http\Controllers\CheckoutController::class, 'cancel'])->name('checkout.cancel');
 
+    // Polling Endpoint
+    Route::get('/api/payment/status/{sessionId}', [App\Http\Controllers\CheckoutController::class, 'checkStatus'])->name('payment.status');
+
     Route::get('/licencia/pending', function () {
         return "Licencia Inactiva o Pago Pendiente. Por favor complete el pago."; // View: licencia.pending
     })->name('licencia.pending');
 
+    Route::get('/licencia/required', function () {
+        return "No se encontró una licencia activa para su empresa. Por favor adquiera un plan."; // View: licencia.required
+    })->name('licencia.required');
+
     Route::get('/licencia/expired', function () {
-        return "Licencia Expirada."; // View: licencia.expired
+        return "Licencia Expirada. Por favor renueve su plan."; // View: licencia.expired
     })->name('licencia.expired');
 
     Route::get('/empresa/select', function () {
@@ -42,11 +49,14 @@ Route::middleware('auth')->group(function () {
     })->name('empresa.select');
 });
 
-Route::get('/empleados', function () {
-    return view('empleados.index');
-})->name('empleados.index');
+// Protected App Routes (Auth + Active License)
+Route::middleware(['auth', 'ensure_active_license'])->group(function () {
+    Route::get('/empleados', function () {
+        return view('empleados.index');
+    })->name('empleados.index');
 
-/* Wizard registro empleado */
-Route::post('/employees/step-1', [RegistroUsuarios::class, 'storeStep1'])->name('employees.step1');
-Route::post('/employees/step-2', [RegistroUsuarios::class, 'storeStep2'])->name('employees.step2');
-Route::post('/employees/final', [RegistroUsuarios::class, 'storeFinal'])->name('employees.final');
+    /* Wizard registro empleado */
+    Route::post('/employees/step-1', [RegistroUsuarios::class, 'storeStep1'])->name('employees.step1');
+    Route::post('/employees/step-2', [RegistroUsuarios::class, 'storeStep2'])->name('employees.step2');
+    Route::post('/employees/final', [RegistroUsuarios::class, 'storeFinal'])->name('employees.final');
+});

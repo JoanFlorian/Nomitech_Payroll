@@ -22,52 +22,37 @@ class EnsureActiveLicense
             return redirect()->route('login');
         }
 
-        // 1. Check if empresa_id is in Session
-        $empresaId = session('empresa_id');
+        // 1. Get Company Directly (Single Company Assumption)
+        // We assume the user has a relationship 'empresas' and we take the first one.
+        $empresa = $user->empresas()->first();
 
-        if (!$empresaId) {
-            // Auto-select if only one company
-            $empresas = $user->empresas; // Assuming 'empresas' relationship exists on Usuario
-
-            if ($empresas->count() === 1) {
-                $empresaId = $empresas->first()->id_empresa;
-                session(['empresa_id' => $empresaId]);
-            } elseif ($empresas->count() > 1) {
-                return redirect()->route('empresa.select');
-            } else {
-                // User has no companies (Should not happen in this flow but handle safe)
-                // Maybe redirect to registration or create company?
-                return redirect()->route('empresa.create_first'); // Placeholder
-            }
-        }
-
-        // 2. Load Enterprise and License
-        // We probably loaded it above, but let's be safe and fetch fresh if from session
-        $empresa = \App\Models\Empresa::with('licencia')->find($empresaId);
-
+        // 2. Validate Company Existence
         if (!$empresa) {
-            // Session ID invalid?
-            session()->forget('empresa_id');
-            return redirect()->route('empresa.select');
+            // No company found for this user. 
+            // Redirect to a page telling them they need a company/license.
+            return redirect()->route('licencia.required');
         }
 
+        // 3. Load License
         $licencia = $empresa->licencia;
 
-        // 3. Check License Status
+        // 4. Validate License Existence and Status
         if (!$licencia) {
+            return redirect()->route('licencia.required');
+        }
+
+        // Check if expired
+        // Note: is_active attribute check includes date validation
+        if (!$licencia->is_active) {
+            if ($licencia->fecha_fin && $licencia->fecha_fin->isPast()) {
+                return redirect()->route('licencia.expired');
+            }
+            // If active is false but not past, it might be future or cancelled? 
+            // Default to pending/required.
             return redirect()->route('licencia.pending');
         }
 
-        if ($licencia->estado === 'inactive') {
-            return redirect()->route('licencia.pending');
-        }
-
-        if ($licencia->estado === 'expired' || ($licencia->fecha_fin && $licencia->fecha_fin->isPast())) {
-            // Optional: Allow read-only? Strict prompt says "Access controlled exclusively by active license"
-            return redirect()->route('licencia.expired');
-        }
-
-        // 4. Access Granted
+        // 5. Access Granted
         return $next($request);
     }
 }

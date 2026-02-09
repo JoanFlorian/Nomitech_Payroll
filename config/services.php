@@ -39,6 +39,7 @@ return [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'grace_period_seconds' => env('STRIPE_GRACE_PERIOD_SECONDS', 60), // Default 60s
     ],
 
 ];

@@ -3,23 +3,69 @@
 
     <x-ui.card>
         <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
+            <div class="mb-6">
+                <!-- Spinner -->
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
             </div>
 
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">¡Pago Exitoso!</h2>
-
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Procesando su pago...</h2>
             <p class="text-gray-600 mb-6">
-                Hemos recibido tu pago correctamente. Tu licencia se está activando en este momento.
-                Recibirás un correo de confirmación en breve.
+                Estamos confirmando su transacción con Stripe. Esto puede tomar unos segundos.<br>
+                Por favor <strong>no cierre esta ventana</strong>.
             </p>
 
-            <a href="{{ route('empleados.index') }}"
-                class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Ir a Empleados
-            </a>
+            <div id="status-message" class="hidden p-4 rounded-md bg-blue-50 text-blue-700">
+                Esperando confirmación...
+            </div>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const sessionId = "{{ $sessionId }}";
+                const statusMessage = document.getElementById('status-message');
+
+                let attempts = 0;
+                const maxAttempts = 20; // 1 minute max (3s * 20)
+
+                const checkStatus = async () => {
+                    try {
+                        const response = await fetch(`/api/payment/status/${sessionId}`);
+                        const data = await response.json();
+
+                        if (data.status === 'paid') {
+                            // Payment confirmed!
+                            statusMessage.classList.remove('hidden', 'bg-blue-50', 'text-blue-700');
+                            statusMessage.classList.add('bg-green-50', 'text-green-700');
+                            statusMessage.textContent = '¡Pago exitoso! Redirigiendo...';
+
+                            setTimeout(() => {
+                                window.location.href = "{{ route('empleados.index') }}"; // Redirect to employees index
+                            }, 1000);
+                            return true;
+                        }
+                    } catch (error) {
+                        console.error('Error checking status:', error);
+                    }
+                    return false;
+                };
+
+                const interval = setInterval(async () => {
+                    attempts++;
+                    const isPaid = await checkStatus();
+
+                    if (isPaid) {
+                        clearInterval(interval);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        statusMessage.classList.remove('hidden', 'bg-blue-50', 'text-blue-700');
+                        statusMessage.classList.add('bg-yellow-50', 'text-yellow-700');
+                        statusMessage.innerHTML = 'La confirmación está tardando. <a href="{{ route("empleados.index") }}" class="underline font-bold">Haga clic aquí</a> si ya recibió el correo.';
+                    }
+                }, 3000);
+
+                // Initial check
+                checkStatus();
+            });
+        </script>
     </x-ui.card>
 </x-guest-layout>

@@ -30,8 +30,9 @@
         </a>
 
         <!-- Facturación -->
-        <a href="#"
-        class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+        <a href="{{ url('/superadmin/facturacion') }}"
+        class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600
+        {{ request()->is('superadmin/facturacion') ? 'bg-blue-50 text-blue-600 font-semibold' : '' }}">
             <i class="bi bi-receipt text-lg"></i>
             Facturación
         </a>

@@ -119,6 +119,72 @@ class facturacioncontroller extends Controller
     }
 
     /**
+     * Mostrar vista de facturación con transacciones
+     */
+    public function facturacion(Request $request)
+    {
+        // Obtener filtros de la solicitud
+        $estadoFiltro = $request->query('estado');
+        $metodoFiltro = $request->query('metodo');
+        $search = $request->query('q');
+
+        // Métricas del dashboard
+        $totalTransacciones = Pago::where('estado_pago', 'succeeded')
+            ->sum('valor');
+
+        $suscripcionesActivas = Licencia::where('fecha_fin', '>=', Carbon::now())
+            ->count();
+
+        $pendientesPago = Pago::where('estado_pago', 'pending')->count();
+
+        // Construir query de transacciones
+        $query = Pago::with(['licencia' => function ($q) {
+            $q->with(['empresa', 'plan']);
+        }, 'empresa'])
+            ->orderBy('created_at', 'desc');
+
+        // Aplicar filtros
+        if ($estadoFiltro && $estadoFiltro !== 'Todos') {
+            $query->where('estado_pago', strtolower($estadoFiltro));
+        }
+
+        if ($metodoFiltro && $metodoFiltro !== 'Todos') {
+            $query->where('proveedor_pago', strtolower($metodoFiltro));
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('referencia', 'like', "%{$search}%")
+                    ->orWhere('proveedor_pago', 'like', "%{$search}%")
+                    ->orWhereHas('licencia.empresa', function ($q2) use ($search) {
+                        $q2->where('razon_social', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $transacciones = $query->paginate(15);
+
+        // Obtener opciones para los filtros
+        $metodosDisponibles = Pago::distinct('proveedor_pago')
+            ->whereNotNull('proveedor_pago')
+            ->pluck('proveedor_pago')
+            ->toArray();
+
+        $estadosDisponibles = ['succeeded', 'pending', 'failed'];
+
+        return view('superadmin.facturacion', [
+            'totalTransacciones' => number_format($totalTransacciones, 2, '.', ','),
+            'suscripcionesActivas' => $suscripcionesActivas,
+            'pendientesPago' => $pendientesPago,
+            'transacciones' => $transacciones,
+            'metodosDisponibles' => $metodosDisponibles,
+            'estadosDisponibles' => $estadosDisponibles,
+            'estadoSeleccionado' => $estadoFiltro ?? 'Todos',
+            'metodoSeleccionado' => $metodoFiltro ?? 'Todos'
+        ]);
+    }
+
+    /**
      * Descargar factura en PDF (o HTML si DomPDF no está disponible)
      */
     public function descargarFacturaPdf($pagoId)

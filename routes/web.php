@@ -17,7 +17,7 @@ Route::get('/empleados', function () {
     return view('empleados.index');
 })->name('empleados.index');
 
-Route::get('/superadmin', [facturacioncontroller::class, 'index'])->name('superadmin.index');
+Route::get('/superadmin', [facturacioncontroller::class, 'facturacion'])->name('superadmin.index');
 Route::get('/superadmin/facturacion', [facturacioncontroller::class, 'facturacion'])->name('superadmin.facturacion');
 Route::get('/superadmin/factura/{pagoId}/pdf', [facturacioncontroller::class, 'descargarFacturaPdf'])->name('superadmin.factura.pdf');
 Route::get('/superadmin/factura/{pagoId}', [facturacioncontroller::class, 'getFactura'])->name('superadmin.factura');

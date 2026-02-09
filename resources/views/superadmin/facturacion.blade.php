@@ -2,110 +2,99 @@
 
 @section('content')
 
-{{-- HEADER --}}
-<div class="flex justify-between items-center mb-8">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-800">Detalles de compras y transacciones</h2>
-        <p class="text-gray-500">
-            Gestion integral del historial de pagos y vigencia de suscripciones corporativas.   
-        </p>
-    </div>
-
-    <div class="flex items-center gap-4">
-        <form method="GET" action="{{ route('superadmin.index') }}" class="flex">
-            <input
-                type="text"
-                name="q"
-                value="{{ request('q') }}"
-                placeholder="Buscar transacciones o empresas..."
-                class="px-4 py-2 border rounded-lg w-72 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-        </form>
-        <span class="text-sm text-green-600 font-semibold flex items-center gap-1">
-            ● ONLINE
+<div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Facturación y Transacciones</h1>
+            <p class="text-gray-600 text-sm mt-1">Gestión integral de pagos y vigencia de licencias</p>
+        </div>
+        <span class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold">
+            <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+            EN LÍNEA
         </span>
     </div>
+
+    <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-4">
+        <input type="text" name="q" value="{{ request('q') }}"
+            placeholder="Buscar empresa, referencia o proveedor..."
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </form>
 </div>
 
-{{-- MÉTRICAS --}}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-    <div class="bg-white p-6 rounded-xl shadow-sm">
-        <p class="text-sm text-gray-500">Total Transacciones</p>
-        <h3 class="text-2xl font-bold mt-2">${{ $totalTransacciones }}</h3>
-        <p class="text-sm text-green-600 mt-1">⬆ Ingresos del sistema</p>
-    </div>
-
-    <div class="bg-white p-6 rounded-xl shadow-sm">
-        <p class="text-sm text-gray-500">Suscripciones Activas</p>
-        <h3 class="text-2xl font-bold mt-2">{{ $suscripcionesActivas }}</h3>
-        <p class="text-sm text-green-600 mt-1">✔ Licencias vigentes</p>
-    </div>
-
-    <div class="bg-white p-6 rounded-xl shadow-sm">
-        <p class="text-sm text-gray-500">Pendientes de Pago</p>
-        <h3 class="text-2xl font-bold mt-2">{{ $pendientesPago }}</h3>
-        <p class="text-sm text-red-600 mt-1">⚠ Acción requerida</p>
-    </div>
-</div>
-
-{{-- LISTADO --}}
-<div class="bg-white rounded-xl shadow-sm p-6">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold">Listado de Transacciones</h3>
-
-        <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-2">
-            <select name="estado" class="border rounded-lg px-3 py-2 text-sm bg-white" onchange="this.form.submit()">
-                <option value="Todos" {{ $estadoSeleccionado === 'Todos' ? 'selected' : '' }}>Estado: Todos</option>
-                <option value="succeeded" {{ $estadoSeleccionado === 'succeeded' ? 'selected' : '' }}>Estado: Pagado</option>
-                <option value="pending" {{ $estadoSeleccionado === 'pending' ? 'selected' : '' }}>Estado: Pendiente</option>
-                <option value="failed" {{ $estadoSeleccionado === 'failed' ? 'selected' : '' }}>Estado: Fallido</option>
+<div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+    <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-3 items-end">
+        <div class="flex-1">
+            <label class="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wide">Estado</label>
+            <select name="estado" class="w-full border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="this.form.submit()">
+                <option value="Todos" {{ $estadoSeleccionado === 'Todos' ? 'selected' : '' }}>Todos</option>
+                <option value="succeeded" {{ $estadoSeleccionado === 'succeeded' ? 'selected' : '' }}>✓ Pagado</option>
+                <option value="pending" {{ $estadoSeleccionado === 'pending' ? 'selected' : '' }}>⏳ Pendiente</option>
+                <option value="failed" {{ $estadoSeleccionado === 'failed' ? 'selected' : '' }}>✗ Fallido</option>
             </select>
-
-            <select name="metodo" class="border rounded-lg px-3 py-2 text-sm bg-white" onchange="this.form.submit()">
-                <option value="Todos" {{ $metodoSeleccionado === 'Todos' ? 'selected' : '' }}>Proveedor: Todos</option>
+        </div>
+        <div class="flex-1">
+            <label class="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wide">Proveedor</label>
+            <select name="metodo" class="w-full border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="this.form.submit()">
+                <option value="Todos" {{ $metodoSeleccionado === 'Todos' ? 'selected' : '' }}>Todos</option>
                 @foreach ($metodosDisponibles as $metodo)
-                    <option value="{{ $metodo }}" {{ $metodoSeleccionado === $metodo ? 'selected' : '' }}>
-                        Proveedor: {{ $metodo }}
-                    </option>
+                    <option value="{{ $metodo }}" {{ $metodoSeleccionado === $metodo ? 'selected' : '' }}>{{ $metodo }}</option>
                 @endforeach
             </select>
-        </form>
+        </div>
+    </form>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 shadow-sm">
+        <p class="text-blue-600 text-xs font-semibold uppercase tracking-wide">Total Ingreso</p>
+        <h3 class="text-2xl font-bold text-gray-900 mt-1">${{ $totalTransacciones }}</h3>
+        <p class="text-blue-600 text-xs mt-2">Ingresos procesados</p>
+    </div>
+    <div class="bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg p-4 shadow-sm">
+        <p class="text-green-600 text-xs font-semibold uppercase tracking-wide">Licencias Activas</p>
+        <h3 class="text-2xl font-bold text-gray-900 mt-1">{{ $suscripcionesActivas }}</h3>
+        <p class="text-green-600 text-xs mt-2">Suscripciones vigentes</p>
+    </div>
+    <div class="bg-gradient-to-br from-red-50 to-red-100 border-l-4 border-red-500 rounded-lg p-4 shadow-sm">
+        <p class="text-red-600 text-xs font-semibold uppercase tracking-wide">Por Cobrar</p>
+        <h3 class="text-2xl font-bold text-gray-900 mt-1">{{ $pendientesPago }}</h3>
+        <p class="text-red-600 text-xs mt-2">Pagos pendientes</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm overflow-hidden">
+    <div class="px-6 py-3 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-base font-bold text-gray-900">Historial de Transacciones</h2>
     </div>
 
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
-            <thead class="text-gray-500 border-b">
+            <thead class="bg-gray-100 border-b border-gray-200">
                 <tr>
-                    <th class="text-left py-3">Empresa</th>
-                    <th class="text-center">Fecha</th>
-                    <th class="text-center">Vigencia</th>
-                    <th class="text-center">Método</th>
-                    <th class="text-center">Estado</th>
-                    <th></th>
+                    <th class="text-left px-6 py-3 font-semibold text-gray-700">Empresa</th>
+                    <th class="text-center px-6 py-3 font-semibold text-gray-700">Fecha</th>
+                    <th class="text-center px-6 py-3 font-semibold text-gray-700">Vigencia</th>
+                    <th class="text-center px-6 py-3 font-semibold text-gray-700">Método</th>
+                    <th class="text-center px-6 py-3 font-semibold text-gray-700">Estado</th>
+                    <th class="text-center px-6 py-3 font-semibold text-gray-700">Acción</th>
                 </tr>
             </thead>
-
-            <tbody class="divide-y">
+            <tbody class="divide-y divide-gray-200">
                 @forelse ($transacciones as $pago)
                     @php
                         $licencia = $pago->licencia;
                         $empresa = $pago->empresa ?? $licencia->empresa;
-                        
-                        // Calcular vigencia
                         $fechaFin = \Carbon\Carbon::parse($licencia->fecha_fin);
-                        $hoy = \Carbon\Carbon::now();
-                        $diasRestantes = $fechaFin->diffInDays($hoy, false);
+                        $diasRestantes = $fechaFin->diffInDays(\Carbon\Carbon::now(), false);
                         
-                        // Determinar color de vigencia
                         if ($diasRestantes < 0) {
-                            $vigenciaColor = 'text-red-600';
+                            $vigenciaColor = 'text-red-600 font-semibold';
                         } elseif ($diasRestantes <= 30) {
-                            $vigenciaColor = 'text-yellow-600';
+                            $vigenciaColor = 'text-yellow-600 font-semibold';
                         } else {
                             $vigenciaColor = 'text-green-600';
                         }
                         
-                        // Color del estado del pago
                         $estadoColor = match($pago->estado_pago) {
                             'succeeded' => 'bg-green-100 text-green-700',
                             'pending' => 'bg-yellow-100 text-yellow-700',
@@ -113,7 +102,6 @@
                             default => 'bg-gray-100 text-gray-700'
                         };
                         
-                        // Traducción del estado
                         $estadoTexto = match($pago->estado_pago) {
                             'succeeded' => 'Pagado',
                             'pending' => 'Pendiente',
@@ -123,72 +111,57 @@
                         
                         $fechaPago = $pago->fecha_pago ? \Carbon\Carbon::parse($pago->fecha_pago)->format('d/m/Y') : $pago->created_at->format('d/m/Y');
                     @endphp
-                    <tr>
-                        <td class="py-4 font-medium">{{ $empresa->razon_social ?? 'Sin especificar' }}</td>
-                        <td class="text-center">{{ $fechaPago }}</td>
-                        <td class="text-center {{ $vigenciaColor }}">
-                            {{ abs((int) floor($diasRestantes)) }} días
-                        </td>
-                        <td class="text-center">{{ $pago->proveedor_pago ?? 'No especificado' }}</td>
-                        <td class="text-center">
-                            <span class="{{ $estadoColor }} px-3 py-1 rounded-full text-xs">
-                                {{ $estadoTexto }}
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <button onclick="verFactura({{ $pago->id }})" class="text-gray-400 hover:text-gray-600 cursor-pointer text-xl">⋮</button>
+                    <tr class="hover:bg-blue-50 transition">
+                        <td class="px-6 py-3 font-medium text-gray-900">{{ $empresa->razon_social ?? 'Sin especificar' }}</td>
+                        <td class="px-6 py-3 text-center text-gray-700">{{ $fechaPago }}</td>
+                        <td class="px-6 py-3 text-center"><span class="{{ $vigenciaColor }}">{{ abs((int) floor($diasRestantes)) }} días</span></td>
+                        <td class="px-6 py-3 text-center text-gray-700">{{ $pago->proveedor_pago ?? '—' }}</td>
+                        <td class="px-6 py-3 text-center"><span class="{{ $estadoColor }} px-3 py-0.5 rounded-full text-xs font-semibold">{{ $estadoTexto }}</span></td>
+                        <td class="px-6 py-3 text-center">
+                            <button onclick="verFactura({{ $pago->id }})" class="text-blue-500 hover:text-blue-700 font-semibold" title="Ver factura">☰</button>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center py-8 text-gray-500">
-                            No hay transacciones para mostrar
-                        </td>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">No hay transacciones para mostrar</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
-    {{-- MODAL FACTURA --}}
-    @include('superadmin.factura')
-
-    {{-- PAGINACIÓN --}}
-    <div class="flex justify-between items-center mt-6 text-sm">
-        <p class="text-gray-500">
-            Mostrando {{ ($transacciones->currentPage() - 1) * $transacciones->perPage() + 1 }} a {{ min($transacciones->currentPage() * $transacciones->perPage(), $transacciones->total()) }} de {{ $transacciones->total() }} transacciones
+    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs">
+        <p class="text-gray-600">
+            Mostrando {{ ($transacciones->currentPage() - 1) * $transacciones->perPage() + 1 }} 
+            a {{ min($transacciones->currentPage() * $transacciones->perPage(), $transacciones->total()) }} 
+            de {{ $transacciones->total() }}
         </p>
-
-        <div class="flex gap-2">
-            {{-- Botón Anterior --}}
+        <div class="flex gap-1">
             @if ($transacciones->onFirstPage())
-                <button class="px-3 py-1 border rounded text-gray-400 cursor-not-allowed" disabled>Anterior</button>
+                <button class="px-2 py-1 border border-gray-300 rounded text-gray-400 cursor-not-allowed" disabled>← Ant</button>
             @else
-                <a href="{{ $transacciones->previousPageUrl() }}" class="px-3 py-1 border rounded hover:bg-gray-100">Anterior</a>
+                <a href="{{ $transacciones->previousPageUrl() }}" class="px-2 py-1 border border-gray-300 rounded hover:bg-white">← Ant</a>
             @endif
 
-            {{-- Números de página --}}
             @for ($i = 1; $i <= $transacciones->lastPage(); $i++)
                 @if ($i == $transacciones->currentPage())
-                    <button class="px-3 py-1 bg-blue-600 text-white rounded">{{ $i }}</button>
+                    <button class="px-2 py-1 bg-blue-600 text-white rounded font-semibold">{{ $i }}</button>
                 @else
-                    <a href="{{ $transacciones->url($i) }}" class="px-3 py-1 border rounded hover:bg-gray-100">{{ $i }}</a>
+                    <a href="{{ $transacciones->url($i) }}" class="px-2 py-1 border border-gray-300 rounded hover:bg-white">{{ $i }}</a>
                 @endif
-
-                {{-- Mostrar solo 5 páginas --}}
-                @if ($i >= $transacciones->currentPage() + 2)
-                    @break
-                @endif
+                @if ($i >= $transacciones->currentPage() + 2) @break @endif
             @endfor
 
-            {{-- Botón Siguiente --}}
             @if ($transacciones->hasMorePages())
-                <a href="{{ $transacciones->nextPageUrl() }}" class="px-3 py-1 border rounded hover:bg-gray-100">Siguiente</a>
+                <a href="{{ $transacciones->nextPageUrl() }}" class="px-2 py-1 border border-gray-300 rounded hover:bg-white">Sig →</a>
             @else
-                <button class="px-3 py-1 border rounded text-gray-400 cursor-not-allowed" disabled>Siguiente</button>
+                <button class="px-2 py-1 border border-gray-300 rounded text-gray-400 cursor-not-allowed" disabled>Sig →</button>
             @endif
         </div>
     </div>
 </div>
 
+@include('superadmin.factura')
+
 @endsection
+

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 // app/Models/Usuario.php
 class Usuario extends Model
 {
-    protected $table = 'nomitech_db_usuario';
+    protected $table = 'usuario';
     protected $primaryKey = 'doc';
     public $incrementing = false;
     protected $keyType = 'string';

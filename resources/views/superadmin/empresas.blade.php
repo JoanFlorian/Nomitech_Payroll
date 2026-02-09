@@ -58,9 +58,12 @@
                     Vence: {{ $empresa->licencia->fecha_fin ?? 'No aplica' }}
                 </p>
 
-                <a href="#" class="block mt-3 text-blue-600 text-sm hover:underline">
-                    Ver detalles
+                <a href="{{ route('superadmin.empresas.show', $empresa->id_empresa) }}"
+               class="block mt-3 text-blue-600 text-sm hover:underline">
+               Ver detalles
                 </a>
+
+
             </div>
 
         @empty

@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegistroUsuarios;
 use App\Http\Controllers\NominaController;
 use App\Http\Controllers\EmployeeWizardController;
-use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\SuperAdmin\EmpresaController;
 
 
 
@@ -40,8 +40,6 @@ Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.s
 Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
 
 
-Route::get('/superadmin', function () {
-    return view('superadmin.index');
-})->name('superadmin.index');
-Route::get('/superadmin/empresas', [SuperAdminController::class, 'empresas'])
-    ->name('superadmin.empresas');
+Route::get('/superadmin/empresas', [EmpresaController::class, 'index'])->name('superadmin.empresas.index');
+Route::get('/superadmin/empresas/{empresa}', [EmpresaController::class, 'show'])->name('superadmin.empresas.show');
+Route::put('/superadmin/empresas/{empresa}', [EmpresaController::class, 'update'])->name('superadmin.empresas.update');

@@ -2,10 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegistroUsuarios;
+use App\Http\Controllers\PricingController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [PricingController::class, 'index']);
 
 Route::get('/login2', function () {
     return view('auth.login');

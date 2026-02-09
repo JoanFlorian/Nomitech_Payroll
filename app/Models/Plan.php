@@ -17,7 +17,15 @@ class Plan extends Model
         'valor',
         'num_empl',
         'duracion',
-        'stripe_price_id'
+        'stripe_price_id',
+        'destacado',
+        'orden',
+        'features'
+    ];
+
+    protected $casts = [
+        'features' => 'array',
+        'destacado' => 'boolean',
     ];
 
     public function licencias()

@@ -26,12 +26,11 @@ class DatabaseSeeder extends Seeder
             BancoSeeder::class,
             TipoDocSeeder::class,
             TipoTrabajadorSeeder::class,
-            SubTipoTrabajadorSeeder::class,
+            PlanSeeder::class,
             TipoContratoSeeder::class,
             TipoHoraRecargoSeeder::class,
+            SubTipoTrabajadorSeeder::class,
             Otros::class,
-            PlanSeeder::class,
-
         ]);
     }
 }

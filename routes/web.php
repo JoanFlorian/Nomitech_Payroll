@@ -16,15 +16,12 @@ Route::get('/empleados', function () {
     return view('empleados.index');
 })->name('empleados.index');
 
-<<<<<<< Updated upstream
-
-=======
 Route::get('/superadmin', [facturacioncontroller::class, 'index'])->name('superadmin.index');
 Route::get('/superadmin/factura/{pagoId}/pdf', [facturacioncontroller::class, 'descargarFacturaPdf'])->name('superadmin.factura.pdf');
 Route::get('/superadmin/factura/{pagoId}', [facturacioncontroller::class, 'getFactura'])->name('superadmin.factura');
->>>>>>> Stashed changes
 
 /* Wizard registro empleado */
 Route::post('/employees/step-1', [RegistroUsuarios::class, 'storeStep1'])->name('employees.step1');
 Route::post('/employees/step-2', [RegistroUsuarios::class, 'storeStep2'])->name('employees.step2');
 Route::post('/employees/final',  [RegistroUsuarios::class, 'storeFinal'])->name('employees.final');
+

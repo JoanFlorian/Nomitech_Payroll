@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegistroUsuarios;
 use App\Http\Controllers\NominaController;
 use App\Http\Controllers\EmployeeWizardController;
+use App\Http\Controllers\SuperAdminController;
 
 
 
@@ -42,3 +43,5 @@ Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmp
 Route::get('/superadmin', function () {
     return view('superadmin.index');
 })->name('superadmin.index');
+Route::get('/superadmin/empresas', [SuperAdminController::class, 'empresas'])
+    ->name('superadmin.empresas');

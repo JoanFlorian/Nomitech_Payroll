@@ -1,5 +1,13 @@
 <aside class="w-64 bg-white border-r h-screen flex flex-col shadow-lg">
 
+    <a href="{{ route('superadmin.empresas') }}"
+   class="flex items-center gap-3 px-4 py-2 rounded-lg 
+   {{ request()->is('superadmin/empresas') ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600' }}">
+    <i class="bi bi-building text-lg"></i>
+    Empresas
+</a>
+
+
     <!-- HEADER -->
     <div class="flex items-center gap-3 p-6 border-b">
         <div class="bg-blue-600 text-white p-3 rounded-lg flex items-center justify-center">
@@ -23,7 +31,7 @@
         </a>
 
         <!-- Empresas -->
-        <a href="#"
+        <a href="{{ route('superadmin.empresas') }}"
            class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600">
             <i class="bi bi-building text-lg"></i>
             Empresas

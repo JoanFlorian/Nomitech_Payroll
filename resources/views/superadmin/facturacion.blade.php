@@ -53,7 +53,7 @@
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-bold">Listado de Transacciones</h3>
 
-        <form method="GET" action="{{ route('superadmin.index') }}" class="flex gap-2">
+        <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-2">
             <select name="estado" class="border rounded-lg px-3 py-2 text-sm bg-white" onchange="this.form.submit()">
                 <option value="Todos" {{ $estadoSeleccionado === 'Todos' ? 'selected' : '' }}>Estado: Todos</option>
                 <option value="succeeded" {{ $estadoSeleccionado === 'succeeded' ? 'selected' : '' }}>Estado: Pagado</option>
@@ -127,7 +127,7 @@
                         <td class="py-4 font-medium">{{ $empresa->razon_social ?? 'Sin especificar' }}</td>
                         <td class="text-center">{{ $fechaPago }}</td>
                         <td class="text-center {{ $vigenciaColor }}">
-                            {{ abs($diasRestantes) }} días
+                            {{ abs((int) floor($diasRestantes)) }} días
                         </td>
                         <td class="text-center">{{ $pago->proveedor_pago ?? 'No especificado' }}</td>
                         <td class="text-center">

@@ -18,7 +18,7 @@ class Otros extends Seeder
     public function run(): void
     {
         /* =========================
-           TIPOS DE CUENTA
+        TIPOS DE CUENTA
         ========================== */
         $tipo_cuenta = [
             'Cuenta de Ahorros',
@@ -33,7 +33,7 @@ class Otros extends Seeder
         }
 
         /* =========================
-           EPS (Resolución DIAN 000013 de 2021)
+        EPS (Resolución DIAN 000013 de 2021)
         ========================== */
         $eps = [
             'Nueva EPS',
@@ -73,7 +73,7 @@ class Otros extends Seeder
         }
 
         /* =========================
-           AFP
+        AFP
         ========================== */
         $afp = [
             'Porvenir',
@@ -90,7 +90,7 @@ class Otros extends Seeder
         }
 
         /* =========================
-           ARL
+        ARL
         ========================== */
         $arl = [
             'ARL SURA',
@@ -110,7 +110,7 @@ class Otros extends Seeder
         }
 
         /* =========================
-           FORMA DE PAGO
+        FORMA DE PAGO
         ========================== */
         $forma_pago = [
             'Contado',
@@ -124,7 +124,7 @@ class Otros extends Seeder
         }
 
         /* =========================
-           MÉTODO DE PAGO
+        MÉTODO DE PAGO
         ========================== */
         $metodo_pago = [
             '10 - Efectivo',

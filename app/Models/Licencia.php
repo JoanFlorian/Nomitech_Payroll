@@ -4,42 +4,40 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Licencia extends Model
 {
     use HasFactory;
 
     protected $table = 'licencia';
+    protected $primaryKey = 'id';
+    public $timestamps = true;
 
     protected $fillable = [
         'empresa_id',
         'plan_id',
-        // 'estado', // REMOVED: State is computed dynamically from dates
         'fecha_inicio',
         'fecha_fin',
     ];
-
-    /**
-     * Get the computed active status.
-     * The license is active ONLY if the current time is within the valid period.
-     */
-    public function getIsActiveAttribute(): bool
-    {
-        return $this->fecha_fin && now()->lessThanOrEqualTo($this->fecha_fin);
-    }
-
-    /**
-     * Scope a query to only include active licenses.
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('fecha_fin', '>=', now());
-    }
 
     protected $casts = [
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
     ];
+
+    public function getEstadoAttribute()
+    {
+        $hoy = Carbon::now();
+        $fechaFin = $this->fecha_fin;
+
+        if ($fechaFin < $hoy) {
+            return 'VENCIDA';
+        } elseif ($fechaFin->diffInDays($hoy) <= 30) {
+            return 'POR_VENCER';
+        }
+        return 'ACTIVA';
+    }
 
     public function empresa()
     {

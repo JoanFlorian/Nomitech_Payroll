@@ -10,6 +10,8 @@ class Plan extends Model
     use HasFactory;
 
     protected $table = 'plan';
+    protected $primaryKey = 'id';
+    public $timestamps = true;
 
     protected $fillable = [
         'nombre',
@@ -26,6 +28,8 @@ class Plan extends Model
     protected $casts = [
         'features' => 'array',
         'destacado' => 'boolean',
+        'stripe_price_id' => 'string',
+        'valor' => 'decimal:2',
     ];
 
     public function licencias()

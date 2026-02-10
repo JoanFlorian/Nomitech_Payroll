@@ -10,6 +10,8 @@ class Pago extends Model
     use HasFactory;
 
     protected $table = 'pago';
+    protected $primaryKey = 'id';
+    public $timestamps = true;
 
     protected $fillable = [
         'empresa_id',
@@ -26,7 +28,8 @@ class Pago extends Model
     ];
 
     protected $casts = [
-        'fecha_pago' => 'datetime',
+        'valor' => 'decimal:2',
+        'fecha_pago' => 'datetime'
     ];
 
     public function empresa()

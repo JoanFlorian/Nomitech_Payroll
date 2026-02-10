@@ -22,37 +22,48 @@ class EnsureActiveLicense
             return redirect()->route('login');
         }
 
-        // 1. Get Company Directly (Single Company Assumption)
-        // We assume the user has a relationship 'empresas' and we take the first one.
-        $empresa = $user->empresas()->first();
+        // Superadmin bypasses license validation completely
+        if ((int) $user->id_rol === 4) {
+            return $next($request);
+        }
 
-        // 2. Validate Company Existence
-        if (!$empresa) {
-            // No company found for this user. 
-            // Redirect to a page telling them they need a company/license.
+        // 1. Get empresa_id from session
+        $empresaId = session('empresa_id');
+        
+        if (!$empresaId) {
             return redirect()->route('licencia.required');
         }
 
-        // 3. Load License
+        // 2. Fetch empresa directly from tabla empresa
+        $empresa = \App\Models\Empresa::find($empresaId);
+
+        if (!$empresa) {
+            return redirect()->route('licencia.required');
+        }
+
+        // 3. Load Latest License (Empresa::licencia relation already orders by latest('created_at'))
+        // This ensures we always validate the most recently purchased/created license
         $licencia = $empresa->licencia;
 
-        // 4. Validate License Existence and Status
+        // 4. Validate License Existence
         if (!$licencia) {
             return redirect()->route('licencia.required');
         }
 
-        // Check if expired
-        // Note: is_active attribute check includes date validation
-        if (!$licencia->is_active) {
-            if ($licencia->fecha_fin && $licencia->fecha_fin->isPast()) {
-                return redirect()->route('licencia.expired');
-            }
-            // If active is false but not past, it might be future or cancelled? 
-            // Default to pending/required.
+        // 5. Check License Status
+        // Allow 'activa' and 'por_vencer' (active within next 10 days)
+        // Reject 'vencida' (expired) and 'prueba' (trial without fecha_fin)
+        $estado = $licencia->getEstadoAttribute();
+
+        if ($estado === 'vencida') {
+            return redirect()->route('licencia.expired');
+        }
+
+        if ($estado === 'prueba') {
             return redirect()->route('licencia.pending');
         }
 
-        // 5. Access Granted
+        // Estado es 'activa' o 'por_vencer' - allow access
         return $next($request);
     }
 }

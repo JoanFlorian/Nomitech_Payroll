@@ -13,9 +13,24 @@
 
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    @include('auth.styles') {{-- o tus estilos compartidos --}}
     <style>
     [x-cloak] { display: none !important; }
+    
+    /* Shape decorations - absolute positioning so they don't affect layout */
+    .shape {
+        position: absolute;
+        pointer-events: none;
+    }
+    
+    .shape-circle {
+        border-radius: 50%;
+    }
+    
+    .shape-triangle,
+    .shape-arrow {
+        width: 0;
+        height: 0;
+    }
     </style>
 
 </head>

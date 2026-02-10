@@ -25,7 +25,8 @@ class Usuario extends Authenticatable
         'telefono',
         'direccion',
         'id_rol',
-        'activo'
+        'activo',
+        'contrasena'
     ];
 
     protected $hidden = [
@@ -47,5 +48,10 @@ class Usuario extends Authenticatable
     public function contratos()
     {
         return $this->hasMany(Contrato::class, 'doc', 'doc');
+    }
+
+    public function empresa()
+    {
+        return $this->belongsToMany(Empresa::class, 'usuario_empresa', 'doc', 'id_empresa');
     }
 }

@@ -28,6 +28,8 @@ class DatabaseSeeder extends Seeder
             TipoTrabajadorSeeder::class,
             PlanSeeder::class,
             TipoContratoSeeder::class,
+            SuperAdminSeeder::class,
+
             TipoHoraRecargoSeeder::class,
             SubTipoTrabajadorSeeder::class,
             Otros::class,

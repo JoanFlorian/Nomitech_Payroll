@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Contrato extends Model
 {
-    protected $table = 'nomitech_db_contrato';
+    protected $table = 'contrato';
     protected $primaryKey = 'id_contrato';
 
     protected $fillable = [

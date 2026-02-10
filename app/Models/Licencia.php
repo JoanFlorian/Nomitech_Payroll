@@ -61,10 +61,4 @@ class Licencia extends Model
     {
         return $this->hasMany(Pago::class, 'licencia_id', 'id');
     }
-
-    // Alias for compatibility: is_active uses the computed estado attribute
-    public function getIsActiveAttribute()
-    {
-        return $this->getEstadoAttribute() === 'activa';
-    }
 }

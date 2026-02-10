@@ -103,6 +103,10 @@ class RegisterController extends Controller
                 'fecha_pago' => null
             ]);
 
+            // 6. Attach Empresa to Usuario (so middleware can find it)
+            // Each user has exactly one company
+            $usuario->empresa()->attach($empresa->id_empresa);
+
             // Login User (Session-based)
             Auth::login($usuario);
 

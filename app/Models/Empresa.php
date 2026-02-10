@@ -11,6 +11,7 @@ class Empresa extends Model
 
     protected $table = 'empresa';
     protected $primaryKey = 'id_empresa';
+
     protected $fillable = [
         'nit',
         'razon_social',
@@ -39,5 +40,11 @@ class Empresa extends Model
     public function contratos()
     {
         return $this->hasMany(Contrato::class, 'id_empresa', 'id_empresa');
+    }
+
+    
+    public function licencia()
+    {
+        return $this->hasOne(Licencia::class, 'empresa_id', 'id_empresa');
     }
 }

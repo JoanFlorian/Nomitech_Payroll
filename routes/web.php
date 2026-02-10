@@ -40,6 +40,11 @@ Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.s
 Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
 
 
-Route::get('/superadmin/empresas', [EmpresaController::class, 'index'])->name('superadmin.empresas.index');
-Route::get('/superadmin/empresas/{empresa}', [EmpresaController::class, 'show'])->name('superadmin.empresas.show');
-Route::put('/superadmin/empresas/{empresa}', [EmpresaController::class, 'update'])->name('superadmin.empresas.update');
+Route::prefix('superadmin')->name('superadmin.')->group(function () {
+    Route::get('/', function () {
+        return redirect()->route('superadmin.empresas.index');
+    })->name('index');
+    Route::get('/empresas', [EmpresaController::class, 'index'])->name('empresas.index');
+    Route::get('/empresas/{empresa}', [EmpresaController::class, 'show'])->name('empresas.show');
+    Route::put('/empresas/{empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
+});

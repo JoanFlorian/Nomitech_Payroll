@@ -3,12 +3,16 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegistroUsuarios;
 use App\Http\Controllers\PricingController;
+use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', [PricingController::class, 'index']);
 
 Route::get('/login2', function () {
     return view('auth.login');
 })->name('login');
+
+// Login POST
+Route::post('/login', [LoginController::class, 'store'])->name('login.perform');
 
 // Auth Routes
 Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'create'])->name('register.create');

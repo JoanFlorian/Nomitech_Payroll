@@ -200,7 +200,7 @@
                     class="px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
                     Iniciar sesión
                 </a>
-                <a href="/registro"
+                <a href="{{ route('register.create') }}"
                     class="px-6 py-2.5 bg-accent text-white text-sm font-bold rounded-lg shadow-lg shadow-accent/20 hover:opacity-90 transition-all">
                     Ver planes
                 </a>
@@ -236,7 +236,7 @@
                         Colombia.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="/registro"
+                        <a href="{{ route('register.create') }}"
                             class="px-8 py-4 bg-white text-primary text-base font-extrabold rounded-lg shadow-xl shadow-black/10 hover:bg-gray-50 transition-all">
                             Iniciar prueba gratuita
                         </a>
@@ -427,7 +427,7 @@
                                     Nuestro equipo de implementación se encarga de la configuración inicial para que te
                                     concentres en hacer crecer tu empresa.
                                 </p>
-                                <a href="/registro"
+                                <a href="{{ route('register.create') }}"
                                     class="px-8 py-4 bg-accent text-white font-bold rounded-xl hover:bg-opacity-90 transition-all">
                                     Comenzar hoy
                                 </a>
@@ -534,7 +534,7 @@
                                             @endforeach
                                         @endif
                                     </ul>
-                                    <a href="/registro?plan_id={{ $plan->id }}"
+                                    <a href="{{ route('register.create', ['plan_id' => $plan->id]) }}"
                                         class="w-full py-3 rounded-xl {{ $plan->destacado ? 'bg-primary text-white font-bold hover:opacity-90' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold hover:bg-slate-100 dark:hover:bg-slate-700' }} text-center transition-all">
                                         {{ $plan->destacado ? 'Comenzar ahora' : 'Elegir plan' }}
                                     </a>

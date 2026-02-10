@@ -61,6 +61,8 @@ class RegisterRequest extends FormRequest
             'correo' => ['required', 'string', 'email', 'max:256', 'unique:usuario'],
             'contrasena' => ['required', 'confirmed', 'min:8'],
             'telefono' => ['required', 'string', 'max:20'],
+            // Selected plan (optional) - validated server-side
+            'plan_id' => ['nullable', 'integer', 'exists:plan,id'],
         ];
     }
 

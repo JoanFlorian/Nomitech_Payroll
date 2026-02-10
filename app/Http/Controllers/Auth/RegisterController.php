@@ -25,12 +25,16 @@ class RegisterController extends Controller
     /**
      * Show the application registration form.
      */
-    public function create()
+    public function create(Request $request)
     {
         $departamentos = Departamento::all()->pluck('nombre', 'id_departamento');
         $tiposDocumento = TipoDoc::all()->pluck('nombre', 'id_tipo_doc');
 
-        return view('auth.register', compact('departamentos', 'tiposDocumento'));
+        // Load plans for selection (allow user to change plan on the register form)
+        $plans = Plan::orderBy('orden', 'asc')->get();
+        $selected_plan_id = $request->query('plan_id');
+
+        return view('auth.register', compact('departamentos', 'tiposDocumento', 'plans', 'selected_plan_id'));
     }
 
     /**
@@ -65,8 +69,15 @@ class RegisterController extends Controller
                 'telefono' => $request->telefono,
             ]);
 
-            // 3. Get Plan (Assuming plan with id_plan = 1 exists)
-            $plan = Plan::findOrFail(1);
+            // 3. Resolve selected plan from request (or fallback to default ordered plan)
+            $planId = $request->input('plan_id');
+            $plan = null;
+            if ($planId) {
+                $plan = Plan::find($planId);
+            }
+            if (!$plan) {
+                $plan = Plan::orderBy('orden', 'asc')->first();
+            }
 
             // 4. Create Licencia (Inactive until payment)
             $licencia = Licencia::create([

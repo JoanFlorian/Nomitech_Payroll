@@ -12,6 +12,21 @@
             @submit.prevent="validateForm($event) && $el.submit()"
         >
             @csrf
+
+            <!-- Plan selection: populated from index via ?plan_id or user choice -->
+            @if(isset($plans) && $plans->count())
+                <div class="mb-6">
+                    <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-2">Selecciona tu plan</label>
+                    <select name="plan_id" id="plan_id" class="w-full rounded-md border-gray-200 p-2">
+                        @foreach($plans as $p)
+                            <option value="{{ $p->id }}" {{ (string) old('plan_id', $selected_plan_id ?? '') === (string) $p->id ? 'selected' : '' }}>
+                                {{ $p->nombre }} - ${{ number_format($p->valor) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Puedes cambiar el plan antes de crear tu cuenta.</p>
+                </div>
+            @endif
             
             @if ($errors->any())
                 <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">

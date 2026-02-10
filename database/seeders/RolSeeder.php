@@ -27,5 +27,9 @@ class RolSeeder extends Seeder
             'nombre' => 'Empleado',
             'descripcion' => 'Acceso únicamente al módulo de desprendibles'
         ]);
+        Rol::create([
+            'nombre' => 'Super admin',
+            'descripcion' => 'Acceso únicamente a los modulos administrativos del sistema'
+        ]);
     }
 }

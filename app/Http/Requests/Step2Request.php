@@ -22,17 +22,20 @@ class Step2Request extends FormRequest
     public function rules(): array
     {
         return [
-            'fecha_inicio'      => 'required|date',
-            'fecha_fin'         => 'nullable|date|after_or_equal:fecha_inicio',
-            'horas_diarias'     => 'required|integer|min:1|max:24',
-            'id_tipo_trabajador'   => 'required|string',
-            'id_sub_tipo_trabajador'=> 'required|string',
-            'id_tipo_contrato'     => 'required|string',
-            'salario'           => 'required|numeric|min:0',
-            'codigo_interno'    => 'required|string',
-            'id_arl'               => 'required|string',
-            // 'alto_riesgo'       => 'nullable|boolean',
-            // 'nivel_riesgo'      => 'required|string',
+            [
+        'fecha_inicio' => 'required|date',
+        'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
+        'horas_diarias' => 'required|integer|min:1|max:12',
+        'id_tipo_trabajador' => 'required|string|max:4',
+        'id_sub_tipo_trabajador' => 'required|string|max:4',
+        'id_tipo_contrato' => 'required|string|max:4',
+        'salario' => 'required|numeric|min:0',
+        'codigo_interno' => 'required|string|max:20',
+        'id_arl' => 'required|string|max:4',
+        // 'alto_riesgo'       => 'nullable|boolean',
+        // 'nivel_riesgo'      => 'required|string',
+        ]
+
         ];
     }
 

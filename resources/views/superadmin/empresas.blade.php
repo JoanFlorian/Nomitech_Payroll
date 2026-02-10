@@ -27,7 +27,7 @@
         @forelse($empresas as $empresa)
 
             @php
-                $estado = $empresa->licencia->estado_calculado ?? 'prueba';
+                $estado = $empresa->licencia->estado ?? 'prueba';
             @endphp
 
             <div class="bg-white p-5 rounded-xl shadow border">

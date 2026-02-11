@@ -1,7 +1,7 @@
 @extends('layouts.superadmin')
 
 @section('content')
-<div class="p-6 bg-gray-50 min-h-screen">
+<div class="p-6 bg-gray-50"></div>
 
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -82,5 +82,7 @@
         @endforelse
     </div>
 
+    <div class="mt-8">
+        {{ $empresas->links() }}
 </div>
 @endsection

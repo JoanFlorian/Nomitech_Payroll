@@ -9,6 +9,7 @@ use App\Http\Controllers\PricingController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\facturacioncontroller;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\SuperAdmin\PlanController;
 
 Route::get('/', [PricingController::class, 'index']);
 
@@ -114,3 +115,7 @@ Route::get('/logout', function () {
     Auth::logout();
     return redirect('/');
 })->name('logout');
+
+
+Route::post('/superadmin/planes', [PlanController::class, 'store'])
+    ->name('superadmin.planes.store');

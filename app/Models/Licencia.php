@@ -40,7 +40,7 @@ class Licencia extends Model
             return 'vencida';
         }
 
-        if ($fin->diffInDays($hoy) <= 10) {
+        if ($fin->diffInDays($hoy) <= 7) {
             return 'por_vencer';
         }
 

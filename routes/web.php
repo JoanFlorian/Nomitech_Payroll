@@ -95,5 +95,13 @@ Route::get('/superadmin/empresas-view', function () { return view('superadmin.em
 Route::get('/superadmin/configuracion', function () { return view('superadmin.configuracion'); })->name('superadmin.configuracion');
 Route::get('/superadmin/crear-planes', function () { return view('superadmin.crear-planes'); })->name('superadmin.crear-planes');
 
+Route::prefix('superadmin')->name('superadmin.')->group(function () {
+    Route::get('/', function () {
+        return redirect()->route('superadmin.empresas.index');
+    })->name('index');
+    Route::get('/empresas', [EmpresaController::class, 'index'])->name('empresas.index');
+    Route::get('/empresas/{empresa}', [EmpresaController::class, 'show'])->name('empresas.show');
+    Route::put('/empresas/{empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
+});
 // Simple logout helper (GET) — change to POST if using auth scaffolding
 Route::get('/logout', function () { Auth::logout(); return redirect('/'); })->name('logout');

@@ -10,6 +10,9 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\facturacioncontroller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\SuperAdmin\PlanController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\CodeVerificationController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 
 Route::get('/', [PricingController::class, 'index']);
 
@@ -23,6 +26,16 @@ Route::post('/login', [LoginController::class, 'store'])->name('login.perform');
 // Auth Routes
 Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'create'])->name('register.create');
 Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'store'])->name('register');
+
+// Password Reset Routes
+Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+
+Route::get('password/verify', [CodeVerificationController::class, 'showVerifyForm'])->name('password.verify.form');
+Route::post('password/verify', [CodeVerificationController::class, 'verify'])->name('password.verify');
+
+Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
 
 Route::get('/api/cities/search', [App\Http\Controllers\Auth\RegisterController::class, 'searchCities']);
 Route::get('/api/city-details/{id}', [App\Http\Controllers\Auth\RegisterController::class, 'getCityDetails']);
@@ -49,9 +62,8 @@ Route::middleware('auth')->group(function () {
         return "No se encontró una licencia activa para su empresa. Por favor adquiera un plan."; // View: licencia.required
     })->name('licencia.required');
 
-    Route::get('/licencia/expired', function () {
-        return "Licencia Expirada. Por favor renueve su plan."; // View: licencia.expired
-    })->name('licencia.expired');
+    Route::get('/licencia/expired', [App\Http\Controllers\LicenseRenewalController::class, 'showExpired'])->name('licencia.expired');
+    Route::post('/licencia/renew', [App\Http\Controllers\LicenseRenewalController::class, 'renew'])->name('licencia.renew');
 
     Route::get('/empresa/select', function () {
         return "Seleccionar Empresa"; // View: auth.empresa-select
@@ -98,9 +110,7 @@ Route::get('/superadmin/empresas-view', function () {
 Route::get('/superadmin/configuracion', function () {
     return view('superadmin.configuracion');
 })->name('superadmin.configuracion');
-Route::get('/superadmin/crear-planes', function () {
-    return view('superadmin.crear-planes');
-})->name('superadmin.crear-planes');
+
 
 Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/', [facturacioncontroller::class, 'dashboard'])->name('index');
@@ -109,13 +119,18 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::put('/empresas/{empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
     Route::get('/facturacion', [facturacioncontroller::class, 'facturacion'])->name('facturacion');
     Route::get('/reporte/descargar', [facturacioncontroller::class, 'descargarReporte'])->name('reporte.descargar');
+
+    // Planes CRUD
+    Route::get('/planes', [PlanController::class, 'index'])->name('planes.index');
+    Route::get('/planes/create', [PlanController::class, 'create'])->name('planes.create');
+    Route::post('/planes', [PlanController::class, 'store'])->name('planes.store');
+    Route::get('/planes/{plan}/edit', [PlanController::class, 'edit'])->name('planes.edit');
+    Route::put('/planes/{plan}', [PlanController::class, 'update'])->name('planes.update');
 });
+
 // Simple logout helper (GET) — change to POST if using auth scaffolding
 Route::get('/logout', function () {
     Auth::logout();
     return redirect('/');
 })->name('logout');
 
-
-Route::post('/superadmin/planes', [PlanController::class, 'store'])
-    ->name('superadmin.planes.store');

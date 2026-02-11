@@ -16,7 +16,7 @@ class SuperAdminController extends Controller
             $licencia = $empresa->licencia;
 
             if (!$licencia || !$licencia->fecha_fin) {
-                $empresa->estado = 'prueba';
+                $empresa->estado = 'pendiente_pago';
             } else {
                 $hoy = Carbon::now()->startOfDay();
                 $fin = Carbon::parse($licencia->fecha_fin)->startOfDay();

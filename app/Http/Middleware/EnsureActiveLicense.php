@@ -29,7 +29,7 @@ class EnsureActiveLicense
 
         // 1. Get empresa_id from session
         $empresaId = session('empresa_id');
-        
+
         if (!$empresaId) {
             return redirect()->route('licencia.required');
         }
@@ -52,14 +52,14 @@ class EnsureActiveLicense
 
         // 5. Check License Status
         // Allow 'activa' and 'por_vencer' (active within next 10 days)
-        // Reject 'vencida' (expired) and 'prueba' (trial without fecha_fin)
+        // Reject 'vencida' (expired) and 'pendiente_pago' (trial without fecha_fin)
         $estado = $licencia->getEstadoAttribute();
 
         if ($estado === 'vencida') {
             return redirect()->route('licencia.expired');
         }
 
-        if ($estado === 'prueba') {
+        if ($estado === 'pendiente_pago') {
             return redirect()->route('licencia.pending');
         }
 

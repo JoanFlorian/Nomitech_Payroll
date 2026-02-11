@@ -38,11 +38,12 @@
             Configuración
         </a>
 
-        <a href="{{ route('superadmin.crear-planes') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
-            {{ request()->routeIs('superadmin.crear-planes') ? 'bg-blue-800 text-white font-semibold' : '' }}">
-            <i class="bi bi-plus-circle text-lg"></i>
-            Crear planes
+        <a href="{{ route('superadmin.planes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
+            {{ request()->routeIs('superadmin.planes.*') ? 'bg-blue-800 text-white font-semibold' : '' }}">
+            <i class="bi bi-layers text-lg"></i>
+            Planes
         </a>
+
     </nav>
 
     <!-- FOOTER -->

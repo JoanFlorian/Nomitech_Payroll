@@ -30,7 +30,7 @@ class Licencia extends Model
     public function getEstadoAttribute()
     {
         if (!$this->fecha_fin) {
-            return 'prueba';
+            return 'pendiente_pago';
         }
 
         $hoy = Carbon::now()->startOfDay();

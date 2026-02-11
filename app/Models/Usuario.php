@@ -54,4 +54,25 @@ class Usuario extends Authenticatable
     {
         return $this->belongsToMany(Empresa::class, 'usuario_empresa', 'doc', 'id_empresa');
     }
+
+    /**
+     * Get the e-mail address where password reset links are sent.
+     *
+     * @return string
+     */
+    public function getEmailForPasswordReset()
+    {
+        return $this->correo;
+    }
+
+    /**
+     * Route notifications for the mail channel.
+     *
+     * @param  \Illuminate\Notifications\Notification  $notification
+     * @return array|string
+     */
+    public function routeNotificationForMail($notification)
+    {
+        return $this->correo;
+    }
 }

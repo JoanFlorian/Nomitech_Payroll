@@ -19,14 +19,14 @@
                 </div>
 
                 @php
-                    $estado = optional($empresa->licencia)->estado ?? 'prueba';
+                    $estado = optional($empresa->licencia)->estado ?? 'pendiente_pago';
                 @endphp
 
                 <span class="px-3 py-1 rounded-full text-xs font-semibold
                     {{ $estado == 'activa' ? 'bg-green-100 text-green-700' : '' }}
                     {{ $estado == 'por_vencer' ? 'bg-yellow-100 text-yellow-700' : '' }}
                     {{ $estado == 'vencida' ? 'bg-red-100 text-red-700' : '' }}
-                    {{ $estado == 'prueba' ? 'bg-blue-100 text-blue-700' : '' }}
+                    {{ $estado == 'pendiente_pago' ? 'bg-blue-100 text-blue-700' : '' }}
                 ">
                     {{ strtoupper(str_replace('_', ' ', $estado)) }}
                 </span>

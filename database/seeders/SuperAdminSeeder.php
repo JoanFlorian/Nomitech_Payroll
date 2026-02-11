@@ -30,6 +30,14 @@ class SuperAdminSeeder extends Seeder
             'abreviatura' => 'CC'
         ]);
 
+        $email = env('SUPERADMIN_EMAIL');
+        $password = env('SUPERADMIN_PASSWORD');
+
+        if (!$email || !$password) {
+            $this->command->error('SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be set in .env');
+            return;
+        }
+
         // 3. Create SuperAdmin user
         $superAdmin = Usuario::firstOrCreate(
             ['doc' => '1070599004'],
@@ -39,10 +47,10 @@ class SuperAdminSeeder extends Seeder
                 'otros_nombres' => 'Admin',
                 'primer_apellido' => 'System',
                 'segundo_apellido' => 'Root',
-                'correo' => 'superadmin@nomitech.local',
+                'correo' => $email,
                 'telefono' => '3182670119',
                 'direccion' => 'Sistema',
-                'contrasena' => Hash::make('SuperAdmin123!'),
+                'contrasena' => Hash::make($password),
                 'id_rol' => 4,
                 'activo' => true
             ]

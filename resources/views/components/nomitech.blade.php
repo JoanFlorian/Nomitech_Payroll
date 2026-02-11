@@ -26,20 +26,20 @@
             Empresas
         </a>
 
-        <a href="{{ route('superadmin.facturacion') }}"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition">
+        <a href="{{ route('superadmin.facturacion') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
+            {{ request()->routeIs('superadmin.facturacion') ? 'bg-blue-800 text-white font-semibold' : '' }}">
             <i class="bi bi-receipt text-lg"></i>
             Facturación
         </a>
 
-        <a href="#"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition">
+        <a href="{{ route('superadmin.configuracion') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
+            {{ request()->routeIs('superadmin.configuracion') ? 'bg-blue-800 text-white font-semibold' : '' }}">
             <i class="bi bi-gear text-lg"></i>
             Configuración
         </a>
 
-        <a href="#"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition">
+        <a href="{{ route('superadmin.crear-planes') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
+            {{ request()->routeIs('superadmin.crear-planes') ? 'bg-blue-800 text-white font-semibold' : '' }}">
             <i class="bi bi-plus-circle text-lg"></i>
             Crear planes
         </a>
@@ -47,7 +47,7 @@
 
     <!-- FOOTER -->
     <div class="p-6 border-t border-blue-800">
-        <a href="#"
+        <a href="{{ route('logout') }}"
             class="flex items-center gap-3 px-4 py-2 rounded-lg text-red-300 hover:bg-red-900/30 hover:text-red-200 transition">
             <i class="bi bi-box-arrow-right text-lg"></i>
             Cerrar sesión

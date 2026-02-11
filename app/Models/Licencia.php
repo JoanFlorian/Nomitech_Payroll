@@ -33,14 +33,16 @@ class Licencia extends Model
             return 'prueba';
         }
 
-        $hoy = Carbon::now();
-        $fin = Carbon::parse($this->fecha_fin);
+        $hoy = Carbon::now()->startOfDay();
+        $fin = Carbon::parse($this->fecha_fin)->startOfDay();
 
         if ($fin->isPast()) {
             return 'vencida';
         }
 
-        if ($fin->diffInDays($hoy) <= 7) {
+        // diffInDays returns absolute difference. 
+        // We check if the difference is 15 days or less.
+        if ($hoy->diffInDays($fin, false) <= 15) {
             return 'por_vencer';
         }
 

@@ -45,18 +45,17 @@ class RegisterController extends Controller
         return DB::transaction(function () use ($request) {
             // 1. Create Usuario first (without empresa FK)
             $usuario = Usuario::create([
-                'doc' => $request->doc,
+                'doc' => $request->documento,
                 'id_tipo_doc' => $request->id_tipo_doc,
                 'primer_apellido' => $request->primer_apellido,
                 'segundo_apellido' => $request->segundo_apellido,
                 'primer_nombre' => $request->primer_nombre,
                 'otros_nombres' => $request->otros_nombres,
-                'telefono' => $request->telefono,
-                'correo' => $request->correo,
+                'telefono' => $request->telefono_celular,
+                'correo' => $request->email,
                 'direccion' => $request->direccion_empresa,
-                'contrasena' => Hash::make($request->contrasena),
+                'contrasena' => Hash::make($request->password),
                 'id_rol' => 1,
-
             ]);
 
             // 2. Create Empresa (with doc_representante)
@@ -66,7 +65,7 @@ class RegisterController extends Controller
                 'doc_representante' => $usuario->doc,
                 'id_ciudad' => $request->id_ciudad,
                 'direccion' => $request->direccion_empresa,
-                'telefono' => $request->telefono,
+                'telefono' => $request->telefono_celular,
             ]);
 
             // 3. Resolve selected plan from request (or fallback to default ordered plan)

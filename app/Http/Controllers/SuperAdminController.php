@@ -18,12 +18,12 @@ class SuperAdminController extends Controller
             if (!$licencia || !$licencia->fecha_fin) {
                 $empresa->estado = 'prueba';
             } else {
-                $hoy = Carbon::now();
-                $fin = Carbon::parse($licencia->fecha_fin);
+                $hoy = Carbon::now()->startOfDay();
+                $fin = Carbon::parse($licencia->fecha_fin)->startOfDay();
 
                 if ($fin->isPast()) {
                     $empresa->estado = 'vencida';
-                } elseif ($fin->diffInDays($hoy) <= 10) {
+                } elseif ($hoy->diffInDays($fin, false) <= 15) {
                     $empresa->estado = 'por_vencer';
                 } else {
                     $empresa->estado = 'activa';

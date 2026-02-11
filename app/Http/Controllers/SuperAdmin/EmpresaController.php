@@ -14,13 +14,6 @@ class EmpresaController extends Controller
     {
         $query = Empresa::with('licencia.plan');
 
-        // Filtro por estado
-        if ($request->estado && $request->estado != 'todas') {
-            $query->whereHas('licencia', function ($q) use ($request) {
-                $q->where('estado', $request->estado);
-            });
-        }
-
         // Buscador por razón social o NIT
         if ($request->buscar) {
             $buscar = $request->buscar;
@@ -29,6 +22,31 @@ class EmpresaController extends Controller
                 $q->where('razon_social', 'like', '%' . $buscar . '%')
                     ->orWhere('nit', 'like', '%' . $buscar . '%');
             });
+        }
+
+        // Filtro por estado (computed accessor, no es columna real en BD)
+        if ($request->estado && $request->estado != 'todas') {
+            $estadoFiltro = $request->estado;
+
+            $empresas = $query->orderBy('razon_social')->get();
+
+            $empresas = $empresas->filter(function ($empresa) use ($estadoFiltro) {
+                $estado = optional($empresa->licencia)->estado ?? 'pendiente_pago';
+                return $estado === $estadoFiltro;
+            });
+
+            // Paginar manualmente la colección filtrada
+            $page = $request->input('page', 1);
+            $perPage = 8;
+            $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+                $empresas->forPage($page, $perPage)->values(),
+                $empresas->count(),
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+
+            return view('superadmin.empresas', ['empresas' => $paginated]);
         }
 
         $empresas = $query

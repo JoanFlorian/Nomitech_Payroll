@@ -8,21 +8,28 @@
 
         <div>
             <label class="block text-sm font-medium mb-1 text-gray-700">Nombre del plan</label>
-            <input type="text" name="nombre" value="{{ old('nombre', $plan->nombre ?? '') }}" class="w-full border rounded-xl px-3 py-2 outline-none transition
-                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: Premium Plus"
-                required>
+            <input type="text" name="nombre" value="{{ old('nombre', $plan->nombre ?? '') }}"
+                class="w-full border rounded-xl px-3 py-2 outline-none transition
+                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('nombre') border-red-500 @enderror" placeholder="Ej: Premium Plus" required>
+            @error('nombre')
+                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+            @enderror
         </div>
 
         <div>
             <label class="block text-sm font-medium mb-1 text-gray-700">Duración (meses)</label>
-            <select name="duracion" class="w-full border rounded-xl px-3 py-2 outline-none transition
-                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+            <select name="duracion"
+                class="w-full border rounded-xl px-3 py-2 outline-none transition
+                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('duracion') border-red-500 @enderror" required>
                 <option value="1" {{ old('duracion', $plan->duracion ?? '') == 1 ? 'selected' : '' }}>1 mes</option>
                 <option value="3" {{ old('duracion', $plan->duracion ?? '') == 3 ? 'selected' : '' }}>3 meses</option>
                 <option value="6" {{ old('duracion', $plan->duracion ?? '') == 6 ? 'selected' : '' }}>6 meses</option>
                 <option value="12" {{ old('duracion', $plan->duracion ?? '') == 12 ? 'selected' : '' }}>12 meses (Anual)
                 </option>
             </select>
+            @error('duracion')
+                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+            @enderror
         </div>
 
         <div>
@@ -31,14 +38,22 @@
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                 <input type="number" name="valor" step="0.01" min="0" value="{{ old('valor', $plan->valor ?? '') }}"
                     class="w-full border rounded-xl pl-8 pr-3 py-2 outline-none transition
-                              focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00" required>
+                              focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('valor') border-red-500 @enderror"
+                    placeholder="0.00" required>
             </div>
+            @error('valor')
+                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+            @enderror
         </div>
 
         <div>
             <label class="block text-sm font-medium mb-1 text-gray-700">Máximo de empleados</label>
-            <input type="number" name="num_empl" min="1" value="{{ old('num_empl', $plan->num_empl ?? '') }}" class="w-full border rounded-xl px-3 py-2 outline-none transition
-                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: 50" required>
+            <input type="number" name="num_empl" min="1" value="{{ old('num_empl', $plan->num_empl ?? '') }}"
+                class="w-full border rounded-xl px-3 py-2 outline-none transition
+                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('num_empl') border-red-500 @enderror" placeholder="Ej: 50" required>
+            @error('num_empl')
+                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+            @enderror
         </div>
     </div>
 </div>
@@ -61,7 +76,7 @@
                     <input type="text" name="features[]"
                         value="{{ old('features.' . $i, (isset($plan->features) && is_array($plan->features)) ? ($plan->features[$i] ?? '') : '') }}"
                         class="w-full border rounded-xl px-3 py-2 outline-none transition
-                                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Ej: Soporte 24/7">
                 </div>
             @endfor
@@ -75,8 +90,12 @@
 
     <div>
         <label class="block text-sm font-medium mb-1 text-gray-700">Descripción del plan</label>
-        <textarea name="descripcion" rows="4" class="w-full border rounded-xl px-3 py-2 outline-none transition
-                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        <textarea name="descripcion" rows="4"
+            class="w-full border rounded-xl px-3 py-2 outline-none transition
+                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('descripcion') border-red-500 @enderror"
             placeholder="Describe los beneficios del plan...">{{ old('descripcion', $plan->descripcion ?? '') }}</textarea>
+        @error('descripcion')
+            <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+        @enderror
     </div>
 </div>

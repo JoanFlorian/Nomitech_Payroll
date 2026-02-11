@@ -44,20 +44,32 @@ class LicenseRenewalController extends Controller
         ]);
 
         $empresaId = session('empresa_id');
+        $empresa = Empresa::with('licencia')->find($empresaId);
         $plan = Plan::findOrFail($request->plan_id);
 
-        return DB::transaction(function () use ($empresaId, $plan) {
-            // Create a new Licencia (Inactive/Pending)
-            $licencia = Licencia::create([
-                'empresa_id' => $empresaId,
-                'plan_id' => $plan->id,
-                'fecha_inicio' => null,
-                'fecha_fin' => null,
-            ]);
+        return DB::transaction(function () use ($empresa, $plan) {
+            $licencia = $empresa->licencia;
 
-            // Create a new Pago (Pending)
+            if ($licencia) {
+                // Update the existing license with the new plan and reset dates
+                $licencia->update([
+                    'plan_id' => $plan->id,
+                    'fecha_inicio' => null,
+                    'fecha_fin' => null,
+                ]);
+            } else {
+                // Fallback: create a new license if none exists
+                $licencia = Licencia::create([
+                    'empresa_id' => $empresa->id_empresa,
+                    'plan_id' => $plan->id,
+                    'fecha_inicio' => null,
+                    'fecha_fin' => null,
+                ]);
+            }
+
+            // Create a new Pago (each payment is a distinct transaction)
             $pago = Pago::create([
-                'empresa_id' => $empresaId,
+                'empresa_id' => $empresa->id_empresa,
                 'licencia_id' => $licencia->id,
                 'referencia' => null,
                 'proveedor_pago' => 'STRIPE',

@@ -48,10 +48,10 @@
 
     <header class="py-8 px-6">
         <div class="max-w-7xl mx-auto flex items-center gap-2">
-            <div class="size-9 bg-primary rounded-lg flex items-center justify-center text-white">
+            <div class="size-9 bg-[#1564C0] rounded-lg flex items-center justify-center text-white">
                 <span class="material-symbols-outlined text-[24px]">account_balance_wallet</span>
             </div>
-            <span class="text-2xl font-extrabold text-primary">Nomitech</span>
+            <span class="text-2xl font-extrabold text-[#1564C0]">Nomitech</span>
         </div>
     </header>
 
@@ -72,11 +72,11 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             @foreach($planes as $plan)
                     <div
-                        class="premium-card relative p-8 rounded-[2rem] bg-white border-2 {{ $plan->id == $currentPlanId ? 'border-primary shadow-2xl shadow-primary/10' : 'border-slate-100 shadow-xl shadow-slate-200/50' }} flex flex-col">
+                        class="premium-card relative p-8 rounded-[2rem] bg-white border-2 {{ $plan->id == $currentPlanId ? 'border-[#1564C0] shadow-2xl shadow-[#1564C0]/10' : 'border-slate-100 shadow-xl shadow-slate-200/50' }} flex flex-col">
 
                         @if($plan->id == $currentPlanId)
                             <div
-                                class="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 bg-primary text-white text-xs font-bold rounded-full shadow-lg">
+                                class="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 bg-[#1564C0] text-white text-xs font-bold rounded-full shadow-lg">
                                 TU PLAN ANTERIOR
                             </div>
                         @endif
@@ -123,11 +123,10 @@
                         <form action="{{ route('licencia.renew') }}" method="POST">
                             @csrf
                             <input type="hidden" name="plan_id" value="{{ $plan->id }}">
-                            <button type="submit"
-                                class="w-full py-4 rounded-2xl font-extrabold transition-all 
-                                    {{ $plan->destacado || $plan->id == $currentPlanId
-                ? 'bg-primary text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0'
-                : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 hover:border-slate-300' }}">
+                            <button type="submit" class="w-full py-4 rounded-2xl font-extrabold transition-all 
+                                                    {{ $plan->destacado || $plan->id == $currentPlanId
+                ? 'bg-[#1564C0] text-white shadow-lg shadow-[#1564C0]/25 hover:shadow-[#1564C0]/40 hover:-translate-y-0.5 active:translate-y-0'
+                : 'bg-white text-[#1564C0] border-2 border-[#1564C0] hover:bg-[#1564C0] hover:text-white' }}">
                                 {{ $plan->id == $currentPlanId ? 'Renovar ahora' : 'Cambiar y renovar' }}
                             </button>
                         </form>
@@ -140,14 +139,14 @@
                 nuestro equipo de soporte.</p>
             <div class="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <a href="{{ route('logout') }}"
-                    class="flex items-center gap-2 px-6 py-2 text-slate-500 hover:text-primary font-bold transition-all group">
+                    class="flex items-center gap-2 px-6 py-2 text-slate-500 hover:text-[#1564C0] font-bold transition-all group">
                     <span
                         class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">logout</span>
                     Cerrar Sesión
                 </a>
                 <span class="hidden sm:block w-px h-6 bg-slate-200"></span>
                 <a href="mailto:soporte@nomitech.com"
-                    class="flex items-center gap-2 px-6 py-2 text-slate-500 hover:text-primary font-bold transition-all group">
+                    class="flex items-center gap-2 px-6 py-2 text-slate-500 hover:text-[#1564C0] font-bold transition-all group">
                     <span class="material-symbols-outlined">help_center</span>
                     Centro de Ayuda
                 </a>

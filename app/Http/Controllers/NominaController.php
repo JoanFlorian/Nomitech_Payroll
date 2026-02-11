@@ -93,27 +93,36 @@ class NominaController extends Controller
     ========================== */
     public function store(Request $request)
     {
-        $s1 = session('nomina.step1');
-        $s2 = session('nomina.step2');
+        try {
+            $s1 = session('nomina.step1');
+            $s2 = session('nomina.step2');
 
-        DB::table('salario')->insert([
-            'id_contrato' => $s1['id_contrato'],
-            'salario_base' => $s1['salario_base'],
-            'auxilio_transporte' => 162000,
-            'horas_extra' => $s2['horas_extra'],
-            'bonificaciones' => $s2['bonificaciones'],
-            'comisiones' => $s2['comisiones'],
-            'otros_devengos' => $s2['otros_devengos'],
-            'eps' => $request->eps,
-            'afp' => $request->afp,
-            'fecha_pago' => now(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            if (!$s1 || !$s2) {
+                return redirect()->route('nomina.step1')->with('error', 'Sesión expirada o datos incompletos.');
+            }
 
-        session()->forget('nomina');
+            DB::table('salario')->insert([
+                'id_contrato' => $s1['id_contrato'],
+                'salario_base' => $s1['salario_base'],
+                'auxilio_transporte' => 162000,
+                'horas_extra' => $s2['horas_extra'],
+                'bonificaciones' => $s2['bonificaciones'],
+                'comisiones' => $s2['comisiones'],
+                'otros_devengos' => $s2['otros_devengos'],
+                'eps' => $request->eps,
+                'afp' => $request->afp,
+                'fecha_pago' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        return redirect()->route('nomina.index')
-            ->with('success', 'Nómina guardada correctamente');
+            session()->forget('nomina');
+
+            return redirect()->route('nomina.index')
+                ->with('success', 'Nómina guardada correctamente');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error al guardar nómina: " . $e->getMessage());
+            return back()->with('error', 'Hubo un error al procesar la nómina. Por favor, intente nuevamente.');
+        }
     }
 }

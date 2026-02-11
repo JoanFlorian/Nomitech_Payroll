@@ -109,8 +109,8 @@ class facturacioncontroller extends Controller
         $licencia = $pago->licencia;
 
         return response()->json([
-            'numero_factura' => 'FAC-' .($pago->fecha_pago ? $pago->fecha_pago->format('Y') : $pago->created_at->format('Y')). '-' .
-            str_pad($pago->id, 6, '0', STR_PAD_LEFT),
+            'numero_factura' => 'FAC-' . ($pago->fecha_pago ? $pago->fecha_pago->format('Y') : $pago->created_at->format('Y')) . '-' .
+                str_pad($pago->id, 6, '0', STR_PAD_LEFT),
             'fecha' => $pago->fecha_pago ? $pago->fecha_pago->format('d/m/Y') : $pago->created_at->format('d/m/Y'),
             'estado' => $this->obtenerEstadoTexto($pago->estado_pago),
             'empresa_emisora' => [
@@ -190,22 +190,27 @@ class facturacioncontroller extends Controller
 
     public function descargarFacturaPdf($pagoId)
     {
-        $pago = Pago::with(['licencia.empresa', 'licencia.plan', 'empresa'])->findOrFail($pagoId);
-        $empresa = $pago->empresa ?? $pago->licencia->empresa;
-        $licencia = $pago->licencia;
-        $estadoTexto = $this->obtenerEstadoTexto($pago->estado_pago);
+        try {
+            $pago = Pago::with(['licencia.empresa', 'licencia.plan', 'empresa'])->findOrFail($pagoId);
+            $empresa = $pago->empresa ?? $pago->licencia->empresa;
+            $licencia = $pago->licencia;
+            $estadoTexto = $this->obtenerEstadoTexto($pago->estado_pago);
 
-        $html = view('superadmin.pdf', compact('pago', 'empresa', 'licencia', 'estadoTexto'))->render();
+            $html = view('superadmin.pdf', compact('pago', 'empresa', 'licencia', 'estadoTexto'))->render();
 
-        return response($html, 200)
-            ->header('Content-Type', 'text/html; charset=utf-8')
-            ->header('Content-Disposition', 'inline; filename="factura-' . $pago->id . '.html"');
+            return response($html, 200)
+                ->header('Content-Type', 'text/html; charset=utf-8')
+                ->header('Content-Disposition', 'inline; filename="factura-' . $pago->id . '.html"');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error al generar factura HTML: " . $e->getMessage());
+            return back()->with('error', 'No se pudo generar la vista de la factura.');
+        }
     }
 
     private function obtenerEstadoTexto($estado)
     {
         return match ($estado) {
-            'succeeded' => 'Pagado',
+            'paid' => 'Pagado',
             'pending' => 'Pendiente',
             'failed' => 'Fallido',
             default => ucfirst($estado)
@@ -213,45 +218,50 @@ class facturacioncontroller extends Controller
     }
     public function descargarReporte(Request $request)
     {
-        $selectedYear = $request->query('year', 2026);
-        $selectedDate = $request->query('date');
+        try {
+            $selectedYear = $request->query('year', 2026);
+            $selectedDate = $request->query('date');
 
-        // Reuse dashboard logic for data fetching
-        $pagoQuery = Pago::where('estado_pago', 'paid');
+            // Reuse dashboard logic for data fetching
+            $pagoQuery = Pago::where('estado_pago', 'paid');
 
-        if ($selectedDate) {
-            $pagoQuery->whereDate(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedDate);
-            $titulo = "Reporte Diario - " . Carbon::parse($selectedDate)->format('d/m/Y');
-        } else {
-            $pagoQuery->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedYear);
-            $titulo = "Reporte Anual - " . $selectedYear;
+            if ($selectedDate) {
+                $pagoQuery->whereDate(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedDate);
+                $titulo = "Reporte Diario - " . Carbon::parse($selectedDate)->format('d/m/Y');
+            } else {
+                $pagoQuery->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedYear);
+                $titulo = "Reporte Anual - " . $selectedYear;
+            }
+
+            $totalIncome = (float) $pagoQuery->sum('valor');
+            $pagos = $pagoQuery->with('licencia.plan')->orderBy('created_at', 'desc')->get();
+
+            $topLicense = Licencia::with('plan')
+                ->select('plan_id', DB::raw('count(*) as total'))
+                ->when($selectedDate, fn($q) => $q->whereDate('created_at', $selectedDate))
+                ->when(!$selectedDate, fn($q) => $q->whereYear('created_at', $selectedYear))
+                ->groupBy('plan_id')
+                ->orderByDesc('total')
+                ->first();
+
+            $data = [
+                'titulo' => $titulo,
+                'selectedDate' => $selectedDate,
+                'selectedYear' => $selectedYear,
+                'totalIncome' => number_format($totalIncome, 0, ',', '.'),
+                'pagos' => $pagos,
+                'topLicenseName' => $topLicense->plan->nombre ?? 'N/A',
+                'topLicenseCount' => $topLicense->total ?? 0,
+                'fechaGeneracion' => Carbon::now()->format('d/m/Y H:i')
+            ];
+
+            $pdf = Pdf::loadView('superadmin.reporte-pdf', $data);
+
+            $filename = $selectedDate ? "reporte-{$selectedDate}.pdf" : "reporte-{$selectedYear}.pdf";
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error al generar reporte PDF: " . $e->getMessage());
+            return back()->with('error', 'Hubo un error al generar el reporte PDF. Por favor, intente nuevamente.');
         }
-
-        $totalIncome = (float) $pagoQuery->sum('valor');
-        $pagos = $pagoQuery->with('licencia.plan')->orderBy('created_at', 'desc')->get();
-
-        $topLicense = Licencia::with('plan')
-            ->select('plan_id', DB::raw('count(*) as total'))
-            ->when($selectedDate, fn($q) => $q->whereDate('created_at', $selectedDate))
-            ->when(!$selectedDate, fn($q) => $q->whereYear('created_at', $selectedYear))
-            ->groupBy('plan_id')
-            ->orderByDesc('total')
-            ->first();
-
-        $data = [
-            'titulo' => $titulo,
-            'selectedDate' => $selectedDate,
-            'selectedYear' => $selectedYear,
-            'totalIncome' => number_format($totalIncome, 0, ',', '.'),
-            'pagos' => $pagos,
-            'topLicenseName' => $topLicense->plan->nombre ?? 'N/A',
-            'topLicenseCount' => $topLicense->total ?? 0,
-            'fechaGeneracion' => Carbon::now()->format('d/m/Y H:i')
-        ];
-
-        $pdf = Pdf::loadView('superadmin.reporte-pdf', $data);
-
-        $filename = $selectedDate ? "reporte-{$selectedDate}.pdf" : "reporte-{$selectedYear}.pdf";
-        return $pdf->download($filename);
     }
 }

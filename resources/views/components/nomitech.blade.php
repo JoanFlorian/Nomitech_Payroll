@@ -26,7 +26,7 @@
             Empresas
         </a>
 
-        <a href="#"
+        <a href="{{ route('superadmin.facturacion') }}"
             class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition">
             <i class="bi bi-receipt text-lg"></i>
             Facturación

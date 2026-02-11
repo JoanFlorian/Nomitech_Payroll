@@ -136,28 +136,10 @@
             a {{ min($transacciones->currentPage() * $transacciones->perPage(), $transacciones->total()) }} 
             de {{ $transacciones->total() }}
         </p>
-        <div class="flex gap-1">
-            @if ($transacciones->onFirstPage())
-                <button class="px-2 py-1 border border-gray-300 rounded text-gray-400 cursor-not-allowed" disabled>← Ant</button>
-            @else
-                <a href="{{ $transacciones->previousPageUrl() }}" class="px-2 py-1 border border-gray-300 rounded hover:bg-white">← Ant</a>
-            @endif
-
-            @for ($i = 1; $i <= $transacciones->lastPage(); $i++)
-                @if ($i == $transacciones->currentPage())
-                    <button class="px-2 py-1 bg-blue-600 text-white rounded font-semibold">{{ $i }}</button>
-                @else
-                    <a href="{{ $transacciones->url($i) }}" class="px-2 py-1 border border-gray-300 rounded hover:bg-white">{{ $i }}</a>
-                @endif
-                @if ($i >= $transacciones->currentPage() + 2) @break @endif
-            @endfor
-
-            @if ($transacciones->hasMorePages())
-                <a href="{{ $transacciones->nextPageUrl() }}" class="px-2 py-1 border border-gray-300 rounded hover:bg-white">Sig →</a>
-            @else
-                <button class="px-2 py-1 border border-gray-300 rounded text-gray-400 cursor-not-allowed" disabled>Sig →</button>
-            @endif
+        <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+            {{ $transacciones->withQueryString()->links() }}
         </div>
+
     </div>
 </div>
 

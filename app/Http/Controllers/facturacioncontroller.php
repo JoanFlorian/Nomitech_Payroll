@@ -145,7 +145,7 @@ class facturacioncontroller extends Controller
         $metodoFiltro = $request->query('metodo');
         $search = $request->query('q');
 
-        $totalTransacciones = Pago::where('estado_pago', 'succeeded')->sum('valor');
+        $totalTransacciones = Pago::where('estado_pago', 'paid')->sum('valor');
         $suscripcionesActivas = Licencia::where('fecha_fin', '>=', Carbon::now())->count();
         $pendientesPago = Pago::where('estado_pago', 'pending')->count();
 
@@ -170,7 +170,7 @@ class facturacioncontroller extends Controller
             });
         }
 
-        $transacciones = $query->paginate(15);
+        $transacciones = $query->paginate(9);
         $metodosDisponibles = Pago::distinct('proveedor_pago')
             ->whereNotNull('proveedor_pago')
             ->pluck('proveedor_pago')

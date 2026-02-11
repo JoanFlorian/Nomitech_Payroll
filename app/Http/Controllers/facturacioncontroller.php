@@ -109,7 +109,8 @@ class facturacioncontroller extends Controller
         $licencia = $pago->licencia;
 
         return response()->json([
-            'numero_factura' => $pago->referencia ?? 'FAC-' . $pago->id,
+            'numero_factura' => 'FAC-' .($pago->fecha_pago ? $pago->fecha_pago->format('Y') : $pago->created_at->format('Y')). '-' .
+            str_pad($pago->id, 6, '0', STR_PAD_LEFT),
             'fecha' => $pago->fecha_pago ? $pago->fecha_pago->format('d/m/Y') : $pago->created_at->format('d/m/Y'),
             'estado' => $this->obtenerEstadoTexto($pago->estado_pago),
             'empresa_emisora' => [

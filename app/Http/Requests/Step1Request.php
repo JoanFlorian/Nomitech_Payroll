@@ -22,16 +22,16 @@ class Step1Request extends FormRequest
     public function rules(): array
     {
         return [
-            'id_tipo_doc'   => 'required',
-            'numero_documento' => 'required|numeric',
-            'primer_apellido'  => 'required|string',
-            'segundo_apellido' => 'nullable|string',
-            'primer_nombre'    => 'required|string',
-            'otros_nombres'    => 'nullable|string',
+            'id_tipo_doc'   => 'required|max:4',
+            'numero_documento' => 'required|numeric|max:15',
+            'primer_apellido'  => 'required|string|max:30',
+            'segundo_apellido' => 'nullable|string|max:30',
+            'primer_nombre'    => 'required|string|max:30',
+            'otros_nombres'    => 'nullable|string|max:50',
             // 'pais'             => 'required|string',
-            'departamento'     => 'required|string',
-            'ciudad'           => 'required|string',
-            'direccion'        => 'required|string',
+            'departamento'     => 'required|string|max:50',
+            'ciudad'           => 'required|string|max:50',
+            'direccion'        => 'required|string|max:100',
         ];
     }
 

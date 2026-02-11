@@ -53,12 +53,16 @@
         >
 
             {{-- SIDEBAR --}}
-            <div class="w-1/3 bg-blue-600 text-white p-10">
-                <h2 class="text-2xl font-bold">Nomitech</h2>
-                <p class="mt-4 text-sm">
-                    Bienvenido al proceso de registro de empleados.
-                </p>
-            </div>
+        <div class="w-1/3 h-full bg-blue-600 text-white p-10 flex flex-col justify-center">
+            <h2 class="text-2xl font-bold">
+                Nomitech
+            </h2>
+
+            <p class="mt-4 text-sm">
+                Bienvenido al proceso de registro de empleados.
+            </p>
+        </div>
+
 
             {{-- CONTENIDO --}}
         <div class="w-2/3 p-10 overflow-y-auto">

@@ -4,12 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('usuario', function (Blueprint $table) {
-            $table->string('doc', 20)->primary(); // PK sin autoincremento
+            $table->string('doc', 12)->primary(); // PK sin autoincremento
             $table->integer('id_tipo_doc'); // NOT NULL
             $table->string('contrasena', 255);
 

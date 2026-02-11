@@ -1,0 +1,62 @@
+@layer components {
+    .form-card {
+        @apply bg-white p-8 md:p-12 rounded-xl;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+        position: relative;
+        z-index: 50;
+    }
+
+    .input-field {
+        @apply w-full h-12 pl-11 rounded-lg transition-all duration-300;
+        border: 1px solid #BDBDBD;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .input-field:focus {
+        @apply outline-none pl-[calc(2.75rem-1px)];
+        border: 2px solid #1565C0;
+        box-shadow: 0 0 0 4px rgba(21, 101, 192, 0.2);
+    }
+
+    .input-field:hover {
+        border-color: #1565C0;
+    }
+
+    .input-icon {
+        @apply absolute top-1/2 -translate-y-1/2 transition-colors duration-300 pointer-events-none;
+        left: 0.875rem;
+        color: #9E9E9E;
+        z-index: 10;
+    }
+
+    .input-group {
+        position: relative;
+    }
+
+    .input-group:focus-within .input-icon,
+    .input-group:hover .input-icon {
+        color: #1565C0;
+    }
+
+    .btn-primary {
+        @apply text-white font-semibold rounded-lg transition-all duration-300;
+        background-color: #2AA58C !important;
+        box-shadow: 0 4px 14px rgba(42, 165, 140, 0.25);
+    }
+
+    .btn-primary:hover {
+        background-color: #24977f !important;
+    }
+
+    .btn-secondary {
+        @apply font-semibold rounded-lg transition-colors border;
+        border-color: #BDBDBD;
+        color: #616161;
+        background-color: transparent;
+    }
+
+    .btn-secondary:hover {
+        background-color: #f3f4f6;
+        border-color: #9E9E9E;
+    }
+}

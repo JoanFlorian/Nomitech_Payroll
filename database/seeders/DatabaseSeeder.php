@@ -17,20 +17,22 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        
+
         $this->call([
             PaisSeeder::class,
             DepartamentoSeeder::class,
             CiudadSeeder::class,
             RolSeeder::class,
             BancoSeeder::class,
-
-            Otros::class,
             TipoDocSeeder::class, 
             TipoTrabajadorSeeder::class,
-            SubTipoTrabajadorSeeder::class,
+            PlanSeeder::class,
             TipoContratoSeeder::class,
+            SuperAdminSeeder::class,
+
             TipoHoraRecargoSeeder::class,
+            SubTipoTrabajadorSeeder::class,
+            Otros::class,
 
         ]);
     }

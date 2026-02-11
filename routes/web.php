@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 
 Route::get('/', [PricingController::class, 'index']);
 
-Route::get('/login2', function () {
+Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
 
@@ -91,17 +91,26 @@ Route::get('/superadmin/factura/{pagoId}/pdf', [facturacioncontroller::class, 'd
 Route::get('/superadmin/factura/{pagoId}', [facturacioncontroller::class, 'getFactura'])->name('superadmin.factura');
 
 // Superadmin extra pages
-Route::get('/superadmin/empresas-view', function () { return view('superadmin.empresas'); })->name('superadmin.empresas-view');
-Route::get('/superadmin/configuracion', function () { return view('superadmin.configuracion'); })->name('superadmin.configuracion');
-Route::get('/superadmin/crear-planes', function () { return view('superadmin.crear-planes'); })->name('superadmin.crear-planes');
+Route::get('/superadmin/empresas-view', function () {
+    return view('superadmin.empresas');
+})->name('superadmin.empresas-view');
+Route::get('/superadmin/configuracion', function () {
+    return view('superadmin.configuracion');
+})->name('superadmin.configuracion');
+Route::get('/superadmin/crear-planes', function () {
+    return view('superadmin.crear-planes');
+})->name('superadmin.crear-planes');
 
 Route::prefix('superadmin')->name('superadmin.')->group(function () {
-    Route::get('/', function () {
-        return redirect()->route('superadmin.empresas.index');
-    })->name('index');
+    Route::get('/', [facturacioncontroller::class, 'dashboard'])->name('index');
     Route::get('/empresas', [EmpresaController::class, 'index'])->name('empresas.index');
     Route::get('/empresas/{empresa}', [EmpresaController::class, 'show'])->name('empresas.show');
     Route::put('/empresas/{empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
+    Route::get('/facturacion', [facturacioncontroller::class, 'facturacion'])->name('facturacion');
+    Route::get('/reporte/descargar', [facturacioncontroller::class, 'descargarReporte'])->name('reporte.descargar');
 });
 // Simple logout helper (GET) — change to POST if using auth scaffolding
-Route::get('/logout', function () { Auth::logout(); return redirect('/'); })->name('logout');
+Route::get('/logout', function () {
+    Auth::logout();
+    return redirect('/');
+})->name('logout');

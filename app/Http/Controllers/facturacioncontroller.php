@@ -7,8 +7,100 @@ use App\Models\Licencia;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
+use App\Models\Empresa;
+use App\Models\Plan;
+use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 class facturacioncontroller extends Controller
 {
+    public function dashboard(Request $request)
+    {
+        $selectedYear = $request->query('year', 2026);
+        $selectedDate = $request->query('date');
+
+        // Base query for payments - Use 'paid' as found in DB
+        $pagoQuery = Pago::where('estado_pago', 'paid');
+
+        if ($selectedDate) {
+            $pagoQuery->whereDate(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedDate);
+            $licenciaQuery = Licencia::whereDate('created_at', $selectedDate);
+        } else {
+            $pagoQuery->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedYear);
+            $licenciaQuery = Licencia::whereYear('created_at', $selectedYear);
+        }
+
+        // Metrics
+        $totalIncome = (float) $pagoQuery->sum('valor');
+
+        // Dynamic Sales Target: Estimate based on current monthly average
+        $currentMonthIncome = Pago::where('estado_pago', 'paid')
+            ->whereMonth(DB::raw('COALESCE(fecha_pago, created_at)'), Carbon::now()->month)
+            ->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), Carbon::now()->year)
+            ->sum('valor');
+
+        $daysElapsed = Carbon::now()->day;
+        $daysInMonth = Carbon::now()->daysInMonth;
+        $averageDaily = $daysElapsed > 0 ? ($currentMonthIncome / $daysElapsed) : 0;
+        $salesTarget = $averageDaily * $daysInMonth;
+
+        // Ensure a minimum target so gauge doesn't break if no sales
+        if ($salesTarget <= 0)
+            $salesTarget = 1750000;
+
+        // Most sold license
+        $topLicense = Licencia::with('plan')
+            ->select('plan_id', DB::raw('count(*) as total'))
+            ->when($selectedDate, fn($q) => $q->whereDate('created_at', $selectedDate))
+            ->when(!$selectedDate, fn($q) => $q->whereYear('created_at', $selectedYear))
+            ->groupBy('plan_id')
+            ->orderByDesc('total')
+            ->first();
+
+        // Previous year income for trend comparison
+        $prevYearIncome = Pago::where('estado_pago', 'paid')
+            ->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedYear - 1)
+            ->sum('valor');
+
+        $trend = 0;
+        if ($prevYearIncome > 0) {
+            $trend = (($totalIncome - $prevYearIncome) / $prevYearIncome) * 100;
+        }
+
+        // Chart Data
+        if ($selectedDate) {
+            $chartData = Pago::where('estado_pago', 'paid')
+                ->whereDate(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedDate)
+                ->select(DB::raw('HOUR(COALESCE(fecha_pago, created_at)) as label'), DB::raw('SUM(valor) as total'))
+                ->groupBy('label')
+                ->orderBy('label')
+                ->get();
+        } else {
+            // Monthly data for the year
+            $chartData = Pago::where('estado_pago', 'paid')
+                ->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedYear)
+                ->select(DB::raw('MONTH(COALESCE(fecha_pago, created_at)) as label'), DB::raw('SUM(valor) as total'))
+                ->groupBy('label')
+                ->orderBy('label')
+                ->get();
+        }
+
+        return view('superadmin.index', [
+            'totalIncome' => number_format((float) $totalIncome, 0, ',', '.'),
+            'salesTarget' => number_format((float) $salesTarget, 0, ',', '.'),
+            'salesTargetValue' => $salesTarget,
+            'currentIncomeValue' => (float) $totalIncome,
+            'topLicenseName' => $topLicense->plan->nombre ?? 'N/A',
+            'topLicenseCount' => $topLicense->total ?? 0,
+            'trend' => number_format((float) $trend, 1, '.', ','),
+            'trendUp' => $trend >= 0,
+            'selectedYear' => $selectedYear,
+            'selectedDate' => $selectedDate,
+            'chartData' => $chartData,
+            'availableYears' => range(2026, date('Y') + 1)
+        ]);
+    }
+
 
     public function getFactura($pagoId)
     {
@@ -33,15 +125,17 @@ class facturacioncontroller extends Controller
                 'direccion' => $empresa->direccion ?? 'No especificado'
             ],
             'metodo_pago' => ucfirst($pago->proveedor_pago ?? 'No especificado'),
-            'subtotal' => number_format($pago->valor, 2, '.', ','),
+            'subtotal' => number_format((float) $pago->valor, 2, '.', ','),
             'iva' => '0.00',
-            'total' => number_format($pago->valor, 2, '.', ','),
-            'items' => [[
-                'concepto' => $licencia->plan->nombre ?? 'Plan de suscripción',
-                'descripcion' => $licencia->plan->descripcion ?? 'Acceso a plataforma Nomitech',
-                'cantidad' => 1,
-                'precio_unitario' => number_format($pago->valor, 2, '.', ',')
-            ]]
+            'total' => number_format((float) $pago->valor, 2, '.', ','),
+            'items' => [
+                [
+                    'concepto' => $licencia->plan->nombre ?? 'Plan de suscripción',
+                    'descripcion' => $licencia->plan->descripcion ?? 'Acceso a plataforma Nomitech',
+                    'cantidad' => 1,
+                    'precio_unitario' => number_format((float) $pago->valor, 2, '.', ',')
+                ]
+            ]
         ]);
     }
 
@@ -83,7 +177,7 @@ class facturacioncontroller extends Controller
             ->toArray();
 
         return view('superadmin.facturacion', [
-            'totalTransacciones' => number_format($totalTransacciones, 2, '.', ','),
+            'totalTransacciones' => number_format((float) $totalTransacciones, 2, '.', ','),
             'suscripcionesActivas' => $suscripcionesActivas,
             'pendientesPago' => $pendientesPago,
             'transacciones' => $transacciones,
@@ -109,11 +203,54 @@ class facturacioncontroller extends Controller
 
     private function obtenerEstadoTexto($estado)
     {
-        return match($estado) {
+        return match ($estado) {
             'succeeded' => 'Pagado',
             'pending' => 'Pendiente',
             'failed' => 'Fallido',
             default => ucfirst($estado)
         };
+    }
+    public function descargarReporte(Request $request)
+    {
+        $selectedYear = $request->query('year', 2026);
+        $selectedDate = $request->query('date');
+
+        // Reuse dashboard logic for data fetching
+        $pagoQuery = Pago::where('estado_pago', 'paid');
+
+        if ($selectedDate) {
+            $pagoQuery->whereDate(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedDate);
+            $titulo = "Reporte Diario - " . Carbon::parse($selectedDate)->format('d/m/Y');
+        } else {
+            $pagoQuery->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedYear);
+            $titulo = "Reporte Anual - " . $selectedYear;
+        }
+
+        $totalIncome = (float) $pagoQuery->sum('valor');
+        $pagos = $pagoQuery->with('licencia.plan')->orderBy('created_at', 'desc')->get();
+
+        $topLicense = Licencia::with('plan')
+            ->select('plan_id', DB::raw('count(*) as total'))
+            ->when($selectedDate, fn($q) => $q->whereDate('created_at', $selectedDate))
+            ->when(!$selectedDate, fn($q) => $q->whereYear('created_at', $selectedYear))
+            ->groupBy('plan_id')
+            ->orderByDesc('total')
+            ->first();
+
+        $data = [
+            'titulo' => $titulo,
+            'selectedDate' => $selectedDate,
+            'selectedYear' => $selectedYear,
+            'totalIncome' => number_format($totalIncome, 0, ',', '.'),
+            'pagos' => $pagos,
+            'topLicenseName' => $topLicense->plan->nombre ?? 'N/A',
+            'topLicenseCount' => $topLicense->total ?? 0,
+            'fechaGeneracion' => Carbon::now()->format('d/m/Y H:i')
+        ];
+
+        $pdf = Pdf::loadView('superadmin.reporte-pdf', $data);
+
+        $filename = $selectedDate ? "reporte-{$selectedDate}.pdf" : "reporte-{$selectedYear}.pdf";
+        return $pdf->download($filename);
     }
 }

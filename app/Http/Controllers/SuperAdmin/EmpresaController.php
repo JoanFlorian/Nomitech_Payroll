@@ -12,23 +12,29 @@ class EmpresaController extends Controller
 {
     public function index(Request $request)
     {
-        $empresas = Empresa::with('licencia.plan')->get();
+        $query = Empresa::with('licencia.plan');
 
         // Filtro por estado
         if ($request->estado && $request->estado != 'todas') {
-            $empresas = $empresas->filter(function ($empresa) use ($request) {
-                $estado = optional($empresa->licencia)->estado_calculado ?? 'prueba';
-                return $estado == $request->estado;
+            $query->whereHas('licencia', function ($q) use ($request) {
+                $q->where('estado', $request->estado);
             });
         }
 
-        // Buscador
+        // Buscador por razón social o NIT
         if ($request->buscar) {
-            $empresas = $empresas->filter(function ($empresa) use ($request) {
-                return str_contains(strtolower($empresa->razon_social), strtolower($request->buscar))
-                    || str_contains(strtolower($empresa->nit), strtolower($request->buscar));
+            $buscar = $request->buscar;
+
+            $query->where(function ($q) use ($buscar) {
+                $q->where('razon_social', 'like', '%' . $buscar . '%')
+                  ->orWhere('nit', 'like', '%' . $buscar . '%');
             });
         }
+
+        $empresas = $query
+            ->orderBy('razon_social')   
+            ->paginate(2)         
+            ->withQueryString();       
 
         return view('superadmin.empresas', compact('empresas'));
     }
@@ -37,7 +43,7 @@ class EmpresaController extends Controller
     {
         $empresa->load(['licencia.plan', 'representante', 'ciudad']);
 
-        // 👇 AGREGAR ESTO (para el select de ciudades en el modal)
+        // Para el select de ciudades en el modal
         $ciudades = Ciudad::orderBy('nombre')->get();
 
         return view('superadmin.empresas-show', compact('empresa', 'ciudades'));

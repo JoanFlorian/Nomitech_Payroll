@@ -17,6 +17,7 @@ class Licencia extends Model
     protected $fillable = [
         'empresa_id',
         'plan_id',
+        'estado',
         'fecha_inicio',
         'fecha_fin',
     ];
@@ -28,15 +29,24 @@ class Licencia extends Model
 
     public function getEstadoAttribute()
     {
-        $hoy = Carbon::now();
-        $fechaFin = $this->fecha_fin;
-
-        if ($fechaFin < $hoy) {
-            return 'VENCIDA';
-        } elseif ($fechaFin->diffInDays($hoy) <= 30) {
-            return 'POR_VENCER';
+        if (!$this->fecha_fin) {
+            return 'pendiente_pago';
         }
-        return 'ACTIVA';
+
+        $hoy = Carbon::now()->startOfDay();
+        $fin = Carbon::parse($this->fecha_fin)->startOfDay();
+
+        if ($fin->isPast()) {
+            return 'vencida';
+        }
+
+        // diffInDays returns absolute difference. 
+        // We check if the difference is 15 days or less.
+        if ($hoy->diffInDays($fin, false) <= 15) {
+            return 'por_vencer';
+        }
+
+        return 'activa';
     }
 
     public function empresa()
@@ -53,7 +63,4 @@ class Licencia extends Model
     {
         return $this->hasMany(Pago::class, 'licencia_id', 'id');
     }
-
-    // Legacy isActive() removed to prevent conflicting logic. 
-    // Use $licencia->is_active instead.
 }

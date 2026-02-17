@@ -15,6 +15,22 @@ class RegisterRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'primer_apellido' => $this->primer_apellido ? str_replace(' ', '', ucwords(strtolower($this->primer_apellido))) : null,
+            'segundo_apellido' => $this->segundo_apellido ? str_replace(' ', '', ucwords(strtolower($this->segundo_apellido))) : null,
+            'primer_nombre' => $this->primer_nombre ? str_replace(' ', '', ucwords(strtolower($this->primer_nombre))) : null,
+            'otros_nombres' => $this->otros_nombres ? ucwords(strtolower($this->otros_nombres)) : null,
+            'razon_social' => $this->razon_social ? strtoupper($this->razon_social) : null,
+            'email' => $this->email ? strtolower($this->email) : null,
+            'direccion_empresa' => $this->direccion_empresa ? trim($this->direccion_empresa) : null,
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -22,62 +38,79 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // NIE032: Razón Social - Alfanumérico, Max 60 caracteres
-            'razon_social' => ['nullable', 'string', 'max:60'],
-
-            // NIE210: Primer Apellido - Alfanumérico, Max 60 caracteres
-            'primer_apellido' => ['nullable', 'string', 'max:60'],
-
-            // NIE211: Segundo Apellido - Alfanumérico, Max 60 caracteres
-            'segundo_apellido' => ['nullable', 'string', 'max:60'],
-
-            // NIE212: Primer Nombre - Alfanumérico, Max 60 caracteres
-            'primer_nombre' => ['nullable', 'string', 'max:60'],
-
-            // NIE213: Otros Nombres - Alfanumérico, Max 60 caracteres
-            'otros_nombres' => ['nullable', 'string', 'max:60'],
-
-            // NIE033: NIT - Numérico, Max 20 caracteres, sin guiones ni DV
-            'nit' => ['required', 'string', 'regex:/^[0-9]+$/', 'max:20', 'unique:empresa,nit'],
-
-            // NIE034: Dígito de Verificación - Numérico, 1 dígito exacto
-            'dv' => ['required', 'numeric', 'digits:1'],
-
-            // NIE035: País - ISO 3166-1 alpha-2, exactamente 2 caracteres
+            // EMPRESA
+            'razon_social' => ['required', 'string', 'min:3', 'max:60'],
+            'nit' => ['required', 'string', 'regex:/^[0-9]+$/', 'digits_between:5,15', 'unique:empresa,nit'],
+            'nit_dv' => ['required', 'numeric', 'digits_between:1,2'],
             'pais' => ['required', 'string', 'size:2', 'in:CO'],
-
-            // NIE036: Departamento - ID interno (FK)
             'id_departamento' => ['required', 'exists:departamento,id_departamento'],
-
-            // NIE037: Municipio/Ciudad - ID interno (FK)
             'id_ciudad' => ['required', 'exists:ciudad,id_ciudad'],
+            'direccion_empresa' => ['required', 'string', 'min:5', 'max:60'],
 
-            // NIE038: Dirección - Alfanumérico, Max 255 caracteres
-            'direccion_empresa' => ['required', 'string', 'max:255'],
-
-            // Campos adicionales del sistema (no DIAN)
-            'doc' => ['required', 'string', 'max:20', 'unique:usuario'],
+            // USUARIO
+            'documento' => ['required', 'string', 'regex:/^[0-9]+$/', 'digits_between:6,12', 'unique:usuario,doc'],
             'id_tipo_doc' => ['required', 'exists:tipo_doc,id_tipo_doc'],
-            'correo' => ['required', 'string', 'email', 'max:256', 'unique:usuario'],
-            'contrasena' => ['required', 'confirmed', 'min:8'],
-            'telefono' => ['required', 'string', 'max:20'],
-            // Selected plan (optional) - validated server-side
+            'primer_apellido' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'segundo_apellido' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'primer_nombre' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'otros_nombres' => ['nullable', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'telefono_celular' => ['required', 'string', 'regex:/^3[0-9]{9}$/'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:usuario,correo'],
+            'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()->mixedCase()->numbers()->symbols()],
+
+            // Selected plan (optional)
             'plan_id' => ['nullable', 'integer', 'exists:plan,id'],
         ];
     }
 
     /**
      * Get custom error messages for validator.
-     *
-     * @return array
      */
     public function messages(): array
     {
         return [
-            'nit.regex' => 'El NIT debe contener solo números, sin guiones ni espacios.',
-            'nit.max' => 'El NIT no puede exceder los 20 caracteres.',
-            'dv.digits' => 'El Dígito de Verificación debe tener exactamente 1 dígito.',
-            'pais.size' => 'El código del país debe tener exactamente 2 caracteres.',
+            'required' => 'El :attribute es requerido.',
+            'string' => 'El :attribute debe ser una cadena de texto.',
+            'min' => 'El :attribute debe tener al menos :min caracteres.',
+            'max' => 'El :attribute no debe exceder los :max caracteres.',
+            'unique' => 'El :attribute ya se encuentra registrado.',
+            'exists' => 'El :attribute seleccionado es inválido.',
+            'numeric' => 'El :attribute debe ser un número.',
+            'digits_between' => 'El :attribute debe tener entre :min y :max dígitos.',
+            'email' => 'El :attribute debe ser una dirección de correo válida.',
+            'confirmed' => 'La confirmación de la contraseña no coincide.',
+            'regex' => 'El formato del :attribute es inválido.',
+
+            // Custom rules/overrides
+            'nit.regex' => 'El NIT debe contener solo números.',
+            'documento.regex' => 'El documento debe contener solo números.',
+            'telefono_celular.regex' => 'El teléfono celular debe tener 10 dígitos y comenzar con 3.',
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors.
+     */
+    public function attributes(): array
+    {
+        return [
+            'razon_social' => 'Razón Social',
+            'nit' => 'NIT',
+            'nit_dv' => 'DV',
+            'pais' => 'País',
+            'id_departamento' => 'Departamento',
+            'id_ciudad' => 'Municipio/Ciudad',
+            'direccion_empresa' => 'Dirección de la Empresa',
+            'documento' => 'Documento',
+            'id_tipo_doc' => 'Tipo de Documento',
+            'primer_apellido' => 'Primer Apellido',
+            'segundo_apellido' => 'Segundo Apellido',
+            'primer_nombre' => 'Primer Nombre',
+            'otros_nombres' => 'Otros Nombres',
+            'telefono_celular' => 'Teléfono Celular',
+            'email' => 'Correo Electrónico',
+            'password' => 'Contraseña',
+            'plan_id' => 'Plan Seleccionado',
         ];
     }
 }

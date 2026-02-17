@@ -9,7 +9,6 @@ use Illuminate\Notifications\Notifiable;
 class Usuario extends Authenticatable
 {
     use HasFactory, Notifiable;
-
     protected $table = 'usuario';
     protected $primaryKey = 'doc';
     public $incrementing = false;
@@ -18,17 +17,16 @@ class Usuario extends Authenticatable
     protected $fillable = [
         'doc',
         'id_tipo_doc',
-        'contrasena',
         'primer_nombre',
-        'otros_nombres',
+        'segundo_nombre',
         'primer_apellido',
         'segundo_apellido',
-        'id_ciudad',
-        'direccion',
-        'telefono',
         'correo',
+        'telefono',
+        'direccion',
         'id_rol',
-        'activo'
+        'activo',
+        'contrasena'
     ];
 
     protected $hidden = [
@@ -47,43 +45,34 @@ class Usuario extends Authenticatable
         return 'doc';
     }
 
-    // Relationships
-    public function tipoDoc()
+    public function contratos()
     {
-        return $this->belongsTo(TipoDoc::class, 'id_tipo_doc', 'id_tipo_doc');
+        return $this->hasMany(Contrato::class, 'doc', 'doc');
     }
 
-    public function ciudad()
-    {
-        return $this->belongsTo(Ciudad::class, 'id_ciudad', 'id_ciudad');
-    }
-
-    public function rol()
-    {
-        return $this->belongsTo(Rol::class, 'id_rol', 'id_rol');
-    }
-
-    public function modulos()
-    {
-        return $this->belongsToMany(Modulo::class, 'usuario_modulo', 'doc', 'id_modulo');
-    }
-
-    /**
-     * Get the companies owned/represented by the user.
-     */
-    public function empresas()
-    {
-        return $this->hasMany(Empresa::class, 'doc_representante', 'doc');
-    }
-
-    // Legacy support if needed, otherwise this is the pivot relation
-    public function empresasAsignadas()
+    public function empresa()
     {
         return $this->belongsToMany(Empresa::class, 'usuario_empresa', 'doc', 'id_empresa');
     }
 
-    public function contratos()
+    /**
+     * Get the e-mail address where password reset links are sent.
+     *
+     * @return string
+     */
+    public function getEmailForPasswordReset()
     {
-        return $this->hasMany(Contrato::class, 'doc', 'doc');
+        return $this->correo;
+    }
+
+    /**
+     * Route notifications for the mail channel.
+     *
+     * @param  \Illuminate\Notifications\Notification  $notification
+     * @return array|string
+     */
+    public function routeNotificationForMail($notification)
+    {
+        return $this->correo;
     }
 }

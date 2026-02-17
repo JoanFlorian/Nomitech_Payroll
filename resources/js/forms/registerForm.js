@@ -1,242 +1,205 @@
-    /**
-     * Register Form Component
-     * Lógica de validación y manejo del formulario de registro
-     */
+export default (initialData = {}) => ({
+    // Campos del formulario
+    nit: initialData.nit || '',
+    nit_dv: initialData.nit_dv || '',
+    razon_social: initialData.razon_social || '',
+    id_departamento: initialData.id_departamento || '',
+    id_ciudad: initialData.id_ciudad || '',
+    direccion_empresa: initialData.direccion_empresa || '',
+    documento: initialData.documento || '',
+    id_tipo_doc: initialData.id_tipo_doc || '',
+    primer_apellido: initialData.primer_apellido || '',
+    segundo_apellido: initialData.segundo_apellido || '',
+    primer_nombre: initialData.primer_nombre || '',
+    otros_nombres: initialData.otros_nombres || '',
+    telefono_celular: initialData.telefono_celular || '',
+    email: initialData.email || '',
+    password: '',
+    password_confirmation: '',
+    plan_id: initialData.plan_id || '',
 
-    export default () => ({
-        departmentId: '',
-        cityId: '',
-        docType: '',
-        errors: {},
-        isSubmitting: false,
+    // Estado de validación
+    errors: {},
+    touched: {},
+    isSubmitting: false,
 
-        init() {
-            this.$watch('departmentId', (val) => this.fetchCities(val));
-        },
+    init() {
+        // Cargar plan de la URL si no viene por old input
+        if (!this.plan_id) {
+            const urlParams = new URLSearchParams(window.location.search);
+            this.plan_id = urlParams.get('plan_id') || '';
+        }
 
-        // ========================================
-        // MÉTODOS DE VALIDACIÓN
-        // ========================================
+        this.$watch('id_departamento', (val) => {
+            if (this.touched['id_departamento']) this.validateField('id_departamento', val);
+            this.fetchCities(val);
+        });
+        this.$watch('id_ciudad', (val) => {
+            if (this.touched['id_ciudad']) this.validateField('id_ciudad', val);
+        });
+    },
 
-        validateRequired(fieldName, value, label) {
-            if (!value || value.toString().trim() === '') {
-                this.errors[fieldName] = `${label} es obligatorio`;
-                return false;
-            }
-            delete this.errors[fieldName];
-            return true;
-        },
+    // Marcar campo como tocado y validar
+    handleBlur(field) {
+        this.touched[field] = true;
+        this.validateField(field, this[field]);
+    },
 
-        validateMaxLength(fieldName, value, maxLength, label) {
-            if (value && value.length > maxLength) {
-                this.errors[fieldName] = `${label} no puede exceder ${maxLength} caracteres`;
-                return false;
-            }
-            delete this.errors[fieldName];
-            return true;
-        },
+    // Validar mientras escribe (opcional para ciertos campos)
+    handleInput(field) {
+        if (this.touched[field]) {
+            this.validateField(field, this[field]);
+        }
+    },
 
-        validateMinLength(fieldName, value, minLength, label) {
-            if (value && value.length < minLength) {
-                this.errors[fieldName] = `${label} debe tener al menos ${minLength} caracteres`;
-                return false;
-            }
-            delete this.errors[fieldName];
-            return true;
-        },
-
-        validateNumeric(fieldName, value, label) {
-            if (value && !/^[0-9]+$/.test(value)) {
-                this.errors[fieldName] = `${label} debe contener solo números`;
-                return false;
-            }
-            delete this.errors[fieldName];
-            return true;
-        },
-
-        validateExactLength(fieldName, value, length, label) {
-            if (value && value.length !== length) {
-                this.errors[fieldName] = `${label} debe tener exactamente ${length} dígito${length > 1 ? 's' : ''}`;
-                return false;
-            }
-            delete this.errors[fieldName];
-            return true;
-        },
-
-        validateEmail(fieldName, value, label) {
-            if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                this.errors[fieldName] = `${label} no es válido`;
-                return false;
-            }
-            delete this.errors[fieldName];
-            return true;
-        },
-
-        validatePasswordConfirmation(password, confirmation) {
-            if (password && confirmation && password !== confirmation) {
-                this.errors['contrasena_confirmation'] = 'Las contraseñas no coinciden';
-                return false;
-            }
-            delete this.errors['contrasena_confirmation'];
-            return true;
-        },
-
-        // Validación de nombres (solo letras, espacios, acentos)
-        validateAlphabetic(fieldName, value, label) {
-            if (value && !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(value)) {
-                this.errors[fieldName] = `${label} solo puede contener letras`;
-                return false;
-            }
-            delete this.errors[fieldName];
-            return true;
-        },
-
-        // Validación de teléfono (solo números, espacios, guiones, paréntesis)
-        validatePhone(fieldName, value, label) {
-            if (value && !/^[0-9\s\-()]+$/.test(value)) {
-                this.errors[fieldName] = `${label} solo puede contener números`;
-                return false;
-            }
-            delete this.errors[fieldName];
-            return true;
-        },
-
-        // ========================================
-        // VALIDACIÓN COMPLETA DEL FORMULARIO
-        // ========================================
-
-        validateForm(event) {
-            this.errors = {};
-            let isValid = true;
-
-            const form = event.target;
-            const formData = new FormData(form);
-
-            // NIE033: NIT - requerido, numérico, max 20
-            const nit = formData.get('nit');
-            if (!this.validateRequired('nit', nit, 'NIT')) isValid = false;
-            else if (!this.validateNumeric('nit', nit, 'NIT')) isValid = false;
-            else if (!this.validateMaxLength('nit', nit, 20, 'NIT')) isValid = false;
-
-            // NIE034: DV - requerido, numérico, exactamente 1 dígito
-            const dv = formData.get('dv');
-            if (!this.validateRequired('dv', dv, 'Dígito de Verificación')) isValid = false;
-            else if (!this.validateNumeric('dv', dv, 'Dígito de Verificación')) isValid = false;
-            else if (!this.validateExactLength('dv', dv, 1, 'Dígito de Verificación')) isValid = false;
-
-            // NIE035: País - requerido
-            const pais = formData.get('pais');
-            if (!this.validateRequired('pais', pais, 'País')) isValid = false;
-
-            // NIE036: Departamento - requerido
-            if (!this.validateRequired('id_departamento', this.departmentId, 'Departamento')) isValid = false;
-
-            // NIE037: Ciudad - requerido
-            if (!this.validateRequired('id_ciudad', this.cityId, 'Ciudad')) isValid = false;
-
-            // NIE038: Dirección - requerido, max 255
-            const direccion = formData.get('direccion_empresa');
-            if (!this.validateRequired('direccion_empresa', direccion, 'Dirección')) isValid = false;
-            else if (!this.validateMaxLength('direccion_empresa', direccion, 255, 'Dirección')) isValid = false;
-
-            // Campos de usuario
-            const doc = formData.get('doc');
-            if (!this.validateRequired('doc', doc, 'Número de Documento')) isValid = false;
-            else if (!this.validateMaxLength('doc', doc, 20, 'Número de Documento')) isValid = false;
-
-            if (!this.validateRequired('id_tipo_doc', this.docType, 'Tipo de Documento')) isValid = false;
-
-            const primerApellido = formData.get('primer_apellido');
-            if (!this.validateRequired('primer_apellido', primerApellido, 'Primer Apellido')) isValid = false;
-            else if (!this.validateAlphabetic('primer_apellido', primerApellido, 'Primer Apellido')) isValid = false;
-            else if (!this.validateMaxLength('primer_apellido', primerApellido, 60, 'Primer Apellido')) isValid = false;
-
-            const primerNombre = formData.get('primer_nombre');
-            if (!this.validateRequired('primer_nombre', primerNombre, 'Primer Nombre')) isValid = false;
-            else if (!this.validateAlphabetic('primer_nombre', primerNombre, 'Primer Nombre')) isValid = false;
-            else if (!this.validateMaxLength('primer_nombre', primerNombre, 60, 'Primer Nombre')) isValid = false;
-
-            const telefono = formData.get('telefono');
-            if (!this.validateRequired('telefono', telefono, 'Teléfono')) isValid = false;
-            else if (!this.validatePhone('telefono', telefono, 'Teléfono')) isValid = false;
-            else if (!this.validateMaxLength('telefono', telefono, 20, 'Teléfono')) isValid = false;
-
-            const correo = formData.get('correo');
-            if (!this.validateRequired('correo', correo, 'Correo electrónico')) isValid = false;
-            else if (!this.validateEmail('correo', correo, 'Correo electrónico')) isValid = false;
-            else if (!this.validateMaxLength('correo', correo, 256, 'Correo electrónico')) isValid = false;
-
-            const contrasena = formData.get('contrasena');
-            if (!this.validateRequired('contrasena', contrasena, 'Contraseña')) isValid = false;
-            else if (!this.validateMinLength('contrasena', contrasena, 8, 'Contraseña')) isValid = false;
-
-            const contrasenaConfirmation = formData.get('contrasena_confirmation');
-            if (!this.validatePasswordConfirmation(contrasena, contrasenaConfirmation)) isValid = false;
-
-            // Validaciones opcionales con max length y formato
-            const razonSocial = formData.get('razon_social');
-            if (razonSocial) this.validateMaxLength('razon_social', razonSocial, 60, 'Razón Social');
-
-            const segundoApellido = formData.get('segundo_apellido');
-            if (segundoApellido) {
-                if (!this.validateAlphabetic('segundo_apellido', segundoApellido, 'Segundo Apellido')) isValid = false;
-                else this.validateMaxLength('segundo_apellido', segundoApellido, 60, 'Segundo Apellido');
-            }
-
-            const otrosNombres = formData.get('otros_nombres');
-            if (otrosNombres) {
-                if (!this.validateAlphabetic('otros_nombres', otrosNombres, 'Otros Nombres')) isValid = false;
-                else this.validateMaxLength('otros_nombres', otrosNombres, 60, 'Otros Nombres');
-            }
-
-            if (!isValid) {
-                event.preventDefault();
-                // Scroll al primer error
-                const firstErrorField = Object.keys(this.errors)[0];
-                const element = document.querySelector(`[name="${firstErrorField}"]`);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    element.focus();
+    validateField(field, value) {
+        const rules = {
+            nit: () => {
+                if (!value) return "El NIT es requerido";
+                if (!/^[0-9]+$/.test(value)) return "El NIT debe ser solo numérico";
+                if (value.length < 5 || value.length > 15) return "El NIT debe tener entre 5 y 15 dígitos";
+                return null;
+            },
+            nit_dv: () => {
+                if (!value) return "El DV es requerido";
+                if (!/^[0-9]+$/.test(value)) return "El DV debe ser numérico";
+                if (value.length < 1 || value.length > 2) return "El DV debe tener 1 o 2 dígitos";
+                return null;
+            },
+            razon_social: () => {
+                if (!value) return "La Razón Social es requerida";
+                if (value.length < 3) return "La Razón Social debe tener al menos 3 caracteres";
+                if (value.length > 60) return "La Razón Social no debe exceder los 60 caracteres";
+                return null;
+            },
+            direccion_empresa: () => {
+                if (!value) return "La Dirección es requerida";
+                if (value.length < 5) return "La Dirección debe tener al menos 5 caracteres";
+                if (value.length > 60) return "La Dirección no debe exceder los 60 caracteres";
+                return null;
+            },
+            documento: () => {
+                if (!value) return "El Documento es requerido";
+                if (!/^[0-9]+$/.test(value)) return "El Documento debe ser numérico";
+                if (value.length < 6 || value.length > 12) return "El Documento debe tener entre 6 y 12 dígitos";
+                return null;
+            },
+            id_tipo_doc: () => !value ? "El Tipo de Documento es requerido" : null,
+            id_departamento: () => !value ? "El Departamento es requerido" : null,
+            id_ciudad: () => !value ? "El Municipio/Ciudad es requerido" : null,
+            primer_apellido: () => {
+                if (!value) return "El Primer Apellido es requerido";
+                if (value.length < 3 || value.length > 60) return "El Primer Apellido debe tener entre 3 y 60 caracteres";
+                return null;
+            },
+            segundo_apellido: () => {
+                if (!value) return "El Segundo Apellido es requerido";
+                if (value.length < 3 || value.length > 60) return "El Segundo Apellido debe tener entre 3 y 60 caracteres";
+                return null;
+            },
+            primer_nombre: () => {
+                if (!value) return "El Primer Nombre es requerido";
+                if (value.length < 3 || value.length > 60) return "El Primer Nombre debe tener entre 3 y 60 caracteres";
+                return null;
+            },
+            otros_nombres: () => {
+                if (!value) return null; // Nullable
+                if (value.length < 3 || value.length > 60) return "Los Otros Nombres deben tener entre 3 y 60 caracteres";
+                return null;
+            },
+            telefono_celular: () => {
+                if (!value) return "El Teléfono Celular es requerido";
+                if (!/^3[0-9]{9}$/.test(value)) return "El Teléfono Celular debe ser un número de Colombia válido (10 dígitos)";
+                return null;
+            },
+            email: () => {
+                if (!value) return "El Correo Electrónico es requerido";
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "El Correo Electrónico debe ser una dirección válida";
+                return null;
+            },
+            password: () => {
+                if (!value) return "La Contraseña es requerida";
+                if (value.length < 8) return "La Contraseña debe tener al menos 8 caracteres";
+                if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])/.test(value)) {
+                    return "La Contraseña debe contener mayúscula, minúscula, número y símbolo";
                 }
-                return false;
+                return null;
+            },
+            password_confirmation: () => {
+                if (!value) return "La Confirmación de la Contraseña es requerida";
+                if (value !== this.password) return "La Confirmación de la Contraseña no coincide";
+                return null;
             }
+        };
 
-            this.isSubmitting = true;
-            return true;
-        },
-
-        // ========================================
-        // MÉTODOS DE API
-        // ========================================
-
-        async onCityChange(id) {
-            if (!id) return;
-            try {
-                let res = await fetch('/api/city-details/' + id);
-                let data = await res.json();
-                if (data && data.id_departamento) {
-                    this.departmentId = String(data.id_departamento);
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        },
-
-        async fetchCities(deptId) {
-            if (!deptId) return;
-            try {
-                let res = await fetch('/api/cities/' + deptId);
-                let data = await res.json();
-
-                let options = {};
-                data.forEach(item => {
-                    options[String(item.id_ciudad)] = item.nombre;
-                });
-
-                window.dispatchEvent(new CustomEvent('set-options-citySelector', { detail: options }));
-
-            } catch (e) {
-                console.error(e);
+        if (rules[field]) {
+            const error = rules[field]();
+            if (error) {
+                this.errors[field] = error;
+            } else {
+                delete this.errors[field];
             }
         }
-    });
+    },
+
+    validateForm() {
+        const fields = [
+            'nit', 'nit_dv', 'razon_social', 'id_departamento', 'id_ciudad',
+            'direccion_empresa', 'documento', 'id_tipo_doc', 'primer_apellido',
+            'segundo_apellido', 'primer_nombre', 'telefono_celular', 'email',
+            'password', 'password_confirmation'
+        ];
+
+        fields.forEach(f => {
+            this.touched[f] = true;
+            this.validateField(f, this[f]);
+        });
+
+        if (Object.keys(this.errors).length > 0) {
+            // Scroll al primer error
+            const firstErrorField = Object.keys(this.errors)[0];
+            const element = document.getElementsByName(firstErrorField)[0];
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.focus();
+            }
+            return false;
+        }
+
+        this.isSubmitting = true;
+        return true;
+    },
+
+    // ========================================
+    // MÉTODOS DE API Y UTILIDADES
+    // ========================================
+
+    async onCityChange(id) {
+        if (!id) return;
+        this.id_ciudad = String(id);
+        try {
+            let res = await fetch('/api/city-details/' + id);
+            let data = await res.json();
+            if (data && data.id_departamento) {
+                this.id_departamento = String(data.id_departamento);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    async fetchCities(deptId) {
+        if (!deptId) return;
+        try {
+            let res = await fetch('/api/cities/' + deptId);
+            let data = await res.json();
+            let options = {};
+            data.forEach(item => {
+                options[String(item.id_ciudad)] = item.nombre;
+            });
+            window.dispatchEvent(new CustomEvent('set-options-citySelector', { detail: options }));
+        } catch (e) {
+            console.error(e);
+        }
+    }
+});

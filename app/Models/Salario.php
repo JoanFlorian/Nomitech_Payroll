@@ -2,68 +2,55 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Salario extends Model
 {
-    use HasFactory;
-
     protected $table = 'salario';
-    protected $primaryKey = 'id_salario';
-    protected $fillable = [
-        'id_contrato',
-        'id_periodo',
-        'id_estado',
-        'auxilio_transporte',
-        'horas_extra',
-        'bonificaciones',
-        'comisiones',
-        'otros_devengos',
-        'arl',
-        'eps',
-        'afp',
-        'seguridad_social',
-        'aporte_fp',
-        'retencion_fuente',
-        'embargo_fiscal',
-        'pension_voluntaria',
-        'dias_a_trabajar',
-        'horas_mensual',
-        'fecha_pago'
-    ];
 
-    protected $casts = [
-        'fecha_pago' => 'date',
+    protected $appends = [
+        'total_devengos',
+        'total_deducciones',
+        'total_aportes',
+        'salario_neto'
     ];
 
     public function contrato()
     {
-        return $this->belongsTo(Contrato::class, 'id_contrato', 'id_contrato');
+        return $this->belongsTo(Contrato::class, 'id_contrato');
     }
 
-    public function periodo()
+    /* =======================
+       ACCESSORS
+    ======================= */
+
+    public function getTotalDevengosAttribute()
     {
-        return $this->belongsTo(PeriodoLiquidacion::class, 'id_periodo', 'id_periodo');
+        return
+            $this->salario_base +
+            $this->auxilio_transporte +
+            $this->horas_extra +
+            $this->bonificaciones +
+            $this->comisiones +
+            $this->otros_devengos;
     }
 
-    public function estado()
+    public function getTotalDeduccionesAttribute()
     {
-        return $this->belongsTo(Estado::class, 'id_estado', 'id_estado');
+        return
+            ($this->salario_base * $this->eps / 100) +
+            ($this->salario_base * $this->afp / 100);
     }
 
-    public function novedades()
+    public function getTotalAportesAttribute()
     {
-        return $this->hasMany(Novedad::class, 'id_salario', 'id_salario');
+        return $this->seguridad_social ?? 0;
     }
 
-    public function horasRecargoExtra()
+    public function getSalarioNetoAttribute()
     {
-        return $this->hasMany(HoraRecargoExtra::class, 'id_salario', 'id_salario');
-    }
-
-    public function nominaElectronica()
-    {
-        return $this->hasOne(NominaElectronica::class, 'id_salario', 'id_salario');
+        return $this->total_devengos
+             - $this->total_deducciones
+             - $this->total_aportes;
     }
 }

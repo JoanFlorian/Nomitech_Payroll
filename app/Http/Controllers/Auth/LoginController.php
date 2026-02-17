@@ -28,44 +28,76 @@ class LoginController extends Controller
             return back()->withErrors(['correo' => 'Credenciales inválidas'])->withInput();
         }
 
-        // Determine company for the user
-        $empresa = $usuario->empresas()->first();
-        if (!$empresa) {
-            $empresa = $usuario->empresasAsignadas()->first();
+        // Superadmin (role 4) - no license check needed
+        if ((int) $usuario->id_rol === 4) {
+            Auth::login($usuario);
+            return redirect()->route('superadmin.empresas.index');
         }
 
-        if (!$empresa) {
-            // No company assigned - redirect to selection/notice
-            return redirect()->route('empresa.select');
-        }
+        // Administrador (role 1)
+        if ((int) $usuario->id_rol === 1) {
+            $empresa = $usuario->empresa()->first();
 
-        // Load license
-        $licencia = $empresa->licencia;
+            if (!$empresa) {
+                return back()->withErrors(['correo' => 'No hay empresa asignada'])->withInput();
+            }
 
-        if (!$licencia) {
-            return redirect()->route('licencia.required');
-        }
-
-        if ($licencia->fecha_fin && $licencia->fecha_fin->isPast()) {
+            // Check if company has active license
+            $licencia = $empresa->licencia;
+            
+            if (!$licencia || !$licencia->fecha_fin || $licencia->fecha_fin->isPast()) {
+                // License is missing or expired - redirect to expired license view
+                Auth::login($usuario);
+                session(['empresa_id' => $empresa->id_empresa]);
                 return redirect()->route('licencia.expired');
             }
-            return redirect()->route('licencia.pending');
-    
 
-        // All good - log in user and set session company
-        Auth::login($usuario);
-        session(['empresa_id' => $empresa->id_empresa]);
-
-        // Redirect by role
-        switch ((int) $usuario->id_rol) {
-            case 1: // Administrador
-            case 2: // Auxiliar RRHH
-                return redirect()->route('empleados.index');
-            case 4: // Super admin
-                return redirect('/superadmin');
-            case 3: // Empleado
-            default:
-                return redirect('/trabajador');
+            // License is active, proceed normally
+            Auth::login($usuario);
+            session(['empresa_id' => $empresa->id_empresa]);
+            return redirect()->route('empleados.index');
         }
+
+        // Empleado (role 3) or Auxiliar RRHH (role 2)
+        if ((int) $usuario->id_rol === 2 || (int) $usuario->id_rol === 3) {
+            // Get company from contrato (employee contract)
+            $contrato = $usuario->contratos()->first();
+
+            if (!$contrato) {
+                return back()->withErrors(['correo' => 'No tiene contratos asignados'])->withInput();
+            }
+
+            $empresa = \App\Models\Empresa::find($contrato->id_empresa);
+
+            if (!$empresa) {
+                return back()->withErrors(['correo' => 'Empresa del contrato no encontrada'])->withInput();
+            }
+
+            // Check if company has active license
+            $licencia = $empresa->licencia;
+
+            if (!$licencia || !$licencia->fecha_fin || $licencia->fecha_fin->isPast()) {
+                // License is not active - redirect to landing page with modal
+                Auth::login($usuario);
+                session(['empresa_id' => $empresa->id_empresa]);
+                session(['license_expired' => true]); // Flag to show modal
+                return redirect('/'); // Redirect to landing page
+            }
+
+            // License is active, proceed normally
+            Auth::login($usuario);
+            session(['empresa_id' => $empresa->id_empresa]);
+            
+            // Redirect based on sub-role
+            if ((int) $usuario->id_rol === 2) {
+                return redirect()->route('empleados.index'); // Auxiliar RRHH
+            } else {
+                return redirect('/trabajador'); // Empleado
+            }
+        }
+
+        // Default fallback
+        Auth::login($usuario);
+        return redirect('/');
     }
 }

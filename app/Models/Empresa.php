@@ -11,6 +11,7 @@ class Empresa extends Model
 
     protected $table = 'empresa';
     protected $primaryKey = 'id_empresa';
+
     protected $fillable = [
         'nit',
         'razon_social',
@@ -43,10 +44,12 @@ class Empresa extends Model
 
     /**
      * The active or current license of the company.
+     * Returns the LATEST (most recently created) license, as newer purchases replace older ones.
      */
     public function licencia()
     {
-        return $this->hasOne(Licencia::class, 'empresa_id', 'id_empresa');
+        return $this->hasOne(Licencia::class, 'empresa_id', 'id_empresa')
+                    ->latest('created_at'); // Get the most recently created license
     }
 
     public function pagos()

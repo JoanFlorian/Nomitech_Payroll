@@ -22,6 +22,11 @@ class PlanSeeder extends Seeder
                 'stripe_price_id' => 'price_1Syz1O5KUObx4PX3yChoOuTO',
                 'destacado' => false,
                 'orden' => 1,
+                'features' => [
+                    'Gestión básica de nómina',
+                    'Soporte por correo',
+                    'Reportes mensuales',
+                ],
             ],
             [
                 'nombre' => 'Pro',
@@ -32,6 +37,12 @@ class PlanSeeder extends Seeder
                 'stripe_price_id' => 'price_1Syz4H5KUObx4PX302wa6cKL',
                 'destacado' => true,
                 'orden' => 2,
+                'features' => [
+                    'Todo en Starter',
+                    'Integración contable básica',
+                    'Soporte prioritario',
+                    'Acceso multiusuario',
+                ],
             ],
             [
                 'nombre' => 'Pyme',
@@ -42,6 +53,12 @@ class PlanSeeder extends Seeder
                 'stripe_price_id' => 'price_1Syz6t5KUObx4PX3Ps3GKSx5',
                 'destacado' => false,
                 'orden' => 3,
+                'features' => [
+                    'Todo en Pro',
+                    'Reportes Avanzados',
+                    'Integración con bancos',
+                    'Soporte telefónico',
+                ],
             ],
             [
                 'nombre' => 'Enterprise',
@@ -52,6 +69,12 @@ class PlanSeeder extends Seeder
                 'stripe_price_id' => 'price_1Syz9N5KUObx4PX3sI5rBpcL',
                 'destacado' => false,
                 'orden' => 4,
+                'features' => [
+                    'Todo en Pyme',
+                    'SLA personalizado',
+                    'Integraciones a medida',
+                    'Manager dedicado',
+                ],
             ],
         ];
 

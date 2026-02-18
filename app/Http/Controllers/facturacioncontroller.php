@@ -19,7 +19,7 @@ class facturacioncontroller extends Controller
         $selectedYear = $request->query('year', 2026);
         $selectedDate = $request->query('date');
 
-        // Base query for payments - Use 'paid' as found in DB
+        // Consulta base para pagos - Usar 'paid' tal como se encuentra en BD
         $pagoQuery = Pago::where('estado_pago', 'paid');
 
         if ($selectedDate) {
@@ -30,10 +30,10 @@ class facturacioncontroller extends Controller
             $licenciaQuery = Licencia::whereYear('created_at', $selectedYear);
         }
 
-        // Metrics
+        // Métricas
         $totalIncome = (float) $pagoQuery->sum('valor');
 
-        // Dynamic Sales Target: Estimate based on current monthly average
+        // Objetivo de ventas dinámico: Estimar basado en el promedio mensual actual
         $currentMonthIncome = Pago::where('estado_pago', 'paid')
             ->whereMonth(DB::raw('COALESCE(fecha_pago, created_at)'), Carbon::now()->month)
             ->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), Carbon::now()->year)
@@ -44,11 +44,11 @@ class facturacioncontroller extends Controller
         $averageDaily = $daysElapsed > 0 ? ($currentMonthIncome / $daysElapsed) : 0;
         $salesTarget = $averageDaily * $daysInMonth;
 
-        // Ensure a minimum target so gauge doesn't break if no sales
+        // Asegurar un objetivo mínimo para que el indicador no se rompa si no hay ventas
         if ($salesTarget <= 0)
             $salesTarget = 1750000;
 
-        // Most sold license
+        // Licencia más vendida
         $topLicense = Licencia::with('plan')
             ->select('plan_id', DB::raw('count(*) as total'))
             ->when($selectedDate, fn($q) => $q->whereDate('created_at', $selectedDate))
@@ -57,7 +57,7 @@ class facturacioncontroller extends Controller
             ->orderByDesc('total')
             ->first();
 
-        // Previous year income for trend comparison
+        // Ingresos del año anterior para comparación de tendencias
         $prevYearIncome = Pago::where('estado_pago', 'paid')
             ->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedYear - 1)
             ->sum('valor');
@@ -67,7 +67,7 @@ class facturacioncontroller extends Controller
             $trend = (($totalIncome - $prevYearIncome) / $prevYearIncome) * 100;
         }
 
-        // Chart Data
+        // Datos del gráfico
         if ($selectedDate) {
             $chartData = Pago::where('estado_pago', 'paid')
                 ->whereDate(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedDate)
@@ -76,7 +76,7 @@ class facturacioncontroller extends Controller
                 ->orderBy('label')
                 ->get();
         } else {
-            // Monthly data for the year
+            // Datos mensuales del año
             $chartData = Pago::where('estado_pago', 'paid')
                 ->whereYear(DB::raw('COALESCE(fecha_pago, created_at)'), $selectedYear)
                 ->select(DB::raw('MONTH(COALESCE(fecha_pago, created_at)) as label'), DB::raw('SUM(valor) as total'))

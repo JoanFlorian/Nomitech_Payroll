@@ -15,7 +15,7 @@ class TestUserSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
-            // Create or update test user
+            // Crear o actualizar usuario de prueba
             $usuario = Usuario::updateOrCreate(
                 ['doc' => '99999999'],
                 [
@@ -32,7 +32,7 @@ class TestUserSeeder extends Seeder
                 ]
             );
 
-            // Create or update company
+            // Crear o actualizar empresa
             $empresa = Empresa::updateOrCreate(
                 ['nit' => '900000000'],
                 [
@@ -69,7 +69,7 @@ class TestUserSeeder extends Seeder
                 ]);
             }
 
-            // Create active license for the company
+            // Crear licencia activa para la empresa
             $licencia = Licencia::updateOrCreate(
                 ['empresa_id' => $empresa->id_empresa],
                 [

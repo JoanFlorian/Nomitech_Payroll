@@ -51,14 +51,14 @@ class LicenseRenewalController extends Controller
             $licencia = $empresa->licencia;
 
             if ($licencia) {
-                // Update the existing license with the new plan and reset dates
+                // Actualizar la licencia existente con el nuevo plan y restablecer fechas
                 $licencia->update([
                     'plan_id' => $plan->id,
                     'fecha_inicio' => null,
                     'fecha_fin' => null,
                 ]);
             } else {
-                // Fallback: create a new license if none exists
+                // Retorno: crear una nueva licencia si no existe ninguna
                 $licencia = Licencia::create([
                     'empresa_id' => $empresa->id_empresa,
                     'plan_id' => $plan->id,
@@ -67,7 +67,7 @@ class LicenseRenewalController extends Controller
                 ]);
             }
 
-            // Create a new Pago (each payment is a distinct transaction)
+            // Crear un nuevo Pago (cada pago es una transacción distinta)
             $pago = Pago::create([
                 'empresa_id' => $empresa->id_empresa,
                 'licencia_id' => $licencia->id,

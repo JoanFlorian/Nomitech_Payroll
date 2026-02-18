@@ -34,7 +34,7 @@ class LoginController extends Controller
             return redirect()->route('superadmin.empresas.index');
         }
 
-        // Administrador (role 1)
+        // Administrador (rol 1)
         if ((int) $usuario->id_rol === 1) {
             $empresa = $usuario->empresa()->first();
 
@@ -42,7 +42,7 @@ class LoginController extends Controller
                 return back()->withErrors(['correo' => 'No hay empresa asignada'])->withInput();
             }
 
-            // Check if company has active license
+            // Verificar si la empresa tiene licencia activa
             $licencia = $empresa->licencia;
             
             if (!$licencia || !$licencia->fecha_fin || $licencia->fecha_fin->isPast()) {
@@ -73,7 +73,7 @@ class LoginController extends Controller
                 return back()->withErrors(['correo' => 'Empresa del contrato no encontrada'])->withInput();
             }
 
-            // Check if company has active license
+            // Verificar si la empresa tiene licencia activa
             $licencia = $empresa->licencia;
 
             if (!$licencia || !$licencia->fecha_fin || $licencia->fecha_fin->isPast()) {
@@ -96,7 +96,7 @@ class LoginController extends Controller
             }
         }
 
-        // Default fallback
+        // Retorno predeterminado
         Auth::login($usuario);
         return redirect('/');
     }

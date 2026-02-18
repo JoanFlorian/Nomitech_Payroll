@@ -13,15 +13,15 @@ use Carbon\Carbon;
 class ResetPasswordController extends Controller
 {
     /**
-     * Display the password reset view for the given token.
+     * Mostrar la vista de restablecimiento de contraseña para el token dado.
      */
     public function showResetForm(Request $request, $token = null)
     {
         $correo = $request->correo;
 
-        // Verify if session has verification flag or if code is valid in DB
+        // Verificar si la sesión tiene la bandera de verificación o si el código es válido en BD
         if (session('password_reset_verified_email') !== $correo || session('password_reset_verified_code') !== $token) {
-            // Second check against DB directly in case session cleared
+            // Segunda verificación directamente contra BD en caso de que la sesión se haya borrado
             $record = DB::table('password_reset_tokens')
                 ->where('email', $correo)
                 ->where('token', $token)
@@ -38,7 +38,7 @@ class ResetPasswordController extends Controller
     }
 
     /**
-     * Reset the given user's password.
+     * Restablecer la contraseña del usuario dado.
      */
     public function reset(Request $request)
     {
@@ -57,7 +57,7 @@ class ResetPasswordController extends Controller
             return back()->withErrors(['correo' => 'Token de recuperación inválido.']);
         }
 
-        // Optional: Check expiry again
+        // Opcional: Verificar la expiración de nuevo
         $expires = config('auth.passwords.users.expire');
         if (Carbon::parse($record->created_at)->addMinutes($expires)->isPast()) {
             return redirect()->route('password.request')->withErrors(['correo' => 'El código ha expirado.']);
@@ -68,11 +68,11 @@ class ResetPasswordController extends Controller
             return back()->withErrors(['correo' => 'Usuario no encontrado.']);
         }
 
-        // Reset Password
+        // Restablecer contraseña
         $user->contrasena = Hash::make($request->contrasena);
         $user->save();
 
-        // Delete token
+        // Eliminar token
         DB::table('password_reset_tokens')->where('email', $request->correo)->delete();
 
         // Clear session

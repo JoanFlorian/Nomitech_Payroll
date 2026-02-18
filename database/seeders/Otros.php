@@ -8,6 +8,8 @@ use App\Models\Eps;
 use App\Models\FormaPago;
 use App\Models\MetodoPago;
 use App\Models\TipoCuenta;
+use App\Models\TipoTrabajador;
+use App\Models\TipoContrato;
 use Illuminate\Database\Seeder;
 
 class Otros extends Seeder
@@ -17,33 +19,18 @@ class Otros extends Seeder
      */
     public function run(): void
     {
-<<<<<<< HEAD
-        $departamentos = Departamento::pluck('id_departamento');
-
-        for ($i = 1; $i <= 10; $i++) {
-            Ciudad::insert([
-                'nombre' => "user$i@test.com",
-                'codigo' => "ABC$i",
-                'id_departamento' => $departamentos->random(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-        }
-
-
-
-
-        $sub_tipo_trabajador = [
-            'Administrativo',
-            'Operativo',
+        /* =========================
+        TIPOS DE CUENTA
+        ========================== */
+        $tipo_cuenta = [
+            'Cuenta de Ahorros',
+            'Cuenta Corriente',
+            'Cuenta Simplificada',
         ];
 
-        foreach ($sub_tipo_trabajador as $value) {
-            SubTipoTrabajador::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
+        foreach ($tipo_cuenta as $value) {
+            TipoCuenta::firstOrCreate([
+                'nombre' => $value
             ]);
         }
 
@@ -107,46 +94,25 @@ class Otros extends Seeder
             ]);
         }
 
+        /* =========================
+        MÉTODO DE PAGO
+        ========================== */
         $metodo_pago = [
-            'Transferencia',
-            'Cheque',
-            'Efectivo',
-
+            '10 - Efectivo',
+            '20 - Cheque',
+            '30 - Transferencia Crédito',
+            '42 - Consignación bancaria',
+            '45 - Transferencia Crédito Bancario',
+            '46 - Transferencia Débito Interbancario',
+            '48 - Tarjeta Crédito',
+            '49 - Tarjeta Débito',
+            '98 - Cuentas Simplificada',
+            'ZZZ - Acuerdo mutuo',
         ];
 
         foreach ($metodo_pago as $value) {
-            MetodoPago::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        $tipo_cuenta = [
-            'Ahorros',
-            'Corriente',
-
-
-        ];
-
-        foreach ($tipo_cuenta as $value) {
-            TipoCuenta::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-=======
-        /* =========================
-        TIPOS DE CUENTA
-        ========================== */
-        $tipo_cuenta = [
-            'Cuenta de Ahorros',
-            'Cuenta Corriente',
-            'Cuenta Simplificada',
-        ];
-
-        foreach ($tipo_cuenta as $value) {
-            TipoCuenta::firstOrCreate([
+            MetodoPago::firstOrCreate([
                 'nombre' => $value
->>>>>>> 0812a8f29b57e9060b8caab3aedaebae4866a702
             ]);
         }
 
@@ -154,23 +120,6 @@ class Otros extends Seeder
         EPS (Resolución DIAN 000013 de 2021)
         ========================== */
         $eps = [
-<<<<<<< HEAD
-            'Sura',
-            'Sanitas',
-            'Coomeva',
-            'Salud Total',
-            'Compensar',
-
-
-
-        ];
-
-        foreach ($eps as $value) {
-            Eps::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-=======
             'Nueva EPS',
             'Coosalud',
             'Mutual Ser',
@@ -204,7 +153,6 @@ class Otros extends Seeder
         foreach ($eps as $value) {
             Eps::firstOrCreate([
                 'nombre' => $value
->>>>>>> 0812a8f29b57e9060b8caab3aedaebae4866a702
             ]);
         }
 
@@ -212,23 +160,6 @@ class Otros extends Seeder
         AFP
         ========================== */
         $afp = [
-<<<<<<< HEAD
-            'Protección',
-            'Colfondos',
-            'Porvenir',
-            'Old Mutua',
-
-
-
-
-        ];
-
-        foreach ($afp as $value) {
-            Afp::insert([
-                'nombre' => $value,
-                'created_at' => now(),
-                'updated_at' => now(),
-=======
             'Porvenir',
             'Protección',
             'Colfondos',
@@ -273,29 +204,6 @@ class Otros extends Seeder
         foreach ($forma_pago as $value) {
             FormaPago::firstOrCreate([
                 'nombre' => $value
-            ]);
-        }
-
-        /* =========================
-        MÉTODO DE PAGO
-        ========================== */
-        $metodo_pago = [
-            '10 - Efectivo',
-            '20 - Cheque',
-            '30 - Transferencia Crédito',
-            '42 - Consignación bancaria',
-            '45 - Transferencia Crédito Bancario',
-            '46 - Transferencia Débito Interbancario',
-            '48 - Tarjeta Crédito',
-            '49 - Tarjeta Débito',
-            '98 - Cuentas Simplificada',
-            'ZZZ - Acuerdo mutuo',
-        ];
-
-        foreach ($metodo_pago as $value) {
-            MetodoPago::firstOrCreate([
-                'nombre' => $value
->>>>>>> 0812a8f29b57e9060b8caab3aedaebae4866a702
             ]);
         }
     }

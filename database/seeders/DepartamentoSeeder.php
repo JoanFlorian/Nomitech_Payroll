@@ -2,16 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Departamento;
 use App\Models\Pais;
 
 class DepartamentoSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $colombia = Pais::where('codigo_alfa2', 'CO')->first();
@@ -58,12 +54,14 @@ class DepartamentoSeeder extends Seeder
         ];
 
         foreach ($departamentos as $dep) {
-            Departamento::create([
-                'id_pais' => $colombia->id_pais,
-                'codigo' => $dep['codigo'],
-                'nombre' => $dep['nombre'],
-                'codigo_iso' => $dep['codigo_iso'],
-            ]);
+            Departamento::updateOrCreate(
+                ['codigo' => $dep['codigo']], // campo único
+                [
+                    'id_pais'    => $colombia->id_pais,
+                    'nombre'     => $dep['nombre'],
+                    'codigo_iso' => $dep['codigo_iso'],
+                ]
+            );
         }
     }
 }

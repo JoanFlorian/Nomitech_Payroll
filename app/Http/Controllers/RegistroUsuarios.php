@@ -52,8 +52,6 @@ class RegistroUsuarios extends Controller
             ]);
             $employeeData = array_merge(
                 session('employee.step1', []),
-                // session('employee.step2', []),
-                // $dataStep3
             );
 
 

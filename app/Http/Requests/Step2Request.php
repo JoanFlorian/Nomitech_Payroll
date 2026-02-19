@@ -6,54 +6,121 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class Step2Request extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            [
-        'fecha_inicio' => 'required|date',
-        'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
-        'horas_diarias' => 'required|integer|min:1|max:12',
-        'id_tipo_trabajador' => 'required|string|max:4',
-        'id_sub_tipo_trabajador' => 'required|string|max:4',
-        'id_tipo_contrato' => 'required|string|max:4',
-        'salario' => 'required|numeric|min:0',
-        'codigo_interno' => 'required|string|max:20',
-        'id_arl' => 'required|string|max:4',
-        // 'alto_riesgo'       => 'nullable|boolean',
-        // 'nivel_riesgo'      => 'required|string',
-        ]
 
+            // FECHAS
+            'fecha_inicio' => 'bail|required|date',
+
+            'fecha_fin' => 'bail|nullable|date|after_or_equal:fecha_inicio',
+
+            // HORAS
+            'horas_diarias' => 'bail|required|integer|min:1|max:12',
+
+            // SELECTS
+            'id_tipo_trabajador'      => 'bail|required|integer',
+            'id_sub_tipo_trabajador'  => 'bail|required|integer',
+            'id_tipo_contrato'        => 'bail|required|integer',
+            'id_arl'                  => 'bail|required|integer',
+
+            // SALARIO
+            'salario' => 'bail|required|numeric|min:0|max:999999999',
+
+            // CODIGO INTERNO
+            'codigo_interno' => 'bail|required|string|min:3|max:20|regex:/^[A-Za-z0-9\-]+$/',
+
+            // CHECK
+            'alto_riesgo' => 'nullable|boolean',
         ];
     }
-
 
     public function messages(): array
     {
         return [
-            'fecha_inicio.required'  => 'Fecha requerida',
-            'fecha_fin.required'    => 'Fecha requerida',
-            'horas_diarias.required'  => 'Campo requerido',
-            'tipo_trabajador.required' => 'Campo obligatorio',
-            'id_sub_tipo_trabajador.required'    => 'Campo obligatorio',
-            'id_tipo_contrato.required'    => 'Campo obligatorio',
-            'salario.required'             => 'Campo obligatorio',
-            'codigo_interno.required'     => 'Campo obligatorio',
-            'arl.required'           => 'Campo obligatorio',
-            // 'alto_riesgo.required'        => 'Campo obligatorio',
-            // 'nivel_riesgo.required'        => 'La direccion es obligatoria',
+
+            /*
+            |--------------------------------------------------------------------------
+            | FECHA INICIO
+            |--------------------------------------------------------------------------
+            */
+            'fecha_inicio.required' => 'La fecha de inicio es obligatoria.',
+            'fecha_inicio.date'     => 'Debe ingresar una fecha válida.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | FECHA FIN
+            |--------------------------------------------------------------------------
+            */
+            'fecha_fin.date' => 'Debe ingresar una fecha válida.',
+            'fecha_fin.after_or_equal' => 'La fecha fin no puede ser menor que la fecha de inicio.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | HORAS DIARIAS
+            |--------------------------------------------------------------------------
+            */
+            'horas_diarias.required' => 'Las horas diarias son obligatorias.',
+            'horas_diarias.integer'  => 'Las horas diarias deben ser un número entero.',
+            'horas_diarias.min'      => 'Debe trabajar mínimo 1 hora diaria.',
+            'horas_diarias.max'      => 'No puede superar 12 horas diarias.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | TIPO TRABAJADOR
+            |--------------------------------------------------------------------------
+            */
+            'id_tipo_trabajador.required' => 'Debe seleccionar el tipo de trabajador.',
+            'id_tipo_trabajador.integer'  => 'Debe seleccionar un tipo de trabajador válido.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | SUB TIPO TRABAJADOR
+            |--------------------------------------------------------------------------
+            */
+            'id_sub_tipo_trabajador.required' => 'Debe seleccionar el sub tipo de trabajador.',
+            'id_sub_tipo_trabajador.integer'  => 'Debe seleccionar un sub tipo válido.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | TIPO CONTRATO
+            |--------------------------------------------------------------------------
+            */
+            'id_tipo_contrato.required' => 'Debe seleccionar el tipo de contrato.',
+            'id_tipo_contrato.integer'  => 'Debe seleccionar un tipo de contrato válido.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | ARL
+            |--------------------------------------------------------------------------
+            */
+            'id_arl.required' => 'Debe seleccionar la ARL.',
+            'id_arl.integer'  => 'Debe seleccionar una ARL válida.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | SALARIO
+            |--------------------------------------------------------------------------
+            */
+            'salario.required' => 'El salario es obligatorio.',
+            'salario.numeric'  => 'El salario debe ser un valor numérico.',
+            'salario.min'      => 'El salario no puede ser negativo.',
+            'salario.max'      => 'El salario es demasiado alto.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | CÓDIGO INTERNO
+            |--------------------------------------------------------------------------
+            */
+            'codigo_interno.required' => 'El código interno es obligatorio.',
+            'codigo_interno.min'      => 'El código interno debe tener mínimo 3 caracteres.',
+            'codigo_interno.max'      => 'El código interno no puede superar 20 caracteres.',
+            'codigo_interno.regex'    => 'El código solo puede contener letras, números y guiones.',
         ];
     }
 }

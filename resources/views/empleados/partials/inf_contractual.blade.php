@@ -41,67 +41,73 @@
             <label class="block text-sm font-medium text-gray-700 mb-1" for="fecha-inicio">
                 Fecha de inicio
             </label>
-            <input type="date" id="fecha-inicio" name="fecha_inicio"
+            <input type="date" id="fecha_inicio" name="fecha_inicio"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"/>
+                        <p class="error-message text-red-500 text-sm hidden" data-error="fecha_inicio"></p>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="fecha-fin">
                 Fecha de fin
             </label>
-            <input type="date" id="fecha-fin" name="fecha_fin"
+            <input type="date" id="fecha_fin" name="fecha_fin"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"/>
+                        <p class="error-message text-red-500 text-sm hidden" data-error="fecha_fin"></p>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="horas-diarias">
                 Horas diarias a trabajar
             </label>
-            <input type="number" id="horas-diarias" name="horas_diarias" placeholder="Ej: 8"
+            <input type="number" id="horas_diarias" name="horas_diarias" placeholder="Ej: 8"
                 min="0" max="24"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"/>
+                        <p class="error-message text-red-500 text-sm hidden" data-error="horas_diarias"></p>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="id_tipo_trabajador">
                 Tipo de trabajador
             </label>
-            <select id="tipo-trabajador"
+            <select id="id_tipo_trabajador"
                     class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="id_tipo_trabajador">
                 @foreach ( $tipotrabajadores as $tipotrabajador )
                     <option value="{{ $tipotrabajador->id_tipo_trabajador }}">{{ $tipotrabajador->nombre }}</option>
                 @endforeach
             </select>
+            <p class="error-message text-red-500 text-sm hidden" data-error="id_tipo_trabajador"></p>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="id_sub_tipo_trabajador">
                 Subtipo de trabajador
             </label>
-            <select id="subtipo-trabajador"
+            <select id="id_sub_tipo_trabajador"
                     class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="id_sub_tipo_trabajador">
                 @foreach ( $suptrabajadores as $suptrabajador )
                     <option value="{{ $suptrabajador->id_sub_tipo_trabajador  }}">{{ $suptrabajador->nombre }}</option>
                 @endforeach
             </select>
+            <p class="error-message text-red-500 text-sm hidden" data-error="id_sub_tipo_trabajador"></p>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="id_tipo_contrato">
                 Tipo de contrato
             </label>
-            <select id="tipo-contrato"
+            <select id="id_tipo_contrato"
                     class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="id_tipo_contrato">
                 @foreach ( $contratos as $contrato )
                     <option value="{{ $contrato->id_tipo_contrato   }}">{{ $contrato->nombre }}</option>
                 @endforeach
             </select>
+            <p class="error-message text-red-500 text-sm hidden" data-error="id_tipo_contrato"></p>
         </div>
 
         <div>
@@ -111,43 +117,47 @@
             <input type="number" id="salario" placeholder="Ej: 2000000"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="salario"/>
+                        <p class="error-message text-red-500 text-sm hidden" data-error="salario"></p>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="codigo-interno">
                 Código interno del trabajador 
             </label>
-            <input type="text" id="codigo-interno" placeholder="Ej: EMP001"
+            <input type="text" id="codigo_interno" placeholder="Ej: EMP001"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="codigo_interno"/>
+                        <p class="error-message text-red-500 text-sm hidden" data-error="codigo_interno"></p>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="id_arl">
                 ARL
             </label>
-            <select id="arl"
+            <select id="id_arl"
                     class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="id_arl">
                 @foreach ( $Arl as $arl )
-                    <option value="{{ $arl->id_arl    }}">{{ $arl->nombre }}</option>
+                    <option value="{{ $arl->id_arl}}">{{ $arl->nombre }}</option>
                 @endforeach
             </select>
+            <p class="error-message text-red-500 text-sm hidden" data-error="id_arl"></p>
         </div>
 
         <div class="flex items-center">
-            <input id="alto-riesgo" type="checkbox"
+            <input id="alto_riesgo" type="checkbox"
                 class="h-4 w-4 text-[#1565C0] border-gray-300 rounded focus:ring-[#1565C0]" name="alto_riesgo" />
             <label for="alto-riesgo" class="ml-2 block text-sm text-gray-700">
                 Trabajador de alto riesgo
             </label>
+            <p class="error-message text-red-500 text-sm hidden" data-error="alto_riesgo"></p>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="nivel-riesgo">
                 Nivel de riesgo
             </label>
-            <select id="nivel-riesgo"
+            <select id="nivel_riesgo"
                     class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="nivel_riesgo">
                 <option value="">Seleccione</option>
@@ -157,6 +167,7 @@
                 <option>Nivel IV</option>
                 <option>Nivel V</option>
             </select>
+            <p class="error-message text-red-500 text-sm hidden" data-error="nivel_riesgo"></p>
         </div>
     </div>
 
@@ -168,7 +179,8 @@
             Atrás
         </button>
 
-        <button type="summit"
+        <button type="button"
+        id="btnStep2"
                 class="ml-4 bg-[rgb(16,185,129)] text-white py-2 px-6 rounded-md hover:bg-[rgb(14,160,112)]">
             Continuar
         </button>
@@ -180,35 +192,47 @@
 <!-- jQuery CDN -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
-    $(document).ready(function () {//cuando todo este cargado en el dom 
+    $(document).ready(function () {
 
-        $('#step2').on('submit', function (e) {
-            e.preventDefault(); // evita recarga
+    $('#btnStep2').on('click', function () {
 
-            let form = $(this);
-            let url  = "{{ route('employees.step2') }}";
-            let data = form.serialize(); // recoge los inputs
-            $.ajax({
-                url: url,
-                type: 'POST',
-                data: data,
-                success: function (response) {
-                    $("#siguienteStep1").click();
-                    console.log(response);
-                },
-                error: function (xhr) {
-                    if (xhr.status === 422) {
-                        let errors = xhr.responseJSON.errors;
-                        let message = '';
-                        $.each(errors, function (key, value) {
-                            message += '• ' + value[0] + '\n';
-                        });
+        let form = $('#step2');
+        let url  = "{{ route('employees.step2') }}";
+        let data = form.serialize();
 
-                        alert(message);
-                    }
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: data,
+
+            success: function (response) {
+                $("#siguienteStep1").click();
+            },
+
+            error: function (xhr) {
+
+                $('.error-message').addClass('hidden').text('');
+                $('input, select').removeClass('border-red-500');
+
+                if (xhr.status === 422) {
+
+                    let errors = xhr.responseJSON.errors;
+
+                    $.each(errors, function (key, value) {
+
+                        let errorField = $('[data-error="' + key + '"]');
+
+                        errorField.removeClass('hidden');
+                        errorField.text(value[0]);
+
+                        $('[name="' + key + '"]').addClass('border-red-500');
+                    });
                 }
-            });
+            }
         });
 
     });
+
+});
+
 </script>

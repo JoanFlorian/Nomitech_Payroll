@@ -1,11 +1,10 @@
 @extends('layouts.superadmin')
 
 @section('content')
+
     <div class="p-6 bg-gray-50">
 
-
         <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg border p-8 mb-0">
-
 
             <!-- Header -->
             <div class="flex items-start justify-between mb-6">
@@ -57,7 +56,9 @@
 
                         <div class="bg-white p-4 rounded-lg border">
                             <p class="text-gray-500">Dirección</p>
-                            <p class="font-medium">{{ $empresa->direccion }}</p>
+                            <p class="font-medium break-words" title="{{ $empresa->direccion }}">
+                                {{ $empresa->direccion }}
+                            </p>
                         </div>
 
                         <div class="bg-white p-4 rounded-lg border">
@@ -106,158 +107,183 @@
         </div>
     </div>
 
-    <!-- Modal Editar (Formulario corregido) -->
-    <div id="modalEditar" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-2xl w-full max-w-2xl mx-auto shadow-2xl overflow-hidden">
+    
+<div id="modalEditar" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl w-full max-w-2xl mx-auto shadow-2xl flex flex-col max-h-[90vh]">
 
-            <!-- Header -->
-            <div class="px-6 py-4 border-b flex items-center justify-between bg-gray-50">
-                <div>
-                    <h3 class="font-semibold text-lg text-gray-900">Editar datos de la empresa</h3>
-                    <p class="text-sm text-gray-500">Actualiza la información permitida</p>
-                </div>
-                <button onclick="document.getElementById('modalEditar').classList.add('hidden')"
-                    class="text-gray-400 hover:text-gray-600">
-                    ✕
-                </button>
-                <!-- Form -->
-                <form method="POST" action="{{ route('superadmin.empresas.update', $empresa->id_empresa) }}">
-                    @csrf
-                    @method('PUT')
-
-                    @if ($errors->any())
-                        <div class="mx-6 mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-                            <ul class="list-disc list-inside">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                        <!-- Dirección -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-                            <input type="text" name="direccion" value="{{ old('direccion', $empresa->direccion) }}"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('direccion') border-red-500 @enderror"
-                                required maxlength="150">
-                            @error('direccion')
-                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Teléfono -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input type="text" name="telefono" value="{{ old('telefono', $empresa->telefono) }}"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('telefono') border-red-500 @enderror"
-                                required maxlength="20">
-                            @error('telefono')
-                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Correo -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Correo</label>
-                            <input type="email" name="correo" value="{{ old('correo', $empresa->correo) }}"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('correo') border-red-500 @enderror"
-                                maxlength="256">
-                            @error('correo')
-                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Ciudad -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
-                            <select name="id_ciudad"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                                @foreach($ciudades as $ciudad)
-                                    <option value="{{ $ciudad->id_ciudad }}" {{ $empresa->id_ciudad == $ciudad->id_ciudad ? 'selected' : '' }}>
-                                        {{ $ciudad->nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <!-- Documento representante -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Documento del representante</label>
-                            <input type="text" name="doc_representante"
-                                value="{{ old('doc_representante', $empresa->doc_representante) }}"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('doc_representante') border-red-500 @enderror"
-                                required>
-                            @error('doc_representante')
-                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Primer nombre -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Primer nombre</label>
-                            <input type="text" name="primer_nombre"
-                                value="{{ old('primer_nombre', optional($empresa->representante)->primer_nombre) }}"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('primer_nombre') border-red-500 @enderror"
-                                required maxlength="100">
-                            @error('primer_nombre')
-                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Segundo nombre -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Segundo nombre</label>
-                            <input type="text" name="segundo_nombre"
-                                value="{{ old('segundo_nombre', optional($empresa->representante)->segundo_nombre) }}"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('segundo_nombre') border-red-500 @enderror"
-                                maxlength="100">
-                            @error('segundo_nombre')
-                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Primer apellido -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Primer apellido</label>
-                            <input type="text" name="primer_apellido"
-                                value="{{ old('primer_apellido', optional($empresa->representante)->primer_apellido) }}"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('primer_apellido') border-red-500 @enderror"
-                                required maxlength="100">
-                            @error('primer_apellido')
-                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Segundo apellido -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Segundo apellido</label>
-                            <input type="text" name="segundo_apellido"
-                                value="{{ old('segundo_apellido', optional($empresa->representante)->segundo_apellido) }}"
-                                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('segundo_apellido') border-red-500 @enderror"
-                                maxlength="100">
-                            @error('segundo_apellido')
-                                <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                        <button type="button" onclick="document.getElementById('modalEditar').classList.add('hidden')"
-                            class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
-                            Cancelar
-                        </button>
-
-                        <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow">
-                            Guardar cambios
-                        </button>
-                    </div>
-                </form>
+        <!-- Header -->
+        <div class="px-6 py-4 border-b flex items-center justify-between bg-gray-50">
+            <div>
+                <h3 class="font-semibold text-lg text-gray-900">Editar datos de la empresa</h3>
+                <p class="text-sm text-gray-500">Actualiza la información permitida</p>
             </div>
+            <button onclick="document.getElementById('modalEditar').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600">
+                ✕
+            </button>
         </div>
 
+      
+        <form method="POST" action="{{ route('superadmin.empresas.update', $empresa->id_empresa) }}">
+            @csrf
+            @method('PUT')
+
+            @if ($errors->any())
+                <div class="mx-6 mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                    <ul class="list-disc list-inside">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <!-- Contenedor con scroll interno -->
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 overflow-y-auto">
+
+                <!-- Dirección -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                    <input type="text" name="direccion" value="{{ old('direccion', $empresa->direccion) }}"
+                        class="w-full border rounded-lg px-3 py-2 overflow-x-auto whitespace-nowrap focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('direccion') border-red-500 @enderror"
+                        required maxlength="150">
+                    @error('direccion')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Teléfono -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                    <input type="number" name="telefono" value="{{ old('telefono', $empresa->telefono) }}"
+                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('telefono') border-red-500 @enderror"
+                        required maxlength="20">
+                    @error('telefono')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Correo -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Correo</label>
+                    <input type="email" name="correo" value="{{ old('correo', $empresa->correo) }}"
+                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('correo') border-red-500 @enderror"
+                        maxlength="100" required>
+                    @error('correo')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+               <div>
+         <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+
+       <select name="id_ciudad"
+        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none
+        @error('id_ciudad') border-red-500 @enderror">
+
+             <option value="">Seleccione una ciudad</option>
+
+                      @foreach($ciudades as $ciudad)
+                         <option value="{{ $ciudad->id_ciudad }}"
+                             {{ old('id_ciudad', $empresa->id_ciudad) == $ciudad->id_ciudad ? 'selected' : '' }}>
+                {{ $ciudad->nombre }}
+            </option>
+        @endforeach
+                    </select>
+
+    {{-- Espacio reservado para el mensaje (no rompe el diseño) --}}
+    <p class="mt-1 min-h-[1rem] text-sm text-red-600">
+        @error('id_ciudad') {{ $message }} @enderror
+    </p>
+</div>
+
+
+                <!-- Documento representante -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Documento del representante</label>
+                    <input type="text" name="doc_representante"
+                        value="{{ old('doc_representante', $empresa->doc_representante) }}"
+                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('doc_representante') border-red-500 @enderror"
+                        required>
+                    @error('doc_representante')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Primer nombre -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Primer nombre</label>
+                    <input type="text" name="primer_nombre"
+                        value="{{ old('primer_nombre', optional($empresa->representante)->primer_nombre) }}"
+                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('primer_nombre') border-red-500 @enderror"
+                        required maxlength="100">
+                    @error('primer_nombre')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Segundo nombre -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Segundo nombre</label>
+                    <input type="text" name="segundo_nombre"
+                        value="{{ old('segundo_nombre', optional($empresa->representante)->segundo_nombre) }}"
+                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('segundo_nombre') border-red-500 @enderror"
+                        maxlength="100">
+                    @error('segundo_nombre')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Primer apellido -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Primer apellido</label>
+                    <input type="text" name="primer_apellido"
+                        value="{{ old('primer_apellido', optional($empresa->representante)->primer_apellido) }}"
+                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('primer_apellido') border-red-500 @enderror"
+                        required maxlength="100">
+                    @error('primer_apellido')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Segundo apellido -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Segundo apellido</label>
+                    <input type="text" name="segundo_apellido"
+                        value="{{ old('segundo_apellido', optional($empresa->representante)->segundo_apellido) }}"
+                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('segundo_apellido') border-red-500 @enderror"
+                        maxlength="100">
+                    @error('segundo_apellido')
+                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modalEditar').classList.add('hidden')"
+                    class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
+                    Cancelar
+                </button>
+
+                <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow">
+                    Guardar cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if ($errors->any())
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('modalEditar');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+    });
+</script>
+@endif
 @endsection

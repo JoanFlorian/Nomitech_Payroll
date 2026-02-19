@@ -36,7 +36,7 @@
 
 
 
-<form id="step1">
+<form id="step1" novalidate>
     @csrf
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
@@ -51,6 +51,7 @@
                 @endforeach
                 
             </select>
+            <p class="error-message text-red-500 text-sm hidden" data-error="id_tipo_doc"></p>
         </div>
 
         <div>
@@ -61,6 +62,7 @@
                 type="number"
                 placeholder="Ej: 1234567890"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="numero_documento">
+                <p class="error-message text-red-500 text-sm hidden" data-error="numero_documento"><p>
         </div>
 
         <div>
@@ -71,6 +73,7 @@
                 type="text"
                 placeholder="Ej: Pérez"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="primer_apellido">
+                <p class="error-message text-red-500 text-sm hidden" data-error="primer_apellido"><p>
         </div>
 
         <div>
@@ -81,6 +84,7 @@
                 type="text"
                 placeholder="Ej: Gómez"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="segundo_apellido">
+                <p class="error-message text-red-500 text-sm hidden" data-error="segundo_apellido"><p>
         </div>
 
         <div>
@@ -91,6 +95,7 @@
                 type="text"
                 placeholder="Ej: Juan"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="primer_nombre">
+                <p class="error-message text-red-500 text-sm hidden" data-error="primer_nombre"></p>
         </div>
 
         <div>
@@ -101,6 +106,7 @@
                 type="text"
                 placeholder="Ej: Carlos"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="otros_nombres">
+                <p class="error-message text-red-500 text-sm hidden" data-error="otros_nombres"></p>
         </div>
 
 
@@ -114,6 +120,7 @@
                     <option value="{{ $depa->id_departamento }}">{{ $depa->nombre }}</option>
                 @endforeach
             </select>
+            <p class="error-message text-red-500 text-sm hidden" data-error="departamento"></p>
         </div>
 
         <div>
@@ -127,6 +134,7 @@
                 @endforeach
                 
             </select>
+            <p class="error-message text-red-500 text-sm hidden" data-error="ciudad"></p>
         </div>
 
         <div>
@@ -137,6 +145,7 @@
                 type="text"
                 placeholder="Ej: Calle 10 #42-15"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="direccion">
+                <p class="error-message text-red-500 text-sm hidden" data-error="direccion"></p>
         </div>
 
     </div>
@@ -171,16 +180,29 @@
                     console.log(response);
                 },
                 error: function (xhr) {
-                    if (xhr.status === 422) {
-                        let errors = xhr.responseJSON.errors;
-                        let message = '';
-                        $.each(errors, function (key, value) {
-                            message += '• ' + value[0] + '\n';
-                        });
 
-                        alert(message);
-                    }
+                // Limpiar errores anteriores
+                $('.error-message').addClass('hidden').text('');
+                $('input, select').removeClass('border-red-500');
+
+                if (xhr.status === 422) {
+
+                    let errors = xhr.responseJSON.errors;
+
+                    $.each(errors, function (key, value) {
+
+                        // Mostrar mensaje debajo del input
+                        let errorField = $('[data-error="' + key + '"]');
+
+                        errorField.removeClass('hidden');
+                        errorField.text(value[0]);
+
+                        // Pintar input en rojo
+                        $('[name="' + key + '"]').addClass('border-red-500');
+                    });
                 }
+            }
+
             });
         });
 

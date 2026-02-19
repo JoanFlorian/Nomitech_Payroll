@@ -1,4 +1,4 @@
-<aside class="w-64 bg-blue-900 border-r border-blue-800 h-screen flex flex-col shadow-lg sticky top-0 overflow-y-auto">
+<aside class="w-64 bg-blue-900 border-r border-blue-800 h-screen flex flex-col shadow-lg overflow-y-auto">
 
     <!-- HEADER -->
     <div class="flex items-center gap-3 p-6 border-b border-blue-800">
@@ -42,6 +42,12 @@
             {{ request()->routeIs('superadmin.planes.*') ? 'bg-blue-800 text-white font-semibold' : '' }}">
             <i class="bi bi-layers text-lg"></i>
             Planes
+        </a>
+
+         <a href="{{ route('superadmin.actualizaciones.principal') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
+            {{ request()->routeIs('superadmin.actualizaciones.principal') ? 'bg-blue-800 text-white font-semibold' : '' }}">
+            <i class="bi bi-arrow-repeat text-lg"></i>
+            Actualizaciones
         </a>
 
     </nav>

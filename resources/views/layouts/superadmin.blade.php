@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
 
-<body class="font-inter bg-gray-100">
+<body class="font-inter bg-gray-100 overflow-hidden">
 
     <div class="flex min-h-screen">
 
@@ -18,7 +18,7 @@
        </aside>
 
 
-       <main class="flex-1 p-8 bg-gray-100">
+       <main class="flex-1 p-8 bg-gray-100 overflow-y-auto">
 
             @yield('content')
         </main>

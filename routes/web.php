@@ -13,6 +13,7 @@ use App\Http\Controllers\SuperAdmin\PlanController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\CodeVerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\SuperAdmin\ActualizacionesController;
 
 Route::get('/', [PricingController::class, 'index']);
 
@@ -134,3 +135,11 @@ Route::get('/logout', function () {
     return redirect('/');
 })->name('logout');
 
+
+Route::prefix('superadmin')->name('superadmin.')->group(function () {
+    Route::get('/actualizaciones', [ActualizacionesController::class, 'index'])->name('actualizaciones.principal');
+    Route::get('/actualizaciones/{tipo}/datos', [ActualizacionesController::class, 'getDatos'])->name('actualizaciones.datos');
+    Route::post('/ciudades', [ActualizacionesController::class, 'storeCiudad'])->name('ciudades.store');
+    Route::post('/{tipo}', [ActualizacionesController::class, 'store'])->name('store');
+    Route::put('/actualizar/{id}', [ActualizacionesController::class, 'actualizar'])->name('actualizar');
+});

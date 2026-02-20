@@ -9,48 +9,52 @@ class PagoSeeder extends Seeder
 {
     public function run(): void
     {
-        // Obtener licencias existentes
-        $licencias = DB::table('licencia')->pluck('id_licencia')->toArray();
+        // Obtener licencias existentes (id y empresa)
+        $licencias = DB::table('licencia')->select('id', 'empresa_id')->get();
 
-        if (empty($licencias)) {
+        if ($licencias->isEmpty()) {
             echo "No hay licencias disponibles para crear pagos";
             return;
         }
 
+        $licencia = $licencias->first();
+
         $pagos = [
             [
-                'id_licencia' => $licencias[0] ?? 1,
-                'id_metodo_pago' => 1,
+                'referencia' => 'PAY-STARTER-001',
+                'empresa_id' => $licencia->empresa_id,
+                'licencia_id' => $licencia->id,
                 'valor' => 99.99,
-                'estado' => 'ACTIVO',
-                'descripcion' => 'Pago mensual Plan Básico',
+                'moneda' => 'COP',
+                'estado_pago' => 'paid',
+                'proveedor_pago' => 'STRIPE',
             ],
             [
-                'id_licencia' => $licencias[0] ?? 1,
-                'id_metodo_pago' => 2,
+                'referencia' => 'PAY-PRO-001',
+                'empresa_id' => $licencia->empresa_id,
+                'licencia_id' => $licencia->id,
                 'valor' => 299.99,
-                'estado' => 'ACTIVO',
-                'descripcion' => 'Pago mensual Plan Profesional',
-            ],
-            [
-                'id_licencia' => $licencias[0] ?? 1,
-                'id_metodo_pago' => 3,
-                'valor' => 799.99,
-                'estado' => 'PENDIENTE',
-                'descripcion' => 'Pago mensual Plan Enterprise',
+                'moneda' => 'COP',
+                'estado_pago' => 'pending',
+                'proveedor_pago' => 'STRIPE',
             ],
         ];
 
         foreach ($pagos as $pago) {
-            DB::table('pago')->insert([
-                'id_licencia' => $pago['id_licencia'],
-                'id_metodo_pago' => $pago['id_metodo_pago'],
-                'valor' => $pago['valor'],
-                'estado' => $pago['estado'],
-                'descripcion' => $pago['descripcion'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            DB::table('pago')->updateOrInsert(
+                ['referencia' => $pago['referencia']],
+                [
+                    'empresa_id' => $pago['empresa_id'],
+                    'licencia_id' => $pago['licencia_id'],
+                    'valor' => $pago['valor'],
+                    'moneda' => $pago['moneda'],
+                    'estado_pago' => $pago['estado_pago'],
+                    'proveedor_pago' => $pago['proveedor_pago'] ?? 'STRIPE',
+                    'fecha_pago' => now(),
+                    'updated_at' => now(),
+                    'created_at' => DB::raw('COALESCE(created_at, NOW())'),
+                ]
+            );
         }
     }
 }

@@ -16,9 +16,10 @@
                 Periodo de liquidación
             </label>
             <input type="text"
-                   value="Periodo activo"
-                   disabled
-                   class="w-full border px-4 py-2 rounded-lg bg-gray-100">
+                   id="periodo-liquidacion"
+                   name="periodo"
+                   placeholder="Seleccionar fecha"
+                   class="w-full border px-4 py-2 rounded-lg hover:border-blue-500 focus:border-blue-600 focus:outline-none cursor-pointer transition">
         </div>
 
         <div>
@@ -101,5 +102,14 @@
     </div>
 
 </div>
+
+<script>
+    flatpickr('#periodo-liquidacion', {
+        locale: 'es',
+        mode: 'range',
+        dateFormat: 'd/m/Y',
+        placeholder: 'Seleccionar rango de fechas'
+    });
+</script>
 
 @endsection

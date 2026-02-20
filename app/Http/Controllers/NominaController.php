@@ -111,7 +111,7 @@ class NominaController extends Controller
                 'otros_devengos' => $s2['otros_devengos'],
                 'eps' => $request->eps,
                 'afp' => $request->afp,
-                'fecha_pago' => now(),
+                'fecha_pago' => $s1['fecha_pago'] ?? now(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

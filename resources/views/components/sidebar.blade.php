@@ -1,49 +1,70 @@
-<div class="w-64 bg-[#1565C0] text-white flex flex-col z-10">
-    <div class="p-6 text-2xl font-bold">Nomitech</div>
-    <nav class="flex-grow">
-        <ul class="space-y-2 px-2">
-            <li>
-                <a class="flex items-center p-4 rounded-lg sidebar-item active" href="/empleados">
-                    <span class="material-icons mr-3">people</span>
-                    <span>Empleados</span>
-                </a>
-            </li>
-            <li>
-                <a class="flex items-center p-4 rounded-lg sidebar-item" href="/nomina">
-                    <span class="material-icons mr-3">receipt_long</span>
-                    <span>Nómina</span>
-                </a>
-            </li>
-            <li>
-                <a class="flex items-center p-4 rounded-lg sidebar-item" href="/roles">
-                    <span class="material-icons mr-3">assignment_ind</span>
-                    <span>Roles</span>
-                </a>
-            </li>
-            <li>
-                <a class="flex items-center p-4 rounded-lg sidebar-item" href="/usuarios">
-                    <span class="material-icons mr-3">person</span>
-                    <span>Usuarios</span>
-                </a>
-            </li>
-            <li>
-                <a class="flex items-center p-4 rounded-lg sidebar-item" href="/departamentos">
-                    <span class="material-icons mr-3">business</span>
-                    <span>Departamentos</span>
-                </a>
-            </li>
-            <li>
-                <a class="flex items-center p-4 rounded-lg sidebar-item" href="/reportes">
-                    <span class="material-icons mr-3">bar_chart</span>
-                    <span>Reportes</span>
-                </a>
-            </li>
-            <li>
-                <a class="flex items-center p-4 rounded-lg sidebar-item" href="/configuracion">
-                    <span class="material-icons mr-3">settings</span>
-                    <span>Configuración</span>
-                </a>
-            </li>
-        </ul>
+<aside class="w-64 bg-[#1565C0] border-r border-[#0D47A1] h-screen flex flex-col shadow-lg overflow-y-auto">
+
+    <!-- HEADER -->
+    <div class="flex items-center gap-3 p-6 border-b border-[#0D47A1]">
+        <div class="bg-[#1976D2] text-white p-3 rounded-lg flex items-center justify-center">
+            <i class="bi bi-shield-lock text-xl"></i>
+        </div>
+        <div>
+            <h1 class="text-lg font-bold text-white">Nomitech</h1>
+            <p class="text-sm text-blue-200">Administrador</p>
+        </div>
+    </div>
+
+    <!-- MENU -->
+    <nav class="flex-1 p-4 flex flex-col gap-1">
+
+        <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+           {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-people text-lg"></i>
+            Empleados
+        </a>
+
+        <a href="/nomina" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+           {{ request()->is('nomina*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-receipt text-lg"></i>
+            Nómina
+        </a>
+
+        <a href="/roles" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+            {{ request()->is('roles*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-person-badge text-lg"></i>
+            Roles
+        </a>
+
+        <a href="/usuarios" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+            {{ request()->is('usuarios*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-person-circle text-lg"></i>
+            Usuarios
+        </a>
+
+        <a href="/departamentos" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+            {{ request()->is('departamentos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-building text-lg"></i>
+            Departamentos
+        </a>
+
+        <a href="/reportes" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+            {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-bar-chart text-lg"></i>
+            Reportes
+        </a>
+
+        <a href="/configuracion" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+            {{ request()->is('configuracion*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-gear text-lg"></i>
+            Configuración
+        </a>
+
     </nav>
-</div>
+
+    <!-- FOOTER -->
+    <div class="p-6 border-t border-[#0D47A1]">
+        <a href="{{ route('logout') }}"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg text-red-300 hover:bg-red-900/30 hover:text-red-200 transition">
+            <i class="bi bi-box-arrow-right text-lg"></i>
+            Cerrar sesión
+        </a>
+    </div>
+
+</aside>

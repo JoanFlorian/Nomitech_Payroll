@@ -32,11 +32,7 @@
             Facturación
         </a>
 
-        <a href="{{ route('superadmin.configuracion') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
-            {{ request()->routeIs('superadmin.configuracion') ? 'bg-blue-800 text-white font-semibold' : '' }}">
-            <i class="bi bi-gear text-lg"></i>
-            Configuración
-        </a>
+
 
         <a href="{{ route('superadmin.planes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
             {{ request()->routeIs('superadmin.planes.*') ? 'bg-blue-800 text-white font-semibold' : '' }}">

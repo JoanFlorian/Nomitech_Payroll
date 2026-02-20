@@ -91,7 +91,7 @@ class CheckoutController extends Controller
                 ],
             ]);
 
-            // Save Session ID to Pago (for tracking)
+            // Guardar ID de sesión en Pago (para seguimiento)
             $pago->update([
                 'stripe_session_id' => $checkoutSession->id,
                 'referencia' => $checkoutSession->id
@@ -105,7 +105,7 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Show processing view while polling for payment confirmation.
+     * Mostrar vista de procesamiento mientras se sondea la confirmación de pago.
      */
     public function success(Request $request)
     {
@@ -115,24 +115,24 @@ class CheckoutController extends Controller
             return redirect()->route('licencia.pending');
         }
 
-        // Store in session for potential reference
+        // Almacenar en sesión para referencia potencial
         session(['stripe_session_id' => $sessionId]);
 
         return view('checkout.success', compact('sessionId'));
     }
 
     /**
-     * API Endpoint to check payment status (Polling).
-     * STRICTLY READ-ONLY for Front-End Polling.
-     * Prevents 500 errors by avoiding deep nested property access on nulls.
-     * Delegates activation logic to Webhook or Fallback Job.
+     * Punto final de API para verificar el estado del pago (Sondeo).
+     * ESTRICTAMENTE DE SÓLO LECTURA para sondeo del front-end.
+     * Previene errores 500 evitando acceso a propiedades anidadas profundas en nulos.
+     * Delega la lógica de activación al webhook o trabajo de retorno.
      */
     public function checkStatus($sessionId)
     {
-        // 1. Eager Load Licencia
+        // 1. Cargar con impaciencia Licencia
         $pago = Pago::with('licencia')->where('stripe_session_id', $sessionId)->first();
 
-        // Safety check: Pago not found
+        // Verificación de seguridad: Pago no encontrado
         if (!$pago) {
             return response()->json(['status' => 'pending']);
         }
@@ -140,24 +140,24 @@ class CheckoutController extends Controller
         // 2. Check Payment Status
         $isPaid = $pago->estado_pago === PaymentStatus::PAID->value;
 
-        // 3. Check License Status (Explicitly check dates to avoid is_active attribute ambiguity)
+        // 3. Verificar estado de la licencia (verificar explícitamente fechas para evitar ambigüedad del atributo is_active)
         $licencia = $pago->licencia;
 
-        // Safety check: Licencia might be null if relationship broken (should not happen but safe check)
+        // Verificación de seguridad: la Licencia podría ser nula si la relación se rompe (no debería suceder pero verificación segura)
         $isLicenseActive = false;
         if ($licencia) {
             $isLicenseActive = $licencia->fecha_fin && $licencia->fecha_fin->gt(now());
         }
 
-        // 4. Return 'paid' ONLY if both conditions met
+        // 4. Devolver 'paid' SÓLO si se cumplen ambas condiciones
         if ($isPaid && $isLicenseActive) {
             return response()->json([
                 'status' => 'paid'
-                // NO user_id returned (as requested for simplicity and safety)
+                // NO se devuelve user_id (según lo solicitado por simplicidad y seguridad)
             ]);
         }
 
-        // Default
+        // Predeterminado
         return response()->json(['status' => 'pending']);
     }
 

@@ -200,7 +200,7 @@
                     class="px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
                     Iniciar sesión
                 </a>
-                <a href="{{ route('register.create') }}"
+                <a href="#pricing"
                     class="px-6 py-2.5 bg-accent text-white text-sm font-bold rounded-lg shadow-lg shadow-accent/20 hover:opacity-90 transition-all">
                     Ver planes
                 </a>
@@ -383,7 +383,7 @@
                                 <div>
                                     <h4 class="text-xl font-bold mb-2">Sincroniza empleados</h4>
                                     <p class="text-slate-500 leading-relaxed">
-                                        Importa tus empleados desde Excel o ERP. Configura contratos, salarios y
+                                        Introduce los datos de tus empleados. Configura contratos, salarios y
                                         novedades recurrentes en minutos.
                                     </p>
                                 </div>

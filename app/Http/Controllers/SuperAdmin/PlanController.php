@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StorePlanRequest;
+use App\Http\Requests\UpdatePlanRequest;
 use App\Models\Plan;
-use Illuminate\Http\Request;
 
 class PlanController extends Controller
 {
@@ -19,23 +20,17 @@ class PlanController extends Controller
         return view('superadmin.planes.create');
     }
 
-    public function store(Request $request)
+    public function store(StorePlanRequest $request)
     {
-        $data = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'valor' => 'required|numeric|min:0',
-            'duracion' => 'required|integer|min:1',
-            'num_empl' => 'required|integer|min:1',
-            'descripcion' => 'nullable|string|max:500',
-            'destacado' => 'nullable|boolean',
-            'features' => 'nullable|array|max:4',
-            'features.*' => 'nullable|string|max:255',
-        ]);
+        $data = $request->validated();
 
-        // Convert destacados to boolean if present, otherwise false
+        // Capitalizar el nombre
+        $data['nombre'] = ucwords(strtolower($data['nombre']));
+
+        // Convertir destacado a booleano si está presente, en caso contrario falso
         $data['destacado'] = $request->has('destacado');
 
-        // Filter out empty features
+        // Filtrar características vacías
         if (isset($data['features'])) {
             $data['features'] = array_values(array_filter($data['features']));
         }
@@ -52,18 +47,12 @@ class PlanController extends Controller
         return view('superadmin.planes.edit', compact('plan'));
     }
 
-    public function update(Request $request, Plan $plan)
+    public function update(UpdatePlanRequest $request, Plan $plan)
     {
-        $data = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'valor' => 'required|numeric|min:0',
-            'duracion' => 'required|integer|min:1',
-            'num_empl' => 'required|integer|min:1',
-            'descripcion' => 'nullable|string|max:500',
-            'destacado' => 'nullable|boolean',
-            'features' => 'nullable|array|max:4',
-            'features.*' => 'nullable|string|max:255',
-        ]);
+        $data = $request->validated();
+
+        // Capitalizar el nombre
+        $data['nombre'] = ucwords(strtolower($data['nombre']));
 
         $data['destacado'] = $request->has('destacado');
 
@@ -80,4 +69,3 @@ class PlanController extends Controller
             ->with('success', 'Plan actualizado correctamente.');
     }
 }
-

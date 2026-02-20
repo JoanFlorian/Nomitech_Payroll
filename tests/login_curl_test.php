@@ -31,20 +31,20 @@ function curl_post($url, $postFields, &$cookieFile) {
 $cookieFile = sys_get_temp_dir() . '/nomitech_cookie.txt';
 if (file_exists($cookieFile)) unlink($cookieFile);
 
-// 1. GET login page to fetch CSRF token
+// 1. Obtener página de login para traer el token CSRF
 list($loginHtml, $info) = curl_get('http://127.0.0.1:8000/login2', $cookieFile);
 if (!$loginHtml) {
     echo "Failed to GET login page\n";
     exit(1);
 }
 
-// Extract CSRF token
+// Extraer token CSRF
 if (preg_match('/name="_token" value="([^"]+)"/', $loginHtml, $m)) {
     $token = $m[1];
     echo "Found CSRF token: $token\n";
 } else {
     echo "CSRF token not found in login page\n";
-    // attempt to find meta tag
+    // Intentar encontrar etiqueta meta
     if (preg_match('/meta name="csrf-token" content="([^"]+)"/', $loginHtml, $m2)) {
         $token = $m2[1];
         echo "Found CSRF token in meta: $token\n";
@@ -53,7 +53,7 @@ if (preg_match('/name="_token" value="([^"]+)"/', $loginHtml, $m)) {
     }
 }
 
-// 2. POST login
+// 2. Enviar POST login
 $post = [
     '_token' => $token,
     'correo' => 'test@nomitech.test',
@@ -64,9 +64,9 @@ list($response, $info2) = curl_post('http://127.0.0.1:8000/login', $post, $cooki
 
 echo "HTTP status: " . $info2['http_code'] . "\n";
 
-// print headers and first 800 chars of body
+// Imprimir encabezados y primeros 2000 caracteres del cuerpo
 echo substr($response, 0, 2000) . "\n";
 
-// cleanup
+// Limpieza
 if (file_exists($cookieFile)) unlink($cookieFile);
 

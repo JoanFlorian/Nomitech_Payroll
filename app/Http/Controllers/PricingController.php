@@ -8,11 +8,11 @@ use Illuminate\View\View;
 class PricingController extends Controller
 {
     /**
-     * Show the landing page with pricing plans
+     * Mostrar la página de inicio con planes de precios
      */
     public function index(): View
     {
-        // Get plans ordered by 'orden' field, with destacado plans first
+        // Obtener planes ordenados por campo 'orden', con planes destacados primero
         $planes = Plan::orderBy('destacado', 'desc')
             ->orderBy('orden', 'asc')
             ->get();

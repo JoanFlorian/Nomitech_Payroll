@@ -41,7 +41,7 @@ class CodeVerificationController extends Controller
             return back()->withErrors(['code' => 'El código ingresado es incorrecto.']);
         }
 
-        // Check expiry (e.g., 60 minutes as per config/auth.php users expiration)
+        // Verificar expiración (por ejemplo, 60 minutos según la expiración en config/auth.php)
         $expires = config('auth.passwords.users.expire');
         if (Carbon::parse($record->created_at)->addMinutes($expires)->isPast()) {
             return back()->withErrors(['code' => 'El código ha expirado. Por favor, solicita uno nuevo.']);

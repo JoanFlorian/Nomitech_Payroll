@@ -91,7 +91,7 @@ class RegisterController extends Controller
             $pago = Pago::create([
                 'empresa_id' => $empresa->id_empresa,
                 'licencia_id' => $licencia->id,
-                'referencia' => null, // Will be set on Checkout
+                'referencia' => null, // Se será establecida en Checkout
                 'proveedor_pago' => 'STRIPE',
                 'valor' => $plan->valor,
                 'moneda' => 'COP',
@@ -112,7 +112,7 @@ class RegisterController extends Controller
             // Set Auto-Selected Company in Session
             session(['empresa_id' => $empresa->id_empresa]);
 
-            // 7. Redirect to Checkout Flow (Internal)
+            // 7. Redirigir al flujo de Checkout (Interno)
             return redirect()->route('checkout.show', ['pago' => $pago->id]);
         });
     }

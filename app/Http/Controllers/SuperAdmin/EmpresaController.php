@@ -15,7 +15,7 @@ class EmpresaController extends Controller
     {
         $query = Empresa::with('licencia.plan');
 
-        // Buscador por razón social o NIT
+        // Búsqueda por razón social o NIT
         if ($request->buscar) {
             $buscar = $request->buscar;
 
@@ -25,7 +25,7 @@ class EmpresaController extends Controller
             });
         }
 
-        // Filtro por estado (computed accessor, no es columna real en BD)
+        // Filtro por estado (acceso calculado, no es columna real en BD)
         if ($request->estado && $request->estado != 'todas') {
             $estadoFiltro = $request->estado;
 
@@ -63,7 +63,7 @@ class EmpresaController extends Controller
     {
         $empresa->load(['licencia.plan', 'representante', 'ciudad']);
 
-        // Para el select de ciudades en el modal
+        // Para la lista desplegable de ciudades en el modal
         $ciudades = Ciudad::orderBy('nombre')->get();
 
         return view('superadmin.empresas-show', compact('empresa', 'ciudades'));

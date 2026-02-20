@@ -11,7 +11,7 @@ class Eps extends Model
 
     protected $table = 'eps';
     protected $primaryKey = 'id_eps';
-    protected $fillable = ['nombre'];
+    protected $fillable = ['nombre', 'telefono', 'direccion'];
 
     public function contratos()
     {

@@ -19,10 +19,10 @@ return new class extends Migration
         });
 
         Schema::create('salario', function (Blueprint $table) {
-            $table->integer('id_salario')->autoIncrement();
-            $table->integer('id_contrato');
+            $table->unsignedBigInteger('id_salario')->autoIncrement();
+            $table->unsignedBigInteger('id_contrato');
             $table->integer('id_periodo');
-            $table->integer('id_estado')->default(1);
+            $table->unsignedBigInteger('id_estado')->default(1);
 
             $table->decimal('auxilio_transporte', 12, 2)->default(0);
             $table->decimal('horas_extra', 12, 2)->default(0);
@@ -53,7 +53,7 @@ return new class extends Migration
         Schema::create('provision', function (Blueprint $table) {
             $table->integer('id_provision')->autoIncrement();
             $table->integer('id_periodo');
-            $table->integer('id_contrato');
+            $table->unsignedBigInteger('id_contrato');
 
             $table->decimal('cesantias', 12, 2)->default(0);
             $table->decimal('intereses_cesantias', 12, 2)->default(0);
@@ -68,8 +68,8 @@ return new class extends Migration
 
         Schema::create('novedad', function (Blueprint $table) {
             $table->integer('id_novedad')->autoIncrement();
-            $table->integer('id_tipo_novedad');
-            $table->integer('id_salario');
+            $table->unsignedBigInteger('id_tipo_novedad');
+            $table->unsignedBigInteger('id_salario');
 
             $table->date('fecha_inicio')->nullable();
             $table->date('fecha_fin')->nullable();
@@ -86,8 +86,8 @@ return new class extends Migration
 
         Schema::create('hora_recargo_extra', function (Blueprint $table) {
             $table->integer('id_hora')->autoIncrement();
-            $table->integer('id_tipo_hora_recargo');
-            $table->integer('id_salario');
+            $table->unsignedBigInteger('id_tipo_hora_recargo');
+            $table->unsignedBigInteger('id_salario');
 
             $table->decimal('cantidad', 12, 2)->default(0);
             $table->decimal('pago', 12, 2)->default(0);

@@ -57,12 +57,15 @@ class ActualizacionesController extends Controller
             'campoId' => 'id_banco',
             'tabla' => 'banco',
             'campos' => [
-                ['clave' => 'codigo', 'label' => 'Código', 'tipo' => 'text', 'icono' => 'bi-hash', 'requerido' => true],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-bank', 'requerido' => true],
+                ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'text', 'icono' => 'bi-telephone'],
+                ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'text', 'icono' => 'bi-geo-alt'],
             ],
             'columnas' => [
-                ['clave' => 'codigo', 'label' => 'Código', 'tipo' => 'simple'],
+                ['clave' => 'id_banco', 'label' => 'ID', 'tipo' => 'simple'],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'simple'],
+                ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'simple'],
+                ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'simple'],
             ],
             'colorBoton' => 'purple',
             'colores' => ['icono' => 'from-purple-400 to-purple-600', 'boton' => 'from-purple-500 to-purple-600'],
@@ -104,9 +107,14 @@ class ActualizacionesController extends Controller
             'tabla' => 'eps',
             'campos' => [
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-heart-pulse', 'requerido' => true],
+                ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'text', 'icono' => 'bi-telephone'],
+                ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'text', 'icono' => 'bi-geo-alt'],
             ],
             'columnas' => [
+                ['clave' => 'id_eps', 'label' => 'ID', 'tipo' => 'simple'],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'simple'],
+                ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'simple'],
+                ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'simple'],
             ],
             'colorBoton' => 'red',
             'colores' => ['icono' => 'from-red-400 to-red-600', 'boton' => 'from-red-500 to-red-600'],
@@ -117,9 +125,14 @@ class ActualizacionesController extends Controller
             'tabla' => 'arl',
             'campos' => [
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-shield-check', 'requerido' => true],
+                ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'text', 'icono' => 'bi-telephone'],
+                ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'text', 'icono' => 'bi-geo-alt'],
             ],
             'columnas' => [
+                ['clave' => 'id_arl', 'label' => 'ID', 'tipo' => 'simple'],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'simple'],
+                ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'simple'],
+                ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'simple'],
             ],
             'colorBoton' => 'yellow',
             'colores' => ['icono' => 'from-yellow-400 to-yellow-600', 'boton' => 'from-yellow-500 to-yellow-600'],

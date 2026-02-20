@@ -20,42 +20,38 @@ class LicenciaSeeder extends Seeder
 
         $licencias = [
             [
-                'id_empresa' => $empresas[0] ?? 1,
-                'id_plan' => 1,
-                'estado' => 'ACTIVA',
+                'empresa_id' => $empresas[0] ?? 1,
+                'plan_id' => 1,
                 'fecha_inicio' => Carbon::now()->subMonths(6),
                 'fecha_fin' => Carbon::now()->addMonths(6),
-                'vigencia_dias' => 365,
             ],
             [
-                'id_empresa' => $empresas[0] ?? 1,
-                'id_plan' => 2,
-                'estado' => 'ACTIVA',
+                'empresa_id' => $empresas[0] ?? 1,
+                'plan_id' => 2,
                 'fecha_inicio' => Carbon::now()->subMonths(3),
                 'fecha_fin' => Carbon::now()->addMonths(9),
-                'vigencia_dias' => 365,
             ],
             [
-                'id_empresa' => $empresas[0] ?? 1,
-                'id_plan' => 3,
-                'estado' => 'PENDIENTE',
+                'empresa_id' => $empresas[0] ?? 1,
+                'plan_id' => 3,
                 'fecha_inicio' => Carbon::now(),
                 'fecha_fin' => Carbon::now()->addMonths(12),
-                'vigencia_dias' => 365,
             ],
         ];
 
         foreach ($licencias as $licencia) {
-            DB::table('licencia')->insert([
-                'id_empresa' => $licencia['id_empresa'],
-                'id_plan' => $licencia['id_plan'],
-                'estado' => $licencia['estado'],
-                'fecha_inicio' => $licencia['fecha_inicio'],
-                'fecha_fin' => $licencia['fecha_fin'],
-                'vigencia_dias' => $licencia['vigencia_dias'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            DB::table('licencia')->updateOrInsert(
+                [
+                    'empresa_id' => $licencia['empresa_id'],
+                    'plan_id' => $licencia['plan_id'],
+                ],
+                [
+                    'fecha_inicio' => $licencia['fecha_inicio'],
+                    'fecha_fin' => $licencia['fecha_fin'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
     }
 }

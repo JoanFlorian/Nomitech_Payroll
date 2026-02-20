@@ -7,31 +7,29 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up(): void
-    {
-        Schema::create('tipo_contrato', function (Blueprint $table) {
-            $table->integer('id_tipo_contrato')->autoIncrement();
-            $table->string('nombre', 60)->unique();
-            $table->boolean('seguridad_social')->default(true);
-            $table->dateTime('created_at')->useCurrent();
-            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
+    { Schema::create('tipo_contrato', function (Blueprint $table) {
+        $table->unsignedBigInteger('id_tipo_contrato')->autoIncrement(); // ✅
+        $table->string('nombre', 60)->unique();
+        $table->boolean('seguridad_social')->default(true);
+        $table->timestamps();
         });
 
         Schema::create('tipo_cuenta', function (Blueprint $table) {
-            $table->integer('id_tipo_cuenta')->autoIncrement();
+            $table->unsignedBigInteger('id_tipo_cuenta')->autoIncrement();
             $table->string('nombre', 60)->unique();
             $table->dateTime('created_at')->useCurrent();
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
 
         Schema::create('forma_pago', function (Blueprint $table) {
-            $table->integer('id_forma_pago')->autoIncrement();
+            $table->unsignedBigInteger('id_forma_pago')->autoIncrement();
             $table->string('nombre', 60)->unique();
             $table->dateTime('created_at')->useCurrent();
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
 
         Schema::create('metodo_pago', function (Blueprint $table) {
-            $table->integer('id_metodo_pago')->autoIncrement();
+            $table->unsignedBigInteger('id_metodo_pago')->autoIncrement();
             $table->string('nombre', 60)->unique();
             $table->dateTime('created_at')->useCurrent();
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();

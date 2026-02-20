@@ -12,9 +12,8 @@ class SubTipoTrabajadorSeeder extends Seeder
         DB::table('sub_tipo_trabajador')->delete();
 
         DB::table('sub_tipo_trabajador')->insert([
-            ['id_sub_tipo_trabajador' => 0, 'nombre' => 'ninguno'],
-            ['id_sub_tipo_trabajador' => 1, 'nombre' => 'Dependiente pensionado por vejez activo'],
-            
+        ['nombre' => 'ninguno'],
+        ['nombre' => 'Dependiente pensionado por vejez activo'],
         ]);
     }
 }

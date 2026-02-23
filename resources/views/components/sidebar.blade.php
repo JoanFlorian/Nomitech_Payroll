@@ -1,4 +1,4 @@
-<aside class="w-64 bg-[#1565C0] border-r border-[#0D47A1] h-screen flex flex-col shadow-lg overflow-y-auto">
+<aside class="w-64 bg-[#1565C0] border-r border-[#0D47A1] h-screen flex flex-col shadow-lg">
 
     <!-- HEADER -->
     <div class="flex items-center gap-3 p-6 border-b border-[#0D47A1]">
@@ -12,7 +12,7 @@
     </div>
 
     <!-- MENU -->
-    <nav class="flex-1 p-4 flex flex-col gap-1">
+    <nav class="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
 
         <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
            {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
@@ -59,7 +59,7 @@
     </nav>
 
     <!-- FOOTER -->
-    <div class="p-6 border-t border-[#0D47A1]">
+    <div class="mt-auto p-6 border-t border-[#0D47A1]">
         <a href="{{ route('logout') }}"
             class="flex items-center gap-3 px-4 py-2 rounded-lg text-red-300 hover:bg-red-900/30 hover:text-red-200 transition">
             <i class="bi bi-box-arrow-right text-lg"></i>

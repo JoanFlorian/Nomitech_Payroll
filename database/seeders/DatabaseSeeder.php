@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Afp;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -32,7 +33,12 @@ class DatabaseSeeder extends Seeder
 
             TipoHoraRecargoSeeder::class,
             SubTipoTrabajadorSeeder::class,
-            Otros::class,
+            AFPSeeder::class,
+            ARLSeeder::class,
+            EPSSeeder::class,
+            FormaPagoSeeder::class,
+            TipoCuentaSeeder::class,
+
 
         ]);
     }

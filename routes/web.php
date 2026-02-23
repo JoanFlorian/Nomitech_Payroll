@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegistroUsuarios;
 use App\Http\Controllers\NominaController;
-use App\Http\Controllers\EmployeeWizardController;
 use App\Http\Controllers\SuperAdmin\EmpresaController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\Auth\LoginController;
@@ -73,14 +72,17 @@ Route::middleware('auth')->group(function () {
 
 // Protected App Routes (Auth + Active License)
 Route::middleware(['auth', 'ensure_active_license'])->group(function () {
-    Route::get('/empleados', function () {
-        return view('empleados.index');
-    })->name('empleados.index');
+    // Empleados
+    Route::get('/empleados', [App\Http\Controllers\EmployeesController::class, 'index'])->name('empleados.index');
+    Route::get('/employees/export', [App\Http\Controllers\EmployeesController::class, 'export'])->name('employees.export');
+    Route::get('/employees/{doc}/edit', [RegistroUsuarios::class, 'editEmployee'])->name('employees.edit');
+    Route::post('/employees/{doc}/update', [RegistroUsuarios::class, 'updateEmployee'])->name('employees.update');
 
     /* Wizard registro empleado */
     Route::post('/employees/step-1', [RegistroUsuarios::class, 'storeStep1'])->name('employees.step1');
     Route::post('/employees/step-2', [RegistroUsuarios::class, 'storeStep2'])->name('employees.step2');
     Route::post('/employees/final', [RegistroUsuarios::class, 'storeFinal'])->name('employees.final');
+    Route::post('/employees/clear-session', [RegistroUsuarios::class, 'clearWizardSession'])->name('employees.clear-session');
 
     // Nómina Routes
     Route::get('/nomina', [NominaController::class, 'index'])->name('nomina.index');

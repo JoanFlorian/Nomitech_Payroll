@@ -3,9 +3,11 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class Step1Request extends FormRequest
 {
+
     public function authorize(): bool
     {
         return true;
@@ -14,12 +16,11 @@ class Step1Request extends FormRequest
     public function rules(): array
     {
         return [
-
             // Tipo documento
-            'id_tipo_doc' => 'bail|required|integer|max:4',
+            'id_tipo_doc' => 'bail|required|integer|exists:tipo_doc,id_tipo_doc',
 
-            // Número documento
-            'numero_documento' => 'bail|required|digits_between:5,15',
+            // Número documento (se mapea a 'doc')
+            'doc' => 'bail|required|digits_between:5,15|unique:usuario,doc',
 
             // PRIMER APELLIDO
             'primer_apellido' => 'bail|required|string|min:2|max:30|regex:/^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$/',
@@ -33,9 +34,9 @@ class Step1Request extends FormRequest
             // OTROS NOMBRES (opcional)
             'otros_nombres' => 'bail|nullable|string|min:2|max:50|regex:/^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$/',
 
-            // SELECTS
+            // SELECTS - Mapear a id_ciudad
             'departamento' => 'bail|required|integer',
-            'ciudad'       => 'bail|required|integer',
+            'ciudad'       => 'bail|required|integer|exists:ciudad,id_ciudad',
 
             // DIRECCIÓN
             'direccion' => 'bail|required|string|min:5|max:100',
@@ -60,8 +61,9 @@ class Step1Request extends FormRequest
             | NUMERO DOCUMENTO
             |--------------------------------------------------------------------------
             */
-            'numero_documento.required'       => 'El número de documento es obligatorio.',
-            'numero_documento.digits_between' => 'El número de documento debe tener entre 5 y 15 dígitos.',
+            'doc.required'       => 'El número de documento es obligatorio.',
+            'doc.digits_between' => 'El número de documento debe tener entre 5 y 15 dígitos.',
+            'doc.unique'         => 'Este número de documento ya está registrado en el sistema.',
 
             /*
             |--------------------------------------------------------------------------
@@ -126,5 +128,18 @@ class Step1Request extends FormRequest
             'direccion.min'      => 'La dirección debe tener mínimo 5 caracteres.',
             'direccion.max'      => 'La dirección no puede superar 100 caracteres.',
         ];
+    }
+    /**
+     * Always respond with JSON errors for AJAX clients.
+     * Prevents a redirect when validation fails.
+     */
+    protected function failedValidation($validator)
+    {
+        throw new HttpResponseException(
+            response()->json([
+                'success' => false,
+                'errors'  => $validator->errors(),
+            ], 422)
+        );
     }
 }

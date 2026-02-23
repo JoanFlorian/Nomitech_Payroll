@@ -3,9 +3,11 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class Step2Request extends FormRequest
 {
+
     public function authorize(): bool
     {
         return true;
@@ -14,10 +16,8 @@ class Step2Request extends FormRequest
     public function rules(): array
     {
         return [
-
             // FECHAS
             'fecha_inicio' => 'bail|required|date',
-
             'fecha_fin' => 'bail|nullable|date|after_or_equal:fecha_inicio',
 
             // HORAS
@@ -35,7 +35,7 @@ class Step2Request extends FormRequest
             // CODIGO INTERNO
             'codigo_interno' => 'bail|required|string|min:3|max:20|regex:/^[A-Za-z0-9\-]+$/',
 
-            // CHECK
+            // BOOLEAN CHECK - alto_riesgo (checkbox)
             'alto_riesgo' => 'nullable|boolean',
         ];
     }
@@ -43,7 +43,6 @@ class Step2Request extends FormRequest
     public function messages(): array
     {
         return [
-
             /*
             |--------------------------------------------------------------------------
             | FECHA INICIO
@@ -123,4 +122,29 @@ class Step2Request extends FormRequest
             'codigo_interno.regex'    => 'El código solo puede contener letras, números y guiones.',
         ];
     }
+
+    /**
+     * Prepare the data for validation. Ensure alto_riesgo is always 0 or 1
+     * regardless of whether the checkbox was checked.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'alto_riesgo' => $this->has('alto_riesgo') ? 1 : 0,
+        ]);
+    }
+
+    /**
+     * Always respond with JSON errors so AJAX front‑end can parse them.
+     */
+    protected function failedValidation($validator)
+    {
+        throw new HttpResponseException(
+            response()->json([
+                'success' => false,
+                'errors'  => $validator->errors(),
+            ], 422)
+        );
+    }
 }
+

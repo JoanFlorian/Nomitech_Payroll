@@ -41,7 +41,6 @@ class DatabaseSeeder extends Seeder
 
             TipoHoraRecargoSeeder::class,
             SubTipoTrabajadorSeeder::class,
-<<<<<<< HEAD
             AFPSeeder::class,
             ARLSeeder::class,
             EPSSeeder::class,
@@ -49,9 +48,6 @@ class DatabaseSeeder extends Seeder
             TipoCuentaSeeder::class,
 
 
-=======
-            TestUserSeeder::class,
->>>>>>> e0221bc19539c646b0a380c0c17cad2e23926a9f
         ]);
     }
 }

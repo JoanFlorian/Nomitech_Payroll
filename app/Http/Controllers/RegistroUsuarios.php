@@ -212,10 +212,18 @@ class RegistroUsuarios extends Controller
     {
         $usuario = Usuario::with('contratos')->findOrFail($doc);
         $contrato = $usuario->contratos->first();
+        $cuenta = null;
+
+        if ($contrato) {
+            $cuenta = Cuenta::where('id_contrato', $contrato->id_contrato)
+                ->where('activo', true)
+                ->first();
+        }
 
         return response()->json([
             'usuario' => $usuario,
             'contrato' => $contrato, // null if not found
+            'cuenta' => $cuenta,
         ]);
     }
 

@@ -20,7 +20,7 @@ return new class extends Migration {
 
         Schema::create('licencia', function (Blueprint $table) {
             $table->id();
-            $table->integer('empresa_id'); // FK to empresa.id_empresa (which is integer)
+            $table->unsignedBigInteger('empresa_id'); // FK to empresa.id_empresa (which is unsignedBigInteger)
             $table->foreignId('plan_id')->constrained('plan');
 
             $table->date('fecha_inicio')->nullable();
@@ -28,13 +28,12 @@ return new class extends Migration {
             $table->timestamps();
 
             // Foreign Key to Empresa
-            // Note: Empresa table PK is id_empresa (integer)
             $table->foreign('empresa_id')->references('id_empresa')->on('empresa')->onDelete('cascade');
         });
 
         Schema::create('pago', function (Blueprint $table) {
             $table->id();
-            $table->integer('empresa_id');
+            $table->unsignedBigInteger('empresa_id');
             $table->foreignId('licencia_id')->constrained('licencia');
 
             $table->string('referencia')->nullable()->unique(); // Internal reference if needed

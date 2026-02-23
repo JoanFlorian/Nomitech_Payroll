@@ -1,4 +1,4 @@
-<aside class="w-64 bg-[#1565C0] border-r border-[#0D47A1] h-screen flex flex-col shadow-lg">
+<aside class="w-64 bg-[#1565C0] border-r border-[#0D47A1] h-screen sticky top-0 self-start flex-shrink-0 flex flex-col shadow-lg">
 
     <!-- HEADER -->
     <div class="flex items-center gap-3 p-6 border-b border-[#0D47A1]">

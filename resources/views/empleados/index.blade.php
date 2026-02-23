@@ -367,7 +367,10 @@
             openEditModal(doc) {
                 this.currentDoc = doc;
                 this.showEditModal = true;
-                // Aquí cargamos los datos del empleado si es necesario
+
+                if (typeof window.loadEmployee === 'function') {
+                    window.loadEmployee(doc);
+                }
             },
             
             closeModals() {

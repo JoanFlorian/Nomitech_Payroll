@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('nomina_electronica', function (Blueprint $table) {
             $table->integer('id_nomina')->autoIncrement();
-            $table->integer('id_salario');
+            $table->unsignedBigInteger('id_salario');
 
             $table->string('cune', 255)->unique();
             $table->dateTime('fecha_generacion');

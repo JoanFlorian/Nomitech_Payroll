@@ -41,7 +41,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Número de Documento</label>
-                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="numero_documento" id="editNumeroDoc">
+                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" name="numero_documento" id="editNumeroDoc" readonly>
                             <p class="error-message text-red-500 text-sm hidden" data-error="numero_documento"></p>
                         </div>
 
@@ -277,6 +277,57 @@
 </div>
 
 <script>
+function normalizeEditFieldValue(field) {
+    if (field.type === 'checkbox') {
+        return field.checked ? '1' : '0';
+    }
+
+    return (field.value ?? '').toString().trim();
+}
+
+function snapshotEditFormValues() {
+    const form = document.getElementById('editEmployeeForm');
+    if (!form) {
+        return;
+    }
+
+    form.querySelectorAll('input, select, textarea').forEach(field => {
+        const name = field.getAttribute('name');
+        if (!name || name === 'doc' || name === '_token') {
+            return;
+        }
+
+        field.dataset.initialValue = normalizeEditFieldValue(field);
+    });
+}
+
+function buildChangedFieldsFormData(form) {
+    const formData = new FormData();
+    const token = form.querySelector('input[name="_token"]')?.value;
+    if (token) {
+        formData.append('_token', token);
+    }
+
+    let changedCount = 0;
+
+    form.querySelectorAll('input, select, textarea').forEach(field => {
+        const name = field.getAttribute('name');
+        if (!name || name === 'doc' || name === '_token') {
+            return;
+        }
+
+        const currentValue = normalizeEditFieldValue(field);
+        const initialValue = (field.dataset.initialValue ?? '').toString();
+
+        if (currentValue !== initialValue) {
+            formData.append(name, currentValue);
+            changedCount++;
+        }
+    });
+
+    return { formData, changedCount };
+}
+
 function loadEmployee(doc) {
     fetch(`/employees/${doc}/edit`)
         .then(response => {
@@ -296,6 +347,7 @@ function loadEmployee(doc) {
             document.getElementById('editDireccion').value = data.usuario.direccion || '';
 
             const contrato = data.contrato;
+            const cuenta = data.cuenta;
             if (contrato) {
                 document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
                 document.getElementById('editIdSubTipoTrabajador').value = contrato.id_sub_tipo_trabajador || '';
@@ -311,8 +363,8 @@ function loadEmployee(doc) {
 
                 document.getElementById('editIdFormaPago').value = contrato.id_forma_pago || '';
                 document.getElementById('editIdMetodoPago').value = contrato.id_metodo_pago || '';
-                document.getElementById('editTipoCuenta').value = contrato.tipo_cuenta || '';
-                document.getElementById('editNumeroCuenta').value = contrato.numero_cuenta || '';
+                document.getElementById('editTipoCuenta').value = cuenta?.id_tipo_cuenta || '';
+                document.getElementById('editNumeroCuenta').value = cuenta?.numero_cuenta || '';
                 document.getElementById('editIdEps').value = contrato.id_eps || '';
                 document.getElementById('editIdAfp').value = contrato.id_afp || '';
                 document.getElementById('editActivo').checked = contrato.activo == 1;
@@ -338,6 +390,8 @@ function loadEmployee(doc) {
                 document.getElementById('editIdAfp').value = '';
                 document.getElementById('editActivo').checked = false;
             }
+
+            snapshotEditFormValues();
         })
         .catch(error => {
             console.error('Error:', error);
@@ -350,7 +404,20 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
     e.preventDefault();
     
     const doc = document.getElementById('editDocField').value;
-    const formData = new FormData(this);
+    const { formData, changedCount } = buildChangedFieldsFormData(this);
+
+    if (changedCount === 0) {
+        Swal.fire('Sin cambios', 'No hay datos modificados para guardar', 'info');
+        return;
+    }
+
+    document.querySelectorAll('.error-message').forEach(el => {
+        el.classList.add('hidden');
+        el.textContent = '';
+    });
+    document.querySelectorAll('#editEmployeeForm input, #editEmployeeForm select, #editEmployeeForm textarea').forEach(el => {
+        el.classList.remove('border-red-500');
+    });
 
     fetch(`/employees/${doc}/update`, {
         method: 'POST',

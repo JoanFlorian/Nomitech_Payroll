@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('rol', function (Blueprint $table) {
-            $table->integer('id_rol')->autoIncrement();
+       Schema::create('rol', function (Blueprint $table) {
+            $table->unsignedBigInteger('id_rol')->autoIncrement(); // ✅
             $table->string('nombre', 60)->unique();
             $table->string('descripcion', 255)->nullable();
             $table->dateTime('created_at')->useCurrent();
@@ -17,7 +17,7 @@ return new class extends Migration
         });
 
         Schema::create('modulo', function (Blueprint $table) {
-            $table->integer('id_modulo')->autoIncrement();
+             $table->unsignedBigInteger('id_modulo')->autoIncrement();
             $table->string('nombre', 60)->unique();
             $table->dateTime('created_at')->useCurrent();
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();

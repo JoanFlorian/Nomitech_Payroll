@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ciudad', function (Blueprint $table) {
-            $table->integer('id_ciudad')->autoIncrement();
+            $table->unsignedBigInteger('id_ciudad')->autoIncrement();
             $table->string('nombre', 60); // VARCHAR(60) NOT NULL
             $table->string('codigo', 10)->nullable();
             $table->integer('id_departamento'); // INT NOT NULL

@@ -25,14 +25,23 @@ class DatabaseSeeder extends Seeder
             CiudadSeeder::class,
             RolSeeder::class,
             BancoSeeder::class,
+            EPSSeeder::class,
+            AFPSeeder::class,
+            ARLSeeder::class,
             TipoDocSeeder::class, 
             TipoTrabajadorSeeder::class,
+            TipoCuentaSeeder::class,
+            FormaPagoSeeder::class,
+            MetodoPagoSeeder::class,
+            LicenciaSeeder::class,
+            PagoSeeder::class,
             PlanSeeder::class,
             TipoContratoSeeder::class,
             SuperAdminSeeder::class,
 
             TipoHoraRecargoSeeder::class,
             SubTipoTrabajadorSeeder::class,
+<<<<<<< HEAD
             AFPSeeder::class,
             ARLSeeder::class,
             EPSSeeder::class,
@@ -40,6 +49,9 @@ class DatabaseSeeder extends Seeder
             TipoCuentaSeeder::class,
 
 
+=======
+            TestUserSeeder::class,
+>>>>>>> e0221bc19539c646b0a380c0c17cad2e23926a9f
         ]);
     }
 }

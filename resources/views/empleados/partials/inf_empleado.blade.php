@@ -1,7 +1,6 @@
 <h2 class="text-2xl font-bold text-gray-800 mb-6">
     Paso 1: Información Personal
 </h2>
-
 <!-- Indicador de pasos -->
 <div class="mb-10">
     <div class="flex justify-between text-sm mb-2">
@@ -118,15 +117,13 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Departamento 
             </label>
-            <select
-                class="form-select mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
+            <x-form.searchable-select
                 name="departamento"
-                required>
-                <option value="">Seleccionar...</option>
-                @foreach ( $departamento as $depa )
-                    <option value="{{ $depa->id_departamento }}">{{ $depa->nombre }}</option>
-                @endforeach
-            </select>
+                id="deptStep1"
+                icon="location_on"
+                placeholder="Departamento"
+                :options="$departamento->pluck('nombre', 'id_departamento')"
+            />
             <p class="error-message text-red-500 text-sm hidden" data-error="departamento"></p>
         </div>
 
@@ -134,15 +131,13 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Ciudad
             </label>
-            <select
-                class="form-select mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
+            <x-form.searchable-select
                 name="ciudad"
-                required>
-                <option value="">Seleccionar...</option>
-                @foreach ( $ciudad as $ciud )
-                    <option value="{{ $ciud->id_ciudad }}" data-departamento="{{$ciud->id_departamento}}">{{ $ciud->nombre }}</option>
-                @endforeach
-            </select>
+                id="cityStep1"
+                icon="location_city"
+                placeholder="Ciudad / Municipio"
+                :options="[]"
+            />
             <p class="error-message text-red-500 text-sm hidden" data-error="ciudad"></p>
         </div>
 
@@ -177,6 +172,140 @@
 </form> 
 
 <script>
+    function searchableSelect(config) {
+        return {
+            open: false,
+            search: '',
+            selectedKey: config.value,
+            options: config.options || {},
+            label: '',
+            isLoading: false,
+            isSearchable: config.searchable ?? true,
+            endpoint: config.endpoint,
+
+            init() {
+                if (!this.options) this.options = {};
+                this.updateLabel();
+
+                this.$watch('selectedKey', () => {
+                    this.updateLabel();
+                    this.$dispatch('input', this.selectedKey);
+                });
+
+                if (config.id) {
+                    window.addEventListener(`set-options-${config.id}`, (e) => {
+                        this.options = e.detail;
+
+                        if (this.selectedKey && this.options[this.selectedKey]) {
+                            this.label = this.options[this.selectedKey];
+                        } else {
+                            this.selectedKey = null;
+                            this.label = '';
+                        }
+                    });
+                }
+            },
+
+            updateLabel() {
+                if (!this.selectedKey) {
+                    this.label = '';
+                    return;
+                }
+                const found = this.options[this.selectedKey];
+                if (found) {
+                    this.label = found;
+                }
+            },
+
+            get filteredOptions() {
+                if (this.search === '') {
+                    return this.options;
+                }
+                const term = this.search.toLowerCase();
+                return Object.entries(this.options).reduce((acc, [key, val]) => {
+                    if (String(val).toLowerCase().includes(term)) {
+                        acc[key] = val;
+                    }
+                    return acc;
+                }, {});
+            },
+
+            toggle() {
+                this.open = !this.open;
+            },
+
+            select(key, value) {
+                this.selectedKey = key;
+                this.label = value;
+                this.open = false;
+                this.search = '';
+                this.$dispatch('selected', { key: key, value: value });
+            },
+
+            async performSearch(query) {
+                if (!this.isSearchable) return;
+                this.search = query;
+                if (!this.endpoint) return;
+
+                if (query.length < 2) return;
+
+                this.isLoading = true;
+                try {
+                    let url = this.endpoint + encodeURIComponent(query);
+                    let res = await fetch(url);
+                    let data = await res.json();
+
+                    let newOptions = {};
+                    data.forEach(item => {
+                        let id = item.id_ciudad || item.id || item.id_departamento;
+                        let text = item.nombre || item.name;
+                        if (id && text) newOptions[id] = text;
+                    });
+
+                    this.options = newOptions;
+                } catch (e) {
+                    console.error(e);
+                }
+                this.isLoading = false;
+            }
+        };
+    }
+
+    function ensureSearchableSelect() {
+        if (!window.Alpine) {
+            return;
+        }
+
+        if (!window.__searchableSelectRegistered) {
+            window.Alpine.data('searchableSelect', searchableSelect);
+            window.__searchableSelectRegistered = true;
+        }
+    }
+
+    document.addEventListener('alpine:init', ensureSearchableSelect);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        ensureSearchableSelect();
+
+        const deptValue = document.querySelector('#deptStep1 input[name="departamento"]')?.value;
+        if (deptValue) {
+            syncCityOptionsByDepartment(deptValue);
+        }
+    });
+
+    function handleDeptSelectionChange(event) {
+        const deptSelect = event.target?.closest?.('#deptStep1');
+        if (!deptSelect) {
+            return;
+        }
+
+        const selectedKey = event?.detail?.key ?? event?.detail ?? '';
+        syncCityOptionsByDepartment(selectedKey);
+    }
+
+    document.addEventListener('selected', handleDeptSelectionChange);
+    document.addEventListener('input', handleDeptSelectionChange);
+
     function clearStep1Errors() {
         const form = $('#step1');
         form.find('.error-message').addClass('hidden').text('');
@@ -223,6 +352,30 @@
         });
 
         return isValid;
+    }
+
+    function syncCityOptionsByDepartment(deptId) {
+        const normalizedId = deptId !== undefined && deptId !== null ? String(deptId) : '';
+
+        if (!normalizedId) {
+            window.dispatchEvent(new CustomEvent('set-options-cityStep1', { detail: {} }));
+            return;
+        }
+
+        fetch(`/api/cities/${encodeURIComponent(normalizedId)}`)
+            .then(response => response.ok ? response.json() : [])
+            .then(data => {
+                const options = {};
+                (data || []).forEach(item => {
+                    if (item && item.id_ciudad && item.nombre) {
+                        options[String(item.id_ciudad)] = item.nombre;
+                    }
+                });
+                window.dispatchEvent(new CustomEvent('set-options-cityStep1', { detail: options }));
+            })
+            .catch(() => {
+                window.dispatchEvent(new CustomEvent('set-options-cityStep1', { detail: {} }));
+            });
     }
 
     function moveToStep2() {
@@ -279,6 +432,15 @@
                 });
             }
         });
+    });
+
+    $(document).on('input', '[data-filter-select]', function () {
+        const target = $(this).attr('data-filter-select');
+        const selectEl = document.querySelector(target);
+        if (!selectEl) {
+            return;
+        }
+        filterSelectOptions(selectEl, this.value);
     });
 
     // Limpiar errores cuando el usuario escriba (delegación)

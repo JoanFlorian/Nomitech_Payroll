@@ -1230,11 +1230,15 @@ class CiudadSeeder extends Seeder
 
         $ciudades = array_merge($ciudades, $batch2, $batch3, $batch4, $batch5, $batch6);
 
-              foreach ($ciudades as $data) {
+        $cargadas = 0;
+        $errores = 0;
+        
+        foreach ($ciudades as $data) {
             $departamento = Departamento::where('codigo', $data['cod_dep'])->first();
 
             if (!$departamento) {
-                $this->command->warn("⚠️ No existe el departamento con código {$data['cod_dep']}");
+                $this->command->warn("⚠️ No existe el departamento con código {$data['cod_dep']} para la ciudad {$data['nombre']}");
+                $errores++;
                 continue;
             }
 
@@ -1245,9 +1249,13 @@ class CiudadSeeder extends Seeder
                     'nombre' => $data['nombre'],
                 ]
             );
+            $cargadas++;
         }
 
-        $this->command->info('✅ Ciudades cargadas correctamente.');
+        $this->command->info("✅ Ciudades cargadas: $cargadas de " . count($ciudades) . " registros");
+        if ($errores > 0) {
+            $this->command->warn("⚠️ Errores encontrados: $errores");
+        }
     }
 
 }

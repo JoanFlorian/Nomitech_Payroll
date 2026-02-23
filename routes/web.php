@@ -141,6 +141,7 @@ Route::get('/logout', function () {
 Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/actualizaciones', [ActualizacionesController::class, 'index'])->name('actualizaciones.principal');
     Route::get('/actualizaciones/{tipo}/datos', [ActualizacionesController::class, 'getDatos'])->name('actualizaciones.datos');
+    Route::get('/actualizaciones/{tipo}/exportar-excel', [ActualizacionesController::class, 'exportarExcel'])->name('actualizaciones.exportar');
     Route::post('/ciudades', [ActualizacionesController::class, 'storeCiudad'])->name('ciudades.store');
     Route::post('/{tipo}', [ActualizacionesController::class, 'store'])->name('store');
     Route::put('/actualizar/{id}', [ActualizacionesController::class, 'actualizar'])->name('actualizar');

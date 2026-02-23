@@ -41,16 +41,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
 
         @foreach($modulos as $modulo)
-            <div class="relative bg-white rounded-lg shadow-sm border p-4 flex flex-col justify-between">
-
-                <!-- Botón Ver (esquina superior derecha) -->
-                <button 
-                    onclick="openModal('{{ $modulo['titulo'] }}')" 
-                    class="absolute top-2 right-2 bg-gray-100 hover:bg-gray-200 text-sm rounded-full px-2 py-1 shadow"
-                    title="Ver detalles"
-                >
-                    <i class="bi bi-eye text-sm"></i>
-                </button>
+            <div class="bg-white rounded-lg shadow-sm border p-4 flex flex-col justify-between">
 
                 <div>
                     <div class="w-10 h-10 flex items-center justify-center rounded-md bg-blue-100 text-blue-900 mb-3">
@@ -79,6 +70,14 @@
                         class="border px-3 py-1.5 rounded-md text-xs flex items-center gap-1 hover:bg-gray-50 transition"
                     >
                         <i class="bi bi-pencil text-xs"></i> Editar
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="descargarExcel('{{ strtolower($modulo['titulo']) }}')"
+                        class="bg-green-600 text-white px-3 py-1.5 rounded-md text-xs flex items-center gap-1 hover:bg-green-700 transition"
+                        title="Descargar Excel"
+                    >
+                        <i class="bi bi-file-earmark-arrow-down text-xs"></i> Descargar
                     </button>
                 </div>
 
@@ -130,7 +129,6 @@
         'ciudades': 'ciudades',
         'tipos de documento': 'tipos_de_documento',
         'bancos': 'bancos',
-        'cargos': 'cargos',
         'tipos de contrato': 'tipos_de_contrato',
         'eps': 'eps',
         'arl': 'arl',
@@ -175,16 +173,6 @@
             campoId: 'id_banco',
             ruta: '/superadmin/actualizar/:id',
             colores: { icono: 'from-purple-400 to-purple-600', boton: 'from-purple-500 to-purple-600' }
-        },
-        cargos: {
-            tipo: 'cargos',
-            campos: [
-                { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-briefcase', requerido: true },
-                { clave: 'descripcion', label: 'Descripción', tipo: 'textarea', icono: 'bi-file-text' }
-            ],
-            campoId: 'id_rol',
-            ruta: '/superadmin/actualizar/:id',
-            colores: { icono: 'from-indigo-400 to-indigo-600', boton: 'from-indigo-500 to-indigo-600' }
         },
         tipos_de_contrato: {
             tipo: 'tipos_de_contrato',
@@ -275,7 +263,7 @@
         paises: {
             tipo: 'paises',
             campos: [
-                { clave: 'codigo', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
+                { clave: 'codigo_alfa2', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
                 { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-globe', requerido: true }
             ],
             campoId: 'id_pais',
@@ -339,6 +327,12 @@
 
     function closeAddModal() {
         cerrarModalAgregar();
+    }
+
+    // Descargar Excel
+    function descargarExcel(modulo) {
+        const tipo = moduloATipo[modulo.toLowerCase()] || modulo.toLowerCase().replace(/\s+/g, '_').replace(/[óá]/g, 'o');
+        window.location.href = `/superadmin/actualizaciones/${tipo}/exportar-excel`;
     }
 
     function cerrarAlerta(idAlerta) {

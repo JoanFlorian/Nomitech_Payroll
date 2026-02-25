@@ -95,6 +95,11 @@
                             class="border px-3 py-1.5 rounded-md text-xs flex items-center gap-1 hover:bg-gray-50 transition">
                             <i class="bi bi-pencil text-xs"></i> Editar
                         </button>
+                        <button type="button" onclick="descargarExcel('{{ strtolower($modulo['titulo']) }}')"
+                            class="bg-green-600 text-white px-3 py-1.5 rounded-md text-xs flex items-center gap-1 hover:bg-green-700 transition"
+                            title="Descargar Excel">
+                            <i class="bi bi-file-earmark-arrow-down text-xs"></i> Descargar
+                        </button>
                     </div>
 
                 </div>
@@ -106,20 +111,35 @@
             {{ $modulos->links() }}
         </div>
 
-
     </div>
 
-    <!-- MODAL -->
-    <div id="modalVer" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl w-full max-w-2xl p-6 relative">
+    <!-- MODAL VER DETALLE (DE DEVELOP, MAS COMPLETO) -->
+    <div id="modalVer" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div
+            class="bg-white rounded-2xl w-full max-w-6xl p-8 relative shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col">
 
-            <button onclick="closeModal()" class="absolute top-2 right-2 text-gray-500 hover:text-black">
-                ✖
+            <!-- Botón cerrar -->
+            <button onclick="closeModal()"
+                class="absolute top-5 right-5 w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 transition-all duration-200">
+                <i class="bi bi-x-lg text-lg"></i>
             </button>
 
-            <h2 id="modalTitulo" class="text-xl font-bold mb-4">Detalle</h2>
+            <!-- Header con icono dinámico -->
+            <div class="mb-6 pb-5 border-b border-gray-200">
+                <div class="flex items-center gap-4">
+                    <div id="modalIcono"
+                        class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                        <i class="bi bi-table text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 id="modalTitulo" class="text-2xl font-bold text-gray-900">Detalle</h2>
+                        <p id="modalSubtitulo" class="text-gray-500 text-sm mt-0.5">Visualiza y gestiona los registros</p>
+                    </div>
+                </div>
+            </div>
 
-            <div id="modalContenido" class="max-h-96 overflow-y-auto text-sm text-gray-700">
+            <!-- Contenido scrollable -->
+            <div id="modalContenido" class="flex-1 overflow-y-auto text-sm text-gray-700 pr-1">
                 <!-- Aquí se cargan los datos -->
             </div>
 
@@ -145,7 +165,6 @@
             'roles de sistema': 'roles',
             'tipos hora recargo': 'tipos_hora_recargo'
         };
-
 
         const departamentosJS = @json($departamentos->map(fn($d) => ['id' => $d->codigo, 'nombre' => $d->nombre]));
 
@@ -277,7 +296,7 @@
             paises: {
                 tipo: 'paises',
                 campos: [
-                    { clave: 'codigo', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
+                    { clave: 'codigo_alfa2', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
                     { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-globe', requerido: true }
                 ],
                 campoId: 'id_pais',
@@ -341,6 +360,12 @@
 
         function closeAddModal() {
             cerrarModalAgregar();
+        }
+
+        // Descargar Excel
+        function descargarExcel(modulo) {
+            const tipo = moduloATipo[modulo.toLowerCase()] || modulo.toLowerCase().replace(/\s+/g, '_').replace(/[óá]/g, 'o');
+            window.location.href = `/superadmin/actualizaciones/${tipo}/exportar-excel`;
         }
 
         function cerrarAlerta(idAlerta) {

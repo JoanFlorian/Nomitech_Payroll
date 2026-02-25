@@ -9,12 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('empresa', function (Blueprint $table) {
-            $table->integer('id_empresa')->autoIncrement();
+            $table->unsignedBigInteger('id_empresa')->autoIncrement();
             $table->string('nit', 20)->unique();
             $table->string('razon_social', 150);
             $table->string('doc_representante', 20); // siempre un usuario
 
-            $table->integer('id_ciudad');
+            $table->unsignedBigInteger('id_ciudad');
             $table->string('direccion', 150);
             $table->string('correo', 256)->nullable();
             $table->string('telefono', 20);
@@ -28,7 +28,7 @@ return new class extends Migration
 
         Schema::create('usuario_empresa', function (Blueprint $table) {
             $table->string('doc', 20);
-            $table->integer('id_empresa');
+            $table->unsignedBigInteger('id_empresa');
 
             $table->primary(['doc', 'id_empresa']);
 

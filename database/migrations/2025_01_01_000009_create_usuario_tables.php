@@ -9,7 +9,9 @@ return new class extends Migration {
     {
         Schema::create('usuario', function (Blueprint $table) {
             $table->string('doc', 12)->primary(); // PK sin autoincremento
-            $table->integer('id_tipo_doc'); // NOT NULL
+
+            // FKs con tipos correctos
+            $table->unsignedBigInteger('id_tipo_doc');   
             $table->string('contrasena', 255);
 
             $table->string('primer_nombre', 60);
@@ -17,16 +19,15 @@ return new class extends Migration {
             $table->string('primer_apellido', 60);
             $table->string('segundo_apellido', 60)->nullable();
 
-            $table->integer('id_ciudad')->nullable();
+            $table->unsignedBigInteger('id_ciudad')->nullable(); 
             $table->string('direccion', 255);
             $table->string('telefono', 20);
             $table->string('correo', 256);
 
-            $table->integer('id_rol');
+            $table->unsignedBigInteger('id_rol'); // ✅ mismo tipo que rol
             $table->boolean('activo')->default(true);
 
-            $table->dateTime('created_at')->useCurrent();
-            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->timestamps();
 
             $table->unique(['id_tipo_doc', 'doc']); // UNIQUE KEY
 
@@ -37,7 +38,7 @@ return new class extends Migration {
 
         Schema::create('usuario_modulo', function (Blueprint $table) {
             $table->string('doc', 20);
-            $table->integer('id_modulo');
+            $table->unsignedBigInteger('id_modulo'); 
 
             $table->primary(['doc', 'id_modulo']);
 

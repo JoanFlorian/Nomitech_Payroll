@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Afp;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -24,8 +25,20 @@ class DatabaseSeeder extends Seeder
             CiudadSeeder::class,
             RolSeeder::class,
             BancoSeeder::class,
+<<<<<<< HEAD
             TipoDocSeeder::class,
+=======
+            EPSSeeder::class,
+            AFPSeeder::class,
+            ARLSeeder::class,
+            TipoDocSeeder::class, 
+>>>>>>> af105929fff92a0e463cda1a326762fda9c6a73f
             TipoTrabajadorSeeder::class,
+            TipoCuentaSeeder::class,
+            FormaPagoSeeder::class,
+            MetodoPagoSeeder::class,
+            LicenciaSeeder::class,
+            PagoSeeder::class,
             PlanSeeder::class,
             TipoContratoSeeder::class,
             SuperAdminSeeder::class,
@@ -33,6 +46,15 @@ class DatabaseSeeder extends Seeder
             FormaPagoSeeder::class,
             MetodoPagoSeeder::class,
             SubTipoTrabajadorSeeder::class,
+<<<<<<< HEAD
+=======
+            AFPSeeder::class,
+            ARLSeeder::class,
+            EPSSeeder::class,
+            FormaPagoSeeder::class,
+            TipoCuentaSeeder::class,
+
+>>>>>>> af105929fff92a0e463cda1a326762fda9c6a73f
 
         ]);
     }

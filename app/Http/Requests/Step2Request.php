@@ -3,9 +3,11 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class Step2Request extends FormRequest
 {
+
     public function authorize(): bool
     {
         return true;
@@ -14,10 +16,8 @@ class Step2Request extends FormRequest
     public function rules(): array
     {
         return [
-
             // FECHAS
             'fecha_inicio' => 'bail|required|date',
-
             'fecha_fin' => 'bail|nullable|date|after_or_equal:fecha_inicio',
 
             // HORAS
@@ -30,12 +30,15 @@ class Step2Request extends FormRequest
             'id_arl'                  => 'bail|required|integer',
 
             // SALARIO
-            'salario' => 'bail|required|numeric|min:0|max:999999999',
+            'salario' => 'bail|required|numeric|min:0.01|max:999999999',
+
+            // NIVEL RIESGO
+            'nivel_riesgo' => 'bail|required|in:Nivel I,Nivel II,Nivel III,Nivel IV,Nivel V',
 
             // CODIGO INTERNO
             'codigo_interno' => 'bail|required|string|min:3|max:20|regex:/^[A-Za-z0-9\-]+$/',
 
-            // CHECK
+            // BOOLEAN CHECK - alto_riesgo (checkbox)
             'alto_riesgo' => 'nullable|boolean',
         ];
     }
@@ -43,7 +46,6 @@ class Step2Request extends FormRequest
     public function messages(): array
     {
         return [
-
             /*
             |--------------------------------------------------------------------------
             | FECHA INICIO
@@ -109,8 +111,16 @@ class Step2Request extends FormRequest
             */
             'salario.required' => 'El salario es obligatorio.',
             'salario.numeric'  => 'El salario debe ser un valor numérico.',
-            'salario.min'      => 'El salario no puede ser negativo.',
+            'salario.min'      => 'El salario debe ser mayor que cero.',
             'salario.max'      => 'El salario es demasiado alto.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | NIVEL DE RIESGO
+            |--------------------------------------------------------------------------
+            */
+            'nivel_riesgo.required' => 'Debe seleccionar el nivel de riesgo.',
+            'nivel_riesgo.in'       => 'El nivel de riesgo seleccionado no es válido.',
 
             /*
             |--------------------------------------------------------------------------
@@ -123,4 +133,29 @@ class Step2Request extends FormRequest
             'codigo_interno.regex'    => 'El código solo puede contener letras, números y guiones.',
         ];
     }
+
+    /**
+     * Prepare the data for validation. Ensure alto_riesgo is always 0 or 1
+     * regardless of whether the checkbox was checked.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'alto_riesgo' => $this->has('alto_riesgo') ? 1 : 0,
+        ]);
+    }
+
+    /**
+     * Always respond with JSON errors so AJAX front‑end can parse them.
+     */
+    protected function failedValidation($validator)
+    {
+        throw new HttpResponseException(
+            response()->json([
+                'success' => false,
+                'errors'  => $validator->errors(),
+            ], 422)
+        );
+    }
 }
+

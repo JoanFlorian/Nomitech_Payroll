@@ -5,172 +5,155 @@
 
 @section('content')
 
-<div class="w-full max-w-6xl mx-auto px-4">
+@php($s1 = $step1 ?? [])
 
-    {{-- PROGRESO --}}
-    <div class="mb-3">
-        <div class="flex justify-between text-xs font-medium text-gray-600 mb-1">
-            <span>Paso 1 de 3</span>
-            <span>Datos del empleado</span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-1.5">
-            <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style="width: 33.33%"></div>
-        </div>
+<div class="relative">
+    <div class="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8" aria-hidden="true">
+        @include('nomina.partials.index_content', ['salarios' => $salarios ?? collect()])
     </div>
 
-    {{-- FORMULARIO --}}
-    <div class="bg-white rounded-lg shadow-md p-4">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Buscar Empleado</h2>
+    <div class="fixed inset-0 bg-black/50 z-40" aria-hidden="true"></div>
+
+    <div class="fixed inset-0 z-50 p-4 md:p-6 flex items-center justify-center overflow-y-auto">
+        <div class="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-gray-200 p-4 md:p-5 modal-enter">
+            <a href="{{ route('nomina.index') }}"
+               class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white flex items-center justify-center shadow-sm transition"
+               aria-label="Cerrar">
+                <span class="text-lg">&times;</span>
+            </a>
+
+    {{-- HERO + FORMULARIO --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1">
+            <div class="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 text-white p-6 md:p-8 shadow-lg">
+                <div class="text-xs uppercase tracking-widest text-blue-100">Nueva Nómina</div>
+                <h2 class="text-2xl md:text-3xl font-bold mt-2">Paso 1: Datos del empleado</h2>
+                <p class="text-blue-100 mt-3 text-sm">Busca el contrato activo y confirma el salario base antes de continuar.</p>
+
+                <div class="mt-6">
+                    <div class="flex items-center justify-between text-xs font-semibold text-blue-100 mb-2">
+                        <span>Progreso</span>
+                        <span>1 de 3</span>
+                    </div>
+                    <div class="w-full bg-blue-400/40 rounded-full h-2">
+                        <div class="bg-white h-2 rounded-full transition-all duration-300" style="width: 33.33%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-blue-100 bg-white/80 p-5 shadow-sm">
+                <div class="text-sm font-semibold text-slate-800">Consejo rápido</div>
+                <p class="text-xs text-slate-500 mt-1">Usa el documento del empleado tal como aparece en el contrato.</p>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2">
+            <div class="bg-white/90 backdrop-blur rounded-2xl shadow-md border border-gray-100 p-6 md:p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl md:text-3xl font-bold text-gray-800">Buscar Empleado</h3>
+                    <span class="hidden md:inline-flex items-center gap-2 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                        Verifica el contrato activo
+                    </span>
+                </div>
 
         <form method="POST" action="{{ route('nomina.step1.post') }}" id="formNomina">
             @csrf
 
-            {{-- DOCUMENTO --}}
-            <div class="mb-3">
-                <label class="block text-xs font-semibold text-gray-700 mb-1">
-                    Documento <span class="text-red-500">*</span>
+            {{-- EMPLEADO --}}
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Buscar empleado <span class="text-red-500">*</span>
                 </label>
                 <div class="relative">
-                    <input id="doc" name="doc" type="text"
-                           class="w-full border-2 border-gray-300 px-3 py-1.5 rounded text-sm focus:border-blue-500 focus:outline-none transition bg-white"
-                           placeholder="Ingrese documento"
+                          <input id="empleado_busqueda" name="empleado_busqueda" type="text"
+                           class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-base focus:border-blue-500 focus:outline-none transition bg-white shadow-sm"
+                              value="{{ old('empleado_busqueda', $s1['empleado_busqueda'] ?? '') }}"
+                           placeholder="Escribe nombre o documento"
+                           maxlength="120"
+                           autocomplete="off"
                            required>
-                    <div id="loadingSpinner" class="hidden absolute right-3 top-1.5">
-                        <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <div id="loadingSpinner" class="hidden absolute right-4 top-3.5">
+                        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                     </div>
+
+                    <div id="sugerenciasEmpleados" class="hidden absolute z-30 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                        <ul id="listaSugerencias" class="py-1"></ul>
+                    </div>
                 </div>
-                <p id="errorMsg" class="hidden text-red-500 text-xs mt-0.5"></p>
+                <p id="docHelp" class="text-xs text-gray-500 mt-2">Escribe nombre o documento y selecciona una opción.</p>
+                <p id="errorMsg" class="hidden text-red-600 text-sm mt-2 font-medium"></p>
             </div>
 
             {{-- DATOS PERSONALES - 2 COLUMNAS --}}
-            <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Nombre Completo</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre Completo</label>
                     <input id="nombre" type="text"
-                           class="w-full border-2 border-gray-200 px-3 py-1.5 rounded bg-gray-50 text-gray-700 cursor-not-allowed text-xs"
+                           class="w-full border-2 border-gray-200 px-4 py-3 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm"
+                              value="{{ old('nombre', $s1['nombre'] ?? '') }}"
                            disabled>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Teléfono</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Teléfono</label>
                     <input id="telefono" type="text"
-                           class="w-full border-2 border-gray-200 px-3 py-1.5 rounded bg-gray-50 text-gray-700 cursor-not-allowed text-xs"
+                              class="w-full border-2 border-gray-200 px-4 py-3 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm"
+                           value="{{ old('telefono', $s1['telefono'] ?? '') }}"
                            disabled>
                 </div>
             </div>
 
             {{-- SALARIO Y FECHA PAGO - 2 COLUMNAS --}}
-            <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Salario Base</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Salario Base</label>
                     <input id="salario_base" name="salario_base" type="text"
-                           class="w-full border-2 border-gray-200 px-3 py-1.5 rounded bg-gray-50 text-gray-700 cursor-not-allowed font-semibold text-xs"
+                           class="w-full border-2 border-gray-200 px-4 py-3 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed font-semibold text-sm"
+                              value="{{ old('salario_base', isset($s1['salario_base']) ? number_format((float) $s1['salario_base'], 0, ',', '.') : '') }}"
                            readonly>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Fecha de Pago <span class="text-red-500">*</span>
                     </label>
                     <input id="fecha_pago" name="fecha_pago" type="date"
-                           class="w-full border-2 border-gray-300 px-3 py-1.5 rounded text-xs focus:border-blue-500 focus:outline-none transition"
+                           class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-sm focus:border-blue-500 focus:outline-none transition bg-white shadow-sm"
+                           value="{{ old('fecha_pago', $s1['fecha_pago'] ?? '') }}"
                            required>
+                    <p id="fechaError" class="hidden text-red-600 text-sm mt-2 font-medium"></p>
                 </div>
             </div>
 
             {{-- CAMPOS OCULTOS --}}
-            <input type="hidden" name="id_contrato" id="id_contrato">
+            <input type="hidden" name="doc" id="doc" value="{{ old('doc', $s1['doc'] ?? '') }}">
+            <input type="hidden" name="id_contrato" id="id_contrato" value="{{ old('id_contrato', $s1['id_contrato'] ?? '') }}">
 
             {{-- BOTONES --}}
-            <div class="flex justify-between pt-3 border-t border-gray-200">
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-6 border-t border-gray-200">
                 <a href="{{ route('nomina.index') }}"
-                   class="px-5 py-1.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded font-medium transition text-xs">
+                   class="px-6 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition text-sm text-center">
                     Cancelar
                 </a>
                 <button type="submit"
-                        class="px-6 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition shadow-md hover:shadow-lg text-xs">
+                        class="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition shadow-md hover:shadow-lg text-sm">
                     Continuar →
                 </button>
             </div>
         </form>
     </div>
 
+        </div>
+    </div>
+
+        </div>
+    </div>
 </div>
 
-<script>
-document.getElementById('doc').addEventListener('blur', function () {
-    const docValue = this.value.trim();
-    
-    if (!docValue) {
-        limpiarFormulario();
-        return;
-    }
-
-    // Mostrar spinner
-    document.getElementById('loadingSpinner').classList.remove('hidden');
-    document.getElementById('errorMsg').classList.add('hidden');
-
-    fetch(`/nomina/buscar-empleado/${docValue}`)
-        .then(response => {
-            if (!response.ok) throw new Error('Error en la solicitud');
-            return response.json();
-        })
-        .then(data => {
-            document.getElementById('loadingSpinner').classList.add('hidden');
-            
-            if (!data) {
-                mostrarError('Empleado no encontrado o no tiene contratos activos');
-                limpiarFormulario();
-                return;
-            }
-
-            // Llenar los campos
-            document.getElementById('nombre').value = data.nombre || '';
-            document.getElementById('telefono').value = data.telefono || '';
-            document.getElementById('salario_base').value = data.salario_base ? 
-                new Intl.NumberFormat('es-CO', {style: 'currency', currency: 'COP'}).format(data.salario_base) : '';
-            document.getElementById('id_contrato').value = data.id_contrato || '';
-
-            // Establecer la fecha de pago a hoy si está vacía
-            if (!document.getElementById('fecha_pago').value) {
-                const hoy = new Date().toISOString().split('T')[0];
-                document.getElementById('fecha_pago').value = hoy;
-            }
-        })
-        .catch(error => {
-            document.getElementById('loadingSpinner').classList.add('hidden');
-            console.error('Error:', error);
-            mostrarError('Error al buscar el empleado. Intente de nuevo.');
-            limpiarFormulario();
-        });
-});
-
-// Validar que el documento esté completo antes de enviar
-document.getElementById('formNomina').addEventListener('submit', function (e) {
-    const idContrato = document.getElementById('id_contrato').value;
-    
-    if (!idContrato) {
-        e.preventDefault();
-        mostrarError('Por favor busque un empleado válido antes de continuar');
-        return false;
-    }
-});
-
-function limpiarFormulario() {
-    document.getElementById('nombre').value = '';
-    document.getElementById('telefono').value = '';
-    document.getElementById('salario_base').value = '';
-    document.getElementById('id_contrato').value = '';
-}
-
-function mostrarError(mensaje) {
-    const errorMsg = document.getElementById('errorMsg');
-    errorMsg.textContent = mensaje;
-    errorMsg.classList.remove('hidden');
-}
-</script>
+@include('nomina.partials.step1_script')
+@include('nomina.partials.modal_assets')
 
 @endsection

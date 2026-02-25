@@ -13,7 +13,7 @@
 
 <div
     {{ $attributes->merge(['class' => 'relative ' . ($colSpan ? 'md:col-span-2' : '')]) }}
-
+    @if($id) id="{{ $id }}" @endif
     data-config="{{ json_encode([
         'value' => $value,
         'options' => $options,

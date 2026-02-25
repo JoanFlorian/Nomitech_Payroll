@@ -17,22 +17,53 @@ class Usuario extends Authenticatable
     protected $fillable = [
         'doc',
         'id_tipo_doc',
+        'numero_documento',
         'primer_nombre',
-        'segundo_nombre',
+        'otros_nombres',
         'primer_apellido',
         'segundo_apellido',
         'correo',
         'telefono',
         'direccion',
+        'id_ciudad',
         'id_rol',
         'activo',
-        'contrasena'
+        'contrasena',
+        // Campos del contrato
+        'id_tipo_trabajador',
+        'id_sub_tipo_trabajador',
+        'id_tipo_contrato',
+        'fecha_inicio',
+        'fecha_fin',
+        'salario_base',
+        'salario',
+        'id_arl',
+        'nivel_riesgo',
+        'alto_riesgo',
+        'id_forma_pago',
+        'id_metodo_pago',
+        'tipo_cuenta',
+        'numero_cuenta',
+        'id_eps',
+        'id_afp',
+        'codigo_interno',
+        'horas_diarias',
     ];
 
     protected $hidden = [
         'contrasena',
         'remember_token',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+            'alto_riesgo' => 'boolean',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 
     // Overrides for Custom Auth Fields
     public function getAuthPassword()
@@ -74,5 +105,15 @@ class Usuario extends Authenticatable
     public function routeNotificationForMail($notification)
     {
         return $this->correo;
+    }
+
+    public function getNombreCompletoAttribute(): string
+    {
+        return trim(collect([
+            $this->primer_nombre,
+            $this->otros_nombres,
+            $this->primer_apellido,
+            $this->segundo_apellido,
+        ])->filter()->implode(' '));
     }
 }

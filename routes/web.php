@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegistroUsuarios;
 use App\Http\Controllers\NominaController;
-use App\Http\Controllers\EmployeeWizardController;
 use App\Http\Controllers\SuperAdmin\EmpresaController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\Auth\LoginController;
@@ -73,14 +72,17 @@ Route::middleware('auth')->group(function () {
 
 // Protected App Routes (Auth + Active License)
 Route::middleware(['auth', 'ensure_active_license'])->group(function () {
-    Route::get('/empleados', function () {
-        return view('empleados.index');
-    })->name('empleados.index');
+    // Empleados
+    Route::get('/empleados', [App\Http\Controllers\EmployeesController::class, 'index'])->name('empleados.index');
+    Route::get('/employees/export', [App\Http\Controllers\EmployeesController::class, 'export'])->name('employees.export');
+    Route::get('/employees/{doc}/edit', [RegistroUsuarios::class, 'editEmployee'])->name('employees.edit');
+    Route::post('/employees/{doc}/update', [RegistroUsuarios::class, 'updateEmployee'])->name('employees.update');
 
     /* Wizard registro empleado */
     Route::post('/employees/step-1', [RegistroUsuarios::class, 'storeStep1'])->name('employees.step1');
     Route::post('/employees/step-2', [RegistroUsuarios::class, 'storeStep2'])->name('employees.step2');
     Route::post('/employees/final', [RegistroUsuarios::class, 'storeFinal'])->name('employees.final');
+    Route::post('/employees/clear-session', [RegistroUsuarios::class, 'clearWizardSession'])->name('employees.clear-session');
 
     // Nómina Routes
     Route::get('/nomina', [NominaController::class, 'index'])->name('nomina.index');
@@ -88,9 +90,12 @@ Route::middleware(['auth', 'ensure_active_license'])->group(function () {
     Route::post('/nomina/step-1', [NominaController::class, 'postStep1'])->name('nomina.step1.post');
     Route::get('/nomina/step-2', [NominaController::class, 'step2'])->name('nomina.step2');
     Route::post('/nomina/step-2', [NominaController::class, 'postStep2'])->name('nomina.step2.post');
+    Route::get('/nomina/step-2/ingresos', [NominaController::class, 'step2Ingresos'])->name('nomina.step2.ingresos');
+    Route::post('/nomina/step-2/ingresos', [NominaController::class, 'postStep2Ingresos'])->name('nomina.step2.ingresos.post');
     Route::get('/nomina/step-3', [NominaController::class, 'step3'])->name('nomina.step3');
     Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.store');
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
+    Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);
 
     // Superadmin Empresas Management
     Route::get('/superadmin/empresas', [EmpresaController::class, 'index'])->name('superadmin.empresas.index');
@@ -139,6 +144,7 @@ Route::get('/logout', function () {
 Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/actualizaciones', [ActualizacionesController::class, 'index'])->name('actualizaciones.principal');
     Route::get('/actualizaciones/{tipo}/datos', [ActualizacionesController::class, 'getDatos'])->name('actualizaciones.datos');
+    Route::get('/actualizaciones/{tipo}/exportar-excel', [ActualizacionesController::class, 'exportarExcel'])->name('actualizaciones.exportar');
     Route::post('/ciudades', [ActualizacionesController::class, 'storeCiudad'])->name('ciudades.store');
     Route::post('/{tipo}', [ActualizacionesController::class, 'store'])->name('store');
     Route::put('/actualizar/{id}', [ActualizacionesController::class, 'actualizar'])->name('actualizar');

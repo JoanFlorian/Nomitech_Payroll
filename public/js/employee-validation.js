@@ -118,10 +118,25 @@
     function validateStep2Field(form, fieldName, showError = true) {
         const input = getField(form, fieldName);
         const value = input ? (input.value || '').trim() : '';
+        const fechaInicioInput = getField(form, 'fecha_inicio');
+        const fechaInicioValue = fechaInicioInput ? (fechaInicioInput.value || '').trim() : '';
 
         switch (fieldName) {
             case 'fecha_inicio':
                 return validarInput(input, value !== '', 'La fecha de ingreso es obligatoria.', showError);
+            case 'fecha_fin':
+                if (value === '') {
+                    if (showError) {
+                        clearFieldError(input);
+                    }
+                    return true;
+                }
+
+                if (!fechaInicioValue) {
+                    return validarInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
+                }
+
+                return validarInput(input, value >= fechaInicioValue, 'La fecha fin no puede ser menor que la fecha de inicio.', showError);
             case 'id_tipo_contrato':
                 return validarInput(input, value !== '', 'El tipo de contrato es obligatorio.', showError);
             case 'nivel_riesgo':
@@ -135,7 +150,7 @@
             case 'id_arl':
                 return validarInput(input, value !== '', 'La ARL es obligatoria.', showError);
             case 'horas_diarias':
-                return validarInput(input, value !== '' && Number(value) > 0, 'Las horas diarias son obligatorias.', showError);
+                return validarInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
             case 'codigo_interno':
                 return validarInput(input, value.length >= 3, 'El código interno debe tener mínimo 3 caracteres.', showError);
             default:
@@ -195,7 +210,7 @@
         }
 
         if (form.id === 'step2') {
-            return ['fecha_inicio', 'id_tipo_contrato', 'nivel_riesgo', 'salario', 'id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_arl', 'horas_diarias', 'codigo_interno'];
+            return ['fecha_inicio', 'fecha_fin', 'id_tipo_contrato', 'nivel_riesgo', 'salario', 'id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_arl', 'horas_diarias', 'codigo_interno'];
         }
 
         if (form.id === 'step3') {

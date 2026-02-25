@@ -418,7 +418,7 @@ function buildChangedFieldsFormData(form) {
 function loadEmployee(doc) {
     fetch(`/employees/${doc}/edit`)
         .then(response => {
-            if (!response.ok) throw new Error('Error loading employee');
+            if (!response.ok) throw new Error('Error al cargar empleado');
             return response.json();
         })
         .then(data => {
@@ -526,10 +526,10 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
                         errorEl.closest('div').querySelector('input, select, textarea')?.classList.add('border-red-500');
                     }
                 }
-                throw new Error('Validation error');
+                throw new Error('Error de validación');
             });
         }
-        if (!response.ok) throw new Error('Error updating employee');
+        if (!response.ok) throw new Error('Error al actualizar empleado');
         return response.json();
     })
     .then(data => {
@@ -539,7 +539,7 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
     })
     .catch(error => {
         console.error('Error:', error);
-        if (error.message !== 'Validation error') {
+        if (error.message !== 'Error de validación') {
             Swal.fire('Error', 'No se pudo actualizar el empleado', 'error');
         }
     });

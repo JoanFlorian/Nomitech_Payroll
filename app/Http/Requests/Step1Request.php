@@ -39,7 +39,7 @@ class Step1Request extends FormRequest
             'telefono' => 'bail|required|digits_between:7,15|regex:/^[0-9]+$/',
 
             // SELECTS - Mapear a id_ciudad
-            'departamento' => 'bail|required|integer',
+            'departamento' => 'bail|required|integer|exists:departamento,id_departamento',
             'ciudad'       => 'bail|required|integer|exists:ciudad,id_ciudad',
 
             // DIRECCIÓN
@@ -58,7 +58,7 @@ class Step1Request extends FormRequest
             */
             'id_tipo_doc.required' => 'El tipo de documento es obligatorio.',
             'id_tipo_doc.integer'  => 'El tipo de documento no es válido.',
-            'id_tipo_doc.max'      => 'El tipo de documento no es válido.',
+            'id_tipo_doc.exists'   => 'El tipo de documento seleccionado no es válido.',
 
             /*
             |--------------------------------------------------------------------------
@@ -127,6 +127,7 @@ class Step1Request extends FormRequest
             */
             'departamento.required' => 'El departamento es obligatorio.',
             'departamento.integer'  => 'Debe seleccionar un departamento válido.',
+            'departamento.exists'   => 'El departamento seleccionado no es válido.',
 
             /*
             |--------------------------------------------------------------------------
@@ -135,6 +136,7 @@ class Step1Request extends FormRequest
             */
             'ciudad.required' => 'La ciudad es obligatoria.',
             'ciudad.integer'  => 'Debe seleccionar una ciudad válida.',
+            'ciudad.exists'   => 'La ciudad seleccionada no es válida.',
 
             /*
             |--------------------------------------------------------------------------

@@ -24,10 +24,10 @@ class Step2Request extends FormRequest
             'horas_diarias' => 'bail|required|integer|min:1|max:12',
 
             // SELECTS
-            'id_tipo_trabajador'      => 'bail|required|integer',
-            'id_sub_tipo_trabajador'  => 'bail|required|integer',
-            'id_tipo_contrato'        => 'bail|required|integer',
-            'id_arl'                  => 'bail|required|integer',
+            'id_tipo_trabajador'      => 'bail|required|integer|exists:tipo_trabajador,id_tipo_trabajador',
+            'id_sub_tipo_trabajador'  => 'bail|required|integer|exists:sub_tipo_trabajador,id_sub_tipo_trabajador',
+            'id_tipo_contrato'        => 'bail|required|integer|exists:tipo_contrato,id_tipo_contrato',
+            'id_arl'                  => 'bail|required|integer|exists:arl,id_arl',
 
             // SALARIO
             'salario' => 'bail|required|numeric|min:0.01|max:999999999',
@@ -79,6 +79,7 @@ class Step2Request extends FormRequest
             */
             'id_tipo_trabajador.required' => 'Debe seleccionar el tipo de trabajador.',
             'id_tipo_trabajador.integer'  => 'Debe seleccionar un tipo de trabajador válido.',
+            'id_tipo_trabajador.exists'   => 'El tipo de trabajador seleccionado no existe.',
 
             /*
             |--------------------------------------------------------------------------
@@ -87,6 +88,7 @@ class Step2Request extends FormRequest
             */
             'id_sub_tipo_trabajador.required' => 'Debe seleccionar el sub tipo de trabajador.',
             'id_sub_tipo_trabajador.integer'  => 'Debe seleccionar un sub tipo válido.',
+            'id_sub_tipo_trabajador.exists'   => 'El sub tipo de trabajador seleccionado no existe.',
 
             /*
             |--------------------------------------------------------------------------
@@ -95,6 +97,7 @@ class Step2Request extends FormRequest
             */
             'id_tipo_contrato.required' => 'Debe seleccionar el tipo de contrato.',
             'id_tipo_contrato.integer'  => 'Debe seleccionar un tipo de contrato válido.',
+            'id_tipo_contrato.exists'   => 'El tipo de contrato seleccionado no existe.',
 
             /*
             |--------------------------------------------------------------------------
@@ -103,6 +106,7 @@ class Step2Request extends FormRequest
             */
             'id_arl.required' => 'Debe seleccionar la ARL.',
             'id_arl.integer'  => 'Debe seleccionar una ARL válida.',
+            'id_arl.exists'   => 'La ARL seleccionada no existe.',
 
             /*
             |--------------------------------------------------------------------------

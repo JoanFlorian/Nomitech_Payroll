@@ -331,14 +331,6 @@
             });
         });
 
-        const step1 = document.getElementById('step1');
-        const step2 = document.getElementById('step2');
-        const step3 = document.getElementById('step3');
-
-        if (step1) step1.style.display = '';
-        if (step2) step2.style.display = 'none';
-        if (step3) step3.style.display = 'none';
-
         if (window.employeeValidation && typeof window.employeeValidation.refreshAll === 'function') {
             window.employeeValidation.refreshAll();
         }
@@ -348,24 +340,6 @@
         const moduleData = getEmpleadosModuleData();
         if (moduleData) {
             moduleData.wizardStep = step;
-        }
-
-        const step1 = document.getElementById('step1');
-        const step2 = document.getElementById('step2');
-        const step3 = document.getElementById('step3');
-
-        if (step === 1) {
-            if (step1) step1.style.display = '';
-            if (step2) step2.style.display = 'none';
-            if (step3) step3.style.display = 'none';
-        } else if (step === 2) {
-            if (step1) step1.style.display = 'none';
-            if (step2) step2.style.display = '';
-            if (step3) step3.style.display = 'none';
-        } else if (step === 3) {
-            if (step1) step1.style.display = 'none';
-            if (step2) step2.style.display = 'none';
-            if (step3) step3.style.display = '';
         }
 
         if (window.employeeValidation && typeof window.employeeValidation.refreshAll === 'function') {
@@ -425,13 +399,13 @@
             
             nextStep() {
                 if (this.wizardStep < 3) {
-                    this.wizardStep++;
+                    window.goToWizardStep(this.wizardStep + 1);
                 }
             },
             
             previousStep() {
                 if (this.wizardStep > 1) {
-                    this.wizardStep--;
+                    window.goToWizardStep(this.wizardStep - 1);
                 }
             },
 

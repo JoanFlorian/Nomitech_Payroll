@@ -51,7 +51,7 @@ class RegisterRequest extends FormRequest
             'documento' => ['required', 'string', 'regex:/^[0-9]+$/', 'digits_between:6,12', 'unique:usuario,doc'],
             'id_tipo_doc' => ['required', 'exists:tipo_doc,id_tipo_doc'],
             'primer_apellido' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
-            'segundo_apellido' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
+            'segundo_apellido' => ['nullable', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'primer_nombre' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'otros_nombres' => ['nullable', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'telefono_celular' => ['required', 'string', 'regex:/^3[0-9]{9}$/'],

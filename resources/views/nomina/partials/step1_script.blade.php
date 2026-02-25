@@ -10,6 +10,7 @@ const errorMsg = $('errorMsg');
 const fechaError = $('fechaError');
 const box = $('sugerenciasEmpleados');
 const list = $('listaSugerencias');
+const isEditingNomina = @json((bool)($isEditing ?? false));
 const formatCOP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(n);
 
 let timer = null;
@@ -107,21 +108,25 @@ function validateFecha() {
     return true;
 }
 
-empleadoInput.addEventListener('focus', () => fetchEmployees(empleadoInput.value.trim()));
-empleadoInput.addEventListener('input', () => {
-    docInput.value = '';
-    clearEmployeeData();
-    hideErrors();
-    markNeutral(empleadoInput);
-    clearTimeout(timer);
-    timer = setTimeout(() => fetchEmployees(empleadoInput.value.trim()), 220);
-});
+if (!isEditingNomina) {
+    empleadoInput.addEventListener('focus', () => fetchEmployees(empleadoInput.value.trim()));
+    empleadoInput.addEventListener('input', () => {
+        docInput.value = '';
+        clearEmployeeData();
+        hideErrors();
+        markNeutral(empleadoInput);
+        clearTimeout(timer);
+        timer = setTimeout(() => fetchEmployees(empleadoInput.value.trim()), 220);
+    });
+}
 
-list.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-index]');
-    if (!btn) return;
-    selectEmployee(lastResults[Number(btn.dataset.index)]);
-});
+if (!isEditingNomina) {
+    list.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-index]');
+        if (!btn) return;
+        selectEmployee(lastResults[Number(btn.dataset.index)]);
+    });
+}
 
 document.addEventListener('click', (e) => {
     if (!box.contains(e.target) && e.target !== empleadoInput) box.classList.add('hidden');

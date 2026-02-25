@@ -6,6 +6,7 @@
 @section('content')
 
 @php($s1 = $step1 ?? [])
+@php($isEditing = $isEditing ?? false)
 
 <div class="relative">
     <div class="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8" aria-hidden="true">
@@ -66,11 +67,12 @@
                 </label>
                 <div class="relative">
                           <input id="empleado_busqueda" name="empleado_busqueda" type="text"
-                           class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-base focus:border-blue-500 focus:outline-none transition bg-white shadow-sm"
+                                    class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-base focus:border-blue-500 focus:outline-none transition bg-white shadow-sm {{ $isEditing ? 'bg-gray-50 cursor-not-allowed' : '' }}"
                               value="{{ old('empleado_busqueda', $s1['empleado_busqueda'] ?? '') }}"
                            placeholder="Escribe nombre o documento"
                            maxlength="120"
                            autocomplete="off"
+                                    @readonly($isEditing)
                            required>
                     <div id="loadingSpinner" class="hidden absolute right-4 top-3.5">
                         <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -121,8 +123,9 @@
                         Fecha de Pago <span class="text-red-500">*</span>
                     </label>
                     <input id="fecha_pago" name="fecha_pago" type="date"
-                           class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-sm focus:border-blue-500 focus:outline-none transition bg-white shadow-sm"
+                              class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-sm focus:border-blue-500 focus:outline-none transition bg-white shadow-sm {{ $isEditing ? 'bg-gray-50 cursor-not-allowed' : '' }}"
                            value="{{ old('fecha_pago', $s1['fecha_pago'] ?? '') }}"
+                              @readonly($isEditing)
                            required>
                     <p id="fechaError" class="hidden text-red-600 text-sm mt-2 font-medium"></p>
                 </div>

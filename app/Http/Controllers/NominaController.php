@@ -9,6 +9,38 @@ use Illuminate\Support\Str;
 
 class NominaController extends Controller
 {
+    private const VALIDATION_MESSAGES = [
+        '*.numeric' => 'Este campo debe ser numérico.',
+        '*.min' => 'Este campo no puede ser negativo.',
+    ];
+
+    private const STEP2_RATES = [
+        'horas_extra_diurnas' => 1.25,
+        'horas_extra_nocturnas' => 1.75,
+        'horas_extra_dominicales_diurnas' => 2.0,
+        'horas_extra_dominicales_nocturnas' => 2.5,
+        'recargo_nocturno' => 0.35,
+        'recargo_dominical_diurno' => 0.75,
+        'recargo_dominical_nocturno' => 1.10,
+        'recargo_festivo_diurno' => 0.75,
+        'recargo_festivo_nocturno' => 1.10,
+    ];
+
+    private const STEP2_EXTRA_KEYS = [
+        'horas_extra_diurnas',
+        'horas_extra_nocturnas',
+        'horas_extra_dominicales_diurnas',
+        'horas_extra_dominicales_nocturnas',
+    ];
+
+    private const STEP2_RECARGO_KEYS = [
+        'recargo_nocturno',
+        'recargo_dominical_diurno',
+        'recargo_dominical_nocturno',
+        'recargo_festivo_diurno',
+        'recargo_festivo_nocturno',
+    ];
+
     private function getContractContributionRules($idContrato): array
     {
         $defaultRates = [
@@ -133,11 +165,51 @@ class NominaController extends Controller
 
         $normalized = preg_replace('/[^\d,.-]/', '', (string) $value);
 
-        if (str_contains($normalized, ',') && str_contains($normalized, '.')) {
-            $normalized = str_replace('.', '', $normalized);
-            $normalized = str_replace(',', '.', $normalized);
-        } else {
-            $normalized = str_replace(',', '.', $normalized);
+        $hasComma = str_contains($normalized, ',');
+        $hasDot = str_contains($normalized, '.');
+
+        if ($hasComma && $hasDot) {
+            $lastComma = strrpos($normalized, ',');
+            $lastDot = strrpos($normalized, '.');
+
+            if ($lastComma !== false && $lastDot !== false && $lastComma > $lastDot) {
+                $normalized = str_replace('.', '', $normalized);
+                $normalized = str_replace(',', '.', $normalized);
+            } else {
+                $normalized = str_replace(',', '', $normalized);
+            }
+        } elseif ($hasDot && !$hasComma) {
+            $dotCount = substr_count($normalized, '.');
+
+            if ($dotCount > 1) {
+                $normalized = str_replace('.', '', $normalized);
+            } else {
+                $parts = explode('.', $normalized);
+                if (
+                    count($parts) === 2 &&
+                    strlen($parts[1]) === 3 &&
+                    strlen($parts[0]) >= 1
+                ) {
+                    $normalized = str_replace('.', '', $normalized);
+                }
+            }
+        } elseif ($hasComma && !$hasDot) {
+            $commaCount = substr_count($normalized, ',');
+
+            if ($commaCount > 1) {
+                $normalized = str_replace(',', '', $normalized);
+            } else {
+                $parts = explode(',', $normalized);
+                if (
+                    count($parts) === 2 &&
+                    strlen($parts[1]) === 3 &&
+                    strlen($parts[0]) >= 1
+                ) {
+                    $normalized = str_replace(',', '', $normalized);
+                } else {
+                    $normalized = str_replace(',', '.', $normalized);
+                }
+            }
         }
 
         return is_numeric($normalized) ? (float) $normalized : 0.0;
@@ -148,14 +220,22 @@ class NominaController extends Controller
     ========================== */
     public function index(Request $request)
     {
+        $busqueda = trim((string) $request->input('documento', ''));
+
         $salarios = Salario::with('contrato.usuario')
-            ->when($request->documento, function ($q) use ($request) {
-                $q->whereHas('contrato.usuario', function ($u) use ($request) {
-                    $u->where('doc', $request->documento);
+            ->when($busqueda !== '', function ($q) use ($busqueda) {
+                $term = mb_strtolower($busqueda);
+                $q->whereHas('contrato.usuario', function ($u) use ($busqueda, $term) {
+                    $u->where('doc', 'like', "%{$busqueda}%")
+                        ->orWhereRaw(
+                            "LOWER(CONCAT_WS(' ', primer_nombre, otros_nombres, primer_apellido, segundo_apellido)) LIKE ?",
+                            ["%{$term}%"]
+                        );
                 });
             })
             ->orderByDesc('fecha_pago')
-            ->get();
+            ->paginate(4)
+            ->withQueryString();
 
         return view('nomina.index', compact('salarios'));
     }
@@ -163,11 +243,20 @@ class NominaController extends Controller
     /* ==========================
        STEP 1
     ========================== */
-    public function step1()
+    public function step1(Request $request)
     {
-        session(['nomina.step' => 1]);
-        $step1 = session('nomina.step1', []);
-        return view('nomina.step1', compact('step1'));
+        if ($request->boolean('fresh')) {
+            session()->forget('nomina');
+            session(['nomina.step' => 1]);
+            $step1 = [];
+        } else {
+            session(['nomina.step' => 1]);
+            $step1 = session('nomina.step1', []);
+        }
+
+        $isEditing = (bool) session('nomina.editing_id');
+
+        return view('nomina.step1', compact('step1', 'isEditing'));
     }
 
     public function postStep1(Request $request)
@@ -176,6 +265,41 @@ class NominaController extends Controller
         $data['salario_base'] = $this->parseNumber($request->input('salario_base'));
         session(['nomina.step1' => $data]);
         return redirect()->route('nomina.step2');
+    }
+
+    public function edit(int $idSalario)
+    {
+        $registro = DB::table('salario as s')
+            ->join('contrato as c', 'c.id_contrato', '=', 's.id_contrato')
+            ->join('usuario as u', 'u.doc', '=', 'c.doc')
+            ->where('s.id_salario', $idSalario)
+            ->select(
+                's.id_salario',
+                's.id_contrato',
+                's.fecha_pago',
+                's.valor_horas_extras_recargos',
+                's.bonificaciones',
+                's.comisiones',
+                's.otros_devengos',
+                's.retencion_fuente',
+                's.embargo_fiscal',
+                's.pension_voluntaria',
+                'u.doc',
+                DB::raw("TRIM(CONCAT(u.primer_nombre,' ',IFNULL(u.otros_nombres,''),' ',u.primer_apellido,' ',IFNULL(u.segundo_apellido,''))) as nombre"),
+                'u.telefono',
+                'c.salario_base'
+            )
+            ->first();
+
+        if (!$registro) {
+            return redirect()->route('nomina.index')->with('error', 'No se encontró el registro de nómina a editar.');
+        }
+
+        session()->forget('nomina');
+
+        session($this->buildEditingSessionPayload($registro));
+
+        return redirect()->route('nomina.step1', ['editing' => 1])->with('success', 'Modo edición activado.');
     }
 
     /* ==========================
@@ -198,20 +322,10 @@ class NominaController extends Controller
 
     public function postStep2(Request $request)
     {
-        $validated = $request->validate([
-            'horas_extra_diurnas' => 'nullable|numeric|min:0',
-            'horas_extra_nocturnas' => 'nullable|numeric|min:0',
-            'horas_extra_dominicales_diurnas' => 'nullable|numeric|min:0',
-            'horas_extra_dominicales_nocturnas' => 'nullable|numeric|min:0',
-            'recargo_nocturno' => 'nullable|numeric|min:0',
-            'recargo_dominical_diurno' => 'nullable|numeric|min:0',
-            'recargo_dominical_nocturno' => 'nullable|numeric|min:0',
-            'recargo_festivo_diurno' => 'nullable|numeric|min:0',
-            'recargo_festivo_nocturno' => 'nullable|numeric|min:0',
-        ], [
-            '*.numeric' => 'Este campo debe ser numérico.',
-            '*.min' => 'Este campo no puede ser negativo.',
-        ]);
+        $validated = $request->validate(
+            array_fill_keys(array_keys(self::STEP2_RATES), 'nullable|numeric|min:0'),
+            self::VALIDATION_MESSAGES
+        );
 
         $s1 = session('nomina.step1');
         if (!$s1) {
@@ -219,70 +333,7 @@ class NominaController extends Controller
         }
 
         $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
-        $valorHoraNormal = $salarioBase / 240;
-
-        $hExtraDiurna = $this->parseNumber($validated['horas_extra_diurnas'] ?? 0);
-        $hExtraNocturna = $this->parseNumber($validated['horas_extra_nocturnas'] ?? 0);
-        $hExtraDomDiurna = $this->parseNumber($validated['horas_extra_dominicales_diurnas'] ?? 0);
-        $hExtraDomNocturna = $this->parseNumber($validated['horas_extra_dominicales_nocturnas'] ?? 0);
-        $rNocturno = $this->parseNumber($validated['recargo_nocturno'] ?? 0);
-        $rDomDiurno = $this->parseNumber($validated['recargo_dominical_diurno'] ?? 0);
-        $rDomNocturno = $this->parseNumber($validated['recargo_dominical_nocturno'] ?? 0);
-        $rFestivoDiurno = $this->parseNumber($validated['recargo_festivo_diurno'] ?? 0);
-        $rFestivoNocturno = $this->parseNumber($validated['recargo_festivo_nocturno'] ?? 0);
-
-        $valorHorasExtraDiurna = $hExtraDiurna * ($valorHoraNormal * 1.25);
-        $valorHorasExtraNocturna = $hExtraNocturna * ($valorHoraNormal * 1.75);
-        $valorHorasExtraDomDiurna = $hExtraDomDiurna * ($valorHoraNormal * 2.0);
-        $valorHorasExtraDomNocturna = $hExtraDomNocturna * ($valorHoraNormal * 2.5);
-
-        $valorRecargoNocturno = $rNocturno * ($valorHoraNormal * 0.35);
-        $valorRecargoDomDiurno = $rDomDiurno * ($valorHoraNormal * 0.75);
-        $valorRecargoDomNocturno = $rDomNocturno * ($valorHoraNormal * 1.10);
-        $valorRecargoFestivoDiurno = $rFestivoDiurno * ($valorHoraNormal * 0.75);
-        $valorRecargoFestivoNocturno = $rFestivoNocturno * ($valorHoraNormal * 1.10);
-
-        $totalHorasExtra =
-            $valorHorasExtraDiurna +
-            $valorHorasExtraNocturna +
-            $valorHorasExtraDomDiurna +
-            $valorHorasExtraDomNocturna;
-
-        $totalRecargos =
-            $valorRecargoNocturno +
-            $valorRecargoDomDiurno +
-            $valorRecargoDomNocturno +
-            $valorRecargoFestivoDiurno +
-            $valorRecargoFestivoNocturno;
-
-        $totalDevengosParcial = $salarioBase + $totalHorasExtra + $totalRecargos;
-        $valorHorasExtrasRecargos = $totalHorasExtra + $totalRecargos;
-
-        session(['nomina.step2' => [
-            'horas_extra_diurnas' => $hExtraDiurna,
-            'horas_extra_nocturnas' => $hExtraNocturna,
-            'horas_extra_dominicales_diurnas' => $hExtraDomDiurna,
-            'horas_extra_dominicales_nocturnas' => $hExtraDomNocturna,
-            'recargo_nocturno' => $rNocturno,
-            'recargo_dominical_diurno' => $rDomDiurno,
-            'recargo_dominical_nocturno' => $rDomNocturno,
-            'recargo_festivo_diurno' => $rFestivoDiurno,
-            'recargo_festivo_nocturno' => $rFestivoNocturno,
-            'valor_horas_extra_diurnas' => $valorHorasExtraDiurna,
-            'valor_horas_extra_nocturnas' => $valorHorasExtraNocturna,
-            'valor_horas_extra_dominicales_diurnas' => $valorHorasExtraDomDiurna,
-            'valor_horas_extra_dominicales_nocturnas' => $valorHorasExtraDomNocturna,
-            'valor_recargo_nocturno' => $valorRecargoNocturno,
-            'valor_recargo_dominical_diurno' => $valorRecargoDomDiurno,
-            'valor_recargo_dominical_nocturno' => $valorRecargoDomNocturno,
-            'valor_recargo_festivo_diurno' => $valorRecargoFestivoDiurno,
-            'valor_recargo_festivo_nocturno' => $valorRecargoFestivoNocturno,
-            'valor_hora_normal' => $valorHoraNormal,
-            'total_horas_extra' => $totalHorasExtra,
-            'total_recargos' => $totalRecargos,
-            'valor_horas_extras_recargos' => $valorHorasExtrasRecargos,
-            'total_devengos_parcial' => $totalDevengosParcial,
-        ]]);
+        session(['nomina.step2' => $this->buildStep2SessionData($salarioBase, $validated)]);
 
         return redirect()->route('nomina.step2.ingresos');
     }
@@ -309,10 +360,7 @@ class NominaController extends Controller
             'bonificaciones' => 'nullable|numeric|min:0',
             'comisiones' => 'nullable|numeric|min:0',
             'otros_devengos' => 'nullable|numeric|min:0',
-        ], [
-            '*.numeric' => 'Este campo debe ser numérico.',
-            '*.min' => 'Este campo no puede ser negativo.',
-        ]);
+        ], self::VALIDATION_MESSAGES);
 
         $s1 = session('nomina.step1');
         $s2 = session('nomina.step2');
@@ -359,8 +407,10 @@ class NominaController extends Controller
         $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
         $totalDevengos = $this->parseNumber($s2Ingresos['total_devengos_final'] ?? 0);
         $rules = $this->getContractContributionRules($s1['id_contrato'] ?? null);
+        $step3 = session('nomina.step3', []);
+        $isEditing = (bool) session('nomina.editing_id');
 
-        return view('nomina.step3', compact('salarioBase', 'totalDevengos', 'rules'));
+        return view('nomina.step3', compact('salarioBase', 'totalDevengos', 'rules', 'step3', 'isEditing'));
     }
 
     /* ==========================
@@ -444,13 +494,17 @@ class NominaController extends Controller
                 return redirect()->route('nomina.step1')->with('error', 'Sesión expirada o datos incompletos.');
             }
 
+            $isEditing = (bool) session('nomina.editing_id');
+
             $validated = $request->validate([
                 'retencion_fuente' => 'nullable|numeric|min:0',
                 'embargo_fiscal' => 'nullable|numeric|min:0',
                 'pension_voluntaria' => 'nullable|numeric|min:0',
+                'confirm_edit' => $isEditing ? 'required|string|in:editar' : 'nullable|string',
             ], [
-                '*.numeric' => 'Este campo debe ser numérico.',
-                '*.min' => 'Este campo no puede ser negativo.',
+                ...self::VALIDATION_MESSAGES,
+                'confirm_edit.required' => 'Debes confirmar la edición escribiendo "editar".',
+                'confirm_edit.in' => 'Para editar debes escribir exactamente "editar".',
             ]);
 
             $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
@@ -465,7 +519,152 @@ class NominaController extends Controller
             $embargoFiscal = $this->parseNumber($validated['embargo_fiscal'] ?? 0);
             $pensionVoluntaria = $this->parseNumber($validated['pension_voluntaria'] ?? 0);
 
-            DB::table('salario')->insert([
+            $payload = $this->buildSalarioPayload(
+                $s1,
+                $s2,
+                $s2Ingresos,
+                $periodoId,
+                $estadoId,
+                $contributions,
+                $fechaPago,
+                $retencionFuente,
+                $embargoFiscal,
+                $pensionVoluntaria
+            );
+
+            if ($isEditing) {
+                DB::table('salario')
+                    ->where('id_salario', (int) session('nomina.editing_id'))
+                    ->update($payload);
+            } else {
+                DB::table('salario')->insert(array_merge($payload, [
+                    'created_at' => now(),
+                ]));
+            }
+
+            session()->forget('nomina');
+
+            return redirect()->route('nomina.index')
+                ->with('success', $isEditing ? 'Nómina actualizada correctamente' : 'Nómina guardada correctamente');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error al guardar nómina: " . $e->getMessage());
+            return back()->with('error', 'Hubo un error al procesar la nómina. Por favor, intente nuevamente.');
+        }
+    }
+
+    private function buildStep2SessionData(float $salarioBase, array $validated): array
+    {
+        $valorHoraNormal = $salarioBase / 240;
+        $cantidades = [];
+        $valores = [];
+
+        foreach (self::STEP2_RATES as $key => $multiplier) {
+            $cantidad = $this->parseNumber($validated[$key] ?? 0);
+            $cantidades[$key] = $cantidad;
+            $valores["valor_{$key}"] = $cantidad * ($valorHoraNormal * $multiplier);
+        }
+
+        $totalHorasExtra = 0;
+        foreach (self::STEP2_EXTRA_KEYS as $key) {
+            $totalHorasExtra += $valores["valor_{$key}"];
+        }
+
+        $totalRecargos = 0;
+        foreach (self::STEP2_RECARGO_KEYS as $key) {
+            $totalRecargos += $valores["valor_{$key}"];
+        }
+
+        $valorHorasExtrasRecargos = $totalHorasExtra + $totalRecargos;
+
+        return array_merge($cantidades, $valores, [
+            'valor_hora_normal' => $valorHoraNormal,
+            'total_horas_extra' => $totalHorasExtra,
+            'total_recargos' => $totalRecargos,
+            'valor_horas_extras_recargos' => $valorHorasExtrasRecargos,
+            'total_devengos_parcial' => $salarioBase + $valorHorasExtrasRecargos,
+        ]);
+    }
+
+    private function buildEditingSessionPayload(object $registro): array
+    {
+        $salarioBase = $this->parseNumber($registro->salario_base ?? 0);
+        $valorHoraNormal = $salarioBase > 0 ? ($salarioBase / 240) : 0;
+        $valorHorasExtrasRecargos = $this->parseNumber($registro->valor_horas_extras_recargos ?? 0);
+        $horasExtraDiurnas = ($valorHoraNormal > 0)
+            ? round(($valorHorasExtrasRecargos / ($valorHoraNormal * self::STEP2_RATES['horas_extra_diurnas'])), 2)
+            : 0;
+
+        $totalDevengosFinal =
+            $salarioBase +
+            $valorHorasExtrasRecargos +
+            $this->parseNumber($registro->bonificaciones ?? 0) +
+            $this->parseNumber($registro->comisiones ?? 0) +
+            $this->parseNumber($registro->otros_devengos ?? 0);
+
+        return [
+            'nomina.editing_id' => (int) $registro->id_salario,
+            'nomina.step' => 1,
+            'nomina.step1' => [
+                'empleado_busqueda' => trim(($registro->doc ?? '') . ' - ' . ($registro->nombre ?? '')),
+                'nombre' => $registro->nombre,
+                'telefono' => $registro->telefono,
+                'salario_base' => $salarioBase,
+                'fecha_pago' => $registro->fecha_pago,
+                'doc' => $registro->doc,
+                'id_contrato' => $registro->id_contrato,
+            ],
+            'nomina.step2' => [
+                'horas_extra_diurnas' => $horasExtraDiurnas,
+                'horas_extra_nocturnas' => 0,
+                'horas_extra_dominicales_diurnas' => 0,
+                'horas_extra_dominicales_nocturnas' => 0,
+                'recargo_nocturno' => 0,
+                'recargo_dominical_diurno' => 0,
+                'recargo_dominical_nocturno' => 0,
+                'recargo_festivo_diurno' => 0,
+                'recargo_festivo_nocturno' => 0,
+                'valor_horas_extra_diurnas' => $valorHorasExtrasRecargos,
+                'valor_horas_extra_nocturnas' => 0,
+                'valor_horas_extra_dominicales_diurnas' => 0,
+                'valor_horas_extra_dominicales_nocturnas' => 0,
+                'valor_recargo_nocturno' => 0,
+                'valor_recargo_dominical_diurno' => 0,
+                'valor_recargo_dominical_nocturno' => 0,
+                'valor_recargo_festivo_diurno' => 0,
+                'valor_recargo_festivo_nocturno' => 0,
+                'valor_hora_normal' => $valorHoraNormal,
+                'total_horas_extra' => $valorHorasExtrasRecargos,
+                'total_recargos' => 0,
+                'valor_horas_extras_recargos' => $valorHorasExtrasRecargos,
+                'total_devengos_parcial' => $salarioBase + $valorHorasExtrasRecargos,
+            ],
+            'nomina.step2_ingresos' => [
+                'bonificaciones' => $this->parseNumber($registro->bonificaciones ?? 0),
+                'comisiones' => $this->parseNumber($registro->comisiones ?? 0),
+                'otros_devengos' => $this->parseNumber($registro->otros_devengos ?? 0),
+                'total_devengos_final' => $totalDevengosFinal,
+            ],
+            'nomina.step3' => [
+                'retencion_fuente' => $this->parseNumber($registro->retencion_fuente ?? 0),
+                'embargo_fiscal' => $this->parseNumber($registro->embargo_fiscal ?? 0),
+                'pension_voluntaria' => $this->parseNumber($registro->pension_voluntaria ?? 0),
+            ],
+        ];
+    }
+
+    private function buildSalarioPayload(
+        array $s1,
+        array $s2,
+        array $s2Ingresos,
+        int $periodoId,
+        int $estadoId,
+        array $contributions,
+        string $fechaPago,
+        float $retencionFuente,
+        float $embargoFiscal,
+        float $pensionVoluntaria
+    ): array {
+        return [
                 'id_contrato' => $s1['id_contrato'],
                 'id_periodo' => $periodoId,
                 'id_estado' => $estadoId,
@@ -483,17 +682,7 @@ class NominaController extends Controller
                 'embargo_fiscal' => $embargoFiscal,
                 'pension_voluntaria' => $pensionVoluntaria,
                 'fecha_pago' => $fechaPago,
-                'created_at' => now(),
                 'updated_at' => now(),
-            ]);
-
-            session()->forget('nomina');
-
-            return redirect()->route('nomina.index')
-                ->with('success', 'Nómina guardada correctamente');
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error al guardar nómina: " . $e->getMessage());
-            return back()->with('error', 'Hubo un error al procesar la nómina. Por favor, intente nuevamente.');
-        }
+            ];
     }
 }

@@ -77,7 +77,7 @@ class EmpresaController extends Controller
                 'string',
                 'max:150',
                 'regex:/[a-zA-Z]/',
-                'regex:/^(?!.\d{8,}).$/',
+                'regex:/^(?!.*\d{8,}).*$/',
                 'regex:/(calle|carrera|cra\.?|cl\.?|av\.?|avenida|#|no\.?)/i',
             ],
            'id_ciudad' => ['required', 'exists:ciudad,id_ciudad'],

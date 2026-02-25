@@ -36,6 +36,7 @@
                             @csrf
                             <input type="hidden" id="salario_base" value="{{ $salarioBase ?? 0 }}">
                             <input type="hidden" id="total_devengos" value="{{ $totalDevengos ?? 0 }}">
+                            <input type="hidden" id="confirm_edit" name="confirm_edit" value="">
 
                             <div class="mb-6 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
                                 <h4 class="text-sm font-semibold text-blue-900 mb-3">Resumen final</h4>
@@ -70,17 +71,17 @@
 
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Retención en la fuente</label>
-                                    <input id="retencion_fuente" name="retencion_fuente" type="number" min="0" step="0.01" value="{{ old('retencion_fuente', 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
+                                    <input id="retencion_fuente" name="retencion_fuente" type="number" min="0" step="0.01" value="{{ old('retencion_fuente', $step3['retencion_fuente'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
                                     @error('retencion_fuente')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Embargo fiscal</label>
-                                    <input id="embargo_fiscal" name="embargo_fiscal" type="number" min="0" step="0.01" value="{{ old('embargo_fiscal', 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
+                                    <input id="embargo_fiscal" name="embargo_fiscal" type="number" min="0" step="0.01" value="{{ old('embargo_fiscal', $step3['embargo_fiscal'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
                                     @error('embargo_fiscal')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Pensión voluntaria</label>
-                                    <input id="pension_voluntaria" name="pension_voluntaria" type="number" min="0" step="0.01" value="{{ old('pension_voluntaria', 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
+                                    <input id="pension_voluntaria" name="pension_voluntaria" type="number" min="0" step="0.01" value="{{ old('pension_voluntaria', $step3['pension_voluntaria'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
                                     @error('pension_voluntaria')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
                             </div>
@@ -118,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const money = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v || 0);
     const toNumber = (raw) => {
         if (raw === '' || raw === null || raw === undefined) return 0;
-        const num = Number(String(raw).replace(',', '.'));
+        const num = Number(String(raw).replace('.', '.'));
         return Number.isFinite(num) && num >= 0 ? num : NaN;
     };
     const sanitize = (input) => {
@@ -159,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('blur', () => { sanitize(input); errorBox.classList.add('hidden'); calc(); });
     });
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         let valid = true;
         manualInputs.forEach((input) => { if (!sanitize(input)) valid = false; });
         if (!valid) {
@@ -168,11 +169,60 @@ document.addEventListener('DOMContentLoaded', () => {
             errorBox.classList.remove('hidden');
             return;
         }
+
+        const isEditing = @json((bool)($isEditing ?? false));
+        if (isEditing) {
+            e.preventDefault();
+
+            if (typeof Swal === 'undefined') {
+                const confirmation = window.prompt('Escribe editar para confirmar la modificación', '');
+                if ((confirmation || '').trim().toLowerCase() !== 'editar') {
+                    errorBox.textContent = 'No se aplicaron cambios. Debes escribir "editar" para confirmar.';
+                    errorBox.classList.remove('hidden');
+                    return;
+                }
+
+                document.getElementById('confirm_edit').value = 'editar';
+                form.submit();
+                return;
+            }
+
+            const result = await Swal.fire({
+                title: 'Confirmar edición',
+                text: 'Para guardar cambios escribe "editar".',
+                icon: 'warning',
+                input: 'text',
+                inputPlaceholder: 'Escribe editar',
+                confirmButtonText: 'Confirmar',
+                cancelButtonText: 'Cancelar',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#6b7280',
+                reverseButtons: true,
+                inputValidator: (value) => {
+                    if ((value || '').trim().toLowerCase() !== 'editar') {
+                        return 'Debes escribir exactamente "editar"';
+                    }
+                    return null;
+                }
+            });
+
+            if (!result.isConfirmed) {
+                e.preventDefault();
+                return;
+            }
+
+            document.getElementById('confirm_edit').value = 'editar';
+            form.submit();
+            return;
+        }
+
         calc();
     });
 
     calc();
 });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 @include('nomina.partials.modal_assets')
 @endsection

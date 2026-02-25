@@ -95,7 +95,7 @@
 
             <!-- Acciones -->
             <div class="flex flex-col sm:flex-row justify-end gap-3 mt-8">
-                <button onclick="document.getElementById('modalEditar').classList.remove('hidden')"
+                <button onclick="document.getElementById('modalEditar').classList.remove('hidden'); document.getElementById('modalEditar').classList.add('flex')"
                     class="px-5 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition">
                     Editar Datos
                 </button>
@@ -108,8 +108,8 @@
     </div>
 
     
-<div id="modalEditar" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-2xl w-full max-w-2xl mx-auto shadow-2xl flex flex-col max-h-[90vh]">
+<div id="modalEditar" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4 md:p-6 overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-2xl mx-auto my-auto shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-3rem)]">
 
         <!-- Header -->
         <div class="px-6 py-4 border-b flex items-center justify-between bg-gray-50">
@@ -117,14 +117,14 @@
                 <h3 class="font-semibold text-lg text-gray-900">Editar datos de la empresa</h3>
                 <p class="text-sm text-gray-500">Actualiza la información permitida</p>
             </div>
-            <button onclick="document.getElementById('modalEditar').classList.add('hidden')"
+            <button onclick="document.getElementById('modalEditar').classList.add('hidden'); document.getElementById('modalEditar').classList.remove('flex')"
                 class="text-gray-400 hover:text-gray-600">
                 ✕
             </button>
         </div>
 
       
-        <form method="POST" action="{{ route('superadmin.empresas.update', $empresa->id_empresa) }}">
+        <form method="POST" action="{{ route('superadmin.empresas.update', $empresa->id_empresa) }}" class="flex flex-col min-h-0">
             @csrf
             @method('PUT')
 
@@ -139,7 +139,7 @@
             @endif
 
             <!-- Contenedor con scroll interno -->
-            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 overflow-y-auto">
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 overflow-y-auto flex-1 min-h-0">
 
                 <!-- Dirección -->
                 <div>
@@ -262,7 +262,8 @@
 
             <!-- Footer -->
             <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button type="button" onclick="document.getElementById('modalEditar').classList.add('hidden')"
+                <button type="button"
+                    onclick="document.getElementById('modalEditar').classList.add('hidden'); document.getElementById('modalEditar').classList.remove('flex')"
                     class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
                     Cancelar
                 </button>
@@ -283,6 +284,21 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
+    });
+</script>
+@endif
+
+@if (session('success'))
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        Swal.fire({
+            icon: 'success',
+            title: 'Cambios exitosos',
+            text: @json(session('success')),
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#2563eb'
+        });
     });
 </script>
 @endif

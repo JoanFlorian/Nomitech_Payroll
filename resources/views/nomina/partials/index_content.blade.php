@@ -4,7 +4,7 @@
 
     {{-- FILTROS --}}
     <form method="GET" action="{{ route('nomina.index') }}"
-          class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+            class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -24,15 +24,23 @@
             <input type="text"
                    name="documento"
                    value="{{ request('documento') }}"
-                   placeholder="Documento"
+                   placeholder="Documento o nombres"
                    class="w-full border border-gray-300 bg-white px-4 py-2.5 rounded-xl hover:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:outline-none transition">
         </div>
 
     </form>
 
     {{-- BOTON NUEVA NOMINA --}}
-    <div class="flex justify-end mb-6">
-        <a href="{{ route('nomina.step1') }}"
+    <div class="flex justify-end gap-3 mb-6">
+        <button type="button"
+                id="btn-editar-empleado"
+                title="Editar empleado seleccionado"
+                disabled
+                class="bg-gray-300 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl shadow-md cursor-not-allowed opacity-70 transition-all duration-200">
+            ✎
+        </button>
+
+        <a href="{{ route('nomina.step1', ['fresh' => 1]) }}"
            title="Crear nueva nomina"
            class="bg-green-600 hover:bg-green-700 text-white
                   rounded-full w-12 h-12 flex items-center
@@ -49,6 +57,7 @@
 
             <thead class="bg-blue-600 text-white">
                 <tr>
+                    <th class="px-4 py-3 text-center font-semibold tracking-wide w-12">Sel.</th>
                     <th class="px-4 py-3 text-left font-semibold tracking-wide">Documento</th>
                     <th class="px-4 py-3 text-left font-semibold tracking-wide">Empleado</th>
                     <th class="px-4 py-3 text-right font-semibold tracking-wide">Salario inicial</th>
@@ -60,7 +69,17 @@
 
             <tbody class="bg-white">
                 @forelse($salarios as $salario)
-                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <tr data-doc="{{ $salario->contrato->usuario->doc }}"
+                        data-salario-id="{{ $salario->id_salario }}"
+                        class="nomina-row border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer">
+
+                        <td class="px-4 py-3 text-center" onclick="event.stopPropagation()">
+                            <input type="radio"
+                                   name="selected_nomina"
+                                   class="nomina-select-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                   value="{{ $salario->id_salario }}"
+                                   aria-label="Seleccionar empleado {{ $salario->contrato->usuario->nombre_completo }}">
+                        </td>
 
                         <td class="px-4 py-3 text-gray-700">
                             {{ $salario->contrato->usuario->doc }}
@@ -92,7 +111,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center py-10 text-gray-400">
+                        <td colspan="7" class="text-center py-10 text-gray-400">
                             No hay registros de nomina
                         </td>
                     </tr>
@@ -101,5 +120,16 @@
 
         </table>
     </div>
+
+    @if(method_exists($salarios, 'links'))
+        <div class="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <p class="text-sm text-gray-500">
+                Mostrando {{ $salarios->firstItem() ?? 0 }} a {{ $salarios->lastItem() ?? 0 }} de {{ $salarios->total() }} empleados
+            </p>
+            <div>
+                {{ $salarios->links() }}
+            </div>
+        </div>
+    @endif
 
 </div>

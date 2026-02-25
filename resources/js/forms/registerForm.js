@@ -93,7 +93,7 @@ export default (initialData = {}) => ({
                 return null;
             },
             segundo_apellido: () => {
-                if (!value) return "El Segundo Apellido es requerido";
+                if (!value) return null; // Opcional
                 if (value.length < 3 || value.length > 60) return "El Segundo Apellido debe tener entre 3 y 60 caracteres";
                 return null;
             },
@@ -146,7 +146,7 @@ export default (initialData = {}) => ({
         const fields = [
             'nit', 'nit_dv', 'razon_social', 'id_departamento', 'id_ciudad',
             'direccion_empresa', 'documento', 'id_tipo_doc', 'primer_apellido',
-            'segundo_apellido', 'primer_nombre', 'telefono_celular', 'email',
+            'primer_nombre', 'telefono_celular', 'email',
             'password', 'password_confirmation'
         ];
 

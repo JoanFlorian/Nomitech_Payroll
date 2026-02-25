@@ -32,7 +32,7 @@
     </div>
 </div>
 
-<form id="step1" novalidate>
+<form id="step1" novalidate action="{{ route('employees.step1') }}" method="POST">
     @csrf
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
@@ -47,7 +47,7 @@
                     <option value="{{ $tipodo->id_tipo_doc }}">{{ $tipodo->nombre }}</option>
                 @endforeach
             </select>
-            <p class="error-message text-red-500 text-sm hidden" data-error="id_tipo_doc"></p>
+            <div class="error-message invalid-feedback" data-error="id_tipo_doc"></div>
         </div>
 
         <div>
@@ -60,7 +60,7 @@
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="doc"
                 required>
-            <p class="error-message text-red-500 text-sm hidden" data-error="doc"></p>
+            <div class="error-message invalid-feedback" data-error="doc"></div>
         </div>
 
         <div>
@@ -73,7 +73,7 @@
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="primer_apellido"
                 required>
-            <p class="error-message text-red-500 text-sm hidden" data-error="primer_apellido"></p>
+            <div class="error-message invalid-feedback" data-error="primer_apellido"></div>
         </div>
 
         <div>
@@ -85,7 +85,7 @@
                 placeholder="Ej: Gómez"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="segundo_apellido">
-            <p class="error-message text-red-500 text-sm hidden" data-error="segundo_apellido"></p>
+            <div class="error-message invalid-feedback" data-error="segundo_apellido"></div>
         </div>
 
         <div>
@@ -98,7 +98,7 @@
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="primer_nombre"
                 required>
-            <p class="error-message text-red-500 text-sm hidden" data-error="primer_nombre"></p>
+            <div class="error-message invalid-feedback" data-error="primer_nombre"></div>
         </div>
 
         <div>
@@ -110,7 +110,33 @@
                 placeholder="Ej: Carlos"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="otros_nombres">
-            <p class="error-message text-red-500 text-sm hidden" data-error="otros_nombres"></p>
+            <div class="error-message invalid-feedback" data-error="otros_nombres"></div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Correo electrónico
+            </label>
+            <input
+                type="email"
+                placeholder="Ej: empleado@empresa.com"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                name="email"
+                required>
+            <div class="error-message invalid-feedback" data-error="email"></div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Teléfono
+            </label>
+            <input
+                type="text"
+                placeholder="Ej: 3001234567"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                name="telefono"
+                required>
+            <div class="error-message invalid-feedback" data-error="telefono"></div>
         </div>
 
         <div>
@@ -124,7 +150,7 @@
                 placeholder="Departamento"
                 :options="$departamento->pluck('nombre', 'id_departamento')"
             />
-            <p class="error-message text-red-500 text-sm hidden" data-error="departamento"></p>
+            <div class="error-message invalid-feedback" data-error="departamento"></div>
         </div>
 
         <div>
@@ -138,7 +164,7 @@
                 placeholder="Ciudad / Municipio"
                 :options="[]"
             />
-            <p class="error-message text-red-500 text-sm hidden" data-error="ciudad"></p>
+            <div class="error-message invalid-feedback" data-error="ciudad"></div>
         </div>
 
         <div>
@@ -151,7 +177,7 @@
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="direccion"
                 required>
-            <p class="error-message text-red-500 text-sm hidden" data-error="direccion"></p>
+            <div class="error-message invalid-feedback" data-error="direccion"></div>
         </div>
 
     </div>
@@ -306,54 +332,6 @@
     document.addEventListener('selected', handleDeptSelectionChange);
     document.addEventListener('input', handleDeptSelectionChange);
 
-    function clearStep1Errors() {
-        const form = $('#step1');
-        form.find('.error-message').addClass('hidden').text('');
-        form.find('input, select').removeClass('border-red-500 is-invalid');
-    }
-
-    function showStep1ValidationErrors(errors) {
-        const form = $('#step1');
-        $.each(errors || {}, function (key, messages) {
-            const errorMessage = Array.isArray(messages) ? messages[0] : messages;
-            const errorField = form.find(`[data-error="${key}"]`);
-            if (errorField.length) {
-                errorField.removeClass('hidden').text(errorMessage);
-            }
-            form.find(`[name="${key}"]`).addClass('border-red-500 is-invalid');
-        });
-    }
-
-    function validateStep1Form() {
-        let isValid = true;
-        const form = $('#step1');
-
-        clearStep1Errors();
-
-        const requiredFields = {
-            'id_tipo_doc': 'El tipo de documento es requerido',
-            'doc': 'El número de documento es requerido',
-            'primer_nombre': 'El primer nombre es requerido',
-            'primer_apellido': 'El primer apellido es requerido',
-            'direccion': 'La dirección es requerida',
-            'ciudad': 'La ciudad es requerida',
-            'departamento': 'El departamento es requerido',
-        };
-
-        $.each(requiredFields, function (fieldName, errorMessage) {
-            const field = form.find(`[name="${fieldName}"]`);
-            const value = field.val();
-
-            if (!value || value === '') {
-                isValid = false;
-                field.addClass('border-red-500 is-invalid');
-                form.find(`[data-error="${fieldName}"]`).removeClass('hidden').text(errorMessage);
-            }
-        });
-
-        return isValid;
-    }
-
     function syncCityOptionsByDepartment(deptId) {
         const normalizedId = deptId !== undefined && deptId !== null ? String(deptId) : '';
 
@@ -372,84 +350,11 @@
                     }
                 });
                 window.dispatchEvent(new CustomEvent('set-options-cityStep1', { detail: options }));
+                window.dispatchEvent(new CustomEvent('step1-city-options-updated'));
             })
             .catch(() => {
                 window.dispatchEvent(new CustomEvent('set-options-cityStep1', { detail: {} }));
+                window.dispatchEvent(new CustomEvent('step1-city-options-updated'));
             });
     }
-
-    function moveToStep2() {
-        $('#step1').hide();
-        $('#step2').show();
-
-        if (typeof window.goToWizardStep === 'function') {
-            window.goToWizardStep(2);
-        }
-    }
-
-    $(document).on('submit', '#step1', function (e) {
-        e.preventDefault();
-
-        if (!validateStep1Form()) {
-            return false;
-        }
-
-        const form = $(this);
-
-        $.ajax({
-            url: "{{ route('employees.step1') }}",
-            type: 'POST',
-            data: form.serialize(),
-            success: function (response) {
-                if (response.success === true) {
-                    moveToStep2();
-                    window.dispatchEvent(new CustomEvent('step1-success'));
-                    return;
-                }
-
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: response?.errors?.general?.[0] || response?.message || 'Ocurrió un error en el paso 1.',
-                    confirmButtonColor: '#ef4444'
-                });
-            },
-            error: function (error) {
-                if (error.status === 422) {
-                    showStep1ValidationErrors(error.responseJSON?.errors || {});
-                    return;
-                }
-
-                const message = error.responseJSON?.errors?.general?.[0]
-                    || error.responseJSON?.message
-                    || 'Error interno al procesar el paso 1. Intenta nuevamente.';
-
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: message,
-                    confirmButtonColor: '#ef4444'
-                });
-            }
-        });
-    });
-
-    $(document).on('input', '[data-filter-select]', function () {
-        const target = $(this).attr('data-filter-select');
-        const selectEl = document.querySelector(target);
-        if (!selectEl) {
-            return;
-        }
-        filterSelectOptions(selectEl, this.value);
-    });
-
-    // Limpiar errores cuando el usuario escriba (delegación)
-    $(document).on('change focusout', '#step1 input, #step1 select', function() {
-        let fieldName = $(this).attr('name');
-        if (fieldName) {
-            const form = $('#step1');
-            form.find(`[data-error="${fieldName}"]`).addClass('hidden').text('');
-            $(this).removeClass('border-red-500 is-invalid');
-        }
-    });
 </script>

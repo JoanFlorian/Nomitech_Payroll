@@ -6,20 +6,21 @@
 @section('content')
 
 <div x-data="empleadosModule()" @open-modal-registro.window="openRegistroModal()" @close-modal.window="closeModals()">
+    <div class="employee-index-compact">
 
     {{-- ENCABEZADO --}}
     <div class="mb-8">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-4xl font-bold text-gray-900">Gestor de Empleados</h1>
-            <a href="{{ route('employees.export') }}" class="bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-semibold transition duration-200 shadow-md">
+        <div class="flex justify-between items-center mb-5">
+            <h1 class="text-3xl font-bold text-gray-900">Gestor de Empleados</h1>
+            <a href="{{ route('employees.export') }}" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition duration-200 shadow-md">
                 <i class="fas fa-download mr-2"></i>Exportar a Excel
             </a>
         </div>
 
         {{-- BÚSQUEDA Y FILTROS --}}
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
             {{-- BARRA DE BÚSQUEDA --}}
-            <form method="GET" action="{{ route('empleados.index') }}" class="mb-6">
+            <form method="GET" action="{{ route('empleados.index') }}" class="mb-4 -mt-2">
                 <div class="flex flex-col md:flex-row gap-3">
                     <div class="flex-1">
                         <input 
@@ -27,31 +28,31 @@
                             name="search" 
                             value="{{ request('search') }}"
                             placeholder="Buscar por nombre, documento o correo..."
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                         >
                     </div>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition duration-200">
                         <i class="fas fa-search mr-2"></i>Buscar
                     </button>
                 </div>
             </form>
 
             {{-- FILTROS POR ESTADO --}}
-            <div class="flex flex-wrap gap-3">
+            <div class="flex flex-wrap gap-2">
                 <a href="{{ route('empleados.index') }}" 
-                   class="px-4 py-2 rounded-full font-semibold transition duration-200 {{ !request('estado') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                   class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ !request('estado') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
                     <i class="fas fa-list mr-2"></i>Todos ({{ $totalEmpleados }})
                 </a>
                 <a href="{{ route('empleados.index', ['estado' => 'activos']) }}" 
-                   class="px-4 py-2 rounded-full font-semibold transition duration-200 {{ request('estado') === 'activos' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                   class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'activos' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
                     <i class="fas fa-check-circle mr-2"></i>Activos ({{ $activosCount }})
                 </a>
                 <a href="{{ route('empleados.index', ['estado' => 'inactivos']) }}" 
-                   class="px-4 py-2 rounded-full font-semibold transition duration-200 {{ request('estado') === 'inactivos' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                   class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'inactivos' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
                     <i class="fas fa-times-circle mr-2"></i>Inactivos ({{ $inactivosCount }})
                 </a>
                 <a href="{{ route('empleados.index', ['estado' => 'sin_contrato']) }}" 
-                   class="px-4 py-2 rounded-full font-semibold transition duration-200 {{ request('estado') === 'sin_contrato' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                   class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'sin_contrato' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
                     <i class="fas fa-user-slash mr-2"></i>Sin Contrato ({{ $sinContratoCount }})
                 </a>
             </div>
@@ -186,12 +187,12 @@
 
         {{-- PAGINACIÓN --}}
         <div class="bg-gray-50 px-6 py-6 border-t border-gray-200">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-sm text-gray-600">
+            <div class="flex flex-col items-center gap-3 md:relative">
+                <p class="text-sm text-gray-600 self-start text-left md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2">
                     Mostrando <span class="font-bold text-gray-900">{{ $empleados->count() }}</span> de 
                     <span class="font-bold text-gray-900">{{ $empleados->total() }}</span> empleado(s)
                 </p>
-                <div class="w-full md:w-auto">
+                <div class="w-full">
                     <div class="flex justify-center">
                         {{ $empleados->links('pagination::tailwind') }}
                     </div>
@@ -203,11 +204,13 @@
     {{-- BOTÓN FLOTANTE --}}
     <button 
         @click="openRegistroModal()"
-        class="fixed bottom-8 right-8 z-40 bg-green-500 hover:bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-3xl font-bold shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95"
+        class="fixed bottom-5 right-5 z-40 bg-green-500 hover:bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-3xl font-bold shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95"
         title="Crear nuevo empleado"
     >
         <span>+</span>
     </button>
+
+    </div>
 
     {{-- MODAL REGISTRO DE EMPLEADO (WIZARD) --}}
     <div
@@ -281,6 +284,12 @@
     {{-- MODAL EDITAR EMPLEADO --}}
     @include('empleados.partials.modal_edit')
 
+    <style>
+        .employee-index-compact {
+            transform: scale(0.95);
+            transform-origin: top left;
+        }
+    </style>
 </div>
 
 {{-- SweetAlert2 --}}
@@ -305,20 +314,34 @@
     }
 
     function resetEmployeeWizardForms() {
-        ['#step1', '#step2', '#step3'].forEach(function (selector) {
-            const form = $(selector);
-            if (!form.length) {
+        ['step1', 'step2', 'step3'].forEach(function (id) {
+            const form = document.getElementById(id);
+            if (!form) {
                 return;
             }
 
-            form.trigger('reset');
-            form.find('.error-message').addClass('hidden').text('');
-            form.find('.invalid-feedback').remove();
-            form.find('.is-invalid, .border-red-500').removeClass('is-invalid border-red-500');
+            form.reset();
+            form.querySelectorAll('.error-message').forEach(function (errorNode) {
+                errorNode.textContent = '';
+                errorNode.classList.remove('d-block');
+            });
+
+            form.querySelectorAll('.is-invalid, .border-red-500').forEach(function (node) {
+                node.classList.remove('is-invalid', 'border-red-500');
+            });
         });
 
-        $('#step1').show();
-        $('#step2, #step3').hide();
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+
+        if (step1) step1.style.display = '';
+        if (step2) step2.style.display = 'none';
+        if (step3) step3.style.display = 'none';
+
+        if (window.employeeValidation && typeof window.employeeValidation.refreshAll === 'function') {
+            window.employeeValidation.refreshAll();
+        }
     }
 
     window.goToWizardStep = function (step) {
@@ -327,27 +350,41 @@
             moduleData.wizardStep = step;
         }
 
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+
         if (step === 1) {
-            $('#step1').show();
-            $('#step2, #step3').hide();
+            if (step1) step1.style.display = '';
+            if (step2) step2.style.display = 'none';
+            if (step3) step3.style.display = 'none';
         } else if (step === 2) {
-            $('#step1').hide();
-            $('#step2').show();
-            $('#step3').hide();
+            if (step1) step1.style.display = 'none';
+            if (step2) step2.style.display = '';
+            if (step3) step3.style.display = 'none';
         } else if (step === 3) {
-            $('#step1, #step2').hide();
-            $('#step3').show();
+            if (step1) step1.style.display = 'none';
+            if (step2) step2.style.display = 'none';
+            if (step3) step3.style.display = '';
+        }
+
+        if (window.employeeValidation && typeof window.employeeValidation.refreshAll === 'function') {
+            window.employeeValidation.refreshAll();
         }
     };
 
     function clearEmployeeWizardSession() {
-        $.ajax({
-            url: "{{ route('employees.clear-session') }}",
-            type: 'POST',
-            data: {
-                _token: '{{ csrf_token() }}'
-            }
-        });
+        const formData = new FormData();
+        formData.append('_token', '{{ csrf_token() }}');
+
+        fetch("{{ route('employees.clear-session') }}", {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            body: formData
+        }).catch(() => {});
     }
 
     // Función para el módulo de empleados
@@ -356,6 +393,7 @@
             showRegistroModal: false,
             showEditModal: false,
             wizardStep: 1,
+            editWizardStep: 1,
             currentDoc: null,
             
             openRegistroModal() {
@@ -367,6 +405,7 @@
             openEditModal(doc) {
                 this.currentDoc = doc;
                 this.showEditModal = true;
+                this.editWizardStep = 1;
 
                 if (typeof window.loadEmployee === 'function') {
                     window.loadEmployee(doc);
@@ -377,6 +416,7 @@
                 this.showRegistroModal = false;
                 this.showEditModal = false;
                 this.wizardStep = 1;
+                this.editWizardStep = 1;
                 this.currentDoc = null;
 
                 resetEmployeeWizardForms();
@@ -392,6 +432,18 @@
             previousStep() {
                 if (this.wizardStep > 1) {
                     this.wizardStep--;
+                }
+            },
+
+            nextEditStep() {
+                if (this.editWizardStep < 3) {
+                    this.editWizardStep++;
+                }
+            },
+
+            previousEditStep() {
+                if (this.editWizardStep > 1) {
+                    this.editWizardStep--;
                 }
             },
             
@@ -455,3 +507,7 @@
     });
 </script>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/employee-validation.js') }}"></script>
+@endpush

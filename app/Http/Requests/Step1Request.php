@@ -23,16 +23,20 @@ class Step1Request extends FormRequest
             'doc' => 'bail|required|digits_between:5,15|unique:usuario,doc',
 
             // PRIMER APELLIDO
-            'primer_apellido' => 'bail|required|string|min:2|max:30|regex:/^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$/',
+            'primer_apellido' => 'bail|required|string|min:3|max:30|regex:/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/',
 
             // SEGUNDO APELLIDO (opcional)
-            'segundo_apellido' => 'bail|nullable|string|min:2|max:30|regex:/^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$/',
+            'segundo_apellido' => 'bail|nullable|string|min:3|max:30|regex:/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/',
 
             // PRIMER NOMBRE
-            'primer_nombre' => 'bail|required|string|min:2|max:30|regex:/^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$/',
+            'primer_nombre' => 'bail|required|string|min:3|max:30|regex:/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/',
 
             // OTROS NOMBRES (opcional)
-            'otros_nombres' => 'bail|nullable|string|min:2|max:50|regex:/^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]+$/',
+            'otros_nombres' => 'bail|nullable|string|min:3|max:50|regex:/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/',
+
+            // CONTACTO
+            'email' => 'bail|required|email|max:255|unique:usuario,correo',
+            'telefono' => 'bail|required|digits_between:7,15|regex:/^[0-9]+$/',
 
             // SELECTS - Mapear a id_ciudad
             'departamento' => 'bail|required|integer',
@@ -71,7 +75,7 @@ class Step1Request extends FormRequest
             |--------------------------------------------------------------------------
             */
             'primer_apellido.required' => 'El primer apellido es obligatorio.',
-            'primer_apellido.min'      => 'El primer apellido debe tener mínimo 4 caracteres.',
+            'primer_apellido.min'      => 'El primer apellido debe tener mínimo 3 caracteres.',
             'primer_apellido.max'      => 'El primer apellido no puede superar 30 caracteres.',
             'primer_apellido.regex'    => 'El primer apellido solo puede contener letras y espacios.',
 
@@ -80,7 +84,7 @@ class Step1Request extends FormRequest
             | SEGUNDO APELLIDO
             |--------------------------------------------------------------------------
             */
-            'segundo_apellido.min'   => 'El segundo apellido debe tener mínimo 4 caracteres.',
+            'segundo_apellido.min'   => 'El segundo apellido debe tener mínimo 3 caracteres.',
             'segundo_apellido.max'   => 'El segundo apellido no puede superar 30 caracteres.',
             'segundo_apellido.regex' => 'El segundo apellido solo puede contener letras y espacios.',
 
@@ -90,7 +94,7 @@ class Step1Request extends FormRequest
             |--------------------------------------------------------------------------
             */
             'primer_nombre.required' => 'El primer nombre es obligatorio.',
-            'primer_nombre.min'      => 'El primer nombre debe tener mínimo 2 caracteres.',
+            'primer_nombre.min'      => 'El primer nombre debe tener mínimo 3 caracteres.',
             'primer_nombre.max'      => 'El primer nombre no puede superar 30 caracteres.',
             'primer_nombre.regex'    => 'El primer nombre solo puede contener letras y espacios.',
 
@@ -99,9 +103,22 @@ class Step1Request extends FormRequest
             | OTROS NOMBRES
             |--------------------------------------------------------------------------
             */
-            'otros_nombres.min'   => 'Los otros nombres deben tener mínimo 5 caracteres.',
+            'otros_nombres.min'   => 'Los otros nombres deben tener mínimo 3 caracteres.',
             'otros_nombres.max'   => 'Los otros nombres no pueden superar 50 caracteres.',
             'otros_nombres.regex' => 'Los otros nombres solo pueden contener letras y espacios.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | EMAIL Y TELÉFONO
+            |--------------------------------------------------------------------------
+            */
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email'    => 'Debe ingresar un correo electrónico válido.',
+            'email.max'      => 'El correo no puede superar 255 caracteres.',
+            'email.unique'   => 'El correo electrónico ya está registrado en el sistema.',
+            'telefono.required'       => 'El teléfono es obligatorio.',
+            'telefono.digits_between' => 'El teléfono debe tener entre 7 y 15 dígitos.',
+            'telefono.regex'          => 'El teléfono solo puede contener números.',
 
             /*
             |--------------------------------------------------------------------------

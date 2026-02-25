@@ -30,7 +30,7 @@
     </div>
 </div>
 
-<form id="step3" novalidate>
+<form id="step3" novalidate action="{{ route('employees.final') }}" method="POST">
     @csrf
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
@@ -48,7 +48,7 @@
                     <option value="{{ $formapago->id_forma_pago }}">{{ $formapago->nombre }}</option>
                 @endforeach
             </select>
-            <p class="error-message text-red-500 text-sm hidden" data-error="id_forma_pago"></p>
+            <div class="error-message invalid-feedback" data-error="id_forma_pago"></div>
         </div>
 
         <div>
@@ -65,7 +65,7 @@
                     <option value="{{ $metopago->id_metodo_pago }}">{{ $metopago->nombre }}</option>
                 @endforeach
             </select>
-            <p class="error-message text-red-500 text-sm hidden" data-error="id_metodo_pago"></p>
+            <div class="error-message invalid-feedback" data-error="id_metodo_pago"></div>
         </div>
 
         <div>
@@ -82,7 +82,7 @@
                     <option value="{{ $tipcuenta->id_tipo_cuenta }}">{{ $tipcuenta->nombre }}</option>
                 @endforeach
             </select>
-            <p class="error-message text-red-500 text-sm hidden" data-error="tipo_cuenta"></p>
+            <div class="error-message invalid-feedback" data-error="tipo_cuenta"></div>
         </div>
 
         <div>
@@ -95,8 +95,10 @@
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                     focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="numero_cuenta"
+                minlength="6"
+                maxlength="20"
                 required>
-            <p class="error-message text-red-500 text-sm hidden" data-error="numero_cuenta"></p>
+            <div class="error-message invalid-feedback" data-error="numero_cuenta"></div>
         </div>
 
         <div>
@@ -113,7 +115,7 @@
                     <option value="{{ $eps->id_eps }}">{{ $eps->nombre }}</option>
                 @endforeach
             </select>
-            <p class="error-message text-red-500 text-sm hidden" data-error="id_eps"></p>
+            <div class="error-message invalid-feedback" data-error="id_eps"></div>
         </div>
 
         <div>
@@ -130,7 +132,7 @@
                     <option value="{{ $afp->id_afp }}">{{ $afp->nombre }}</option>
                 @endforeach
             </select>
-            <p class="error-message text-red-500 text-sm hidden" data-error="id_afp"></p>
+            <div class="error-message invalid-feedback" data-error="id_afp"></div>
         </div>
     </div>
 
@@ -150,152 +152,3 @@
         </button>
     </div>
 </form>
-
-
-<script>
-    $(document).ready(function () {
-        // Función para validar el formulario de Step 3
-        function validateStep3Form() {
-            let isValid = true;
-            const form = $('#step3');
-            
-            // Limpiar errores previos
-            form.find('.error-message').addClass('hidden').text('');
-            form.find('input, select').removeClass('border-red-500 is-invalid');
-            
-            // Validar campos required
-            const requiredFields = {
-                'id_forma_pago': 'La forma de pago es requerida',
-                'id_metodo_pago': 'El método de pago es requerido',
-                'tipo_cuenta': 'El tipo de cuenta es requerido',
-                'numero_cuenta': 'El número de cuenta es requerido',
-                'id_eps': 'La EPS es requerida',
-                'id_afp': 'La AFP es requerida',
-            };
-            
-            $.each(requiredFields, function(fieldName, errorMessage) {
-                const field = form.find(`[name="${fieldName}"]`);
-                const value = field.val();
-                
-                if (!value || value === '') {
-                    isValid = false;
-                    field.addClass('border-red-500 is-invalid');
-                    form.find(`[data-error="${fieldName}"]`).removeClass('hidden').text(errorMessage);
-                }
-            });
-            
-            return isValid;
-        }
-        
-        // Manejar el envío del formulario
-        $('#step3').on('submit', function (e) {
-            e.preventDefault();
-
-            // Validar en cliente primero
-            if (!validateStep3Form()) {
-                return false;
-            }
-
-            let form = $(this);
-            let url = "{{ route('employees.final') }}";
-            let data = form.serialize();
-
-
-            // Limpiar errores anteriores
-            form.find('.error-message').addClass('hidden').text('');
-            form.find('input, select').removeClass('border-red-500');
-
-            $.ajax({
-                url: url,
-                type: 'POST',
-                data: data,
-                success: function (response) {
-                    if (response.success === true) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Registro exitoso',
-                            text: 'Empleado registrado correctamente',
-                            confirmButtonColor: '#10b981'
-                        }).then(() => {
-                            window.dispatchEvent(new CustomEvent('step3-success'));
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: response.errors?.general?.[0] || 'Ocurrió un error',
-                            confirmButtonColor: '#ef4444'
-                        });
-                    }
-                },
-                error: function (xhr) {
-                    
-                    // Limpiar errores anteriores
-                    form.find('.error-message').addClass('hidden').text('');
-                    form.find('input, select').removeClass('border-red-500 is-invalid');
-
-                    if (xhr.status === 422) {
-                        // Errores de validación
-                        let errors = xhr.responseJSON?.errors || {};
-                        $.each(errors, function (key, messages) {
-                            let errorField = form.find(`[data-error="${key}"]`);
-                            const errorMessage = Array.isArray(messages) ? messages[0] : messages;
-                            if (errorField.length) {
-                                errorField.removeClass('hidden').text(errorMessage);
-                            }
-                            form.find(`[name="${key}"]`).addClass('border-red-500 is-invalid');
-                        });
-
-                        const generalError = xhr.responseJSON?.errors?.general?.[0];
-                        if (generalError) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error al registrar',
-                                text: generalError,
-                                confirmButtonColor: '#ef4444'
-                            });
-                        }
-                    } else if (xhr.status === 400) {
-                        const sessionMessage = xhr.responseJSON?.errors?.general?.[0]
-                            || xhr.responseJSON?.message
-                            || 'Sesión expirada';
-
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Sesión expirada',
-                            text: sessionMessage,
-                            confirmButtonColor: '#ef4444'
-                        });
-                    } else if (xhr.status === 500) {
-                        const errorMessage = xhr.responseJSON?.errors?.general?.[0]
-                            || xhr.responseJSON?.message
-                            || 'Error al registrar empleado';
-
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error al registrar',
-                            text: errorMessage,
-                            confirmButtonColor: '#ef4444'
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Ocurrió un error inesperado al registrar el empleado',
-                            confirmButtonColor: '#ef4444'
-                        });
-                    }
-                }
-            });
-        });
-
-        // Limpiar errores cuando el usuario escriba
-        $('input, select').on('change focusout', function() {
-            let fieldName = $(this).attr('name');
-            if (fieldName) {
-                $('[data-error="' + fieldName + '"]').addClass('hidden').text('');
-                $(this).removeClass('border-red-500 is-invalid');
-            }
-        });
-    });
-</script>

@@ -8,26 +8,97 @@
 >
     <div
         @click.outside="closeModals()"
-        class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+        class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex overflow-hidden"
     >
-        {{-- HEADER --}}
-        <div class="sticky top-0 bg-gradient-to-r from-[#1565C0] to-[#1976D2] text-white p-6 flex justify-between items-center border-b">
-            <h2 class="text-2xl font-bold">Editar Empleado</h2>
-            <button @click="closeModals()" class="text-white hover:text-gray-200 text-2xl">
-                &times;
-            </button>
+        {{-- SIDEBAR --}}
+        <div class="w-full md:w-1/3 bg-gradient-to-b from-[#1565C0] to-[#0D47A1] text-white p-8 md:p-10 flex flex-col justify-center">
+            <h2 class="text-3xl font-bold">Nomitech</h2>
+            <p class="mt-4 text-sm text-blue-100 leading-relaxed">
+                Actualiza los datos del empleado en tres pasos.
+            </p>
+
+            <div class="mt-8 space-y-4">
+                <div class="flex items-center" :class="editWizardStep >= 1 ? 'opacity-100' : 'opacity-50'">
+                    <div :class="editWizardStep >= 1 ? 'bg-green-400' : 'bg-blue-300'" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mr-3 flex-shrink-0">
+                        <i :class="editWizardStep > 1 ? 'fas fa-check' : ''" x-show="editWizardStep > 1"></i>
+                        <span x-show="editWizardStep <= 1">1</span>
+                    </div>
+                    <span class="font-medium">Datos Personales</span>
+                </div>
+
+                <div class="flex items-center" :class="editWizardStep >= 2 ? 'opacity-100' : 'opacity-50'">
+                    <div :class="editWizardStep >= 2 ? 'bg-green-400' : 'bg-blue-300'" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mr-3 flex-shrink-0">
+                        <i :class="editWizardStep > 2 ? 'fas fa-check' : ''" x-show="editWizardStep > 2"></i>
+                        <span x-show="editWizardStep <= 2">2</span>
+                    </div>
+                    <span class="font-medium">Datos Laborales</span>
+                </div>
+
+                <div class="flex items-center" :class="editWizardStep >= 3 ? 'opacity-100' : 'opacity-50'">
+                    <div :class="editWizardStep >= 3 ? 'bg-green-400' : 'bg-blue-300'" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mr-3 flex-shrink-0">
+                        <i :class="editWizardStep > 3 ? 'fas fa-check' : ''" x-show="editWizardStep > 3"></i>
+                        <span x-show="editWizardStep <= 3">3</span>
+                    </div>
+                    <span class="font-medium">Datos Financieros</span>
+                </div>
+            </div>
         </div>
 
         {{-- CONTENIDO --}}
-        <div class="p-8">
+        <div class="w-full md:w-2/3 p-8 md:p-10 overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Editar Empleado</h2>
+                <button @click="closeModals()" class="text-gray-500 hover:text-gray-800 text-2xl">
+                    &times;
+                </button>
+            </div>
+
+            <div class="mb-10">
+                <div class="flex justify-between text-sm mb-2">
+                    <span :class="editWizardStep >= 1 ? 'font-semibold text-[rgb(16,185,129)]' : 'text-gray-500'">
+                        Información Personal
+                    </span>
+                    <span :class="editWizardStep >= 2 ? 'font-semibold text-[rgb(16,185,129)]' : 'text-gray-500'">
+                        Información Contractual y Laboral
+                    </span>
+                    <span class="text-right" :class="editWizardStep >= 3 ? 'font-semibold text-[rgb(16,185,129)]' : 'text-gray-500'">
+                        Información Financiera y Seguridad Social
+                    </span>
+                </div>
+
+                <div class="relative h-1 bg-gray-200 rounded-full">
+                    <div
+                        class="absolute h-1 bg-[rgb(16,185,129)] rounded-full"
+                        :class="{
+                            'w-1/3': editWizardStep === 1,
+                            'w-2/3': editWizardStep === 2,
+                            'w-full': editWizardStep === 3
+                        }"
+                    ></div>
+
+                    <div class="absolute -top-3 left-0 w-full flex justify-between">
+                        <div :class="editWizardStep >= 1 ? 'bg-[rgb(16,185,129)] text-white' : 'bg-gray-300 text-gray-600'" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                            1
+                        </div>
+
+                        <div :class="editWizardStep >= 2 ? 'bg-[rgb(16,185,129)] text-white' : 'bg-gray-300 text-gray-600'" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                            2
+                        </div>
+
+                        <div :class="editWizardStep >= 3 ? 'bg-[rgb(16,185,129)] text-white' : 'bg-gray-300 text-gray-600'" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                            3
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <form id="editEmployeeForm" novalidate>
                 @csrf
                 <input type="hidden" id="editDocField" name="doc">
 
-                {{-- DATOS PERSONALES --}}
-                <div class="mb-8">
+                <div x-show="editWizardStep === 1" x-cloak>
                     <h3 class="text-lg font-bold text-gray-800 mb-6 border-b pb-3">Datos Personales</h3>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento</label>
@@ -87,10 +158,9 @@
                     </div>
                 </div>
 
-                {{-- DATOS LABORALES --}}
-                <div class="mb-8">
+                <div x-show="editWizardStep === 2" x-cloak>
                     <h3 class="text-lg font-bold text-gray-800 mb-6 border-b pb-3">Datos Laborales</h3>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Trabajador</label>
@@ -184,10 +254,9 @@
                     </div>
                 </div>
 
-                {{-- DATOS FINANCIEROS --}}
-                <div class="mb-8">
+                <div x-show="editWizardStep === 3" x-cloak>
                     <h3 class="text-lg font-bold text-gray-800 mb-6 border-b pb-3">Datos Financieros y Seguridad Social</h3>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
@@ -254,22 +323,40 @@
                     </div>
                 </div>
 
-                {{-- BOTONES --}}
-                <div class="mt-10 flex justify-end gap-4">
+                <div class="mt-10 flex justify-between gap-4">
                     <button
                         type="button"
-                        @click="editOpen = false"
+                        @click="closeModals()"
                         class="bg-gray-200 text-gray-700 py-2 px-6 rounded-md hover:bg-gray-300 transition"
                     >
                         Cancelar
                     </button>
 
-                    <button
-                        type="submit"
-                        class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition"
-                    >
-                        Guardar Cambios
-                    </button>
+                    <div class="flex gap-3">
+                        <button
+                            type="button"
+                            x-show="editWizardStep > 1"
+                            @click="previousEditStep()"
+                            class="bg-white border border-gray-300 text-gray-700 py-2 px-6 rounded-md hover:bg-gray-50 transition"
+                        >
+                            Atrás
+                        </button>
+                        <button
+                            type="button"
+                            x-show="editWizardStep < 3"
+                            @click="nextEditStep()"
+                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition"
+                        >
+                            Continuar
+                        </button>
+                        <button
+                            type="submit"
+                            x-show="editWizardStep === 3"
+                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition"
+                        >
+                            Guardar Cambios
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

@@ -21,7 +21,7 @@ class Step3Request extends FormRequest
             'id_forma_pago'   => 'required|integer|exists:forma_pago,id_forma_pago',
             'id_metodo_pago'  => 'required|integer|exists:metodo_pago,id_metodo_pago',
             'tipo_cuenta'     => 'required|integer|exists:tipo_cuenta,id_tipo_cuenta',
-            'numero_cuenta'   => 'required|string|min:6|max:18|regex:/^[0-9]+$/',
+            'numero_cuenta'   => 'required|string|max:20|regex:/^[0-9]{6,20}$/',
             'id_eps'          => 'required|integer|exists:eps,id_eps',
             'id_afp'          => 'required|integer|exists:afp,id_afp',
         ];
@@ -44,9 +44,8 @@ class Step3Request extends FormRequest
 
             'numero_cuenta.required'   => 'Debe ingresar el número de cuenta.',
             'numero_cuenta.string'     => 'El número de cuenta debe ser texto.',
-            'numero_cuenta.min'        => 'El número de cuenta debe tener al menos 6 caracteres.',
-            'numero_cuenta.max'        => 'El número de cuenta no puede superar 18 caracteres.',
-            'numero_cuenta.regex'      => 'El número de cuenta solo puede contener números.',
+            'numero_cuenta.max'        => 'El número de cuenta no puede superar 20 caracteres.',
+            'numero_cuenta.regex'      => 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.',
 
             'id_eps.required'          => 'Debe seleccionar la EPS.',
             'id_eps.integer'           => 'La EPS no es válida.',

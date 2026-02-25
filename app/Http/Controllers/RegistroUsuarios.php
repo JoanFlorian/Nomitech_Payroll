@@ -29,9 +29,10 @@ class RegistroUsuarios extends Controller
 
         // get doc from the FormRequest merge; this avoids manual transformation
         $data['doc'] = $request->input('doc');
+        $data['correo'] = $data['email'];
 
         $data['id_ciudad'] = $data['ciudad'];
-        unset($data['ciudad'], $data['departamento']); // departamento no se almacena
+        unset($data['email'], $data['ciudad'], $data['departamento']); // departamento no se almacena
 
         // reset cualquier paso posterior para evitar datos corruptos
         session()->forget('employee.step2');

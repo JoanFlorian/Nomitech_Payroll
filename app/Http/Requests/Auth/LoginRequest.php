@@ -24,6 +24,7 @@ class LoginRequest extends FormRequest
         return [
             'correo.required' => 'El correo es requerido.',
             'contrasena.required' => 'La contraseña es requerida.',
+            'contrasena.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ];
     }
 }

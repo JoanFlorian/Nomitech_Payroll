@@ -30,7 +30,10 @@ class Step2Request extends FormRequest
             'id_arl'                  => 'bail|required|integer',
 
             // SALARIO
-            'salario' => 'bail|required|numeric|min:0|max:999999999',
+            'salario' => 'bail|required|numeric|min:0.01|max:999999999',
+
+            // NIVEL RIESGO
+            'nivel_riesgo' => 'bail|required|in:Nivel I,Nivel II,Nivel III,Nivel IV,Nivel V',
 
             // CODIGO INTERNO
             'codigo_interno' => 'bail|required|string|min:3|max:20|regex:/^[A-Za-z0-9\-]+$/',
@@ -108,8 +111,16 @@ class Step2Request extends FormRequest
             */
             'salario.required' => 'El salario es obligatorio.',
             'salario.numeric'  => 'El salario debe ser un valor numérico.',
-            'salario.min'      => 'El salario no puede ser negativo.',
+            'salario.min'      => 'El salario debe ser mayor que cero.',
             'salario.max'      => 'El salario es demasiado alto.',
+
+            /*
+            |--------------------------------------------------------------------------
+            | NIVEL DE RIESGO
+            |--------------------------------------------------------------------------
+            */
+            'nivel_riesgo.required' => 'Debe seleccionar el nivel de riesgo.',
+            'nivel_riesgo.in'       => 'El nivel de riesgo seleccionado no es válido.',
 
             /*
             |--------------------------------------------------------------------------

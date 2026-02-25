@@ -23,9 +23,11 @@ class PlanSeeder extends Seeder
                 'destacado' => false,
                 'orden' => 1,
                 'features' => [
-                    'Gestión básica de nómina',
-                    'Soporte por correo',
-                    'Reportes mensuales',
+                    'Soporta hasta 15 Empleados',
+                    'Gestión Básica de Nómina Electrónica',
+                    'Liquidación mensual y quincenal',
+                    'Soporte estándar por correo',
+                    'Generación de comprobantes PDF'
                 ],
             ],
             [
@@ -38,10 +40,11 @@ class PlanSeeder extends Seeder
                 'destacado' => true,
                 'orden' => 2,
                 'features' => [
-                    'Todo en Starter',
+                    'Soporta hasta 30 Empleados',
+                    'Todo lo del plan Starter',
                     'Integración contable básica',
-                    'Soporte prioritario',
-                    'Acceso multiusuario',
+                    'Atención prioritaria por chat',
+                    'Acceso multiusuario (hasta 3 admins)'
                 ],
             ],
             [
@@ -54,10 +57,11 @@ class PlanSeeder extends Seeder
                 'destacado' => false,
                 'orden' => 3,
                 'features' => [
-                    'Todo en Pro',
-                    'Reportes Avanzados',
-                    'Integración con bancos',
-                    'Soporte telefónico',
+                    'Soporta hasta 50 Empleados',
+                    'Todo lo del plan Pro',
+                    'Reportes Avanzados de Costos',
+                    'Portal de autoservicio para empleados',
+                    'Soporte telefónico directo'
                 ],
             ],
             [
@@ -70,10 +74,11 @@ class PlanSeeder extends Seeder
                 'destacado' => false,
                 'orden' => 4,
                 'features' => [
-                    'Todo en Pyme',
-                    'SLA personalizado',
-                    'Integraciones a medida',
-                    'Manager dedicado',
+                    'Soporta hasta 100 Empleados',
+                    'Todo lo del plan Pyme',
+                    'SLA de disponibilidad garantizada',
+                    'Desarrollo de integraciones a medida',
+                    'Account Manager dedicado'
                 ],
             ],
         ];

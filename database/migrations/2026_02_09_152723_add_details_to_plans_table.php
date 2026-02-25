@@ -22,7 +22,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-<<<<<<< HEAD
         if (config('database.default') !== 'sqlite' && config('database.connections.' . config('database.default') . '.driver') !== 'sqlite') {
             Schema::table('plan', function (Blueprint $table) {
                 if (Schema::hasColumn('plan', 'destacado')) {
@@ -36,18 +35,5 @@ return new class extends Migration {
                 }
             });
         }
-=======
-        Schema::table('plan', function (Blueprint $table) {
-            if (Schema::hasColumn('plan', 'destacado')) {
-                $table->dropColumn('destacado');
-            }
-            if (Schema::hasColumn('plan', 'orden')) {
-                $table->dropColumn('orden');
-            }
-            if (Schema::hasColumn('plan', 'features')) {
-                $table->dropColumn('features');
-            }
-        });
->>>>>>> af105929fff92a0e463cda1a326762fda9c6a73f
     }
 };

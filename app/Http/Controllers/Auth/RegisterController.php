@@ -88,9 +88,11 @@ class RegisterController extends Controller
             ]);
 
             // 5. Create Pago (Pending)
+            // Se guarda plan_id para mantener trazabilidad del plan adquirido originalmente
             $pago = Pago::create([
                 'empresa_id' => $empresa->id_empresa,
                 'licencia_id' => $licencia->id,
+                'plan_id' => $plan->id,
                 'referencia' => null, // Se será establecida en Checkout
                 'proveedor_pago' => 'STRIPE',
                 'valor' => $plan->valor,

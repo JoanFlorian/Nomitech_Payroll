@@ -90,7 +90,7 @@
                             $licencia = $pago->licencia;
                             $empresa = $pago->empresa ?? $licencia->empresa;
                             $fechaFin = \Carbon\Carbon::parse($licencia->fecha_fin);
-                            $diasRestantes = $fechaFin->diffInDays(\Carbon\Carbon::now(), false);
+                            $diasRestantes = \Carbon\Carbon::now()->diffInDays($fechaFin, false);
 
                             if ($diasRestantes < 0) {
                                 $vigenciaColor = 'text-red-600 font-semibold';
@@ -121,7 +121,9 @@
                             </td>
                             <td class="px-6 py-3 text-center text-gray-700">{{ $fechaPago }}</td>
                             <td class="px-6 py-3 text-center"><span
-                                    class="{{ $vigenciaColor }}">{{ abs((int) floor($diasRestantes)) }} días</span></td>
+                                    class="{{ $vigenciaColor }}">
+                                    {{ $diasRestantes < 0 ? 'Vencida' : (abs((int) floor($diasRestantes)) . ' días') }}
+                                </span></td>
                             <td class="px-6 py-3 text-center text-gray-700">{{ $pago->proveedor_pago ?? '—' }}</td>
                             <td class="px-6 py-3 text-center"><span
                                     class="{{ $estadoColor }} px-3 py-0.5 rounded-full text-xs font-semibold">{{ $estadoTexto }}</span>

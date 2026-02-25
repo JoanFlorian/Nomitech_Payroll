@@ -104,9 +104,18 @@ class facturacioncontroller extends Controller
 
     public function getFactura($pagoId)
     {
-        $pago = Pago::with(['licencia.empresa', 'licencia.plan', 'empresa'])->findOrFail($pagoId);
+        // Cargar plan directo desde pago (trazabilidad) y desde licencia (fallback datos históricos)
+        $pago = Pago::with(['licencia.empresa', 'licencia.plan', 'plan', 'empresa'])->findOrFail($pagoId);
         $empresa = $pago->empresa ?? $pago->licencia->empresa;
         $licencia = $pago->licencia;
+
+        // Usar plan directo del pago si existe (nuevo comportamiento),
+        // si no, caer al plan de la licencia (registros históricos anteriores al fix)
+        $plan = $pago->plan ?? ($licencia ? $licencia->plan : null);
+
+        // Los valores se retornan como float puro para que parseFloat() en JavaScript funcione.
+        // El formateo a moneda colombiana lo realiza toLocaleString('es-CO') en el frontend.
+        $valorFloat = (float) $pago->valor;
 
         return response()->json([
             'numero_factura' => 'FAC-' . ($pago->fecha_pago ? $pago->fecha_pago->format('Y') : $pago->created_at->format('Y')) . '-' .
@@ -126,15 +135,15 @@ class facturacioncontroller extends Controller
                 'direccion' => $empresa->direccion ?? 'No especificado'
             ],
             'metodo_pago' => ucfirst($pago->proveedor_pago ?? 'No especificado'),
-            'subtotal' => number_format((float) $pago->valor, 2, '.', ','),
-            'iva' => '0.00',
-            'total' => number_format((float) $pago->valor, 2, '.', ','),
+            'subtotal' => $valorFloat,
+            'iva' => 0,
+            'total' => $valorFloat,
             'items' => [
                 [
-                    'concepto' => $licencia->plan->nombre ?? 'Plan de suscripción',
-                    'descripcion' => $licencia->plan->descripcion ?? 'Acceso a plataforma Nomitech',
+                    'concepto' => $plan->nombre ?? 'Plan de suscripción',
+                    'descripcion' => $plan->descripcion ?? 'Acceso a plataforma Nomitech',
                     'cantidad' => 1,
-                    'precio_unitario' => number_format((float) $pago->valor, 2, '.', ',')
+                    'precio_unitario' => $valorFloat
                 ]
             ]
         ]);
@@ -150,7 +159,7 @@ class facturacioncontroller extends Controller
         $suscripcionesActivas = Licencia::where('fecha_fin', '>=', Carbon::now())->count();
         $pendientesPago = Pago::where('estado_pago', 'pending')->count();
 
-        $query = Pago::with(['licencia.empresa', 'licencia.plan', 'empresa'])
+        $query = Pago::with(['licencia.empresa', 'licencia.plan', 'plan', 'empresa'])
             ->orderBy('created_at', 'desc');
 
         if ($estadoFiltro && $estadoFiltro !== 'Todos') {
@@ -178,7 +187,7 @@ class facturacioncontroller extends Controller
             ->toArray();
 
         return view('superadmin.facturacion', [
-            'totalTransacciones' => number_format((float) $totalTransacciones, 2, '.', ','),
+            'totalTransacciones' => number_format((float) $totalTransacciones, 0, ',', '.'),
             'suscripcionesActivas' => $suscripcionesActivas,
             'pendientesPago' => $pendientesPago,
             'transacciones' => $transacciones,
@@ -191,12 +200,15 @@ class facturacioncontroller extends Controller
     public function descargarFacturaPdf($pagoId)
     {
         try {
-            $pago = Pago::with(['licencia.empresa', 'licencia.plan', 'empresa'])->findOrFail($pagoId);
+            // Cargar plan directo del pago y de la licencia (fallback datos históricos)
+            $pago = Pago::with(['licencia.empresa', 'licencia.plan', 'plan', 'empresa'])->findOrFail($pagoId);
             $empresa = $pago->empresa ?? $pago->licencia->empresa;
             $licencia = $pago->licencia;
             $estadoTexto = $this->obtenerEstadoTexto($pago->estado_pago);
+            // Plan desde el pago (nuevo) o desde la licencia (histórico)
+            $planParaPdf = $pago->plan ?? ($licencia ? $licencia->plan : null);
 
-            $html = view('superadmin.pdf', compact('pago', 'empresa', 'licencia', 'estadoTexto'))->render();
+            $html = view('superadmin.pdf', compact('pago', 'empresa', 'licencia', 'estadoTexto', 'planParaPdf'))->render();
 
             return response($html, 200)
                 ->header('Content-Type', 'text/html; charset=utf-8')

@@ -68,9 +68,11 @@ class LicenseRenewalController extends Controller
             }
 
             // Crear un nuevo Pago (cada pago es una transacción distinta)
+            // Se guarda plan_id para mantener trazabilidad si la licencia cambia de plan en el futuro
             $pago = Pago::create([
                 'empresa_id' => $empresa->id_empresa,
                 'licencia_id' => $licencia->id,
+                'plan_id' => $plan->id,
                 'referencia' => null,
                 'proveedor_pago' => 'STRIPE',
                 'valor' => $plan->valor,

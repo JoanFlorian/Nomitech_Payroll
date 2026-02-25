@@ -16,6 +16,7 @@ class Pago extends Model
     protected $fillable = [
         'empresa_id',
         'licencia_id',
+        'plan_id',
         'referencia',
         'proveedor_pago',
         'valor',
@@ -40,5 +41,10 @@ class Pago extends Model
     public function licencia()
     {
         return $this->belongsTo(Licencia::class, 'licencia_id', 'id');
+    }
+
+    public function plan()
+    {
+        return $this->belongsTo(Plan::class, 'plan_id', 'id');
     }
 }

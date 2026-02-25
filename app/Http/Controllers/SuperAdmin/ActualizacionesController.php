@@ -77,7 +77,7 @@ class ActualizacionesController extends Controller
             'colorBoton' => 'purple',
             'colores' => ['icono' => 'from-purple-400 to-purple-600', 'boton' => 'from-purple-500 to-purple-600'],
         ],
-        'cargos' => [
+        'roles_nombres' => [
             'modelo' => Rol::class,
             'campoId' => 'id_rol',
             'tabla' => 'rol',
@@ -273,7 +273,7 @@ class ActualizacionesController extends Controller
             ['titulo' => 'Ciudades', 'desc' => 'Gestiona el listado de ciudades y regiones del sistema.', 'icono' => 'bi-geo-alt'],
             ['titulo' => 'Tipos de Documento', 'desc' => 'Configura tipos de identificación como CC, NIT, CE.', 'icono' => 'bi-person-badge'],
             ['titulo' => 'Bancos', 'desc' => 'Gestiona entidades bancarias para nómina.', 'icono' => 'bi-bank'],
-            ['titulo' => 'Cargos', 'desc' => 'Define cargos, jerarquías y responsabilidades.', 'icono' => 'bi-briefcase'],
+            ['titulo' => 'Roles', 'desc' => 'Define roles de trabajo, jerarquías y responsabilidades.', 'icono' => 'bi-briefcase'],
             ['titulo' => 'Tipos de Contrato', 'desc' => 'Configura tipos de contrato laboral.', 'icono' => 'bi-file-earmark-text'],
             ['titulo' => 'EPS', 'desc' => 'Gestión de entidades de salud.', 'icono' => 'bi-heart-pulse'],
             ['titulo' => 'ARL', 'desc' => 'Gestión de riesgos laborales.', 'icono' => 'bi-shield-check'],
@@ -283,7 +283,7 @@ class ActualizacionesController extends Controller
             ['titulo' => 'Formas de Pago', 'desc' => 'Configura formas de pago disponibles.', 'icono' => 'bi-credit-card'],
             ['titulo' => 'Métodos de Pago', 'desc' => 'Gestiona métodos de pago para nómina.', 'icono' => 'bi-wallet2'],
             ['titulo' => 'Países', 'desc' => 'Gestiona el listado de países.', 'icono' => 'bi-globe'],
-            ['titulo' => 'Roles', 'desc' => 'Define roles y permisos de usuario.', 'icono' => 'bi-shield-lock'],
+            ['titulo' => 'Roles de Sistema', 'desc' => 'Define roles y permisos de seguridad del usuario.', 'icono' => 'bi-shield-lock'],
             ['titulo' => 'Tipos Hora Recargo', 'desc' => 'Configura tipos de horas con recargo.', 'icono' => 'bi-clock'],
         ]);
 
@@ -346,7 +346,7 @@ class ActualizacionesController extends Controller
     private $updateRequestMap = [
         'ciudades' => UpdateCiudadRequest::class,
         'tipos_de_documento' => UpdateTipoDocumentoRequest::class,
-        'cargos' => UpdateCargoRequest::class,
+        'roles_nombres' => UpdateCargoRequest::class,
         'formas_de_pago' => UpdateFormaPagoRequest::class,
         'metodos_de_pago' => UpdateMetodoPagoRequest::class,
     ];
@@ -422,7 +422,7 @@ class ActualizacionesController extends Controller
      */
     private $storeRequestMap = [
         'tipos_de_documento' => StoreTipoDocumentoRequest::class,
-        'cargos' => StoreCargoRequest::class,
+        'roles_nombres' => StoreCargoRequest::class,
         'formas_de_pago' => StoreFormaPagoRequest::class,
         'metodos_de_pago' => StoreMetodoPagoRequest::class,
     ];

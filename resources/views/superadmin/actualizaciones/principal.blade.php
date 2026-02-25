@@ -132,7 +132,7 @@
             'ciudades': 'ciudades',
             'tipos de documento': 'tipos_de_documento',
             'bancos': 'bancos',
-            'cargos': 'cargos',
+            'roles': 'roles_nombres',
             'tipos de contrato': 'tipos_de_contrato',
             'eps': 'eps',
             'arl': 'arl',
@@ -142,7 +142,7 @@
             'formas de pago': 'formas_de_pago',
             'métodos de pago': 'metodos_de_pago',
             'países': 'paises',
-            'roles': 'roles',
+            'roles de sistema': 'roles',
             'tipos hora recargo': 'tipos_hora_recargo'
         };
 
@@ -180,8 +180,8 @@
                 ruta: '/superadmin/actualizar/:id',
                 colores: { icono: 'from-purple-400 to-purple-600', boton: 'from-purple-500 to-purple-600' }
             },
-            cargos: {
-                tipo: 'cargos',
+            roles_nombres: {
+                tipo: 'roles_nombres',
                 campos: [
                     { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-briefcase', requerido: true },
                     { clave: 'descripcion', label: 'Descripción', tipo: 'textarea', icono: 'bi-file-text' }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Usuario;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
@@ -24,9 +25,18 @@ class ForgotPasswordController extends Controller
      */
     public function sendResetLinkEmail(Request $request)
     {
-        $request->validate(['correo' => 'required|email']);
+        $correo = strtolower(trim((string) $request->input('correo', '')));
 
-        $user = Usuario::where('correo', $request->correo)->first();
+        $request->validate(
+            ['correo' => 'required|email|max:255'],
+            [
+                'correo.required' => 'El campo correo electrónico es obligatorio.',
+                'correo.email' => 'El correo electrónico no es válido.',
+                'correo.max' => 'El correo electrónico no puede superar los 255 caracteres.',
+            ]
+        );
+
+        $user = Usuario::where('correo', $correo)->first();
 
         if (!$user) {
             return back()->withErrors(['correo' => 'No encontramos un usuario con ese correo electrónico.']);
@@ -37,7 +47,7 @@ class ForgotPasswordController extends Controller
 
         // Store in database
         DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $request->correo],
+            ['email' => $correo],
             [
                 'token' => $code,
                 'created_at' => Carbon::now()
@@ -53,11 +63,11 @@ class ForgotPasswordController extends Controller
             });
         } catch (\Exception $e) {
             // Log the error if mail fails but provide message to user if needed
-            \Log::error('Mail failure: ' . $e->getMessage());
+            Log::error('Mail failure: ' . $e->getMessage());
             return back()->withErrors(['correo' => 'Hubo un error al enviar el correo. Por favor, intenta de nuevo más tarde.']);
         }
 
-        return redirect()->route('password.verify.form', ['correo' => $request->correo])
+        return redirect()->route('password.verify.form', ['correo' => $correo])
             ->with('status', 'Hemos enviado un código de verificación a tu correo electrónico.');
     }
 }

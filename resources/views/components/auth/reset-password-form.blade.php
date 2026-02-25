@@ -17,15 +17,18 @@
 
     <div class="mb-6">
         <label class="block text-[#424242] text-sm font-medium mb-2">Nueva Contraseña</label>
-        <input type="password" name="contrasena" placeholder="••••••••" required
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white" />
+        <input type="password" name="contrasena" id="contrasena" placeholder="••••••••" required minlength="8"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
+            aria-describedby="contrasena-feedback" />
+        <p id="contrasena-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">La contraseña debe tener mínimo 8 caracteres y contener al menos una letra, un número y un símbolo.</p>
         @error('contrasena') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
     </div>
 
     <div class="mb-6">
         <label class="block text-[#424242] text-sm font-medium mb-2">Confirmar Contraseña</label>
-        <input type="password" name="contrasena_confirmation" placeholder="••••••••" required
+        <input type="password" name="contrasena_confirmation" id="contrasena_confirmation" placeholder="••••••••" required
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white" />
+        <p id="contrasena-confirmation-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">Las contraseñas no coinciden.</p>
     </div>
 
     <div class="mb-4">
@@ -35,3 +38,89 @@
         </button>
     </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form[action="{{ route('password.update') }}"]');
+        const passwordInput = document.getElementById('contrasena');
+        const confirmInput = document.getElementById('contrasena_confirmation');
+        const passwordFeedback = document.getElementById('contrasena-feedback');
+        const confirmFeedback = document.getElementById('contrasena-confirmation-feedback');
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,}$/;
+
+        if (!form || !passwordInput || !confirmInput) {
+            return;
+        }
+
+        function showInvalid(input, feedback) {
+            input.classList.add('is-invalid');
+            if (feedback) {
+                feedback.classList.remove('hidden');
+            }
+        }
+
+        function clearInvalid(input, feedback) {
+            input.classList.remove('is-invalid');
+            if (feedback) {
+                feedback.classList.add('hidden');
+            }
+        }
+
+        function validatePassword() {
+            const value = passwordInput.value || '';
+            if (value.length === 0) {
+                passwordFeedback.textContent = 'El campo contraseña es obligatorio.';
+                showInvalid(passwordInput, passwordFeedback);
+                return false;
+            }
+
+            const isValid = passwordRegex.test(value);
+            if (isValid) {
+                clearInvalid(passwordInput, passwordFeedback);
+                return true;
+            }
+
+            passwordFeedback.textContent = 'La contraseña debe tener mínimo 8 caracteres y contener al menos una letra, un número y un símbolo.';
+            showInvalid(passwordInput, passwordFeedback);
+            return false;
+        }
+
+        function validateConfirmation() {
+            const passwordValue = passwordInput.value || '';
+            const confirmValue = confirmInput.value || '';
+
+            if (confirmValue.length === 0) {
+                confirmFeedback.textContent = 'La confirmación de contraseña es obligatoria.';
+                showInvalid(confirmInput, confirmFeedback);
+                return false;
+            }
+
+            const matches = passwordValue === confirmValue;
+            if (matches) {
+                clearInvalid(confirmInput, confirmFeedback);
+                return true;
+            }
+
+            confirmFeedback.textContent = 'Las contraseñas no coinciden.';
+            showInvalid(confirmInput, confirmFeedback);
+            return false;
+        }
+
+        passwordInput.addEventListener('input', function () {
+            validatePassword();
+            validateConfirmation();
+        });
+
+        confirmInput.addEventListener('input', validateConfirmation);
+
+        form.addEventListener('submit', function (event) {
+            const passwordOk = validatePassword();
+            const confirmationOk = validateConfirmation();
+
+            if (!passwordOk || !confirmationOk) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        });
+    });
+</script>

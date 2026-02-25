@@ -14,7 +14,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'correo' => ['required', 'string', 'email', 'max:256'],
+            'correo' => ['required', 'string', 'email', 'max:255'],
             'contrasena' => ['required', 'string', 'min:8'],
         ];
     }
@@ -22,8 +22,12 @@ class LoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'correo.required' => 'El correo es requerido.',
-            'contrasena.required' => 'La contraseña es requerida.',
+            'correo.required' => 'El correo electrónico es obligatorio.',
+            'correo.string' => 'El correo electrónico debe ser texto válido.',
+            'correo.email' => 'El correo electrónico no es válido.',
+            'correo.max' => 'El correo electrónico no puede superar los 255 caracteres.',
+            'contrasena.required' => 'La contraseña es obligatoria.',
+            'contrasena.string' => 'La contraseña debe ser texto válido.',
             'contrasena.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ];
     }

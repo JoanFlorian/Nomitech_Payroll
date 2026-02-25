@@ -118,25 +118,25 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Primer Nombre</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="primer_nombre" id="editPrimerNombre">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="primer_nombre" id="editPrimerNombre">
                             <p class="error-message text-red-500 text-sm hidden" data-error="primer_nombre"></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Otros Nombres</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="otros_nombres" id="editOtrosNombres">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="otros_nombres" id="editOtrosNombres">
                             <p class="error-message text-red-500 text-sm hidden" data-error="otros_nombres"></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Primer Apellido</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="primer_apellido" id="editPrimerApellido">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="primer_apellido" id="editPrimerApellido">
                             <p class="error-message text-red-500 text-sm hidden" data-error="primer_apellido"></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Segundo Apellido</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="segundo_apellido" id="editSegundoApellido">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="segundo_apellido" id="editSegundoApellido">
                             <p class="error-message text-red-500 text-sm hidden" data-error="segundo_apellido"></p>
                         </div>
 
@@ -152,7 +152,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="direccion" id="editDireccion">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="direccion" id="editDireccion">
                             <p class="error-message text-red-500 text-sm hidden" data-error="direccion"></p>
                         </div>
                     </div>

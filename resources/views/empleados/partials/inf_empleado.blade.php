@@ -70,7 +70,7 @@
             <input
                 type="text"
                 placeholder="Ej: Pérez"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
                 name="primer_apellido"
                 required>
             <div class="error-message invalid-feedback" data-error="primer_apellido"></div>
@@ -83,7 +83,7 @@
             <input
                 type="text"
                 placeholder="Ej: Gómez"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
                 name="segundo_apellido">
             <div class="error-message invalid-feedback" data-error="segundo_apellido"></div>
         </div>
@@ -95,7 +95,7 @@
             <input
                 type="text"
                 placeholder="Ej: Juan"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
                 name="primer_nombre"
                 required>
             <div class="error-message invalid-feedback" data-error="primer_nombre"></div>
@@ -108,7 +108,7 @@
             <input
                 type="text"
                 placeholder="Ej: Carlos"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
                 name="otros_nombres">
             <div class="error-message invalid-feedback" data-error="otros_nombres"></div>
         </div>
@@ -174,7 +174,7 @@
             <input
                 type="text"
                 placeholder="Ej: Calle 10 #42-15"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
                 name="direccion"
                 required>
             <div class="error-message invalid-feedback" data-error="direccion"></div>
@@ -330,7 +330,6 @@
     }
 
     document.addEventListener('selected', handleDeptSelectionChange);
-    document.addEventListener('input', handleDeptSelectionChange);
 
     function syncCityOptionsByDepartment(deptId) {
         const normalizedId = deptId !== undefined && deptId !== null ? String(deptId) : '';

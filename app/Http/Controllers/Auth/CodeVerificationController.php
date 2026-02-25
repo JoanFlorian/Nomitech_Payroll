@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 
 class CodeVerificationController extends Controller
@@ -28,16 +29,35 @@ class CodeVerificationController extends Controller
      */
     public function verify(Request $request)
     {
-        $request->validate([
-            'correo' => 'required|email',
-            'code' => 'required|string|size:6',
-        ]);
+        $correo = trim((string) $request->input('correo', ''));
+        $code = trim((string) $request->input('code', ''));
+
+        $request->validate(
+            [
+                'correo' => 'required|email|max:255',
+                'code' => 'required|digits:6',
+            ],
+            [
+                'correo.required' => 'El campo correo electrónico es obligatorio.',
+                'correo.email' => 'El correo electrónico no es válido.',
+                'correo.max' => 'El correo electrónico no puede superar los 255 caracteres.',
+                'code.required' => 'El código de verificación es obligatorio.',
+                'code.digits' => 'El código de verificación debe contener exactamente 6 números.',
+            ]
+        );
 
         $record = DB::table('password_reset_tokens')
-            ->where('email', $request->correo)
+            ->where('email', $correo)
             ->first();
 
-        if (!$record || $record->token !== $request->code) {
+        $storedToken = (string) ($record->token ?? '');
+        $isValidToken = $record && hash_equals($storedToken, $code);
+
+        if (!$isValidToken && $record && strlen($storedToken) > 20) {
+            $isValidToken = Hash::check($code, $storedToken);
+        }
+
+        if (!$isValidToken) {
             return back()->withErrors(['code' => 'El código ingresado es incorrecto.']);
         }
 
@@ -48,8 +68,8 @@ class CodeVerificationController extends Controller
         }
 
         // Store verification in session to allow access to reset form
-        session(['password_reset_verified_email' => $request->correo, 'password_reset_verified_code' => $request->code]);
+        session(['password_reset_verified_email' => $correo, 'password_reset_verified_code' => $code]);
 
-        return redirect()->route('password.reset', ['token' => $request->code, 'correo' => $request->correo]);
+        return redirect()->route('password.reset', ['token' => $code, 'correo' => $correo]);
     }
 }

@@ -19,13 +19,13 @@ class LoginController extends Controller
     public function store(LoginRequest $request)
     {
         // Validate credentials
-        $correo = $request->input('correo');
-        $password = $request->input('contrasena');
+        $correo = strtolower(trim((string) $request->input('correo', '')));
+        $password = (string) $request->input('contrasena', '');
 
         $usuario = Usuario::where('correo', $correo)->first();
 
         if (!$usuario || !Hash::check($password, $usuario->contrasena)) {
-            return back()->withErrors(['correo' => 'Credenciales inválidas'])->withInput();
+            return back()->withErrors(['correo' => 'Las credenciales ingresadas son incorrectas.'])->withInput();
         }
 
         // Superadmin (role 4) - no license check needed

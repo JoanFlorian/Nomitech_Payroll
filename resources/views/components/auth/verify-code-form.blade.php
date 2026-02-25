@@ -20,9 +20,10 @@
         </p>
 
         <label class="block text-[#424242] text-sm font-medium mb-2">Código de Verificación</label>
-        <input type="text" name="code" placeholder="000000" maxlength="6" required
+        <input type="text" name="code" id="verification-code" placeholder="000000" maxlength="6" required inputmode="numeric" pattern="[0-9]{6}"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white text-center text-2xl tracking-[1rem] font-bold"
-            autocomplete="off" />
+            autocomplete="off" aria-describedby="verification-code-feedback" />
+        <p id="verification-code-feedback" class="invalid-feedback text-red-600 text-sm mt-1 text-center hidden">El código de verificación debe contener exactamente 6 números.</p>
         @error('code') <p class="text-red-600 text-sm mt-1 text-center">{{ $message }}</p> @enderror
         @error('correo') <p class="text-red-600 text-sm mt-1 text-center">{{ $message }}</p> @enderror
     </div>
@@ -39,3 +40,54 @@
             intentar de nuevo</a>
     </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form[action="{{ route('password.verify') }}"]');
+        const input = document.getElementById('verification-code');
+        const feedback = document.getElementById('verification-code-feedback');
+        if (!input || !form || !feedback) {
+            return;
+        }
+
+        function showInvalid(message) {
+            input.classList.add('is-invalid');
+            feedback.textContent = message;
+            feedback.classList.remove('hidden');
+        }
+
+        function clearInvalid() {
+            input.classList.remove('is-invalid');
+            feedback.classList.add('hidden');
+        }
+
+        function validateCode() {
+            const value = input.value || '';
+
+            if (!value) {
+                showInvalid('El código de verificación es obligatorio.');
+                return false;
+            }
+
+            if (!/^\d{6}$/.test(value)) {
+                showInvalid('El código de verificación debe contener exactamente 6 números.');
+                return false;
+            }
+
+            clearInvalid();
+            return true;
+        }
+
+        input.addEventListener('input', function () {
+            input.value = input.value.replace(/\D/g, '').slice(0, 6);
+            validateCode();
+        });
+
+        form.addEventListener('submit', function (event) {
+            if (!validateCode()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        });
+    });
+</script>

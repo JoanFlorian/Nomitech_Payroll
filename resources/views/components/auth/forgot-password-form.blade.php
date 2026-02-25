@@ -12,9 +12,10 @@
 
     <div class="mb-6">
         <label class="block text-[#424242] text-sm font-medium mb-2">Email</label>
-        <input type="email" name="correo" placeholder="tu@email.com" required
+        <input type="email" name="correo" id="forgot-correo" placeholder="tu@email.com" required
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
-            value="{{ old('correo') }}" />
+            value="{{ old('correo') }}" aria-describedby="forgot-correo-feedback" />
+        <p id="forgot-correo-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">El campo correo electrónico es obligatorio.</p>
         @error('correo') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
     </div>
 
@@ -29,3 +30,53 @@
         <a href="{{ route('login') }}" class="text-sm text-[#424242] hover:underline">Volver al inicio de sesión</a>
     </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form[action="{{ route('password.email') }}"]');
+        const input = document.getElementById('forgot-correo');
+        const feedback = document.getElementById('forgot-correo-feedback');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!form || !input || !feedback) {
+            return;
+        }
+
+        function showInvalid(message) {
+            input.classList.add('is-invalid');
+            feedback.textContent = message;
+            feedback.classList.remove('hidden');
+        }
+
+        function clearInvalid() {
+            input.classList.remove('is-invalid');
+            feedback.classList.add('hidden');
+        }
+
+        function validateEmail() {
+            const value = (input.value || '').trim();
+
+            if (!value) {
+                showInvalid('El campo correo electrónico es obligatorio.');
+                return false;
+            }
+
+            if (!emailRegex.test(value)) {
+                showInvalid('El correo electrónico no es válido.');
+                return false;
+            }
+
+            clearInvalid();
+            return true;
+        }
+
+        input.addEventListener('input', validateEmail);
+
+        form.addEventListener('submit', function (event) {
+            if (!validateEmail()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        });
+    });
+</script>

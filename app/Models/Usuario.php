@@ -106,4 +106,14 @@ class Usuario extends Authenticatable
     {
         return $this->correo;
     }
+
+    public function getNombreCompletoAttribute(): string
+    {
+        return trim(collect([
+            $this->primer_nombre,
+            $this->otros_nombres,
+            $this->primer_apellido,
+            $this->segundo_apellido,
+        ])->filter()->implode(' '));
+    }
 }

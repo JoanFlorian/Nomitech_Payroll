@@ -90,9 +90,12 @@ Route::middleware(['auth', 'ensure_active_license'])->group(function () {
     Route::post('/nomina/step-1', [NominaController::class, 'postStep1'])->name('nomina.step1.post');
     Route::get('/nomina/step-2', [NominaController::class, 'step2'])->name('nomina.step2');
     Route::post('/nomina/step-2', [NominaController::class, 'postStep2'])->name('nomina.step2.post');
+    Route::get('/nomina/step-2/ingresos', [NominaController::class, 'step2Ingresos'])->name('nomina.step2.ingresos');
+    Route::post('/nomina/step-2/ingresos', [NominaController::class, 'postStep2Ingresos'])->name('nomina.step2.ingresos.post');
     Route::get('/nomina/step-3', [NominaController::class, 'step3'])->name('nomina.step3');
     Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.store');
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
+    Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);
 
     // Superadmin Empresas Management
     Route::get('/superadmin/empresas', [EmpresaController::class, 'index'])->name('superadmin.empresas.index');

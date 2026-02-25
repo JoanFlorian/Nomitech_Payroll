@@ -24,15 +24,15 @@ class DatabaseSeeder extends Seeder
             CiudadSeeder::class,
             RolSeeder::class,
             BancoSeeder::class,
-            TipoDocSeeder::class, 
+            TipoDocSeeder::class,
             TipoTrabajadorSeeder::class,
             PlanSeeder::class,
             TipoContratoSeeder::class,
             SuperAdminSeeder::class,
-
             TipoHoraRecargoSeeder::class,
+            FormaPagoSeeder::class,
+            MetodoPagoSeeder::class,
             SubTipoTrabajadorSeeder::class,
-            Otros::class,
 
         ]);
     }

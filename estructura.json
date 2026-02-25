@@ -1,0 +1,39 @@
+Need to install the following packages:
+tree-cli@0.6.7
+Ok to proceed? (y) 
+
+C:\xampp\htdocs\Nomitech_Payroll
+├── app
+├── archivos.txt
+├── artisan
+├── bootstrap
+├── carpetas.txt
+├── composer.json
+├── composer.lock
+├── config
+├── database
+├── estructura.json
+├── git
+├── laravel
+├── node_modules
+├── nomitech
+├── nomitech_db (2).sql
+├── package-lock.json
+├── package.json
+├── phpunit.dusk.xml
+├── phpunit.xml
+├── public
+├── README.md
+├── resources
+├── routes
+├── storage
+├── tailwind.config.js
+├── tests
+├── vendor
+└── vite.config.js
+
+directory: 12 file: 16
+
+
+
+[2K[1G

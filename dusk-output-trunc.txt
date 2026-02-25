@@ -1,0 +1,35 @@
+﻿Warning: TTY mode is not supported on Windows platform.
+
+   WARN  Metadata found in doc-comment for class Tests\Browser\CiudadesTest. Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Browser\CiudadesTest::test_it_can_create_a_ciudad_successfully(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Browser\CiudadesTest::test_it_fails_validation_when_required_fields_are_missing(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   FAIL  Tests\Browser\CiudadesTest
+  Ô¿» it can creÔÇª 10.53s  
+  Ô£ô it fails vaÔÇª 4.94s  
+  ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ  
+   FÔÇª  QueryException   
+  SQLSTATE[42S02]: Base table or view not found: 1146 Table 'nomitech_dusk_testing.ciudades' doesn't exist (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: nomitech_dusk_testing, SQL: select exists(select * from `ciudades` where (`codigo` = BOG-123)) as `exists`)
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:838
+    834Ôûò             $exceptionType = $this->isUniqueConstraintError($e)
+    835Ôûò                 ? UniqueConstraintViolationException::class
+    836Ôûò                 : QueryException::class;
+    837Ôûò 
+  Ô×£ 838Ôûò             throw new $exceptionType(
+    839Ôûò                 $this->getNameWithReadWriteType(),
+    840Ôûò                 $query,
+    841Ôûò                 $this->prepareBindings($bindings),
+    842Ôûò                 $e,
+
+  1   vendor\laravel\framework\src\Illuminate\Database\Connection.php:838
+
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:420
+      NunoMaduro\Collision\Exceptions\TestException::("SQLSTATE[42S02]: Base table or view not found: 1146 Table 'nomitech_dusk_testing.ciudades' doesn't exist")
+
+
+  Tests:    1 failed, 1 passed (2 assertions)
+  Duration: 16.25s
+

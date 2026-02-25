@@ -1,0 +1,49 @@
+﻿Warning: TTY mode is not supported on Windows platform.
+
+   WARN  Metadata found in doc-comment for class Tests\Browser\CiudadesTest. Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Browser\CiudadesTest::test_it_can_create_a_ciudad_successfully(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Browser\CiudadesTest::test_it_fails_validation_when_required_fields_are_missing(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   FAIL  Tests\Browser\CiudadesTest
+  Ô¿» it can creÔÇª 41.73s  
+  Ô¿» it fails vÔÇª 11.67s  
+  ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ  
+  ÔÇª  TimeoutException   
+  Waited 30 seconds for selector [#dusk-success-check].
+
+  at vendor\php-webdriver\webdriver\lib\WebDriverWait.php:71
+     67Ôûò         if ($last_exception) {
+     68Ôûò             throw $last_exception;
+     69Ôûò         }
+     70Ôûò 
+  Ô×£  71Ôûò         throw new TimeoutException($message);
+     72Ôûò     }
+     73Ôûò }
+     74Ôûò
+
+  1   vendor\php-webdriver\webdriver\lib\WebDriverWait.php:71
+  2   tests\Browser\CiudadesTest.php:70
+
+  ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ  
+  ÔÇª  TimeoutException   
+  Waited 5 seconds for text [M├│dulo de Actualizaciones].
+
+  at vendor\php-webdriver\webdriver\lib\WebDriverWait.php:71
+     67Ôûò         if ($last_exception) {
+     68Ôûò             throw $last_exception;
+     69Ôûò         }
+     70Ôûò 
+  Ô×£  71Ôûò         throw new TimeoutException($message);
+     72Ôûò     }
+     73Ôûò }
+     74Ôûò
+
+  1   vendor\php-webdriver\webdriver\lib\WebDriverWait.php:71
+  2   tests\Browser\CiudadesTest.php:86
+
+
+  Tests:    2 failed (0 assertions)
+  Duration: 54.31s
+

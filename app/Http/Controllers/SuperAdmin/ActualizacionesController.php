@@ -17,6 +17,16 @@ use App\Models\FormaPago;
 use App\Models\MetodoPago;
 use App\Models\Pais;
 use App\Models\TipoHoraRecargo;
+use App\Http\Requests\Actualizaciones\StoreCiudadRequest;
+use App\Http\Requests\Actualizaciones\UpdateCiudadRequest;
+use App\Http\Requests\Actualizaciones\StoreTipoDocumentoRequest;
+use App\Http\Requests\Actualizaciones\UpdateTipoDocumentoRequest;
+use App\Http\Requests\Actualizaciones\StoreCargoRequest;
+use App\Http\Requests\Actualizaciones\UpdateCargoRequest;
+use App\Http\Requests\Actualizaciones\StoreFormaPagoRequest;
+use App\Http\Requests\Actualizaciones\UpdateFormaPagoRequest;
+use App\Http\Requests\Actualizaciones\StoreMetodoPagoRequest;
+use App\Http\Requests\Actualizaciones\UpdateMetodoPagoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -87,10 +97,16 @@ class ActualizacionesController extends Controller
             'tabla' => 'tipo_contrato',
             'campos' => [
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-file-earmark', 'requerido' => true],
-                ['clave' => 'seguridad_social', 'label' => '¿Incluye Seguridad Social?', 'tipo' => 'select', 'icono' => 'bi-check-circle', 'opciones' => [
-                    ['id' => 0, 'nombre' => 'No'],
-                    ['id' => 1, 'nombre' => 'Sí'],
-                ]],
+                [
+                    'clave' => 'seguridad_social',
+                    'label' => '¿Incluye Seguridad Social?',
+                    'tipo' => 'select',
+                    'icono' => 'bi-check-circle',
+                    'opciones' => [
+                        ['id' => 0, 'nombre' => 'No'],
+                        ['id' => 1, 'nombre' => 'Sí'],
+                    ]
+                ],
             ],
             'columnas' => [
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'simple'],
@@ -245,6 +261,14 @@ class ActualizacionesController extends Controller
 
     public function index(Request $request)
     {
+        \Illuminate\Support\Facades\Log::info('Actualizaciones index hit', [
+            'session_id' => $request->session()->getId(),
+            'auth' => auth()->check() ? auth()->user()->doc : 'guest',
+            'success' => session('success'),
+            'error' => session('error'),
+            'all_session' => $request->session()->all()
+        ]);
+
         $items = collect([
             ['titulo' => 'Ciudades', 'desc' => 'Gestiona el listado de ciudades y regiones del sistema.', 'icono' => 'bi-geo-alt'],
             ['titulo' => 'Tipos de Documento', 'desc' => 'Configura tipos de identificación como CC, NIT, CE.', 'icono' => 'bi-person-badge'],
@@ -276,7 +300,7 @@ class ActualizacionesController extends Controller
             $perPage,
             $page,
             [
-                'path'  => $request->url(),
+                'path' => $request->url(),
                 'query' => $request->query(),
             ]
         );
@@ -316,6 +340,17 @@ class ActualizacionesController extends Controller
         return view('superadmin.actualizaciones.partials.tabla-generica', compact('items', 'config'));
     }
 
+    /**
+     * Mapa de FormRequests por tipo para el método actualizar.
+     */
+    private $updateRequestMap = [
+        'ciudades' => UpdateCiudadRequest::class,
+        'tipos_de_documento' => UpdateTipoDocumentoRequest::class,
+        'cargos' => UpdateCargoRequest::class,
+        'formas_de_pago' => UpdateFormaPagoRequest::class,
+        'metodos_de_pago' => UpdateMetodoPagoRequest::class,
+    ];
+
     public function actualizar(Request $request, $id)
     {
         $tipo = $request->input('tipo');
@@ -324,43 +359,50 @@ class ActualizacionesController extends Controller
             return redirect()->back()->with('error', 'Tipo de dato inválido');
         }
 
+        // Usar FormRequest dedicado si existe para este tipo
+        if (isset($this->updateRequestMap[$tipo])) {
+            $formRequest = app($this->updateRequestMap[$tipo]);
+            $validated = $formRequest->validated();
+        } else {
+            // Validación genérica para tipos sin FormRequest dedicado
+            $config = $this->configuraciones[$tipo];
+            $rules = [];
+            $messages = [];
+
+            foreach ($config['campos'] as $campo) {
+                if ($campo['requerido'] ?? false) {
+                    $rules[$campo['clave']] = 'required';
+                    $messages[$campo['clave'] . '.required'] = "El/La {$campo['label']} es obligatorio(a).";
+                }
+                if ($campo['tipo'] === 'email') {
+                    $rules[$campo['clave']] = ($rules[$campo['clave']] ?? '') . '|email';
+                }
+            }
+
+            // Validaciones únicas para tipos sin FormRequest
+            if ($tipo === 'empresas') {
+                $rules['nit'] = 'required|string|max:50|unique:empresa,nit,' . $id . ',id_empresa';
+                $messages['nit.unique'] = 'El NIT ya se encuentra registrado.';
+            } elseif ($tipo === 'departamentos') {
+                $rules['codigo'] = 'bail|required|regex:/^[0-9]+$/|min:2|max:11|unique:departamento,codigo,' . $id . ',id_departamento';
+                $messages['codigo.unique'] = 'El código ya se encuentra registrado.';
+                $messages['codigo.regex'] = 'El código debe contener solo números positivos.';
+                $messages['codigo.min'] = 'El código debe tener al menos 2 dígitos.';
+                $messages['codigo.max'] = 'El código no puede tener más de 11 dígitos.';
+            } elseif ($tipo === 'paises') {
+                $rules['codigo'] = 'required|string|max:50|unique:pais,codigo,' . $id . ',id_pais';
+                $messages['codigo.unique'] = 'El código ya se encuentra registrado.';
+            } elseif ($tipo === 'bancos') {
+                $rules['codigo'] = 'required|string|max:50|unique:banco,codigo,' . $id . ',id_banco';
+                $messages['codigo.unique'] = 'El código ya se encuentra registrado.';
+            }
+
+            $validated = $request->validate($rules, $messages);
+        }
+
         $config = $this->configuraciones[$tipo];
         $modeloClass = $config['modelo'];
         $item = $modeloClass::findOrFail($id);
-
-        // Validación básica según el tipo
-        $rules = [];
-        $messages = [];
-
-        foreach ($config['campos'] as $campo) {
-            if ($campo['requerido'] ?? false) {
-                $rules[$campo['clave']] = 'required';
-                $messages[$campo['clave'] . '.required'] = "{$campo['label']} es obligatorio";
-            }
-            if ($campo['tipo'] === 'email') {
-                $rules[$campo['clave']] = ($rules[$campo['clave']] ?? '') . '|email';
-            }
-        }
-
-        // Agregar validaciones únicas específicas según el tipo
-        if ($tipo === 'ciudades') {
-            $rules['codigo'] = 'required|string|max:50|unique:ciudad,codigo,' . $id . ',id_ciudad';
-            $messages['codigo.unique'] = 'Este código de ciudad ya existe';
-        } elseif ($tipo === 'empresas') {
-            $rules['nit'] = 'required|string|max:50|unique:empresa,nit,' . $id . ',id_empresa';
-            $messages['nit.unique'] = 'Este NIT ya está registrado';
-        } elseif ($tipo === 'departamentos') {
-            $rules['codigo'] = 'required|string|max:50|unique:departamento,codigo,' . $id . ',id_departamento';
-            $messages['codigo.unique'] = 'Este código de departamento ya existe';
-        } elseif ($tipo === 'paises') {
-            $rules['codigo'] = 'required|string|max:50|unique:pais,codigo,' . $id . ',id_pais';
-            $messages['codigo.unique'] = 'Este código de país ya existe';
-        } elseif ($tipo === 'bancos') {
-            $rules['codigo'] = 'required|string|max:50|unique:banco,codigo,' . $id . ',id_banco';
-            $messages['codigo.unique'] = 'Este código de banco ya existe';
-        }
-
-        $validated = $request->validate($rules, $messages);
 
         // Remover campos que no son del modelo
         $validated = collect($validated)
@@ -375,6 +417,16 @@ class ActualizacionesController extends Controller
         }
     }
 
+    /**
+     * Mapa de FormRequests por tipo para el método store.
+     */
+    private $storeRequestMap = [
+        'tipos_de_documento' => StoreTipoDocumentoRequest::class,
+        'cargos' => StoreCargoRequest::class,
+        'formas_de_pago' => StoreFormaPagoRequest::class,
+        'metodos_de_pago' => StoreMetodoPagoRequest::class,
+    ];
+
     public function store(Request $request, $tipo)
     {
         if (!isset($this->configuraciones[$tipo])) {
@@ -384,39 +436,45 @@ class ActualizacionesController extends Controller
         $config = $this->configuraciones[$tipo];
         $modeloClass = $config['modelo'];
 
-        // Validación según el tipo
-        $rules = [];
-        $messages = [];
+        // Usar FormRequest dedicado si existe para este tipo
+        if (isset($this->storeRequestMap[$tipo])) {
+            $formRequest = app($this->storeRequestMap[$tipo]);
+            $validated = $formRequest->validated();
+        } else {
+            // Validación genérica para tipos sin FormRequest dedicado
+            $rules = [];
+            $messages = [];
 
-        foreach ($config['campos'] as $campo) {
-            if ($campo['requerido'] ?? false) {
-                $rules[$campo['clave']] = 'required';
-                $messages[$campo['clave'] . '.required'] = "{$campo['label']} es obligatorio";
+            foreach ($config['campos'] as $campo) {
+                if ($campo['requerido'] ?? false) {
+                    $rules[$campo['clave']] = 'required';
+                    $messages[$campo['clave'] . '.required'] = "El/La {$campo['label']} es obligatorio(a).";
+                }
+                if ($campo['tipo'] === 'email') {
+                    $rules[$campo['clave']] = ($rules[$campo['clave']] ?? '') . '|email';
+                }
             }
-            if ($campo['tipo'] === 'email') {
-                $rules[$campo['clave']] = ($rules[$campo['clave']] ?? '') . '|email';
+
+            // Validaciones únicas para tipos sin FormRequest
+            if ($tipo === 'empresas') {
+                $rules['nit'] = 'required|string|max:50|unique:empresa,nit';
+                $messages['nit.unique'] = 'El NIT ya se encuentra registrado.';
+            } elseif ($tipo === 'departamentos') {
+                $rules['codigo'] = 'bail|required|regex:/^[0-9]+$/|min:2|max:11|unique:departamento,codigo';
+                $messages['codigo.unique'] = 'El código ya se encuentra registrado.';
+                $messages['codigo.regex'] = 'El código debe contener solo números positivos.';
+                $messages['codigo.min'] = 'El código debe tener al menos 2 dígitos.';
+                $messages['codigo.max'] = 'El código no puede tener más de 11 dígitos.';
+            } elseif ($tipo === 'paises') {
+                $rules['codigo'] = 'required|string|max:50|unique:pais,codigo';
+                $messages['codigo.unique'] = 'El código ya se encuentra registrado.';
+            } elseif ($tipo === 'bancos') {
+                $rules['codigo'] = 'required|string|max:50|unique:banco,codigo';
+                $messages['codigo.unique'] = 'El código ya se encuentra registrado.';
             }
-        }
 
-        // Agregar validaciones únicas específicas según el tipo
-        if ($tipo === 'ciudades') {
-            $rules['codigo'] = 'required|string|max:50|unique:ciudad,codigo';
-            $messages['codigo.unique'] = 'Este código de ciudad ya existe';
-        } elseif ($tipo === 'empresas') {
-            $rules['nit'] = 'required|string|max:50|unique:empresa,nit';
-            $messages['nit.unique'] = 'Este NIT ya está registrado';
-        } elseif ($tipo === 'departamentos') {
-            $rules['codigo'] = 'required|string|max:50|unique:departamento,codigo';
-            $messages['codigo.unique'] = 'Este código de departamento ya existe';
-        } elseif ($tipo === 'paises') {
-            $rules['codigo'] = 'required|string|max:50|unique:pais,codigo';
-            $messages['codigo.unique'] = 'Este código de país ya existe';
-        } elseif ($tipo === 'bancos') {
-            $rules['codigo'] = 'required|string|max:50|unique:banco,codigo';
-            $messages['codigo.unique'] = 'Este código de banco ya existe';
+            $validated = $request->validate($rules, $messages);
         }
-
-        $validated = $request->validate($rules, $messages);
 
         // Remover campos que no son del modelo
         $validated = collect($validated)
@@ -431,22 +489,12 @@ class ActualizacionesController extends Controller
         }
     }
 
-    public function storeCiudad(Request $request)
+    public function storeCiudad(StoreCiudadRequest $request)
     {
-        $validated = $request->validate([
-            'codigo' => 'required|string|max:50|unique:ciudad,codigo',
-            'nombre' => 'required|string|max:255',
-            'cod_dep' => 'required|exists:departamento,codigo',
-        ], [
-            'codigo.required' => 'El código es obligatorio',
-            'codigo.unique' => 'Este código de ciudad ya existe',
-            'nombre.required' => 'El nombre es obligatorio',
-            'cod_dep.required' => 'El departamento es obligatorio',
-            'cod_dep.exists' => 'El departamento seleccionado no existe',
-        ]);
+        $validated = $request->validated();
 
         try {
-            Ciudad::create([
+            $ciudad = Ciudad::create([
                 'codigo' => $validated['codigo'],
                 'nombre' => $validated['nombre'],
                 'id_departamento' => Departamento::where('codigo', $validated['cod_dep'])->firstOrFail()->id_departamento,

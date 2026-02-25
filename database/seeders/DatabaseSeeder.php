@@ -16,9 +16,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-
         $this->call([
             PaisSeeder::class,
             DepartamentoSeeder::class,
@@ -28,7 +25,7 @@ class DatabaseSeeder extends Seeder
             EPSSeeder::class,
             AFPSeeder::class,
             ARLSeeder::class,
-            TipoDocSeeder::class, 
+            TipoDocSeeder::class,
             TipoTrabajadorSeeder::class,
             TipoCuentaSeeder::class,
             FormaPagoSeeder::class,
@@ -38,16 +35,8 @@ class DatabaseSeeder extends Seeder
             PlanSeeder::class,
             TipoContratoSeeder::class,
             SuperAdminSeeder::class,
-
             TipoHoraRecargoSeeder::class,
             SubTipoTrabajadorSeeder::class,
-            AFPSeeder::class,
-            ARLSeeder::class,
-            EPSSeeder::class,
-            FormaPagoSeeder::class,
-            TipoCuentaSeeder::class,
-
-
         ]);
     }
 }

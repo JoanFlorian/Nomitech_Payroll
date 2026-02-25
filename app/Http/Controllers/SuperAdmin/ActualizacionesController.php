@@ -5,6 +5,28 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Ciudad;
 use App\Models\Departamento;
+use App\Models\Empresa;
+use App\Models\Banco;
+use App\Models\TipoDoc;
+use App\Models\Rol;
+use App\Models\TipoContrato;
+use App\Models\Eps;
+use App\Models\Arl;
+use App\Models\Estado;
+use App\Models\FormaPago;
+use App\Models\MetodoPago;
+use App\Models\Pais;
+use App\Models\TipoHoraRecargo;
+use App\Http\Requests\Actualizaciones\StoreCiudadRequest;
+use App\Http\Requests\Actualizaciones\UpdateCiudadRequest;
+use App\Http\Requests\Actualizaciones\StoreTipoDocumentoRequest;
+use App\Http\Requests\Actualizaciones\UpdateTipoDocumentoRequest;
+use App\Http\Requests\Actualizaciones\StoreCargoRequest;
+use App\Http\Requests\Actualizaciones\UpdateCargoRequest;
+use App\Http\Requests\Actualizaciones\StoreFormaPagoRequest;
+use App\Http\Requests\Actualizaciones\UpdateFormaPagoRequest;
+use App\Http\Requests\Actualizaciones\StoreMetodoPagoRequest;
+use App\Http\Requests\Actualizaciones\UpdateMetodoPagoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -21,17 +43,33 @@ class ActualizacionesController extends Controller
 
     public function index(Request $request)
     {
+        \Illuminate\Support\Facades\Log::info('Actualizaciones index hit', [
+            'session_id' => $request->session()->getId(),
+            'auth' => auth()->check() ? auth()->user()->doc : 'guest',
+            'success' => session('success'),
+            'error' => session('error'),
+            'all_session' => $request->session()->all()
+        ]);
+
         $items = collect($this->config())->map(fn($m) => [
-            'titulo' => $m['titulo'], 'desc' => $m['desc'], 'icono' => $m['icono'],
+            'titulo' => $m['titulo'],
+            'desc' => $m['desc'],
+            'icono' => $m['icono'],
         ])->values();
 
         $perPage = 6;
         $page = (int) $request->get('page', 1);
+        $pagedItems = $items->slice(($page - 1) * $perPage, $perPage)->values();
 
         $modulos = new LengthAwarePaginator(
-            $items->slice(($page - 1) * $perPage, $perPage)->values(),
-            $items->count(), $perPage, $page,
-            ['path' => $request->url(), 'query' => $request->query()]
+            $pagedItems,
+            $items->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
         );
 
         $departamentos = Departamento::orderBy('nombre')->get();
@@ -88,14 +126,16 @@ class ActualizacionesController extends Controller
     public function getDatos($tipo)
     {
         $config = $this->config($tipo);
-        if (!$config) return response('Tipo de dato no disponible', 404);
+        if (!$config)
+            return response('Tipo de dato no disponible', 404);
 
         $items = $config['modelo']::orderBy('nombre')->get();
 
         foreach ($config['campos'] as &$campo) {
             if ($campo['tipo'] === 'select' && !isset($campo['opciones']) && $campo['clave'] === 'id_ciudad') {
                 $campo['opciones'] = Ciudad::orderBy('nombre')->get()->map(fn($c) => [
-                    'id' => $c->id_ciudad, 'nombre' => $c->nombre
+                    'id' => $c->id_ciudad,
+                    'nombre' => $c->nombre
                 ])->toArray();
             }
         }
@@ -109,7 +149,8 @@ class ActualizacionesController extends Controller
     {
         $tipo = $request->input('tipo');
         $config = $this->config($tipo);
-        if (!$config) return redirect()->back()->with('error', 'Tipo de dato inválido');
+        if (!$config)
+            return redirect()->back()->with('error', 'Tipo de dato inválido');
 
         $item = $config['modelo']::findOrFail($id);
         [$rules, $msgs] = $this->buildRules($tipo, $config, $id);
@@ -126,7 +167,8 @@ class ActualizacionesController extends Controller
     public function store(Request $request, $tipo)
     {
         $config = $this->config($tipo);
-        if (!$config) return redirect()->back()->with('error', 'Tipo de dato inválido');
+        if (!$config)
+            return redirect()->back()->with('error', 'Tipo de dato inválido');
 
         [$rules, $msgs] = $this->buildRules($tipo, $config);
         $data = collect($request->validate($rules, $msgs))->except(['tipo', '_token', '_method'])->toArray();
@@ -139,22 +181,12 @@ class ActualizacionesController extends Controller
         }
     }
 
-    public function storeCiudad(Request $request)
+    public function storeCiudad(StoreCiudadRequest $request)
     {
-        $validated = $request->validate([
-            'codigo'  => 'required|string|max:50|unique:ciudad,codigo',
-            'nombre'  => 'required|string|max:255',
-            'cod_dep' => 'required|exists:departamento,codigo',
-        ], [
-            'codigo.required' => 'El código es obligatorio',
-            'codigo.unique'   => 'Este código de ciudad ya existe',
-            'nombre.required' => 'El nombre es obligatorio',
-            'cod_dep.required' => 'El departamento es obligatorio',
-            'cod_dep.exists'  => 'El departamento seleccionado no existe',
-        ]);
+        $validated = $request->validated();
 
         try {
-            Ciudad::create([
+            $ciudad = Ciudad::create([
                 'codigo' => $validated['codigo'],
                 'nombre' => $validated['nombre'],
                 'id_departamento' => Departamento::where('codigo', $validated['cod_dep'])->firstOrFail()->id_departamento,

@@ -19,14 +19,16 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::table('plan', function (Blueprint $table) {
-            if (Schema::hasColumn('plan', 'destacado')) {
-                $table->dropColumn('destacado');
-            }
+        if (config('database.default') !== 'sqlite' && config('database.connections.' . config('database.default') . '.driver') !== 'sqlite') {
+            Schema::table('plan', function (Blueprint $table) {
+                if (Schema::hasColumn('plan', 'destacado')) {
+                    $table->dropColumn('destacado');
+                }
 
-            if (Schema::hasColumn('plan', 'orden')) {
-                $table->dropColumn('orden');
-            }
-        });
+                if (Schema::hasColumn('plan', 'orden')) {
+                    $table->dropColumn('orden');
+                }
+            });
+        }
     }
 };

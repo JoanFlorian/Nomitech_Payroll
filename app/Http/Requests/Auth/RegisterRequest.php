@@ -53,7 +53,20 @@ class RegisterRequest extends FormRequest
                 'string',
                 'regex:/^[0-9]+$/',
                 'digits_between:5,15',
-                Rule::unique('empresa', 'nit')->ignore($empresaId, 'id_empresa')
+                function ($attribute, $value, $fail) use ($empresaId) {
+                    $existente = \App\Models\Empresa::where('nit', $value)
+                        ->where('id_empresa', '!=', $empresaId)
+                        ->first();
+
+                    if ($existente) {
+                        $licencia = $existente->licencia; // Obtiene la última licencia
+                        if ($licencia && $licencia->fecha_fin) {
+                            $fail("Ya existe una cuenta con este NIT. Por favor, inicia sesión para renovar tu licencia.");
+                        } else {
+                            $fail("Este NIT ya está registrado. Por favor, inicia sesión para completar tu pago.");
+                        }
+                    }
+                }
             ],
             'nit_dv' => ['required', 'numeric', 'digits:1'],
             'pais' => ['required', 'string', 'size:2', 'in:CO'],
@@ -132,8 +145,10 @@ class RegisterRequest extends FormRequest
             'regex' => 'El formato del :attribute es inválido.',
 
             // Custom rules/overrides
+            'razon_social.required' => 'La razón social es requerida.',
+            'direccion_empresa.required' => 'La dirección de empresa es requerida.',
+            'password.required' => 'La contraseña es requerida.',
             'nit.regex' => 'El NIT debe contener solo números.',
-            'nit.unique' => 'Ya existe una cuenta con este NIT. Si no terminaste tu pago, por favor inicia sesión para continuar.',
             'documento.regex' => 'El documento debe contener solo números.',
             'telefono_celular.regex' => 'El teléfono celular debe tener exactamente 10 dígitos numéricos.',
             'email.unique' => 'Este correo ya está registrado. Si no terminaste tu pago, por favor inicia sesión para continuar.',

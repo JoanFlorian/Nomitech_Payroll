@@ -1,9 +1,11 @@
+@props(['backUrl' => '/', 'backText' => 'Volver al inicio'])
+
 <div class="bg-[#1565C0] text-white p-12 flex flex-col justify-center items-start left-column relative">
     <!-- Botón Volver -->
-    <a href="/"
+    <a href="{{ $backUrl }}"
         class="absolute top-8 left-8 flex items-center text-sm font-semibold text-white/80 hover:text-white transition-all group z-20">
         <span class="material-icons text-xl mr-2 group-hover:-translate-x-1 transition-transform">arrow_back</span>
-        Volver al inicio
+        {{ $backText }}
     </a>
 
     <div class="shape shape-1"></div>

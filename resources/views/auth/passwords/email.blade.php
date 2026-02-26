@@ -7,6 +7,7 @@
     <title>Recuperar Contraseña - Nomitech</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -16,7 +17,7 @@
         <div class="w-full max-w-4xl mx-auto shadow-2xl rounded-2xl overflow-hidden">
             <div class="grid grid-cols-1 md:grid-cols-2">
 
-                <x-auth.left-panel />
+                <x-auth.left-panel backUrl="{{ route('login') }}" backText="Volver al login" />
 
                 <x-auth.right-panel>
                     <x-auth.forgot-password-form />

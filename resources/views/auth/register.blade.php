@@ -25,7 +25,11 @@
 
     <div x-data="{ 
         showExitModal: false,
-        handleBack() {
+        exitUrl: '/',
+        handleBack(url = '/') {
+            // Guardar la URL de destino
+            this.exitUrl = url;
+
             // Obtener todos los campos de entrada del formulario (incluyendo ocultos para los searchable-select)
             const formInputs = Array.from(document.querySelectorAll('form input, form select'));
             
@@ -43,7 +47,7 @@
             if (hasData) {
                 this.showExitModal = true;
             } else {
-                window.location.href = '/';
+                window.location.href = url;
             }
         }
     }">
@@ -97,7 +101,7 @@
                                 class="px-5 py-2.5 text-sm font-bold text-white bg-[#2AA58C] rounded-xl hover:bg-[#248f76] transition-all duration-200 cursor-pointer shadow-md shadow-[#2AA58C]/20">
                             Continuar registro
                         </button>
-                        <a href="/" 
+                        <a :href="exitUrl" 
                            class="px-5 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-all cursor-pointer shadow-md shadow-red-200">
                             Salir y borrar
                         </a>
@@ -108,7 +112,7 @@
 
         <x-ui.card>
             <div class="mb-6 -mt-2">
-                <button @click="handleBack()" type="button" class="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-[#2AA58C] transition-all group focus:outline-none">
+                <button @click="handleBack('/')" type="button" class="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-[#2AA58C] transition-all group focus:outline-none">
                     <span class="material-icons text-xl mr-2 group-hover:-translate-x-1 transition-transform">arrow_back</span>
                     Volver al inicio
                 </button>
@@ -334,7 +338,7 @@
             </x-form.grid>
 
             <div class="mt-10 flex flex-col-reverse sm:flex-row items-center justify-end gap-4">
-                <x-ui.button-secondary href="{{ route('login') }}">
+                <x-ui.button-secondary @click="handleBack('{{ route('login') }}')">
                     Atrás
                 </x-ui.button-secondary>
 

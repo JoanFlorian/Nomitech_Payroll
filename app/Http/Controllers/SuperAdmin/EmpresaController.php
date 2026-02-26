@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use App\Models\Usuario;
 use App\Models\Ciudad;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 class EmpresaController extends Controller
 {
     public function index(Request $request)
@@ -69,79 +71,147 @@ class EmpresaController extends Controller
         return view('superadmin.empresas-show', compact('empresa', 'ciudades'));
     }
 
-    public function update(Request $request, Empresa $empresa)
-    {
-        $data = $request->validate([
-            'direccion' => [
-                'required',
-                'string',
-                'max:150',
-                'regex:/[a-zA-Z]/',
-                'regex:/^(?!.*\d{8,}).*$/',
-                'regex:/(calle|carrera|cra\.?|cl\.?|av\.?|avenida|#|no\.?)/i',
-            ],
-           'id_ciudad' => ['required', 'exists:ciudad,id_ciudad'],
-            // Correo estricto
-            'correo' => ['required', 'email:rfc,dns', 'max:100'],
+   public function update(Request $request, Empresa $empresa)
+{
+    $validated = $request->validate([
 
-            // Teléfono solo números (7–10 dígitos)
-            'telefono' => ['required', 'digits_between:7,10'],
+        
+        'direccion' => [
+            'required',
+            'string',
+            'max:150',
+            'regex:/^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i'
+        ],
 
-            'doc_representante' => ['required', 'digits_between:7,10', 'exists:usuario,doc'],
+        
+        'id_ciudad' => [
+            'required',
+            'exists:ciudad,id_ciudad'
+        ],
 
+        
+        'correo' => [
+            'required',
+            'email:rfc',
+            'max:100',
+            Rule::unique((new Empresa())->getTable(), 'correo')
+                ->ignore($empresa->id_empresa, 'id_empresa')
+        ],
 
-            'primer_nombre' => ['required', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u', 'max:70'],
-            'segundo_nombre'  => ['nullable', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u', 'max:100'],
-            'primer_apellido' => ['required', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u', 'max:100'],
-            'segundo_apellido'=> ['nullable', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u', 'max:100'],
-        ], [
-            'direccion.required' => 'La dirección es obligatoria.',
-            'direccion.regex' => 'La dirección debe tener un formato válido (ej: Calle, Carrera, Av, #, No.).',
-            'direccion.max' => 'La dirección no puede superar los 150 caracteres.',
+        // TELÉFONO (10 dígitos numéricos)
+        'telefono' => [
+            'required',
+            'digits:10'
+        ],
 
-            'correo.required' => 'El correo es obligatorio.',
-            'correo.email' => 'El correo debe tener un formato válido (ej: usuario@dominio.com).',
-            'correo.max' => 'El correo no puede superar los 100 caracteres.',
+        // DOCUMENTO REPRESENTANTE
+        'doc_representante' => [
+            'required',
+            'digits_between:7,12',
+            'exists:' . (new Usuario())->getTable() . ',doc'
+        ],
 
-            'telefono.required' => 'El teléfono es obligatorio.',
-            'telefono.digits_between' => 'El teléfono debe contener solo números y tener entre 7 y 10 dígitos.',
+        // NOMBRES
+        'primer_nombre' => [
+            'required',
+            'string',
+            'max:60',
+            'regex:/^(?=.*\pL)[\pL\s]+$/u'
+        ],
 
-            'doc_representante.required' => 'El documento del representante es obligatorio.',
-            'doc_representante.digits_between' => 'El documento debe contener solo números y tener máximo 10 dígitos.',
-            'doc_representante.exists' => 'No existe un usuario con el documento del representante proporcionado.',
-            'id_ciudad.required' => 'Debes seleccionar una ciudad.',
-            'id_ciudad.exists'   => 'La ciudad seleccionada no es válida.',
-            'primer_nombre.required' => 'El primer nombre del representante es obligatorio.',
-            'primer_nombre.regex' => 'El primer nombre solo debe contener letras.',
-            'segundo_nombre.regex'  => 'El segundo nombre solo debe contener letras.',
-            'primer_apellido.regex' => 'El primer apellido solo debe contener letras.',
-            'segundo_apellido.regex'=> 'El segundo apellido solo debe contener letras.',
+        'segundo_nombre' => [
+            'nullable',
+            'string',
+            'max:60',
+            'regex:/^(?=.*\pL)[\pL\s]+$/u'
+        ],
 
+        'primer_apellido' => [
+            'required',
+            'string',
+            'max:60',
+            'regex:/^(?=.*\pL)[\pL\s]+$/u'
+        ],
 
-            'primer_apellido.required' => 'El primer apellido del representante es obligatorio.',
-        ]);
+        'segundo_apellido' => [
+            'nullable',
+            'string',
+            'max:60',
+            'regex:/^(?=.*\pL)[\pL\s]+$/u'
+        ],
 
+    ], [
+
+        'direccion.required' => 'La dirección es obligatoria.',
+        'direccion.regex' => 'La dirección debe tener formato válido (Calle, Carrera, Av, #, etc).',
+
+        'id_ciudad.required' => 'Debes seleccionar una ciudad.',
+        'id_ciudad.exists' => 'La ciudad seleccionada no es válida.',
+
+        'correo.required' => 'El correo es obligatorio.',
+        'correo.email' => 'El correo no tiene un formato válido.',
+        'correo.unique' => 'Este correo ya está registrado en otra empresa.',
+
+        'telefono.required' => 'El teléfono es obligatorio.',
+        'telefono.digits' => 'El teléfono debe tener exactamente 10 dígitos.',
+
+        'doc_representante.required' => 'El documento del representante es obligatorio.',
+        'doc_representante.exists' => 'No existe un usuario con ese documento.',
+
+        'primer_nombre.required' => 'El primer nombre es obligatorio.',
+        'primer_nombre.regex' => 'El nombre solo puede contener letras.',
+
+        'primer_apellido.required' => 'El primer apellido es obligatorio.',
+        'primer_apellido.regex' => 'El apellido solo puede contener letras.',
+    ]);
+
+    // 🔥 NORMALIZACIÓN PROFESIONAL
+    $normalizarNombre = function (?string $valor): ?string {
+        if ($valor === null) {
+            return null;
+        }
+
+        $valor = preg_replace('/\s+/', ' ', trim($valor));
+
+        if ($valor === '') {
+            return null;
+        }
+
+        return Str::title(mb_strtolower($valor, 'UTF-8'));
+    };
+
+    $validated['primer_nombre'] = $normalizarNombre($validated['primer_nombre']);
+    $validated['segundo_nombre'] = $normalizarNombre($validated['segundo_nombre'] ?? null);
+    $validated['primer_apellido'] = $normalizarNombre($validated['primer_apellido']);
+    $validated['segundo_apellido'] = $normalizarNombre($validated['segundo_apellido'] ?? null);
+    $validated['correo'] = strtolower(trim($validated['correo']));
+    $validated['direccion'] = trim($validated['direccion']);
+
+    DB::transaction(function () use ($empresa, $validated) {
+        // ACTUALIZAR EMPRESA
         $empresa->update([
-            'direccion' => $data['direccion'],
-            'correo' => $data['correo'],
-            'telefono' => $data['telefono'],
-            'doc_representante' => $data['doc_representante'],
-            'id_ciudad' => $data['id_ciudad'],
+            'direccion' => $validated['direccion'],
+            'correo' => $validated['correo'],
+            'telefono' => $validated['telefono'],
+            'doc_representante' => $validated['doc_representante'],
+            'id_ciudad' => $validated['id_ciudad'],
         ]);
 
-        $usuario = Usuario::where('doc', $data['doc_representante'])->first();
+        // 🔐 SEGURIDAD: usar relación en vez de buscar manualmente
+        $usuario = $empresa->representante;
 
         if ($usuario) {
             $usuario->update([
-                'primer_nombre' => $data['primer_nombre'],
-                'otros_nombres' => $data['segundo_nombre'] ?? null,
-                'primer_apellido' => $data['primer_apellido'],
-                'segundo_apellido' => $data['segundo_apellido'] ?? null,
+                'primer_nombre' => $validated['primer_nombre'],
+                'otros_nombres' => $validated['segundo_nombre'],
+                'primer_apellido' => $validated['primer_apellido'],
+                'segundo_apellido' => $validated['segundo_apellido'],
             ]);
         }
+    });
 
-        return redirect()
-            ->route('superadmin.empresas.show', $empresa->id_empresa)
-            ->with('success', 'Datos actualizados correctamente.');
-    }
+    return redirect()
+        ->route('superadmin.empresas.show', $empresa->id_empresa)
+        ->with('success', 'Datos actualizados correctamente.');
+}
 }

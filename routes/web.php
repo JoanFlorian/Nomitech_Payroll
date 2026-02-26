@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\CodeVerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
+use Illuminate\Http\Request;
 
 Route::get('/', [PricingController::class, 'index']);
 
@@ -97,35 +98,20 @@ Route::middleware(['auth', 'ensure_active_license'])->group(function () {
     Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.store');
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
     Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);
-
-    // Superadmin Empresas Management
-    Route::get('/superadmin/empresas', [EmpresaController::class, 'index'])->name('superadmin.empresas.index');
-    Route::get('/superadmin/empresas/{empresa}', [EmpresaController::class, 'show'])->name('superadmin.empresas.show');
-    Route::put('/superadmin/empresas/{empresa}', [EmpresaController::class, 'update'])->name('superadmin.empresas.update');
 });
 
-// Superadmin routes and helpers (outside protected app group)
-Route::get('/superadmin', [facturacioncontroller::class, 'facturacion'])->name('superadmin.index');
-Route::get('/superadmin/facturacion', [facturacioncontroller::class, 'facturacion'])->name('superadmin.facturacion');
-Route::get('/superadmin/factura/{pagoId}/pdf', [facturacioncontroller::class, 'descargarFacturaPdf'])->name('superadmin.factura.pdf');
-Route::get('/superadmin/factura/{pagoId}', [facturacioncontroller::class, 'getFactura'])->name('superadmin.factura');
-
-// Superadmin extra pages
-Route::get('/superadmin/empresas-view', function () {
-    return view('superadmin.empresas');
-})->name('superadmin.empresas-view');
-Route::get('/superadmin/configuracion', function () {
-    return view('superadmin.configuracion');
-})->name('superadmin.configuracion');
-
-
-Route::prefix('superadmin')->name('superadmin.')->group(function () {
+// Superadmin routes protected by auth and role
+Route::middleware(['auth', 'is_superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/', [facturacioncontroller::class, 'dashboard'])->name('index');
+    Route::get('/facturacion', [facturacioncontroller::class, 'facturacion'])->name('facturacion');
+    Route::get('/reporte/descargar', [facturacioncontroller::class, 'descargarReporte'])->name('reporte.descargar');
+    Route::get('/factura/{pagoId}/pdf', [facturacioncontroller::class, 'descargarFacturaPdf'])->name('factura.pdf');
+    Route::get('/factura/{pagoId}', [facturacioncontroller::class, 'getFactura'])->name('factura');
+
+    // Empresas
     Route::get('/empresas', [EmpresaController::class, 'index'])->name('empresas.index');
     Route::get('/empresas/{empresa}', [EmpresaController::class, 'show'])->name('empresas.show');
     Route::put('/empresas/{empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
-    Route::get('/facturacion', [facturacioncontroller::class, 'facturacion'])->name('facturacion');
-    Route::get('/reporte/descargar', [facturacioncontroller::class, 'descargarReporte'])->name('reporte.descargar');
 
     // Planes CRUD
     Route::get('/planes', [PlanController::class, 'index'])->name('planes.index');
@@ -133,20 +119,28 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::post('/planes', [PlanController::class, 'store'])->name('planes.store');
     Route::get('/planes/{plan}/edit', [PlanController::class, 'edit'])->name('planes.edit');
     Route::put('/planes/{plan}', [PlanController::class, 'update'])->name('planes.update');
-});
 
-// Simple logout helper (GET) — change to POST if using auth scaffolding
-Route::get('/logout', function () {
-    Auth::logout();
-    return redirect('/');
-})->name('logout');
-
-
-Route::prefix('superadmin')->name('superadmin.')->group(function () {
+    // Actualizaciones y otros
     Route::get('/actualizaciones', [ActualizacionesController::class, 'index'])->name('actualizaciones.principal');
     Route::get('/actualizaciones/{tipo}/datos', [ActualizacionesController::class, 'getDatos'])->name('actualizaciones.datos');
     Route::get('/actualizaciones/{tipo}/exportar-excel', [ActualizacionesController::class, 'exportarExcel'])->name('actualizaciones.exportar');
     Route::post('/ciudades', [ActualizacionesController::class, 'storeCiudad'])->name('ciudades.store');
     Route::post('/{tipo}', [ActualizacionesController::class, 'store'])->name('store');
     Route::put('/actualizar/{id}', [ActualizacionesController::class, 'actualizar'])->name('actualizar');
+
+    // Vistas directas
+    Route::get('/empresas-view', function () {
+        return view('superadmin.empresas');
+    })->name('empresas-view');
+    Route::get('/configuracion', function () {
+        return view('superadmin.configuracion');
+    })->name('configuracion');
 });
+
+// Logout robusto (GET por compatibilidad con sidebar actual)
+Route::get('/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect('/');
+})->name('logout');

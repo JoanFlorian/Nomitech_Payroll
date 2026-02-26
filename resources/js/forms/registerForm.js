@@ -63,7 +63,7 @@ export default (initialData = {}) => ({
             nit_dv: () => {
                 if (!value) return "El DV es requerido";
                 if (!/^[0-9]+$/.test(value)) return "El DV debe ser numérico";
-                if (value.length < 1 || value.length > 2) return "El DV debe tener 1 o 2 dígitos";
+                if (value.length !== 1) return "El DV debe tener exactamente 1 dígito";
                 return null;
             },
             razon_social: () => {
@@ -143,6 +143,7 @@ export default (initialData = {}) => ({
     },
 
     validateForm() {
+        this.errors = {}; // Reset errors before re-validating all fields
         const fields = [
             'nit', 'nit_dv', 'razon_social', 'id_departamento', 'id_ciudad',
             'direccion_empresa', 'documento', 'id_tipo_doc', 'primer_apellido',

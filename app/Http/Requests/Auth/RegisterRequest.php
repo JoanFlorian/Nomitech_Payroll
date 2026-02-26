@@ -41,7 +41,7 @@ class RegisterRequest extends FormRequest
             // EMPRESA
             'razon_social' => ['required', 'string', 'min:3', 'max:60'],
             'nit' => ['required', 'string', 'regex:/^[0-9]+$/', 'digits_between:5,15', 'unique:empresa,nit'],
-            'nit_dv' => ['required', 'numeric', 'digits_between:1,2'],
+            'nit_dv' => ['required', 'numeric', 'digits:1'],
             'pais' => ['required', 'string', 'size:2', 'in:CO'],
             'id_departamento' => ['required', 'exists:departamento,id_departamento'],
             'id_ciudad' => ['required', 'exists:ciudad,id_ciudad'],

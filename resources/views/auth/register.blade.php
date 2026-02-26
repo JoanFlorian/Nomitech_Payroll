@@ -77,7 +77,7 @@
                 </div>
 
                 <!-- NIT & DV -->
-                <div class="grid grid-cols-4 gap-x-4 md:col-span-2">
+                <div class="grid grid-cols-4 gap-x-4">
                     <div class="col-span-3">
                         <x-form.input name="nit" icon="badge" placeholder="NIT (Solo números)" 
                             x-model="nit" @blur="handleBlur('nit')" @input="handleInput('nit')"
@@ -85,16 +85,21 @@
                         <span x-show="errors.nit" x-text="errors.nit" class="text-red-500 text-xs mt-1 block"></span>
                     </div>
                     <div class="col-span-1">
-                        <x-form.input name="nit_dv" icon="pin" placeholder="DV" 
-                            x-model="nit_dv" @blur="handleBlur('nit_dv')" @input="handleInput('nit_dv')"
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric" />
-                        <span x-show="errors.nit_dv" x-text="errors.nit_dv" class="text-red-500 text-xs mt-1 block"></span>
+                        <x-form.input name="nit_dv" icon="pin" placeholder="DV" required 
+                            maxlength="1" inputmode="numeric" pattern="[0-9]*"
+                            x-model="nit_dv"
+                            @blur="handleBlur('nit_dv')"
+                            @input="handleInput('nit_dv')"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value.length > 1) this.value = this.value.slice(0, 1);"
+                            title="Debe ser numérico de un solo dígito." />
+                        <template x-if="errors.nit_dv">
+                            <span class="text-orange-600 text-[10px] mt-1 block font-medium" x-text="errors.nit_dv"></span>
+                        </template>
                     </div>
                 </div>
                 
-                <!-- PAÍS -->
-                <x-form.input name="pais" icon="public" placeholder="País" value="CO" readonly 
-                    class="bg-gray-100 text-gray-500 cursor-not-allowed" />
+                <!-- NIE035: PAÍS (Hidden, fixed to CO) -->
+                <input type="hidden" name="pais" value="CO">
 
                 <!-- DEPARTAMENTO -->
                 <div>

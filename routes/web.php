@@ -55,11 +55,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/payment/status/{sessionId}', [App\Http\Controllers\CheckoutController::class, 'checkStatus'])->name('payment.status');
 
     Route::get('/licencia/pending', function () {
-        return "Licencia Inactiva o Pago Pendiente. Por favor complete el pago."; // View: licencia.pending
+        return redirect('/#pricing');
     })->name('licencia.pending');
 
     Route::get('/licencia/required', function () {
-        return "No se encontró una licencia activa para su empresa. Por favor adquiera un plan."; // View: licencia.required
+        return redirect('/#pricing');
     })->name('licencia.required');
 
     Route::get('/licencia/expired', [App\Http\Controllers\LicenseRenewalController::class, 'showExpired'])->name('licencia.expired');

@@ -1,4 +1,10 @@
-<div class="bg-[#1565C0] text-white p-12 flex flex-col justify-center items-start left-column">
+<div class="bg-[#1565C0] text-white p-12 flex flex-col justify-center items-start left-column relative">
+    <!-- Botón Volver -->
+    <a href="/"
+        class="absolute top-8 left-8 flex items-center text-sm font-semibold text-white/80 hover:text-white transition-all group z-20">
+        <span class="material-icons text-xl mr-2 group-hover:-translate-x-1 transition-transform">arrow_back</span>
+        Volver al inicio
+    </a>
 
     <div class="shape shape-1"></div>
     <div class="shape shape-2"></div>
@@ -9,7 +15,7 @@
 
     <div class="w-full max-w-xs relative z-10">
         <svg class="w-20 h-20 mb-8" fill="none" viewBox="0 0 100 100">
-            <path d="M50 0C22..." fill="rgba(255,255,255,0.2)"/>
+            <path d="M50 0C22..." fill="rgba(255,255,255,0.2)" />
         </svg>
 
         <h1 class="text-4xl font-bold mb-4">¡BIENVENIDO A NOMITECH!</h1>

@@ -15,7 +15,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'correo' => ['required', 'string', 'email', 'max:255'],
-            'contrasena' => ['required', 'string', 'min:8'],
+            'contrasena' => ['required', 'string', 'min:8', 'max:64', 'regex:/^(?=.*[A-Za-z])(?=.*\d).+$/'],
         ];
     }
 
@@ -29,6 +29,8 @@ class LoginRequest extends FormRequest
             'contrasena.required' => 'La contraseña es obligatoria.',
             'contrasena.string' => 'La contraseña debe ser texto válido.',
             'contrasena.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'contrasena.max' => 'La contraseña no puede superar los 64 caracteres.',
+            'contrasena.regex' => 'La contraseña debe contener al menos una letra y un número.',
         ];
     }
 }

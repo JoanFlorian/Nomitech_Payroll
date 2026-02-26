@@ -59,6 +59,12 @@ class LoginController extends Controller
             $remainingAttempts = max(self::MAX_LOGIN_ATTEMPTS - $attempts, 0);
             $attemptText = $remainingAttempts === 1 ? 'intento' : 'intentos';
 
+            if ($usuario && !Hash::check($password, $usuario->contrasena)) {
+                return back()->withErrors([
+                    'contrasena' => "La contraseña es incorrecta. Te quedan {$remainingAttempts} {$attemptText}.",
+                ])->withInput($request->only('correo'));
+            }
+
             return back()->withErrors([
                 'correo' => "Las credenciales ingresadas son incorrectas. Te quedan {$remainingAttempts} {$attemptText}.",
             ])->withInput($request->only('correo'));

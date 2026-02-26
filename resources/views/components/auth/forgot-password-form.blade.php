@@ -20,10 +20,11 @@
     </div>
 
     <div class="mb-4">
-        <button type="submit"
+        <button type="submit" id="send-code-button"
             class="w-full bg-[#1565C0] text-white py-3 px-4 rounded-lg font-semibold text-lg hover:bg-blue-800 transition shadow-md">
             Enviar Código de Verificación
         </button>
+        <p id="cooldown-feedback" class="text-sm text-[#424242] mt-2 text-center hidden"></p>
     </div>
 
     <div class="text-center">
@@ -36,10 +37,55 @@
         const form = document.querySelector('form[action="{{ route('password.email') }}"]');
         const input = document.getElementById('forgot-correo');
         const feedback = document.getElementById('forgot-correo-feedback');
+        const sendButton = document.getElementById('send-code-button');
+        const cooldownFeedback = document.getElementById('cooldown-feedback');
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const cooldownSecondsFromServer = Number(@json(session('cooldown_seconds', 0))) || 0;
+        const cooldownStorageKey = 'password-reset-cooldown-end';
 
-        if (!form || !input || !feedback) {
+        if (!form || !input || !feedback || !sendButton || !cooldownFeedback) {
             return;
+        }
+
+        function updateButtonCooldown(secondsLeft) {
+            if (secondsLeft > 0) {
+                sendButton.disabled = true;
+                sendButton.classList.add('opacity-60', 'cursor-not-allowed');
+                cooldownFeedback.textContent = `Podrás solicitar un nuevo código en ${secondsLeft}s.`;
+                cooldownFeedback.classList.remove('hidden');
+                return;
+            }
+
+            sendButton.disabled = false;
+            sendButton.classList.remove('opacity-60', 'cursor-not-allowed');
+            cooldownFeedback.textContent = '';
+            cooldownFeedback.classList.add('hidden');
+        }
+
+        function startCooldown(seconds) {
+            const safeSeconds = Math.max(Number(seconds) || 0, 0);
+            if (safeSeconds <= 0) {
+                updateButtonCooldown(0);
+                localStorage.removeItem(cooldownStorageKey);
+                return;
+            }
+
+            const cooldownEnd = Date.now() + (safeSeconds * 1000);
+            localStorage.setItem(cooldownStorageKey, String(cooldownEnd));
+
+            const tick = function () {
+                const remaining = Math.max(Math.ceil((cooldownEnd - Date.now()) / 1000), 0);
+                updateButtonCooldown(remaining);
+
+                if (remaining <= 0) {
+                    localStorage.removeItem(cooldownStorageKey);
+                    return;
+                }
+
+                setTimeout(tick, 1000);
+            };
+
+            tick();
         }
 
         function showInvalid(message) {
@@ -70,9 +116,26 @@
             return true;
         }
 
+        const savedCooldownEnd = Number(localStorage.getItem(cooldownStorageKey) || 0);
+        const savedRemaining = Math.max(Math.ceil((savedCooldownEnd - Date.now()) / 1000), 0);
+
+        if (cooldownSecondsFromServer > 0) {
+            startCooldown(cooldownSecondsFromServer);
+        } else if (savedRemaining > 0) {
+            startCooldown(savedRemaining);
+        } else {
+            updateButtonCooldown(0);
+        }
+
         input.addEventListener('input', validateEmail);
 
         form.addEventListener('submit', function (event) {
+            if (sendButton.disabled) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+
             if (!validateEmail()) {
                 event.preventDefault();
                 event.stopPropagation();

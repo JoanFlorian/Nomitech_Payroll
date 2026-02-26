@@ -8,10 +8,25 @@ use App\Models\Usuario;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Carbon\Carbon;
 
 class ForgotPasswordController extends Controller
 {
+    private const MAX_TOKEN_REQUESTS = 5;
+    private const TOKEN_REQUEST_LOCKOUT_SECONDS = 3600;
+    private const TOKEN_REQUEST_COOLDOWN_SECONDS = 60;
+
+    private function tokenRequestThrottleKey(string $correo): string
+    {
+        return 'password-reset-request:' . strtolower(trim($correo));
+    }
+
+    private function tokenCooldownThrottleKey(string $correo): string
+    {
+        return 'password-reset-cooldown:' . strtolower(trim($correo));
+    }
+
     /**
      * Display the form to request a password reset link.
      */
@@ -36,6 +51,27 @@ class ForgotPasswordController extends Controller
             ]
         );
 
+        $throttleKey = $this->tokenRequestThrottleKey($correo);
+        $cooldownKey = $this->tokenCooldownThrottleKey($correo);
+
+        if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
+            $seconds = RateLimiter::availableIn($cooldownKey);
+
+            return back()->withErrors([
+                'correo' => "Debes esperar {$seconds} segundos antes de solicitar un nuevo código.",
+            ])->withInput($request->only('correo'))->with('cooldown_seconds', $seconds);
+        }
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_TOKEN_REQUESTS)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $minutes = (int) ceil($seconds / 60);
+            $minuteText = $minutes === 1 ? 'minuto' : 'minutos';
+
+            return back()->withErrors([
+                'correo' => "Ya solicitaste el token 5 veces para este correo. Intenta nuevamente en {$minutes} {$minuteText}.",
+            ])->withInput($request->only('correo'));
+        }
+
         $user = Usuario::where('correo', $correo)->first();
 
         if (!$user) {
@@ -53,6 +89,9 @@ class ForgotPasswordController extends Controller
                 'created_at' => Carbon::now()
             ]
         );
+
+        RateLimiter::hit($cooldownKey, self::TOKEN_REQUEST_COOLDOWN_SECONDS);
+        RateLimiter::hit($throttleKey, self::TOKEN_REQUEST_LOCKOUT_SECONDS);
 
         // Send Email
         try {

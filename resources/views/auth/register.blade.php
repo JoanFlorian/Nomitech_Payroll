@@ -23,7 +23,96 @@
         ];
     @endphp
 
-    <x-ui.card>
+    <div x-data="{ 
+        showExitModal: false,
+        handleBack() {
+            // Obtener todos los campos de entrada del formulario (incluyendo ocultos para los searchable-select)
+            const formInputs = Array.from(document.querySelectorAll('form input, form select'));
+            
+            // Campos que NO deben activar el modal (Sistema o por defecto)
+            const ignoredFields = ['_token', 'pais', 'plan_id'];
+
+            // Verificar si alguno tiene contenido significativo
+            const hasData = formInputs.some(input => {
+                if (ignoredFields.includes(input.name)) return false;
+                
+                // Si es un select o un input, verificamos que tenga valor
+                return input.value.trim() !== '' && input.value !== '0';
+            });
+
+            if (hasData) {
+                this.showExitModal = true;
+            } else {
+                window.location.href = '/';
+            }
+        }
+    }">
+        <!-- Modal de confirmación de salida -->
+        <template x-teleport="body">
+            <div x-show="showExitModal" 
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 z-[100] flex items-center justify-center p-4" 
+                 x-cloak>
+                
+                <!-- Fondo oscuro (sin blur) con figuritas decorativas más grandes y variadas -->
+                <div class="absolute inset-0 bg-gray-900/85" @click="showExitModal = false">
+                    <!-- Figuritas decorativas Marca: Azul #1565C0, Verde #2AA58C -->
+                    <div class="absolute top-[5%] left-[10%] w-32 h-32 rounded-full bg-[#1565C0]/20 blur-[2px] rotate-12"></div>
+                    <div class="absolute top-[15%] right-[15%] w-48 h-48 rounded-3xl bg-[#2AA58C]/15 blur-[1px] -rotate-12"></div>
+                    <div class="absolute bottom-[10%] left-[20%] w-40 h-40 rounded-xl bg-[#2AA58C]/20 rotate-45"></div>
+                    <div class="absolute bottom-[20%] right-[10%] w-56 h-56 rounded-full bg-[#1565C0]/15 blur-[3px]"></div>
+                    <div class="absolute top-[40%] left-[-5%] w-24 h-24 rounded-full bg-[#2AA58C]/25"></div>
+                    <div class="absolute top-[55%] right-[-5%] w-36 h-36 rounded-2xl bg-[#1565C0]/20 -rotate-6"></div>
+                    <div class="absolute top-[70%] left-[45%] w-16 h-16 rounded-full bg-[#2AA58C]/20"></div>
+                </div>
+
+                <!-- Contenido del Modal -->
+                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative z-10 border border-gray-100"
+                     x-show="showExitModal"
+                     x-transition:enter="transition ease-out duration-300 transform"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-200 transform"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95">
+                    
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                            <span class="material-icons text-orange-600 text-xl">report_problem</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 leading-tight">¿Confirmas salir?</h3>
+                    </div>
+                    
+                    <p class="text-gray-600 mb-6 text-sm leading-relaxed">
+                        Detectamos que has empezado a completar el formulario. Si sales ahora, perderás toda la información ingresada.
+                    </p>
+                    
+                    <div class="flex items-center justify-end gap-3">
+                        <button @click="showExitModal = false" 
+                                class="px-5 py-2.5 text-sm font-bold text-white bg-[#2AA58C] rounded-xl hover:bg-[#248f76] transition-all duration-200 cursor-pointer shadow-md shadow-[#2AA58C]/20">
+                            Continuar registro
+                        </button>
+                        <a href="/" 
+                           class="px-5 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-all cursor-pointer shadow-md shadow-red-200">
+                            Salir y borrar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <x-ui.card>
+            <div class="mb-6 -mt-2">
+                <button @click="handleBack()" type="button" class="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-[#2AA58C] transition-all group focus:outline-none">
+                    <span class="material-icons text-xl mr-2 group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                    Volver al inicio
+                </button>
+            </div>
         <x-auth.form-header 
             title="{{ $title ?? 'Crea tu cuenta Nomitech' }}"
             description="{{ $description ?? 'Por favor, proporciona la información básica de tu empresa para crear tu cuenta Nomitech.' }}" 
@@ -116,9 +205,9 @@
                             title="Debe ser numérico de un solo dígito."
                             :readonly="isset($isPendingPayment) && $isPendingPayment"
                             class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500 text-center px-0' : '' }}" />
-                        <template x-if="errors.nit_dv && !(isset($isPendingPayment) && $isPendingPayment)">
-                            <span class="text-orange-600 text-[10px] mt-1 block font-medium" x-text="errors.nit_dv"></span>
-                        </template>
+                        <span x-show="errors.nit_dv && !(isset($isPendingPayment) && $isPendingPayment)" 
+                              x-text="errors.nit_dv" 
+                              class="text-red-500 text-xs mt-1 block font-medium"></span>
                     </div>
                 </div>
                 
@@ -265,4 +354,5 @@
             </div>
         </form>
     </x-ui.card>
+</div>
 </x-guest-layout>

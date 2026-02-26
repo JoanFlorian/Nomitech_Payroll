@@ -116,7 +116,7 @@ export default (initialData = {}) => ({
             },
             telefono_celular: () => {
                 if (!value) return "El Teléfono Celular es requerido";
-                if (!/^3[0-9]{9}$/.test(value)) return "El Teléfono Celular debe ser un número de Colombia válido (10 dígitos)";
+                if (!/^[0-9]{10}$/.test(value)) return "El Teléfono Celular debe tener exactamente 10 dígitos numéricos";
                 return null;
             },
             email: () => {

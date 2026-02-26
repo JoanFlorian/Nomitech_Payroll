@@ -79,7 +79,7 @@ class RegisterRequest extends FormRequest
             'segundo_apellido' => ['nullable', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'primer_nombre' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'otros_nombres' => ['nullable', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
-            'telefono_celular' => ['required', 'string', 'regex:/^3[0-9]{9}$/'],
+            'telefono_celular' => ['required', 'string', 'regex:/^[0-9]{10}$/'],
             'email' => [
                 'required',
                 'string',
@@ -135,7 +135,7 @@ class RegisterRequest extends FormRequest
             'nit.regex' => 'El NIT debe contener solo números.',
             'nit.unique' => 'Ya existe una cuenta con este NIT. Si no terminaste tu pago, por favor inicia sesión para continuar.',
             'documento.regex' => 'El documento debe contener solo números.',
-            'telefono_celular.regex' => 'El teléfono celular debe tener 10 dígitos y comenzar con 3.',
+            'telefono_celular.regex' => 'El teléfono celular debe tener exactamente 10 dígitos numéricos.',
             'email.unique' => 'Este correo ya está registrado. Si no terminaste tu pago, por favor inicia sesión para continuar.',
             'direccion_empresa.regex' => 'La dirección debe incluir texto válido y una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).',
         ];

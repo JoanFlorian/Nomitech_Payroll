@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class LoginController extends Controller
 {
@@ -18,7 +19,7 @@ class LoginController extends Controller
     private function loginThrottleKey(Request $request): string
     {
         $correo = strtolower(trim((string) $request->input('correo', '')));
-        return 'login:'.$correo.'|'.$request->ip();
+        return 'login:' . $correo . '|' . $request->ip();
     }
 
     public function create()
@@ -78,7 +79,7 @@ class LoginController extends Controller
             return redirect()->route('superadmin.empresas.index');
         }
 
-        // Administrador (rol 1)
+        // Representante Legal (rol 1)
         if ((int) $usuario->id_rol === 1) {
             $empresa = $usuario->empresa()->first();
 
@@ -88,9 +89,16 @@ class LoginController extends Controller
 
             // Verificar si la empresa tiene licencia activa
             $licencia = $empresa->licencia;
-            
-            if (!$licencia || !$licencia->fecha_fin || $licencia->fecha_fin->isPast()) {
-                // License is missing or expired - redirect to expired license view
+
+            if (!$licencia || !$licencia->fecha_fin) {
+                // License is missing or pending payment - redirect to pending view
+                Auth::login($usuario);
+                session(['empresa_id' => $empresa->id_empresa]);
+                return redirect()->route('licencia.pending');
+            }
+
+            if (Carbon::parse($licencia->fecha_fin)->isPast()) {
+                // License is expired - redirect to expired license view
                 Auth::login($usuario);
                 session(['empresa_id' => $empresa->id_empresa]);
                 return redirect()->route('licencia.expired');
@@ -102,7 +110,7 @@ class LoginController extends Controller
             return redirect()->route('empleados.index');
         }
 
-        // Empleado (role 3) or Auxiliar RRHH (role 2)
+        // Empleado (rol 3) o Administrador (rol 2)
         if ((int) $usuario->id_rol === 2 || (int) $usuario->id_rol === 3) {
             // Get company from contrato (employee contract)
             $contrato = $usuario->contratos()->first();
@@ -120,7 +128,7 @@ class LoginController extends Controller
             // Verificar si la empresa tiene licencia activa
             $licencia = $empresa->licencia;
 
-            if (!$licencia || !$licencia->fecha_fin || $licencia->fecha_fin->isPast()) {
+            if (!$licencia || !$licencia->fecha_fin || Carbon::parse($licencia->fecha_fin)->isPast()) {
                 // License is not active - redirect to landing page with modal
                 Auth::login($usuario);
                 session(['empresa_id' => $empresa->id_empresa]);
@@ -131,10 +139,10 @@ class LoginController extends Controller
             // License is active, proceed normally
             Auth::login($usuario);
             session(['empresa_id' => $empresa->id_empresa]);
-            
+
             // Redirect based on sub-role
             if ((int) $usuario->id_rol === 2) {
-                return redirect()->route('empleados.index'); // Auxiliar RRHH
+                return redirect()->route('empleados.index'); // Administrador
             } else {
                 return redirect('/trabajador'); // Empleado
             }

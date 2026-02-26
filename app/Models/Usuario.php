@@ -86,6 +86,11 @@ class Usuario extends Authenticatable
         return $this->belongsToMany(Empresa::class, 'usuario_empresa', 'doc', 'id_empresa');
     }
 
+    public function rol()
+    {
+        return $this->belongsTo(Rol::class, 'id_rol', 'id_rol');
+    }
+
     /**
      * Get the e-mail address where password reset links are sent.
      *

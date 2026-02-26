@@ -7,6 +7,8 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Session;
 
+use Illuminate\Validation\Rule;
+
 class RegisterRequest extends FormRequest
 {
     /**
@@ -40,10 +42,19 @@ class RegisterRequest extends FormRequest
      */
     public function rules(): array
     {
+        $user = auth()->user();
+        $empresaId = session('empresa_id');
+
         return [
             // EMPRESA
             'razon_social' => ['required', 'string', 'min:3', 'max:60'],
-            'nit' => ['required', 'string', 'regex:/^[0-9]+$/', 'digits_between:5,15', 'unique:empresa,nit'],
+            'nit' => [
+                'required',
+                'string',
+                'regex:/^[0-9]+$/',
+                'digits_between:5,15',
+                Rule::unique('empresa', 'nit')->ignore($empresaId, 'id_empresa')
+            ],
             'nit_dv' => ['required', 'numeric', 'digits:1'],
             'pais' => ['required', 'string', 'size:2', 'in:CO'],
             'id_departamento' => ['required', 'exists:departamento,id_departamento'],
@@ -51,15 +62,31 @@ class RegisterRequest extends FormRequest
             'direccion_empresa' => ['required', 'string', 'min:5', 'max:60'],
 
             // USUARIO
-            'documento' => ['required', 'string', 'regex:/^[0-9]+$/', 'digits_between:6,12', 'unique:usuario,doc'],
+            'documento' => [
+                'required',
+                'string',
+                'regex:/^[0-9]+$/',
+                'digits_between:6,12',
+                Rule::unique('usuario', 'doc')->ignore($user?->doc, 'doc')
+            ],
             'id_tipo_doc' => ['required', 'exists:tipo_doc,id_tipo_doc'],
             'primer_apellido' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'segundo_apellido' => ['nullable', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'primer_nombre' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'otros_nombres' => ['nullable', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
             'telefono_celular' => ['required', 'string', 'regex:/^3[0-9]{9}$/'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:usuario,correo'],
-            'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()->mixedCase()->numbers()->symbols()],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('usuario', 'correo')->ignore($user?->doc, 'doc')
+            ],
+            'password' => [
+                'required',
+                'confirmed',
+                \Illuminate\Validation\Rules\Password::defaults()->mixedCase()->numbers()->symbols()
+            ],
 
             // Selected plan (optional)
             'plan_id' => ['nullable', 'integer', 'exists:plan,id'],
@@ -101,8 +128,10 @@ class RegisterRequest extends FormRequest
 
             // Custom rules/overrides
             'nit.regex' => 'El NIT debe contener solo números.',
+            'nit.unique' => 'Ya existe una cuenta con este NIT. Si no terminaste tu pago, por favor inicia sesión para continuar.',
             'documento.regex' => 'El documento debe contener solo números.',
             'telefono_celular.regex' => 'El teléfono celular debe tener 10 dígitos y comenzar con 3.',
+            'email.unique' => 'Este correo ya está registrado. Si no terminaste tu pago, por favor inicia sesión para continuar.',
         ];
     }
 

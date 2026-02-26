@@ -19,6 +19,13 @@
                 <x-auth.left-panel />
 
                 <x-auth.right-panel>
+                    <div class="mb-4">
+                        <a href="/"
+                            class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-[#1565C0] transition-colors">
+                            <span class="material-icons text-base mr-1">arrow_back</span>
+                            Volver al inicio
+                        </a>
+                    </div>
                     <x-auth.login-form />
                 </x-auth.right-panel>
 

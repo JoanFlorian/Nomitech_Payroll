@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'ensure_active_license' => \App\Http\Middleware\EnsureActiveLicense::class,
             'is_superadmin' => \App\Http\Middleware\CheckSuperAdmin::class,
+            'prevent_back_history' => \App\Http\Middleware\PreventBackHistory::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

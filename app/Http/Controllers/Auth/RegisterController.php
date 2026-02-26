@@ -62,10 +62,12 @@ class RegisterController extends Controller
             $empresa = Empresa::create([
                 'razon_social' => $request->razon_social,
                 'nit' => $request->nit,
+                'nit_dv' => $request->nit_dv,
                 'doc_representante' => $usuario->doc,
                 'id_ciudad' => $request->id_ciudad,
                 'direccion' => $request->direccion_empresa,
                 'telefono' => $request->telefono_celular,
+                'correo' => $request->email,
             ]);
 
             // 3. Resolve selected plan from request (or fallback to default ordered plan)

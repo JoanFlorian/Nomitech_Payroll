@@ -2,7 +2,7 @@
     <x-auth.background-shapes />
 
     @php
-        $initialData = [
+        $initialData = $initialData ?? [
             'nit' => old('nit', ''),
             'nit_dv' => old('nit_dv', ''),
             'razon_social' => old('razon_social', ''),
@@ -24,22 +24,40 @@
     @endphp
 
     <x-ui.card>
-        <x-auth.form-header title="Crea tu cuenta Nomitech"
-            description="Por favor, proporciona la información básica de tu empresa para crear tu cuenta Nomitech." />
+        <x-auth.form-header 
+            title="{{ $title ?? 'Crea tu cuenta Nomitech' }}"
+            description="{{ $description ?? 'Por favor, proporciona la información básica de tu empresa para crear tu cuenta Nomitech.' }}" 
+        />
 
         <form 
             method="POST" 
-            action="{{ route('register') }}"
+            action="{{ $action ?? route('register') }}"
             x-data="registerForm(@js($initialData))"
             @submit.prevent="validateForm() && $el.submit()"
             novalidate
         >
             @csrf
 
+            @if(isset($isPendingPayment) && $isPendingPayment)
+                <div class="mb-6 p-3 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center gap-3">
+                    <span class="material-icons text-emerald-600">info_outline</span>
+                    <p class="text-sm text-emerald-800">
+                        Hemos recuperado tus datos de registro anteriores. Por favor, verifícalos y completa el pago para activar tu cuenta.
+                    </p>
+                </div>
+            @endif
+
             <!-- Plan selection -->
             @if(isset($plans) && $plans->count())
                 <div class="mb-6">
-                    <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-2">Selecciona tu plan</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="plan_id" class="block text-sm font-medium text-gray-700">Selecciona tu plan</label>
+                        @if(isset($isPendingPayment) && $isPendingPayment)
+                            <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold border border-emerald-200">
+                                PUEDES CAMBIAR TU PLAN AQUÍ
+                            </span>
+                        @endif
+                    </div>
                     <select name="plan_id" id="plan_id" class="w-full rounded-md border-gray-200 p-2" x-model="plan_id">
                         @foreach($plans as $p)
                             <option value="{{ $p->id }}">
@@ -83,7 +101,9 @@
                     <div class="col-span-3">
                         <x-form.input name="nit" icon="badge" placeholder="NIT (Solo números)" 
                             x-model="nit" @blur="handleBlur('nit')" @input="handleInput('nit')"
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric" />
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric"
+                            :readonly="isset($isPendingPayment) && $isPendingPayment"
+                            class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500' : '' }}" />
                         <span x-show="errors.nit" x-text="errors.nit" class="text-red-500 text-xs mt-1 block"></span>
                     </div>
                     <div class="col-span-1">
@@ -93,8 +113,10 @@
                             @blur="handleBlur('nit_dv')"
                             @input="handleInput('nit_dv')"
                             oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value.length > 1) this.value = this.value.slice(0, 1);"
-                            title="Debe ser numérico de un solo dígito." />
-                        <template x-if="errors.nit_dv">
+                            title="Debe ser numérico de un solo dígito."
+                            :readonly="isset($isPendingPayment) && $isPendingPayment"
+                            class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500 text-center px-0' : '' }}" />
+                        <template x-if="errors.nit_dv && !(isset($isPendingPayment) && $isPendingPayment)">
                             <span class="text-orange-600 text-[10px] mt-1 block font-medium" x-text="errors.nit_dv"></span>
                         </template>
                     </div>
@@ -147,6 +169,7 @@
                         x-model="id_tipo_doc"
                         :options="$tiposDocumento" 
                         :searchable="false"
+                        :readonly="isset($isPendingPayment) && $isPendingPayment"
                     />
                     <span x-show="errors.id_tipo_doc" x-text="errors.id_tipo_doc" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
@@ -154,7 +177,9 @@
                 <div>
                     <x-form.input name="documento" icon="numbers" placeholder="Número de Documento" 
                         x-model="documento" @blur="handleBlur('documento')" @input="handleInput('documento')"
-                        oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric" />
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric"
+                        :readonly="isset($isPendingPayment) && $isPendingPayment"
+                        class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500' : '' }}" />
                     <span x-show="errors.documento" x-text="errors.documento" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
 
@@ -200,8 +225,13 @@
                 </div>
                 
                 <div>
-                    <x-form.input name="password" icon="lock" placeholder="Contraseña" type="password" 
+                    <x-form.input name="password" icon="lock" 
+                        placeholder="{{ isset($isPendingPayment) && $isPendingPayment ? 'Confirmar Nueva Contraseña' : 'Contraseña' }}" 
+                        type="password" 
                         x-model="password" @blur="handleBlur('password')" @input="handleInput('password')" />
+                    @if(isset($isPendingPayment) && $isPendingPayment)
+                        <span class="text-[10px] text-emerald-600 mt-1 block font-medium">Por seguridad, introduce tu contraseña de acceso</span>
+                    @endif
                     <span x-show="errors.password" x-text="errors.password" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
 
@@ -223,7 +253,7 @@
                     :class="{'opacity-50 cursor-not-allowed': isSubmitting}"
                     class="inline-flex items-center justify-center px-6 py-3 bg-[#2AA58C] text-white font-medium rounded-lg hover:bg-[#248f76] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#2AA58C] focus:ring-offset-2"
                 >
-                    <span x-show="!isSubmitting">Crear cuenta</span>
+                    <span x-show="!isSubmitting">{{ $submitText ?? 'Crear cuenta' }}</span>
                     <span x-show="isSubmitting" class="flex items-center">
                         <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

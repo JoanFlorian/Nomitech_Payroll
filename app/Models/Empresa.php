@@ -14,6 +14,7 @@ class Empresa extends Model
 
     protected $fillable = [
         'nit',
+        'nit_dv',
         'razon_social',
         'doc_representante',
         'id_ciudad',
@@ -49,7 +50,7 @@ class Empresa extends Model
     public function licencia()
     {
         return $this->hasOne(Licencia::class, 'empresa_id', 'id_empresa')
-                    ->latest('created_at'); // Get the most recently created license
+            ->latest('created_at'); // Get the most recently created license
     }
 
     public function pagos()

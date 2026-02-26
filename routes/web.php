@@ -55,9 +55,8 @@ Route::middleware(['auth', 'prevent_back_history'])->group(function () {
     // Polling Endpoint
     Route::get('/api/payment/status/{sessionId}', [App\Http\Controllers\CheckoutController::class, 'checkStatus'])->name('payment.status');
 
-    Route::get('/licencia/pending', function () {
-        return redirect('/#pricing');
-    })->name('licencia.pending');
+    Route::get('/licencia/pending', [App\Http\Controllers\LicenseRenewalController::class, 'showPending'])->name('licencia.pending');
+    Route::post('/licencia/pending', [App\Http\Controllers\LicenseRenewalController::class, 'processPending'])->name('licencia.pending.post');
 
     Route::get('/licencia/required', function () {
         return redirect('/#pricing');

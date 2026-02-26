@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class LoginController extends Controller
 {
@@ -83,8 +84,15 @@ class LoginController extends Controller
             // Verificar si la empresa tiene licencia activa
             $licencia = $empresa->licencia;
 
-            if (!$licencia || !$licencia->fecha_fin || $licencia->fecha_fin->isPast()) {
-                // License is missing or expired - redirect to expired license view
+            if (!$licencia || !$licencia->fecha_fin) {
+                // License is missing or pending payment - redirect to pending view
+                Auth::login($usuario);
+                session(['empresa_id' => $empresa->id_empresa]);
+                return redirect()->route('licencia.pending');
+            }
+
+            if (Carbon::parse($licencia->fecha_fin)->isPast()) {
+                // License is expired - redirect to expired license view
                 Auth::login($usuario);
                 session(['empresa_id' => $empresa->id_empresa]);
                 return redirect()->route('licencia.expired');
@@ -114,7 +122,7 @@ class LoginController extends Controller
             // Verificar si la empresa tiene licencia activa
             $licencia = $empresa->licencia;
 
-            if (!$licencia || !$licencia->fecha_fin || $licencia->fecha_fin->isPast()) {
+            if (!$licencia || !$licencia->fecha_fin || Carbon::parse($licencia->fecha_fin)->isPast()) {
                 // License is not active - redirect to landing page with modal
                 Auth::login($usuario);
                 session(['empresa_id' => $empresa->id_empresa]);

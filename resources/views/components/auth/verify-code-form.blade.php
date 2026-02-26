@@ -24,7 +24,7 @@
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white text-center text-2xl tracking-[1rem] font-bold"
             autocomplete="off" aria-describedby="verification-code-feedback" />
         <p id="verification-code-feedback" class="invalid-feedback text-red-600 text-sm mt-1 text-center hidden">El código de verificación debe contener exactamente 6 números.</p>
-        @error('code') <p class="text-red-600 text-sm mt-1 text-center">{{ $message }}</p> @enderror
+        @error('code') <p id="verification-code-server-error" class="text-red-600 text-sm mt-1 text-center">{{ $message }}</p> @enderror
         @error('correo') <p class="text-red-600 text-sm mt-1 text-center">{{ $message }}</p> @enderror
     </div>
 
@@ -46,6 +46,7 @@
         const form = document.querySelector('form[action="{{ route('password.verify') }}"]');
         const input = document.getElementById('verification-code');
         const feedback = document.getElementById('verification-code-feedback');
+        const serverError = document.getElementById('verification-code-server-error');
         if (!input || !form || !feedback) {
             return;
         }
@@ -80,6 +81,9 @@
 
         input.addEventListener('input', function () {
             input.value = input.value.replace(/\D/g, '').slice(0, 6);
+            if (serverError) {
+                serverError.classList.add('hidden');
+            }
             validateCode();
         });
 

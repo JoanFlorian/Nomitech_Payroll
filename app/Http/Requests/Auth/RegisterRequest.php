@@ -3,6 +3,9 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Session;
 
 class RegisterRequest extends FormRequest
 {
@@ -61,6 +64,21 @@ class RegisterRequest extends FormRequest
             // Selected plan (optional)
             'plan_id' => ['nullable', 'integer', 'exists:plan,id'],
         ];
+    }
+
+    /**
+     * Handle a failed validation attempt.
+     * Overridden to explicitly include passwords in withInput flash data.
+     */
+    protected function failedValidation(Validator $validator)
+    {
+        // Creamos una respuesta manual que incluya ABSOLUTAMENTE TODO el input
+        // Esto evita que el manejador de excepciones de Laravel filtre las contraseñas
+        $response = redirect($this->getRedirectUrl())
+            ->withInput($this->all())
+            ->withErrors($validator, $this->errorBag);
+
+        throw new ValidationException($validator, $response);
     }
 
     /**

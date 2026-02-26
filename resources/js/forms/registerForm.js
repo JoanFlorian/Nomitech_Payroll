@@ -14,8 +14,8 @@ export default (initialData = {}) => ({
     otros_nombres: initialData.otros_nombres || '',
     telefono_celular: initialData.telefono_celular || '',
     email: initialData.email || '',
-    password: '',
-    password_confirmation: '',
+    password: initialData.password || '',
+    password_confirmation: initialData.password_confirmation || '',
     plan_id: initialData.plan_id || '',
 
     // Estado de validación
@@ -28,6 +28,11 @@ export default (initialData = {}) => ({
         if (!this.plan_id) {
             const urlParams = new URLSearchParams(window.location.search);
             this.plan_id = urlParams.get('plan_id') || '';
+        }
+
+        // Hidratar ciudades si ya hay un departamento elegido (old input)
+        if (this.id_departamento) {
+            this.fetchCities(this.id_departamento);
         }
 
         this.$watch('id_departamento', (val) => {

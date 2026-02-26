@@ -17,6 +17,8 @@
             'otros_nombres' => old('otros_nombres', ''),
             'telefono_celular' => old('telefono_celular', ''),
             'email' => old('email', ''),
+            'password' => old('password', ''),
+            'password_confirmation' => old('password_confirmation', ''),
             'plan_id' => old('plan_id', $selected_plan_id ?? '')
         ];
     @endphp

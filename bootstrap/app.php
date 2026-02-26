@@ -21,5 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Permitimos que todos los campos se flasheen a la sesión, incluyendo contraseñas
+        $exceptions->dontFlash([]);
     })->create();

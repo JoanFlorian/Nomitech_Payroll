@@ -20,7 +20,7 @@
         <input type="password" name="contrasena" id="contrasena" placeholder="••••••••" required minlength="8" maxlength="64"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
             aria-describedby="contrasena-feedback" />
-        <p id="contrasena-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">La contraseña debe contener al menos una letra, un número y un símbolo.</p>
+        <p id="contrasena-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">La contraseña debe contener al menos una letra mayúscula, un número y un símbolo.</p>
         @error('contrasena') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
     </div>
 
@@ -46,7 +46,7 @@
         const confirmInput = document.getElementById('contrasena_confirmation');
         const passwordFeedback = document.getElementById('contrasena-feedback');
         const confirmFeedback = document.getElementById('contrasena-confirmation-feedback');
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
+        const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
         const minPasswordLength = 8;
         const maxPasswordLength = 64;
 
@@ -94,7 +94,7 @@
                 return true;
             }
 
-            passwordFeedback.textContent = 'La contraseña debe contener al menos una letra, un número y un símbolo.';
+            passwordFeedback.textContent = 'La contraseña debe contener al menos una letra mayúscula, un número y un símbolo.';
             showInvalid(passwordInput, passwordFeedback);
             return false;
         }

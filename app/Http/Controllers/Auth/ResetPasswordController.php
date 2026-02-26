@@ -79,7 +79,7 @@ class ResetPasswordController extends Controller
                     'string',
                     'min:8',
                     'max:64',
-                    'regex:/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/',
+                    'regex:/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/',
                     'confirmed',
                 ],
             ],
@@ -93,7 +93,7 @@ class ResetPasswordController extends Controller
                 'contrasena.string' => 'La contraseña debe ser una cadena de texto válida.',
                 'contrasena.min' => 'La contraseña debe tener al menos 8 caracteres.',
                 'contrasena.max' => 'La contraseña no puede superar los 64 caracteres.',
-                'contrasena.regex' => 'La contraseña debe contener al menos una letra, un número y un símbolo.',
+                'contrasena.regex' => 'La contraseña debe contener al menos una letra mayúscula, un número y un símbolo.',
                 'contrasena.confirmed' => 'Las contraseñas no coinciden.',
             ]
         );

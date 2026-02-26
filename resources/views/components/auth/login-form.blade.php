@@ -8,19 +8,22 @@
         <label class="block text-[#424242] text-sm font-medium mb-2">Correo electrónico</label>
         <input type="email" name="correo" id="login-correo" placeholder="tu@email.com" required maxlength="255"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
-            value="{{ old('correo') }}" aria-describedby="login-correo-feedback login-correo-counter" />
+            value="{{ old('correo') }}" aria-describedby="login-correo-feedback" />
         <p id="login-correo-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">El correo electrónico es obligatorio.</p>
-        <p id="login-correo-counter" class="text-xs text-gray-500 mt-1 text-right">0/255</p>
         @error('correo') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
     </div>
 
     <div class="mb-6">
         <label class="block text-[#424242] text-sm font-medium mb-2">Contraseña</label>
-        <input type="password" name="contrasena" id="login-contrasena" placeholder="••••••••" required minlength="8" maxlength="64"
+        <input type="password" name="contrasena" id="login-contrasena" placeholder="••••••••" required
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
             aria-describedby="login-contrasena-feedback" />
         <p id="login-contrasena-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">La contraseña es obligatoria.</p>
-        @error('contrasena') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
+        @error('contrasena')
+            @if (str_contains($message, 'incorrecta'))
+                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+            @endif
+        @enderror
     </div>
 
     <div class="mb-4">
@@ -43,14 +46,10 @@
         const form = document.querySelector('form[action="{{ route('login.perform') }}"]');
         const correoInput = document.getElementById('login-correo');
         const correoFeedback = document.getElementById('login-correo-feedback');
-        const correoCounter = document.getElementById('login-correo-counter');
         const contrasenaInput = document.getElementById('login-contrasena');
         const contrasenaFeedback = document.getElementById('login-contrasena-feedback');
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).+$/;
         const maxCorreoLength = 255;
-        const minContrasenaLength = 8;
-        const maxContrasenaLength = 64;
 
         if (!form || !correoInput || !contrasenaInput) {
             return;
@@ -69,15 +68,6 @@
             if (feedback) {
                 feedback.classList.add('hidden');
             }
-        }
-
-        function updateCorreoCounter() {
-            if (!correoCounter) {
-                return;
-            }
-
-            const currentLength = (correoInput.value || '').length;
-            correoCounter.textContent = `${currentLength}/${maxCorreoLength}`;
         }
 
         function validateCorreo() {
@@ -110,21 +100,6 @@
                 return false;
             }
 
-            if (value.length < minContrasenaLength) {
-                showInvalid(contrasenaInput, contrasenaFeedback, `La contraseña debe tener al menos ${minContrasenaLength} caracteres.`);
-                return false;
-            }
-
-            if (value.length > maxContrasenaLength) {
-                showInvalid(contrasenaInput, contrasenaFeedback, `La contraseña no puede superar los ${maxContrasenaLength} caracteres.`);
-                return false;
-            }
-
-            if (!passwordRegex.test(value)) {
-                showInvalid(contrasenaInput, contrasenaFeedback, 'La contraseña debe contener al menos una letra y un número.');
-                return false;
-            }
-
             clearInvalid(contrasenaInput, contrasenaFeedback);
             return true;
         }
@@ -133,16 +108,12 @@
             if ((correoInput.value || '').length > maxCorreoLength) {
                 correoInput.value = correoInput.value.slice(0, maxCorreoLength);
                 showInvalid(correoInput, correoFeedback, `El correo electrónico no puede superar los ${maxCorreoLength} caracteres.`);
-                updateCorreoCounter();
                 return;
             }
 
-            updateCorreoCounter();
             validateCorreo();
         });
         contrasenaInput.addEventListener('input', validateContrasena);
-
-        updateCorreoCounter();
 
         form.addEventListener('submit', function (event) {
             const correoOk = validateCorreo();

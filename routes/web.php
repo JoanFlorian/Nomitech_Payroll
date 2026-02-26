@@ -46,7 +46,7 @@ Route::get('/api/cities/{department}', [App\Http\Controllers\Auth\RegisterContro
 Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::class, 'handleWebhook']);
 
 // License Status Routes (Protected by auth, but handled by middleware redirection)
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'prevent_back_history'])->group(function () {
     Route::get('/checkout/{pago}', [App\Http\Controllers\CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkout/{pago}/session', [App\Http\Controllers\CheckoutController::class, 'createSession'])->name('checkout.session');
     Route::get('/checkout-status/success', [App\Http\Controllers\CheckoutController::class, 'success'])->name('checkout.success');
@@ -72,7 +72,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Protected App Routes (Auth + Active License)
-Route::middleware(['auth', 'ensure_active_license'])->group(function () {
+Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history'])->group(function () {
     // Empleados
     Route::get('/empleados', [App\Http\Controllers\EmployeesController::class, 'index'])->name('empleados.index');
     Route::get('/employees/export', [App\Http\Controllers\EmployeesController::class, 'export'])->name('employees.export');
@@ -101,7 +101,7 @@ Route::middleware(['auth', 'ensure_active_license'])->group(function () {
 });
 
 // Superadmin routes protected by auth and role
-Route::middleware(['auth', 'is_superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
+Route::middleware(['auth', 'is_superadmin', 'prevent_back_history'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/', [facturacioncontroller::class, 'dashboard'])->name('index');
     Route::get('/facturacion', [facturacioncontroller::class, 'facturacion'])->name('facturacion');
     Route::get('/reporte/descargar', [facturacioncontroller::class, 'descargarReporte'])->name('reporte.descargar');

@@ -1,4 +1,5 @@
-<aside class="w-64 bg-[#1565C0] border-r border-[#0D47A1] h-screen sticky top-0 self-start flex-shrink-0 flex flex-col shadow-lg">
+<aside
+    class="w-64 bg-[#1565C0] border-r border-[#0D47A1] h-screen sticky top-0 self-start flex-shrink-0 flex flex-col shadow-lg">
 
     <!-- HEADER -->
     <div class="flex items-center gap-3 p-6 border-b border-[#0D47A1]">
@@ -7,7 +8,7 @@
         </div>
         <div>
             <h1 class="text-lg font-bold text-white">Nomitech</h1>
-            <p class="text-sm text-blue-200">Administrador</p>
+            <p class="text-sm text-blue-200">{{ Auth::user()->rol->nombre ?? 'Usuario' }}</p>
         </div>
     </div>
 

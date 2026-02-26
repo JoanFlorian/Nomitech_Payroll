@@ -243,7 +243,9 @@
                 <!-- DIRECCIÓN -->
                 <div class="md:col-span-2">
                     <x-form.input name="direccion_empresa" icon="home" placeholder="Dirección Empresa" 
-                        x-model="direccion_empresa" @blur="handleBlur('direccion_empresa')" @input="handleInput('direccion_empresa')" />
+                        x-model="direccion_empresa" @blur="handleBlur('direccion_empresa')" @input="handleInput('direccion_empresa')"
+                        maxlength="150"
+                        title="Incluye referencia vial (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No)." />
                     <span x-show="errors.direccion_empresa" x-text="errors.direccion_empresa" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
 

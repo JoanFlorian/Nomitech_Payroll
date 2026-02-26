@@ -59,7 +59,12 @@ class RegisterRequest extends FormRequest
             'pais' => ['required', 'string', 'size:2', 'in:CO'],
             'id_departamento' => ['required', 'exists:departamento,id_departamento'],
             'id_ciudad' => ['required', 'exists:ciudad,id_ciudad'],
-            'direccion_empresa' => ['required', 'string', 'min:5', 'max:60'],
+            'direccion_empresa' => [
+                'required',
+                'string',
+                'max:150',
+                'regex:/^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i'
+            ],
 
             // USUARIO
             'documento' => [
@@ -132,6 +137,7 @@ class RegisterRequest extends FormRequest
             'documento.regex' => 'El documento debe contener solo números.',
             'telefono_celular.regex' => 'El teléfono celular debe tener 10 dígitos y comenzar con 3.',
             'email.unique' => 'Este correo ya está registrado. Si no terminaste tu pago, por favor inicia sesión para continuar.',
+            'direccion_empresa.regex' => 'La dirección debe incluir texto válido y una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).',
         ];
     }
 

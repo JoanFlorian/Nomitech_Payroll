@@ -129,7 +129,8 @@
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="salario"
-                min="0"
+                min="0.01"
+                max="999999999"
                 step="0.01"
                 required/>
             <div class="error-message invalid-feedback" data-error="salario"></div>
@@ -143,6 +144,9 @@
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="codigo_interno"
+                minlength="3"
+                maxlength="20"
+                pattern="[A-Za-z0-9\-]+"
                 required/>
             <div class="error-message invalid-feedback" data-error="codigo_interno"></div>
         </div>

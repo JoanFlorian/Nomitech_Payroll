@@ -79,8 +79,10 @@ export default (initialData = {}) => ({
             },
             direccion_empresa: () => {
                 if (!value) return "La Dirección es requerida";
-                if (value.length < 5) return "La Dirección debe tener al menos 5 caracteres";
-                if (value.length > 60) return "La Dirección no debe exceder los 60 caracteres";
+                if (value.length > 150) return "La Dirección no debe exceder los 150 caracteres";
+                if (!/^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i.test(value)) {
+                    return "La Dirección debe incluir una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).";
+                }
                 return null;
             },
             documento: () => {

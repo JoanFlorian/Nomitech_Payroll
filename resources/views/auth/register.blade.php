@@ -205,7 +205,7 @@
                             title="Debe ser numérico de un solo dígito."
                             :readonly="isset($isPendingPayment) && $isPendingPayment"
                             class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500 text-center px-0' : '' }}" />
-                        <span x-show="errors.nit_dv && !(isset($isPendingPayment) && $isPendingPayment)" 
+                        <span x-show="errors.nit_dv && !{{ (isset($isPendingPayment) && $isPendingPayment) ? 'true' : 'false' }}" 
                               x-text="errors.nit_dv" 
                               class="text-red-500 text-xs mt-1 block font-medium"></span>
                     </div>

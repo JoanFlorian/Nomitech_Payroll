@@ -66,7 +66,7 @@ export default (initialData = {}) => ({
                 return null;
             },
             nit_dv: () => {
-                if (this.nit_dv === '') return "El DV es requerido";
+                if (value === '') return "El DV es requerido";
                 if (!/^[0-9]+$/.test(value)) return "El DV debe ser numérico";
                 if (value.length !== 1) return "El DV debe tener exactamente 1 dígito";
                 return null;

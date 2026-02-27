@@ -20,6 +20,6 @@
         {{ $attributes }}
     />
     @error($name)
-        <span class="text-red-500 text-xs absolute -bottom-4 left-0">{{ $message }}</span>
+        <span class="text-red-500 text-[11px] absolute top-full left-0 leading-tight mt-1">{{ $message }}</span>
     @enderror
 </div>

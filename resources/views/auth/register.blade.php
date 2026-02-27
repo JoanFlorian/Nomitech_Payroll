@@ -197,7 +197,7 @@
                             oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric"
                             :readonly="isset($isPendingPayment) && $isPendingPayment"
                             class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500' : '' }}" />
-                        <span x-show="errors.nit" x-text="errors.nit" class="text-red-500 text-xs mt-1 block"></span>
+                        <span x-show="errors.nit" x-text="errors.nit" class="text-red-500 text-[11px] leading-tight mt-1 block font-medium"></span>
                     </div>
                     <div class="col-span-1">
                         <x-form.input name="nit_dv" icon="pin" placeholder="DV" required 

@@ -109,6 +109,7 @@ Route::middleware(['auth', 'is_superadmin', 'prevent_back_history'])->prefix('su
 
     // Empresas
     Route::get('/empresas', [EmpresaController::class, 'index'])->name('empresas.index');
+    Route::get('/empresas/{empresa}/validar-correo', [EmpresaController::class, 'validarCorreo'])->name('empresas.validar-correo');
     Route::get('/empresas/{empresa}', [EmpresaController::class, 'show'])->name('empresas.show');
     Route::put('/empresas/{empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
 

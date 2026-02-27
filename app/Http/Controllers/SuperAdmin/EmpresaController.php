@@ -70,6 +70,46 @@ class EmpresaController extends Controller
         return view('superadmin.empresas-show', compact('empresa', 'ciudades'));
     }
 
+    public function validarCorreo(Request $request, Empresa $empresa)
+    {
+        $correo = trim((string) $request->input('correo', ''));
+
+        if ($correo === '') {
+            return response()->json([
+                'available' => false,
+                'message' => 'El correo es obligatorio.',
+            ]);
+        }
+
+        if (mb_strlen($correo, 'UTF-8') > 100) {
+            return response()->json([
+                'available' => false,
+                'message' => 'El correo debe tener máximo 100 caracteres.',
+            ]);
+        }
+
+        if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'El correo no tiene un formato válido.',
+            ]);
+        }
+
+        $correoNormalizado = mb_strtoupper($correo, 'UTF-8');
+
+        $existeEnOtraEmpresa = Empresa::query()
+            ->whereRaw('UPPER(correo) = ?', [$correoNormalizado])
+            ->where('id_empresa', '!=', $empresa->id_empresa)
+            ->exists();
+
+        return response()->json([
+            'available' => !$existeEnOtraEmpresa,
+            'message' => $existeEnOtraEmpresa
+                ? 'Este correo ya está registrado en otra empresa.'
+                : '',
+        ]);
+    }
+
    public function update(Request $request, Empresa $empresa)
 {
     $validated = $request->validate([

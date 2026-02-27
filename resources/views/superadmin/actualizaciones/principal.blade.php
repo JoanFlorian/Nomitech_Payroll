@@ -62,14 +62,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
 
             @foreach($modulos as $modulo)
-                <div class="relative bg-white rounded-lg shadow-sm border p-4 flex flex-col justify-between">
-
-                    <!-- Botón Ver (esquina superior derecha) -->
-                    <button onclick="openModal('{{ $modulo['titulo'] }}')"
-                        class="absolute top-2 right-2 bg-gray-100 hover:bg-gray-200 text-sm rounded-full px-2 py-1 shadow"
-                        title="Ver detalles">
-                        <i class="bi bi-eye text-sm"></i>
-                    </button>
+                <div class="bg-white rounded-lg shadow-sm border p-4 flex flex-col justify-between">
 
                     <div>
                         <div class="w-10 h-10 flex items-center justify-center rounded-md bg-blue-100 text-blue-900 mb-3">
@@ -113,13 +106,13 @@
 
     </div>
 
-    <!-- MODAL VER DETALLE (DE DEVELOP, MAS COMPLETO) -->
-    <div id="modalVer" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+    <!-- MODAL DE LISTADO PARA EDICIÓN -->
+    <div id="modalListadoEdicion" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div
             class="bg-white rounded-2xl w-full max-w-6xl p-8 relative shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col">
 
             <!-- Botón cerrar -->
-            <button onclick="closeModal()"
+            <button onclick="closeListadoModal()"
                 class="absolute top-5 right-5 w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 transition-all duration-200">
                 <i class="bi bi-x-lg text-lg"></i>
             </button>
@@ -132,8 +125,8 @@
                         <i class="bi bi-table text-white text-xl"></i>
                     </div>
                     <div>
-                        <h2 id="modalTitulo" class="text-2xl font-bold text-gray-900">Detalle</h2>
-                        <p id="modalSubtitulo" class="text-gray-500 text-sm mt-0.5">Visualiza y gestiona los registros</p>
+                        <h2 id="modalTitulo" class="text-2xl font-bold text-gray-900">Edición</h2>
+                        <p id="modalSubtitulo" class="text-gray-500 text-sm mt-0.5">Selecciona un registro para editar</p>
                     </div>
                 </div>
             </div>
@@ -145,6 +138,26 @@
 
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    @if ($errors->any())
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                if (!window.Swal) {
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Errores de validación',
+                    html: `<ul style="text-align:left; margin:0; padding-left:1rem;">@foreach ($errors->all() as $error)<li>{{ addslashes($error) }}</li>@endforeach</ul>`,
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#2563eb'
+                });
+            });
+        </script>
+    @endif
 
     <script>
         // Mapeo de nombre de módulo a tipo de configuración
@@ -166,7 +179,8 @@
             'tipos hora recargo': 'tipos_hora_recargo'
         };
 
-        const departamentosJS = @json($departamentos->map(fn($d) => ['id' => $d->codigo, 'nombre' => $d->nombre]));
+        const departamentosJS = @json($departamentos->map(fn($d) => ['id' => $d->id_departamento, 'nombre' => $d->nombre]));
+        const ciudadesJS = @json(($ciudades ?? collect())->map(fn($c) => ['id' => $c->id_ciudad, 'nombre' => $c->nombre]));
 
         const configuracionesCliente = {
             ciudades: {
@@ -174,7 +188,7 @@
                 campos: [
                     { clave: 'codigo', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
                     { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-pin-map', requerido: true },
-                    { clave: 'cod_dep', label: 'Departamento', tipo: 'select', icono: 'bi-map', requerido: true, opciones: departamentosJS }
+                    { clave: 'id_departamento', label: 'Departamento', tipo: 'select', icono: 'bi-map', requerido: true, opciones: departamentosJS }
                 ],
                 campoId: 'id_ciudad',
                 ruta: '/superadmin/actualizar/:id',
@@ -192,8 +206,10 @@
             bancos: {
                 tipo: 'bancos',
                 campos: [
-                    { clave: 'codigo', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
-                    { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-bank', requerido: true }
+                    { clave: 'id_banco', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
+                    { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-bank', requerido: true },
+                    { clave: 'telefono', label: 'Teléfono', tipo: 'text', icono: 'bi-telephone' },
+                    { clave: 'direccion', label: 'Dirección', tipo: 'text', icono: 'bi-geo-alt' }
                 ],
                 campoId: 'id_banco',
                 ruta: '/superadmin/actualizar/:id',
@@ -227,7 +243,10 @@
             eps: {
                 tipo: 'eps',
                 campos: [
-                    { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-heart-pulse', requerido: true }
+                    { clave: 'id_eps', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
+                    { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-heart-pulse', requerido: true },
+                    { clave: 'telefono', label: 'Teléfono', tipo: 'text', icono: 'bi-telephone' },
+                    { clave: 'direccion', label: 'Dirección', tipo: 'text', icono: 'bi-geo-alt' }
                 ],
                 campoId: 'id_eps',
                 ruta: '/superadmin/actualizar/:id',
@@ -236,7 +255,10 @@
             arl: {
                 tipo: 'arl',
                 campos: [
-                    { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-shield-check', requerido: true }
+                    { clave: 'id_arl', label: 'Código', tipo: 'text', icono: 'bi-hash', requerido: true },
+                    { clave: 'nombre', label: 'Nombre', tipo: 'text', icono: 'bi-shield-check', requerido: true },
+                    { clave: 'telefono', label: 'Teléfono', tipo: 'text', icono: 'bi-telephone' },
+                    { clave: 'direccion', label: 'Dirección', tipo: 'text', icono: 'bi-geo-alt' }
                 ],
                 campoId: 'id_arl',
                 ruta: '/superadmin/actualizar/:id',
@@ -247,6 +269,7 @@
                 campos: [
                     { clave: 'nit', label: 'NIT', tipo: 'text', icono: 'bi-hash', requerido: true },
                     { clave: 'razon_social', label: 'Razón Social', tipo: 'text', icono: 'bi-card-text', requerido: true },
+                    { clave: 'id_ciudad', label: 'Ciudad', tipo: 'select', icono: 'bi-geo-alt', requerido: true, opciones: ciudadesJS },
                     { clave: 'doc_representante', label: 'Doc. Representante', tipo: 'text', icono: 'bi-person-badge' },
                     { clave: 'direccion', label: 'Dirección', tipo: 'text', icono: 'bi-map-pin' },
                     { clave: 'correo', label: 'Correo', tipo: 'email', icono: 'bi-envelope' },
@@ -324,29 +347,89 @@
             }
         };
 
-        function openModal(modulo) {
-            document.getElementById('modalVer').classList.remove('hidden');
-            document.getElementById('modalVer').classList.add('flex');
+        const estadoListadoEdicion = {
+            tipo: null,
+            q: '',
+            debounce: null,
+            requestId: 0,
+        };
+
+        function cargarListadoEdicion(page = 1) {
+            if (!estadoListadoEdicion.tipo) {
+                return;
+            }
+
+            const requestIdActual = ++estadoListadoEdicion.requestId;
+
+            const params = new URLSearchParams();
+            params.set('page', String(page));
+            if (estadoListadoEdicion.q) {
+                params.set('q', estadoListadoEdicion.q);
+            }
+
+            fetch(`/superadmin/actualizaciones/${estadoListadoEdicion.tipo}/datos?${params.toString()}`)
+                .then(res => res.text())
+                .then(html => {
+                    if (requestIdActual !== estadoListadoEdicion.requestId) {
+                        return;
+                    }
+
+                    document.getElementById('modalContenido').innerHTML = html;
+
+                    const inputBuscar = document.getElementById('buscar-items');
+                    if (inputBuscar) {
+                        inputBuscar.value = estadoListadoEdicion.q;
+                        inputBuscar.addEventListener('input', function () {
+                            buscarListadoEdicion(this.value);
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.log(err);
+                    document.getElementById('modalContenido').innerHTML = '<p class="text-red-600">No se pudo cargar el listado.</p>';
+                });
+        }
+
+        function openListadoModal(modulo) {
+            document.getElementById('modalListadoEdicion').classList.remove('hidden');
+            document.getElementById('modalListadoEdicion').classList.add('flex');
             document.getElementById('modalTitulo').innerText = 'Datos de ' + modulo;
 
             // Convertir nombre de módulo a tipo
             const tipo = moduloATipo[modulo.toLowerCase()] || modulo.toLowerCase().replace(/\s+/g, '_').replace(/[óá]/g, 'o');
+            estadoListadoEdicion.tipo = tipo;
+            estadoListadoEdicion.q = '';
+            cargarListadoEdicion(1);
+        }
 
-            fetch(`/superadmin/actualizaciones/${tipo}/datos`)
-                .then(res => res.text())
-                .then(html => {
-                    document.getElementById('modalContenido').innerHTML = html;
-                })
-                .catch(err => console.log(err));
+        function buscarListadoEdicion(valor) {
+            estadoListadoEdicion.q = (valor || '').trim();
+
+            if (estadoListadoEdicion.debounce) {
+                clearTimeout(estadoListadoEdicion.debounce);
+            }
+
+            estadoListadoEdicion.debounce = setTimeout(() => {
+                cargarListadoEdicion(1);
+            }, 250);
+        }
+
+        function cambiarPaginaListadoEdicion(page) {
+            const numeroPagina = Number(page);
+            if (!Number.isInteger(numeroPagina) || numeroPagina < 1) {
+                return;
+            }
+
+            cargarListadoEdicion(numeroPagina);
         }
 
         function abrirEdicion(modulo) {
-            openModal(modulo);
+            openListadoModal(modulo);
         }
 
-        function closeModal() {
-            document.getElementById('modalVer').classList.add('hidden');
-            document.getElementById('modalVer').classList.remove('flex');
+        function closeListadoModal() {
+            document.getElementById('modalListadoEdicion').classList.add('hidden');
+            document.getElementById('modalListadoEdicion').classList.remove('flex');
         }
 
         function openAddModal(modulo) {

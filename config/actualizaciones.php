@@ -20,10 +20,12 @@ return [
             'campos' => [
                 ['clave' => 'codigo', 'label' => 'Código', 'tipo' => 'text', 'icono' => 'bi-hash', 'requerido' => true],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-pin-map', 'requerido' => true],
+                ['clave' => 'id_departamento', 'label' => 'Departamento', 'tipo' => 'select', 'icono' => 'bi-map', 'requerido' => true],
             ],
             'columnas' => [
                 ['clave' => 'codigo', 'label' => 'Código', 'tipo' => 'simple'],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'simple'],
+                ['clave' => 'id_departamento', 'label' => 'Departamento', 'tipo' => 'relacion', 'relacion' => 'departamento', 'mostrar' => 'nombre'],
             ],
             'colores' => ['icono' => 'from-orange-400 to-orange-600', 'boton' => 'from-orange-500 to-orange-600'],
         ],
@@ -42,6 +44,7 @@ return [
             'modelo' => Banco::class, 'campoId' => 'id_banco', 'tabla' => 'banco',
             'titulo' => 'Bancos', 'desc' => 'Gestiona entidades bancarias para nómina.', 'icono' => 'bi-bank',
             'campos' => [
+                ['clave' => 'id_banco', 'label' => 'Código', 'tipo' => 'text', 'icono' => 'bi-hash', 'requerido' => true],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-bank', 'requerido' => true],
                 ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'text', 'icono' => 'bi-telephone'],
                 ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'text', 'icono' => 'bi-geo-alt'],
@@ -73,6 +76,7 @@ return [
             'modelo' => Eps::class, 'campoId' => 'id_eps', 'tabla' => 'eps',
             'titulo' => 'EPS', 'desc' => 'Gestión de entidades de salud.', 'icono' => 'bi-heart-pulse',
             'campos' => [
+                ['clave' => 'id_eps', 'label' => 'Código', 'tipo' => 'text', 'icono' => 'bi-hash', 'requerido' => true],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-heart-pulse', 'requerido' => true],
                 ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'text', 'icono' => 'bi-telephone'],
                 ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'text', 'icono' => 'bi-geo-alt'],
@@ -89,6 +93,7 @@ return [
             'modelo' => Arl::class, 'campoId' => 'id_arl', 'tabla' => 'arl',
             'titulo' => 'ARL', 'desc' => 'Gestión de riesgos laborales.', 'icono' => 'bi-shield-check',
             'campos' => [
+                ['clave' => 'id_arl', 'label' => 'Código', 'tipo' => 'text', 'icono' => 'bi-hash', 'requerido' => true],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-shield-check', 'requerido' => true],
                 ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'text', 'icono' => 'bi-telephone'],
                 ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'text', 'icono' => 'bi-geo-alt'],

@@ -90,9 +90,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const baseMensual = Number(document.getElementById('salario_base_mensual').value || 0);
     const errorBox = document.getElementById('step2Error');
     const money = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v || 0);
+    const normalizeNumberString = (raw) => {
+        if (raw === '' || raw === null || raw === undefined) return '';
+
+        let normalized = String(raw).replace(/[^\d,.-]/g, '').trim();
+        if (!normalized) return '';
+
+        const hasComma = normalized.includes(',');
+        const hasDot = normalized.includes('.');
+
+        if (hasComma && hasDot) {
+            if (normalized.lastIndexOf(',') > normalized.lastIndexOf('.')) {
+                normalized = normalized.replace(/\./g, '').replace(',', '.');
+            } else {
+                normalized = normalized.replace(/,/g, '');
+            }
+        } else if (hasDot && !hasComma) {
+            const dotCount = (normalized.match(/\./g) || []).length;
+            if (dotCount > 1) {
+                normalized = normalized.replace(/\./g, '');
+            } else {
+                const parts = normalized.split('.');
+                if (parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1) {
+                    normalized = normalized.replace('.', '');
+                }
+            }
+        } else if (hasComma && !hasDot) {
+            const commaCount = (normalized.match(/,/g) || []).length;
+            if (commaCount > 1) {
+                normalized = normalized.replace(/,/g, '');
+            } else {
+                const parts = normalized.split(',');
+                if (parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1) {
+                    normalized = normalized.replace(',', '');
+                } else {
+                    normalized = normalized.replace(',', '.');
+                }
+            }
+        }
+
+        return normalized;
+    };
     const toNumber = (raw) => {
         if (raw === '' || raw === null || raw === undefined) return 0;
-        const num = Number(String(raw).replace(',', '.'));
+        const num = Number(normalizeNumberString(raw));
         return Number.isFinite(num) && num >= 0 ? num : NaN;
     };
     const sanitizeInput = (input) => {

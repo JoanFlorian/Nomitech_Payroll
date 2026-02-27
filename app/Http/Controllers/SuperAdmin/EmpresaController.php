@@ -9,7 +9,6 @@ use App\Models\Ciudad;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 class EmpresaController extends Controller
 {
@@ -98,10 +97,10 @@ class EmpresaController extends Controller
                 ->ignore($empresa->id_empresa, 'id_empresa')
         ],
 
-        // TELÉFONO (10 dígitos numéricos)
+        // TELÉFONO (máximo 11 dígitos numéricos)
         'telefono' => [
             'required',
-            'digits:10'
+            'regex:/^[0-9]{1,11}$/'
         ],
 
         // DOCUMENTO REPRESENTANTE
@@ -153,7 +152,7 @@ class EmpresaController extends Controller
         'correo.unique' => 'Este correo ya está registrado en otra empresa.',
 
         'telefono.required' => 'El teléfono es obligatorio.',
-        'telefono.digits' => 'El teléfono debe tener exactamente 10 dígitos.',
+        'telefono.regex' => 'El teléfono debe contener solo números y máximo 11 dígitos.',
 
         'doc_representante.required' => 'El documento del representante es obligatorio.',
         'doc_representante.exists' => 'No existe un usuario con ese documento.',
@@ -165,8 +164,8 @@ class EmpresaController extends Controller
         'primer_apellido.regex' => 'El apellido solo puede contener letras.',
     ]);
 
-    // 🔥 NORMALIZACIÓN PROFESIONAL
-    $normalizarNombre = function (?string $valor): ?string {
+    // Normalización en MAYÚSCULAS
+    $normalizarTexto = function (?string $valor): ?string {
         if ($valor === null) {
             return null;
         }
@@ -177,15 +176,15 @@ class EmpresaController extends Controller
             return null;
         }
 
-        return Str::title(mb_strtolower($valor, 'UTF-8'));
+        return mb_strtoupper($valor, 'UTF-8');
     };
 
-    $validated['primer_nombre'] = $normalizarNombre($validated['primer_nombre']);
-    $validated['segundo_nombre'] = $normalizarNombre($validated['segundo_nombre'] ?? null);
-    $validated['primer_apellido'] = $normalizarNombre($validated['primer_apellido']);
-    $validated['segundo_apellido'] = $normalizarNombre($validated['segundo_apellido'] ?? null);
-    $validated['correo'] = strtolower(trim($validated['correo']));
-    $validated['direccion'] = trim($validated['direccion']);
+    $validated['primer_nombre'] = $normalizarTexto($validated['primer_nombre']);
+    $validated['segundo_nombre'] = $normalizarTexto($validated['segundo_nombre'] ?? null);
+    $validated['primer_apellido'] = $normalizarTexto($validated['primer_apellido']);
+    $validated['segundo_apellido'] = $normalizarTexto($validated['segundo_apellido'] ?? null);
+    $validated['correo'] = mb_strtoupper(trim($validated['correo']), 'UTF-8');
+    $validated['direccion'] = mb_strtoupper(trim($validated['direccion']), 'UTF-8');
 
     DB::transaction(function () use ($empresa, $validated) {
         // ACTUALIZAR EMPRESA

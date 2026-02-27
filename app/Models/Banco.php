@@ -13,6 +13,7 @@ class Banco extends Model
     protected $primaryKey = 'id_banco';
 
     protected $fillable = [
+        'id_banco',
         'nombre',
         'telefono',
         'direccion',

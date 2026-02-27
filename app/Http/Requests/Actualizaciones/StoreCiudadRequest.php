@@ -14,9 +14,9 @@ class StoreCiudadRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'codigo' => 'bail|required|string|regex:/^[0-9]+$/|min:2|max:11|unique:ciudad,codigo',
+            'codigo' => 'bail|required|string|regex:/^[0-9]{8}$/|unique:ciudad,codigo',
             'nombre' => 'bail|required|string|regex:/^[A-Za-zÁ-Úá-úñÑ\s]+$/|min:2|max:100|unique:ciudad,nombre',
-            'cod_dep' => 'bail|required|exists:departamento,codigo',
+            'id_departamento' => 'bail|required|exists:departamento,id_departamento',
         ];
     }
 
@@ -24,9 +24,7 @@ class StoreCiudadRequest extends FormRequest
     {
         return [
             'codigo.required' => 'El código es obligatorio.',
-            'codigo.regex' => 'El código debe contener solo números positivos.',
-            'codigo.min' => 'El código debe tener al menos 2 dígitos.',
-            'codigo.max' => 'El código no puede tener más de 11 dígitos.',
+            'codigo.regex' => 'El código debe tener exactamente 8 dígitos numéricos.',
             'codigo.unique' => 'El código ya se encuentra registrado.',
 
             'nombre.required' => 'El nombre es obligatorio.',
@@ -35,8 +33,8 @@ class StoreCiudadRequest extends FormRequest
             'nombre.max' => 'El nombre no puede tener más de 100 caracteres.',
             'nombre.unique' => 'El nombre ya se encuentra registrado.',
 
-            'cod_dep.required' => 'El departamento es obligatorio.',
-            'cod_dep.exists' => 'El departamento seleccionado no es válido.',
+            'id_departamento.required' => 'El departamento es obligatorio.',
+            'id_departamento.exists' => 'El departamento seleccionado no es válido.',
         ];
     }
 }

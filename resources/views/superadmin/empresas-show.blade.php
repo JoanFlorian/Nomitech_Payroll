@@ -155,6 +155,8 @@
                     <label for="direccion" class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
                     <input id="direccion" type="text" name="direccion" value="{{ old('direccion', $empresa->direccion) }}"
                         autocomplete="street-address" placeholder="Ej: Carrera 3 # 15 - 90"
+                        pattern="(?=.*[A-Za-z])(?=.*([Cc]alle|[Cc]arrera|[Cc]ra\.?|[Cc]l\.?|[Aa]v\.?|[Aa]venida|[Tt]ransversal|[Dd]iagonal|#|[Nn]o\.?)).+"
+                        title="La dirección debe tener formato válido (Calle, Carrera, Av, #, etc)."
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 overflow-x-auto whitespace-nowrap focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('direccion') border-red-500 @enderror"
                         required maxlength="150">
                     @error('direccion')
@@ -166,7 +168,7 @@
                 <div>
                     <label for="telefono" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                     <input id="telefono" type="text" name="telefono" value="{{ old('telefono', $empresa->telefono) }}"
-                        inputmode="numeric" pattern="^[0-9]{10}$" maxlength="10" autocomplete="tel-national"
+                        inputmode="numeric" pattern="^[0-9]{1,11}$" maxlength="11" autocomplete="tel-national"
                         placeholder="Ej: 3115990394"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none @error('telefono') border-red-500 @enderror"
                         required>
@@ -362,13 +364,8 @@
                 return false;
             }
 
-            if (valor.length < 10) {
-                setTelefonoError(`Faltan ${10 - valor.length} dígitos.`);
-                return false;
-            }
-
-            if (valor.length > 10) {
-                setTelefonoError('El teléfono debe tener máximo 10 dígitos.');
+            if (valor.length > 11) {
+                setTelefonoError('El teléfono debe tener máximo 11 dígitos.');
                 return false;
             }
 
@@ -421,7 +418,7 @@
 
             telefonoInput.addEventListener('input', function () {
                 const valorOriginal = telefonoInput.value;
-                const soloNumeros = valorOriginal.replace(/\D/g, '').slice(0, 10);
+                const soloNumeros = valorOriginal.replace(/\D/g, '').slice(0, 11);
 
                 if (valorOriginal !== soloNumeros) {
                     telefonoInput.value = soloNumeros;
@@ -521,7 +518,7 @@
                 const telefono = (telefonoInput?.value || '').trim();
                 const documento = (docInput?.value || '').trim();
 
-                const telefonoValido = /^\d{10}$/.test(telefono);
+                const telefonoValido = /^\d{1,11}$/.test(telefono);
                 const documentoValido = /^\d{7,12}$/.test(documento);
 
                 if (!telefonoValido) {

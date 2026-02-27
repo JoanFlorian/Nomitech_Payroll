@@ -101,6 +101,11 @@ function validateEmployee() {
 
 function validateFecha() {
     if (!fechaInput.value) return markError(fechaInput), showFechaError('La fecha de pago es obligatoria.'), false;
+    if (isEditingNomina) {
+        markOk(fechaInput);
+        fechaError.classList.add('hidden');
+        return true;
+    }
     const today = new Date(); today.setHours(0,0,0,0);
     const fecha = new Date(`${fechaInput.value}T00:00:00`);
     if (fecha < today) return markError(fechaInput), showFechaError('La fecha de pago no puede ser menor a hoy.'), false;

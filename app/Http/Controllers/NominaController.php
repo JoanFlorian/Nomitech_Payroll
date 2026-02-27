@@ -254,7 +254,7 @@ class NominaController extends Controller
             $step1 = session('nomina.step1', []);
         }
 
-        $isEditing = (bool) session('nomina.editing_id');
+        $isEditing = (bool) (session('nomina.editing_id') || $request->boolean('editing'));
 
         return view('nomina.step1', compact('step1', 'isEditing'));
     }
@@ -322,6 +322,12 @@ class NominaController extends Controller
 
     public function postStep2(Request $request)
     {
+        $request->merge(
+            collect(array_keys(self::STEP2_RATES))
+                ->mapWithKeys(fn (string $key) => [$key => $this->parseNumber($request->input($key))])
+                ->all()
+        );
+
         $validated = $request->validate(
             array_fill_keys(array_keys(self::STEP2_RATES), 'nullable|numeric|min:0'),
             self::VALIDATION_MESSAGES
@@ -356,6 +362,12 @@ class NominaController extends Controller
 
     public function postStep2Ingresos(Request $request)
     {
+        $request->merge([
+            'bonificaciones' => $this->parseNumber($request->input('bonificaciones')),
+            'comisiones' => $this->parseNumber($request->input('comisiones')),
+            'otros_devengos' => $this->parseNumber($request->input('otros_devengos')),
+        ]);
+
         $validated = $request->validate([
             'bonificaciones' => 'nullable|numeric|min:0',
             'comisiones' => 'nullable|numeric|min:0',
@@ -495,6 +507,12 @@ class NominaController extends Controller
             }
 
             $isEditing = (bool) session('nomina.editing_id');
+
+            $request->merge([
+                'retencion_fuente' => $this->parseNumber($request->input('retencion_fuente')),
+                'embargo_fiscal' => $this->parseNumber($request->input('embargo_fiscal')),
+                'pension_voluntaria' => $this->parseNumber($request->input('pension_voluntaria')),
+            ]);
 
             $validated = $request->validate([
                 'retencion_fuente' => 'nullable|numeric|min:0',

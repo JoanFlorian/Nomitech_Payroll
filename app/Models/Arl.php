@@ -11,7 +11,7 @@ class Arl extends Model
 
     protected $table = 'arl';
     protected $primaryKey = 'id_arl';
-    protected $fillable = ['nombre', 'telefono', 'direccion'];
+    protected $fillable = ['id_arl', 'nombre', 'telefono', 'direccion'];
 
     public function contratos()
     {

@@ -49,6 +49,11 @@
                         type="text" 
                         name="codigo" 
                         placeholder="05001" 
+                        inputmode="numeric"
+                        minlength="8"
+                        maxlength="8"
+                        pattern="[0-9]{8}"
+                        title="El código debe contener exactamente 8 dígitos."
                         class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-3 focus:ring-green-200 transition hover:border-gray-400" 
                         required
                     >
@@ -63,6 +68,9 @@
                         type="text" 
                         name="nombre" 
                         placeholder="Medellín" 
+                        maxlength="100"
+                        pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$"
+                        title="El nombre solo permite letras y espacios."
                         class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 focus:ring-3 focus:ring-purple-200 transition hover:border-gray-400" 
                         required
                     >
@@ -88,3 +96,42 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalCiudad = document.getElementById('modalAgregarCiudad');
+        if (!modalCiudad) {
+            return;
+        }
+
+        const formCiudad = modalCiudad.querySelector('form');
+        const inputCodigo = modalCiudad.querySelector('input[name="codigo"]');
+        const inputNombre = modalCiudad.querySelector('input[name="nombre"]');
+
+        if (inputCodigo) {
+            inputCodigo.addEventListener('input', function () {
+                this.value = (this.value || '').replace(/\D/g, '').slice(0, 8);
+            });
+        }
+
+        if (inputNombre) {
+            inputNombre.addEventListener('input', function () {
+                this.value = (this.value || '')
+                    .replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]/g, '')
+                    .replace(/\s{2,}/g, ' ');
+            });
+            inputNombre.addEventListener('blur', function () {
+                this.value = (this.value || '').trim();
+            });
+        }
+
+        if (formCiudad) {
+            formCiudad.addEventListener('submit', function (e) {
+                if (!this.checkValidity()) {
+                    e.preventDefault();
+                    this.reportValidity();
+                }
+            });
+        }
+    });
+</script>

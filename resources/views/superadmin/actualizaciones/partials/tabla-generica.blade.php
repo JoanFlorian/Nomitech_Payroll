@@ -5,12 +5,13 @@
         <input 
             type="text" 
             id="buscar-items" 
+            value="{{ $config['q'] ?? '' }}"
             placeholder="Buscar {{ $config['placeholderBusqueda'] ?? 'por nombre o código' }}..." 
             class="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-100 transition bg-gray-50 hover:bg-white"
         >
     </div>
     <p class="text-xs text-gray-400 mt-2 ml-1">
-        <i class="bi bi-info-circle mr-1"></i>{{ $items->count() }} registros encontrados
+        <i class="bi bi-info-circle mr-1"></i>{{ $items->total() }} registros encontrados
     </p>
 </div>
 
@@ -26,12 +27,23 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
+            @if($items->count() === 0)
+            <tr>
+                <td colspan="{{ count($config['columnas']) + 1 }}" class="px-5 py-8 text-center text-sm text-gray-500">
+                    No hay resultados para la búsqueda actual.
+                </td>
+            </tr>
+            @endif
             @foreach($items as $index => $item)
             <tr class="fila-item hover:bg-blue-50/50 transition-colors duration-150 {{ $index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30' }}">
                 @foreach($config['columnas'] as $columna)
                 <td class="px-5 py-3.5 columna-{{ $columna['clave'] }} text-gray-700 font-medium">
                     @if($columna['tipo'] === 'relacion')
-                        {{ $item->{$columna['relacion']}?->{$columna['mostrar']} ?? 'N/A' }}
+                        @if(($columna['relacion'] ?? null) === 'departamento')
+                            {{ mb_strtoupper($item->{$columna['relacion']}?->{$columna['mostrar']} ?? 'N/A', 'UTF-8') }}
+                        @else
+                            {{ $item->{$columna['relacion']}?->{$columna['mostrar']} ?? 'N/A' }}
+                        @endif
                     @else
                         @if($columna['clave'] === 'telefono')
                             @if($item->{$columna['clave']})
@@ -67,28 +79,33 @@
     </table>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const inputBuscar = document.getElementById('buscar-items');
-    
-    if (inputBuscar) {
-        inputBuscar.addEventListener('keyup', function() {
-            const busqueda = this.value.toLowerCase().trim();
-            const filas = document.querySelectorAll('.fila-item');
-            
-            filas.forEach(fila => {
-                let texto = '';
-                fila.querySelectorAll('[class^="columna-"]').forEach(celda => {
-                    texto += celda.textContent.toLowerCase().trim() + ' ';
-                });
-                
-                const coincide = texto.includes(busqueda);
-                fila.style.display = coincide ? '' : 'none';
-            });
-        });
-    }
-});
+@if($items->lastPage() > 1)
+    <div class="mt-4 flex items-center justify-between gap-3 text-sm">
+        <button
+            type="button"
+            onclick="cambiarPaginaListadoEdicion({{ $items->currentPage() - 1 }})"
+            class="px-3 py-2 rounded-md border {{ $items->onFirstPage() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50' }}"
+            {{ $items->onFirstPage() ? 'disabled' : '' }}
+        >
+            Anterior
+        </button>
 
+        <span class="text-gray-600">
+            Página {{ $items->currentPage() }} de {{ $items->lastPage() }}
+        </span>
+
+        <button
+            type="button"
+            onclick="cambiarPaginaListadoEdicion({{ $items->currentPage() + 1 }})"
+            class="px-3 py-2 rounded-md border {{ $items->hasMorePages() ? 'hover:bg-gray-50' : 'opacity-50 cursor-not-allowed' }}"
+            {{ $items->hasMorePages() ? '' : 'disabled' }}
+        >
+            Siguiente
+        </button>
+    </div>
+@endif
+
+<script>
 function abrirEdicion(tipo, id, datos, config) {
     abrirEdicionGenerico(tipo, id, datos, config);
 }

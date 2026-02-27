@@ -95,6 +95,8 @@
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                     focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="numero_cuenta"
+                inputmode="numeric"
+                pattern="[0-9]{6,20}"
                 minlength="6"
                 maxlength="20"
                 required>

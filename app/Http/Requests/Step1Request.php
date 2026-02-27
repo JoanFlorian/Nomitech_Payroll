@@ -43,7 +43,13 @@ class Step1Request extends FormRequest
             'ciudad'       => 'bail|required|integer|exists:ciudad,id_ciudad',
 
             // DIRECCIÓN
-            'direccion' => 'bail|required|string|min:5|max:100',
+            'direccion' => [
+                'bail',
+                'required',
+                'string',
+                'max:150',
+                'regex:/^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i'
+            ],
         ];
     }
 
@@ -144,8 +150,8 @@ class Step1Request extends FormRequest
             |--------------------------------------------------------------------------
             */
             'direccion.required' => 'La dirección es obligatoria.',
-            'direccion.min'      => 'La dirección debe tener mínimo 5 caracteres.',
-            'direccion.max'      => 'La dirección no puede superar 100 caracteres.',
+            'direccion.max'      => 'La dirección no puede superar 150 caracteres.',
+            'direccion.regex'    => 'La dirección debe incluir texto válido y una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).',
         ];
     }
     /**

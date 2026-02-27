@@ -55,10 +55,14 @@
                 Número de documento 
             </label>
             <input
-                type="number"
+                type="text"
                 placeholder="Ej: 1234567890"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="doc"
+                inputmode="numeric"
+                minlength="5"
+                maxlength="15"
+                pattern="[0-9]{5,15}"
                 required>
             <div class="error-message invalid-feedback" data-error="doc"></div>
         </div>
@@ -72,6 +76,8 @@
                 placeholder="Ej: Pérez"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
                 name="primer_apellido"
+                minlength="3"
+                maxlength="30"
                 required>
             <div class="error-message invalid-feedback" data-error="primer_apellido"></div>
         </div>
@@ -84,7 +90,9 @@
                 type="text"
                 placeholder="Ej: Gómez"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
-                name="segundo_apellido">
+                name="segundo_apellido"
+                minlength="3"
+                maxlength="30">
             <div class="error-message invalid-feedback" data-error="segundo_apellido"></div>
         </div>
 
@@ -97,6 +105,8 @@
                 placeholder="Ej: Juan"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
                 name="primer_nombre"
+                minlength="3"
+                maxlength="30"
                 required>
             <div class="error-message invalid-feedback" data-error="primer_nombre"></div>
         </div>
@@ -109,7 +119,9 @@
                 type="text"
                 placeholder="Ej: Carlos"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
-                name="otros_nombres">
+                name="otros_nombres"
+                minlength="3"
+                maxlength="50">
             <div class="error-message invalid-feedback" data-error="otros_nombres"></div>
         </div>
 
@@ -122,6 +134,7 @@
                 placeholder="Ej: empleado@empresa.com"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                 name="email"
+                maxlength="255"
                 required>
             <div class="error-message invalid-feedback" data-error="email"></div>
         </div>
@@ -135,6 +148,10 @@
                 placeholder="Ej: 3001234567"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                 name="telefono"
+                inputmode="numeric"
+                minlength="7"
+                maxlength="15"
+                pattern="[0-9]{7,15}"
                 required>
             <div class="error-message invalid-feedback" data-error="telefono"></div>
         </div>
@@ -176,6 +193,8 @@
                 placeholder="Ej: Calle 10 #42-15"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
                 name="direccion"
+                maxlength="150"
+                title="Incluye referencia vial (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No)."
                 required>
             <div class="error-message invalid-feedback" data-error="direccion"></div>
         </div>

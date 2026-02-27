@@ -30,6 +30,7 @@ class RegisterRequest extends FormRequest
             'primer_nombre' => $this->primer_nombre ? str_replace(' ', '', ucwords(strtolower($this->primer_nombre))) : null,
             'otros_nombres' => $this->otros_nombres ? ucwords(strtolower($this->otros_nombres)) : null,
             'razon_social' => $this->razon_social ? strtoupper($this->razon_social) : null,
+            'nit' => $this->nit ? trim($this->nit) : null,
             'email' => $this->email ? strtolower($this->email) : null,
             'direccion_empresa' => $this->direccion_empresa ? trim($this->direccion_empresa) : null,
         ]);
@@ -53,13 +54,38 @@ class RegisterRequest extends FormRequest
                 'string',
                 'regex:/^[0-9]+$/',
                 'digits_between:5,15',
-                Rule::unique('empresa', 'nit')->ignore($empresaId, 'id_empresa')
+                function ($attribute, $value, $fail) use ($empresaId) {
+                    $isUpdateFlow = $this->routeIs('licencia.pending.post');
+
+                    // Buscamos cualquier empresa con ese NIT en toda la base de datos
+                    $existente = \App\Models\Empresa::where('nit', $value)->first();
+
+                    if ($existente) {
+                        // Solo permitimos ignorar el duplicado si estamos en el flujo de actualización de un registro pendiente
+                        if ($isUpdateFlow && $empresaId && $existente->id_empresa == $empresaId) {
+                            return;
+                        }
+
+                        // De lo contrario, es un duplicado prohibido (como en el flujo de Registro nuevo)
+                        $licencia = $existente->licencia; // Relación definida en el modelo Empresa
+                        if ($licencia && $licencia->fecha_fin) {
+                            $fail("Este NIT ya se encuentra registrado.");
+                        } else {
+                            $fail("Este NIT esta registrado y tiene un pago pendiente. Por favor inicia sesion para completar tu pago.");
+                        }
+                    }
+                }
             ],
             'nit_dv' => ['required', 'numeric', 'digits:1'],
             'pais' => ['required', 'string', 'size:2', 'in:CO'],
             'id_departamento' => ['required', 'exists:departamento,id_departamento'],
             'id_ciudad' => ['required', 'exists:ciudad,id_ciudad'],
-            'direccion_empresa' => ['required', 'string', 'min:5', 'max:60'],
+            'direccion_empresa' => [
+                'required',
+                'string',
+                'max:150',
+                'regex:/^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i'
+            ],
 
             // USUARIO
             'documento' => [
@@ -67,7 +93,7 @@ class RegisterRequest extends FormRequest
                 'string',
                 'regex:/^[0-9]+$/',
                 'digits_between:6,12',
-                Rule::unique('usuario', 'doc')->ignore($user?->doc, 'doc')
+                Rule::unique('usuario', 'doc')->ignore($this->routeIs('register') ? null : $user?->doc, 'doc')
             ],
             'id_tipo_doc' => ['required', 'exists:tipo_doc,id_tipo_doc'],
             'primer_apellido' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/'],
@@ -80,7 +106,29 @@ class RegisterRequest extends FormRequest
                 'string',
                 'email',
                 'max:255',
-                Rule::unique('usuario', 'correo')->ignore($user?->doc, 'doc')
+                function ($attribute, $value, $fail) use ($user) {
+                    $isUpdateFlow = $this->routeIs('licencia.pending.post');
+
+                    // Buscamos cualquier usuario con ese correo
+                    $existente = \App\Models\Usuario::where('correo', $value)->first();
+
+                    if ($existente) {
+                        // Solo permitimos ignorar el duplicado si estamos en el flujo de actualización y es el mismo usuario
+                        if ($isUpdateFlow && $user && $existente->doc == $user->doc) {
+                            return;
+                        }
+
+                        // De lo contrario, buscamos la empresa asociada para ver su estado de pago
+                        $empresaExistente = $existente->empresa()->first();
+                        $licencia = $empresaExistente ? $empresaExistente->licencia : null;
+
+                        if ($licencia && $licencia->fecha_fin) {
+                            $fail("Este correo ya se encuentra registrado.");
+                        } else {
+                            $fail("Este correo esta registrado y tiene un pago pendiente. Por favor inicia sesion para completar tu pago.");
+                        }
+                    }
+                }
             ],
             'password' => [
                 'required',
@@ -127,11 +175,14 @@ class RegisterRequest extends FormRequest
             'regex' => 'El formato del :attribute es inválido.',
 
             // Custom rules/overrides
+            'razon_social.required' => 'La razón social es requerida.',
+            'direccion_empresa.required' => 'La dirección de empresa es requerida.',
+            'password.required' => 'La contraseña es requerida.',
             'nit.regex' => 'El NIT debe contener solo números.',
-            'nit.unique' => 'Ya existe una cuenta con este NIT. Si no terminaste tu pago, por favor inicia sesión para continuar.',
             'documento.regex' => 'El documento debe contener solo números.',
             'telefono_celular.regex' => 'El teléfono celular debe tener exactamente 10 dígitos numéricos.',
             'email.unique' => 'Este correo ya está registrado. Si no terminaste tu pago, por favor inicia sesión para continuar.',
+            'direccion_empresa.regex' => 'La dirección debe incluir texto válido y una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).',
         ];
     }
 

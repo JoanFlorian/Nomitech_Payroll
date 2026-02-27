@@ -3,6 +3,7 @@
     const NUMBERS_REGEX = /^[0-9]+$/;
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const ACCOUNT_REGEX = /^[0-9]{6,20}$/;
+    const INTERNAL_CODE_REGEX = /^[A-Za-z0-9\-]+$/;
 
     function getErrorElement(form, fieldName) {
         return form.querySelector(`[data-error="${fieldName}"]`);
@@ -79,9 +80,9 @@
             case 'id_tipo_doc':
                 return validarInput(input, value !== '', 'El tipo de documento es obligatorio.', showError);
             case 'doc':
-                return validarInput(input, NUMBERS_REGEX.test(value) && value.length >= 5, 'El documento debe tener solo números y mínimo 5 dígitos.', showError);
+                return validarInput(input, NUMBERS_REGEX.test(value) && value.length >= 5 && value.length <= 15, 'El documento debe tener entre 5 y 15 dígitos numéricos.', showError);
             case 'primer_nombre':
-                return validarInput(input, LETTERS_REGEX.test(value) && value.length >= 3, 'El primer nombre debe tener solo letras y mínimo 3 caracteres.', showError);
+                return validarInput(input, LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El primer nombre debe tener entre 3 y 30 caracteres, solo letras y espacios.', showError);
             case 'otros_nombres':
                 if (value === '') {
                     if (showError) {
@@ -89,9 +90,9 @@
                     }
                     return true;
                 }
-                return validarInput(input, LETTERS_REGEX.test(value) && value.length >= 3, 'Los otros nombres deben tener solo letras y mínimo 3 caracteres.', showError);
+                return validarInput(input, LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 50, 'Los otros nombres deben tener entre 3 y 50 caracteres, solo letras y espacios.', showError);
             case 'primer_apellido':
-                return validarInput(input, LETTERS_REGEX.test(value) && value.length >= 3, 'El primer apellido debe tener solo letras y mínimo 3 caracteres.', showError);
+                return validarInput(input, LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El primer apellido debe tener entre 3 y 30 caracteres, solo letras y espacios.', showError);
             case 'segundo_apellido':
                 if (value === '') {
                     if (showError) {
@@ -99,17 +100,17 @@
                     }
                     return true;
                 }
-                return validarInput(input, LETTERS_REGEX.test(value) && value.length >= 3, 'El segundo apellido debe tener solo letras y mínimo 3 caracteres.', showError);
+                return validarInput(input, LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El segundo apellido debe tener entre 3 y 30 caracteres, solo letras y espacios.', showError);
             case 'email':
-                return validarInput(input, EMAIL_REGEX.test(value), 'Debe ingresar un correo electrónico válido.', showError);
+                return validarInput(input, EMAIL_REGEX.test(value) && value.length <= 255, 'Debe ingresar un correo electrónico válido de máximo 255 caracteres.', showError);
             case 'telefono':
-                return validarInput(input, NUMBERS_REGEX.test(value) && value.length >= 7, 'El teléfono debe tener solo números y mínimo 7 dígitos.', showError);
+                return validarInput(input, NUMBERS_REGEX.test(value) && value.length >= 7 && value.length <= 15, 'El teléfono debe tener entre 7 y 15 dígitos numéricos.', showError);
             case 'departamento':
                 return validarInput(input, value !== '', 'El departamento es obligatorio.', showError);
             case 'ciudad':
                 return validarInput(input, value !== '', 'La ciudad es obligatoria.', showError);
             case 'direccion':
-                return validarInput(input, value.length >= 5, 'La dirección debe tener mínimo 5 caracteres.', showError);
+                return validarInput(input, value.length >= 5 && value.length <= 100, 'La dirección debe tener entre 5 y 100 caracteres.', showError);
             default:
                 return true;
         }
@@ -142,7 +143,7 @@
             case 'nivel_riesgo':
                 return validarInput(input, value !== '', 'El nivel de riesgo es obligatorio.', showError);
             case 'salario':
-                return validarInput(input, NUMBERS_REGEX.test(value.replace(/\./g, '')) && Number(value) > 0, 'El salario debe ser numérico y mayor que 0.', showError);
+                return validarInput(input, value !== '' && !Number.isNaN(Number(value)) && Number(value) >= 0.01 && Number(value) <= 999999999, 'El salario debe estar entre 0.01 y 999999999.', showError);
             case 'id_tipo_trabajador':
                 return validarInput(input, value !== '', 'El tipo de trabajador es obligatorio.', showError);
             case 'id_sub_tipo_trabajador':
@@ -152,7 +153,7 @@
             case 'horas_diarias':
                 return validarInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
             case 'codigo_interno':
-                return validarInput(input, value.length >= 3, 'El código interno debe tener mínimo 3 caracteres.', showError);
+                return validarInput(input, INTERNAL_CODE_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 caracteres y solo letras, números o guiones.', showError);
             default:
                 return true;
         }

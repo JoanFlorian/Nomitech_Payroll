@@ -25,7 +25,11 @@
 
     <div x-data="{ 
         showExitModal: false,
-        handleBack() {
+        exitUrl: '/',
+        handleBack(url = '/') {
+            // Guardar la URL de destino
+            this.exitUrl = url;
+
             // Obtener todos los campos de entrada del formulario (incluyendo ocultos para los searchable-select)
             const formInputs = Array.from(document.querySelectorAll('form input, form select'));
             
@@ -43,7 +47,7 @@
             if (hasData) {
                 this.showExitModal = true;
             } else {
-                window.location.href = '/';
+                window.location.href = url;
             }
         }
     }">
@@ -97,7 +101,7 @@
                                 class="px-5 py-2.5 text-sm font-bold text-white bg-[#2AA58C] rounded-xl hover:bg-[#248f76] transition-all duration-200 cursor-pointer shadow-md shadow-[#2AA58C]/20">
                             Continuar registro
                         </button>
-                        <a href="/" 
+                        <a :href="exitUrl" 
                            class="px-5 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-all cursor-pointer shadow-md shadow-red-200">
                             Salir y borrar
                         </a>
@@ -108,7 +112,7 @@
 
         <x-ui.card>
             <div class="mb-6 -mt-2">
-                <button @click="handleBack()" type="button" class="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-[#2AA58C] transition-all group focus:outline-none">
+                <button @click="handleBack('/')" type="button" class="inline-flex items-center text-sm font-semibold text-gray-500 hover:text-[#2AA58C] transition-all group focus:outline-none">
                     <span class="material-icons text-xl mr-2 group-hover:-translate-x-1 transition-transform">arrow_back</span>
                     Volver al inicio
                 </button>
@@ -193,7 +197,7 @@
                             oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric"
                             :readonly="isset($isPendingPayment) && $isPendingPayment"
                             class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500' : '' }}" />
-                        <span x-show="errors.nit" x-text="errors.nit" class="text-red-500 text-xs mt-1 block"></span>
+                        <span x-show="errors.nit" x-text="errors.nit" class="text-red-500 text-[11px] leading-tight mt-1 block font-medium"></span>
                     </div>
                     <div class="col-span-1">
                         <x-form.input name="nit_dv" icon="pin" placeholder="DV" required 
@@ -243,7 +247,9 @@
                 <!-- DIRECCIÓN -->
                 <div class="md:col-span-2">
                     <x-form.input name="direccion_empresa" icon="home" placeholder="Dirección Empresa" 
-                        x-model="direccion_empresa" @blur="handleBlur('direccion_empresa')" @input="handleInput('direccion_empresa')" />
+                        x-model="direccion_empresa" @blur="handleBlur('direccion_empresa')" @input="handleInput('direccion_empresa')"
+                        maxlength="150"
+                        title="Incluye referencia vial (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No)." />
                     <span x-show="errors.direccion_empresa" x-text="errors.direccion_empresa" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
 
@@ -332,7 +338,7 @@
             </x-form.grid>
 
             <div class="mt-10 flex flex-col-reverse sm:flex-row items-center justify-end gap-4">
-                <x-ui.button-secondary href="{{ route('login') }}">
+                <x-ui.button-secondary @click="handleBack('{{ route('login') }}')">
                     Atrás
                 </x-ui.button-secondary>
 

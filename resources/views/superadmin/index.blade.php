@@ -2,15 +2,15 @@
 
 @section('content')
     <div class="flex flex-col gap-8" x-data="{ 
-        selectedYear: '{{ $selectedYear }}',
-        selectedDate: '{{ $selectedDate }}',
-        updateYear() {
-            window.location.href = '{{ route('superadmin.index') }}?year=' + this.selectedYear;
-        },
-        updateDate(date) {
-            window.location.href = '{{ route('superadmin.index') }}?date=' + date;
-        }
-    }">
+                selectedYear: '{{ $selectedYear }}',
+                selectedDate: '{{ $selectedDate }}',
+                updateYear() {
+                    window.location.href = '{{ route('superadmin.index') }}?year=' + this.selectedYear;
+                },
+                updateDate(date) {
+                    window.location.href = '{{ route('superadmin.index') }}?date=' + date;
+                }
+            }">
 
         <!-- NAVBAR SUPERIOR -->
         <div class="flex justify-between items-center bg-transparent">
@@ -50,7 +50,8 @@
         <!-- RENDIMIENTO DE VENTAS -->
         <div class="flex flex-col gap-1">
             <h2 class="text-2xl font-bold text-gray-800">Rendimiento de Ventas
-                {{ $selectedDate ? 'del ' . \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') : 'Anuales' }}</h2>
+                {{ $selectedDate ? 'del ' . \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') : 'Anuales' }}
+            </h2>
             <p class="text-sm text-gray-500">Análisis detallado de ingresos acumulados y metas comerciales del período
                 actual.</p>
         </div>
@@ -76,7 +77,8 @@
                 <div class="flex -space-x-2 mt-2">
                     <div
                         class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center border-2 border-white text-[10px] font-bold text-blue-600">
-                        {{ $topLicenseCount }}</div>
+                        {{ $topLicenseCount }}
+                    </div>
                     <div class="w-6 h-6 rounded-full bg-gray-300 border-2 border-white"></div>
                     <div class="w-6 h-6 rounded-full bg-gray-400 border-2 border-white"></div>
                 </div>
@@ -93,23 +95,22 @@
                 @endif
             </div>
             <div class="flex justify-end gap-3">
-            <div class="relative flex items-center bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 transition cursor-pointer group">
-                <i class="bi bi-calendar-event text-gray-500 mr-2 group-hover:text-blue-600 transition"></i>
-                <span class="text-sm font-semibold text-gray-700 mr-2">
-                    {{ $selectedDate ? \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') : 'Filtrar Fecha' }}
-                </span>
-                <input type="date" 
-                       min="2026-01-01"
-                       @change="updateDate($event.target.value)"
-                       value="{{ $selectedDate }}"
-                       class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
+                <div
+                    class="relative flex items-center bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 transition cursor-pointer group">
+                    <i class="bi bi-calendar-event text-gray-500 mr-2 group-hover:text-blue-600 transition"></i>
+                    <span class="text-sm font-semibold text-gray-700 mr-2">
+                        {{ $selectedDate ? \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') : 'Filtrar Fecha' }}
+                    </span>
+                    <input type="date" min="2026-01-01" @change="updateDate($event.target.value)"
+                        @click="typeof $el.showPicker === 'function' && $el.showPicker()"
+                        value="{{ $selectedDate }}" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
+                </div>
+                <a href="{{ route('superadmin.reporte.descargar', ['year' => $selectedYear, 'date' => $selectedDate]) }}"
+                    class="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-semibold text-white hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+                    <i class="bi bi-download"></i>
+                    Descargar Reporte {{ $selectedDate ? 'Diario' : 'Anual' }}
+                </a>
             </div>
-            <a href="{{ route('superadmin.reporte.descargar', ['year' => $selectedYear, 'date' => $selectedDate]) }}" 
-               class="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-semibold text-white hover:bg-blue-700 transition shadow-lg shadow-blue-200">
-                <i class="bi bi-download"></i>
-                Descargar Reporte {{ $selectedDate ? 'Diario' : 'Anual' }}
-            </a>
-        </div>
         </div>
 
         <!-- GRÁFICO DE INGRESOS -->
@@ -118,7 +119,8 @@
                 <div class="flex flex-col">
                     <h3 class="text-xl font-bold text-gray-800">Ingresos Acumulados</h3>
                     <p class="text-[10px] text-gray-400 uppercase tracking-wider">VISUALIZACIÓN DE CRECIMIENTO
-                        {{ $selectedDate ? 'POR HORAS' : 'MENSUAL' }}</p>
+                        {{ $selectedDate ? 'POR HORAS' : 'MENSUAL' }}
+                    </p>
                 </div>
                 <div class="flex gap-4">
                     <div class="flex items-center gap-2 text-xs font-bold text-gray-500">

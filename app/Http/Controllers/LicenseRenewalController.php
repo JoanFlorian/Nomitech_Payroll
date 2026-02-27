@@ -165,7 +165,7 @@ class LicenseRenewalController extends Controller
         $plan = Plan::findOrFail($request->plan_id);
 
         return DB::transaction(function () use ($request, $user, $empresa, $plan) {
-            // 1. Update User (Ignoring doc PK change for stability)
+            // 1. Update User scalar fields first (before potential PK change)
             $user->update([
                 'id_tipo_doc' => $request->id_tipo_doc,
                 'primer_apellido' => $request->primer_apellido,
@@ -181,13 +181,28 @@ class LicenseRenewalController extends Controller
                 $user->update(['contrasena' => Hash::make($request->password)]);
             }
 
-            // 2. Update Empresa (Ignoring NIT change for stability)
+            // 1b. If documento (PK) changed, update via raw SQL
+            // ON UPDATE CASCADE propagates to: empresa.doc_representante,
+            // usuario_empresa.doc, usuario_modulo.doc, contrato.doc
+            $newDoc = $request->documento;
+            if ($newDoc !== $user->doc) {
+                $oldDoc = $user->doc;
+                DB::statement('UPDATE usuario SET doc = ? WHERE doc = ?', [$newDoc, $oldDoc]);
+
+                // Re-fetch user with new PK and re-authenticate
+                $user = \App\Models\Usuario::find($newDoc);
+                Auth::login($user);
+            }
+
+            // 2. Update Empresa (including NIT and NIT DV)
             $empresa->update([
                 'razon_social' => $request->razon_social,
+                'nit' => $request->nit,
+                'nit_dv' => $request->nit_dv,
                 'id_ciudad' => $request->id_ciudad,
                 'direccion' => $request->direccion_empresa,
                 'telefono' => $request->telefono_celular,
-                'correo' => $request->email, // Synchronize email
+                'correo' => $request->email,
             ]);
 
             // 3. Update Licencia

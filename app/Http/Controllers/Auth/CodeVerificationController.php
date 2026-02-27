@@ -6,10 +6,21 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class CodeVerificationController extends Controller
 {
+    private const MAX_VERIFY_ATTEMPTS = 5;
+    private const VERIFY_LOCKOUT_SECONDS = 300; // 5 minutes
+
+    private function verifyThrottleKey(string $correo): string
+    {
+        return 'password-verify-attempt:' . strtolower(trim($correo));
+    }
+
     /**
      * Display the code verification form.
      */
@@ -46,6 +57,30 @@ class CodeVerificationController extends Controller
             ]
         );
 
+        $throttleKey = $this->verifyThrottleKey($correo);
+        $blockKey = 'password-verify-blocked:' . $correo;
+
+        if (Cache::has($blockKey)) {
+            $seconds = max(0, Cache::get($blockKey) - now()->timestamp);
+            if ($seconds > 0) {
+                $minutes = (int) ceil($seconds / 60);
+                return back()->withErrors([
+                    'code' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por {$minutes} minutos.",
+                ]);
+            } else {
+                Cache::forget($blockKey);
+            }
+        }
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_VERIFY_ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $minutes = (int) ceil($seconds / 60);
+
+            return back()->withErrors([
+                'code' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por {$minutes} minutos.",
+            ]);
+        }
+
         $record = DB::table('password_reset_tokens')
             ->where('email', $correo)
             ->first();
@@ -58,7 +93,24 @@ class CodeVerificationController extends Controller
         }
 
         if (!$isValidToken) {
-            return back()->withErrors(['code' => 'El código ingresado es incorrecto.']);
+            RateLimiter::hit($throttleKey, 3600); // Mantenemos historial por 1 hora
+            $attempts = RateLimiter::attempts($throttleKey);
+
+            if ($attempts >= self::MAX_VERIFY_ATTEMPTS) {
+                Cache::put($blockKey, now()->addMinutes(5)->timestamp, now()->addMinutes(5));
+                RateLimiter::clear($throttleKey);
+
+                Log::warning("Verify lockout triggered for {$correo}. Blocked for 5 minutes.");
+
+                return back()->withErrors([
+                    'code' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por 5 minutos.",
+                ]);
+            }
+
+            $remaining = max(self::MAX_VERIFY_ATTEMPTS - $attempts, 0);
+            $attemptText = $remaining === 1 ? 'intento' : 'intentos';
+
+            return back()->withErrors(['code' => "El código ingresado es incorrecto. Te quedan {$remaining} {$attemptText}."]);
         }
 
         // Verificar expiración (por ejemplo, 60 minutos según la expiración en config/auth.php)
@@ -66,6 +118,9 @@ class CodeVerificationController extends Controller
         if (Carbon::parse($record->created_at)->addMinutes($expires)->isPast()) {
             return back()->withErrors(['code' => 'El código ha expirado. Por favor, solicita uno nuevo.']);
         }
+
+        // Limpiar intentos fallidos al tener éxito
+        RateLimiter::clear($throttleKey);
 
         // Store verification in session to allow access to reset form
         session(['password_reset_verified_email' => $correo, 'password_reset_verified_code' => $code]);

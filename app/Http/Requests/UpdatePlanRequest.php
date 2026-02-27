@@ -15,6 +15,20 @@ class UpdatePlanRequest extends FormRequest
     }
 
     /**
+     * Preparar los datos antes de la validación.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('features')) {
+            $this->merge([
+                'features' => array_values(array_filter($this->features ?? [], function ($value) {
+                    return !is_null($value) && trim($value) !== '';
+                }))
+            ]);
+        }
+    }
+
+    /**
      * Reglas de validación para actualizar un plan.
      */
     public function rules(): array
@@ -25,12 +39,13 @@ class UpdatePlanRequest extends FormRequest
         return [
             'nombre' => 'required|string|min:3|max:60|unique:plan,nombre,' . $planId,
             'valor' => ['required', 'numeric', 'gt:0', 'max:99999999.99', 'regex:/^\d+(\.\d{1,2})?$/'],
-            'duracion' => 'required|integer|in:1,3,6,12',
+            'duracion' => 'required|integer|min:1|max:12',
             'num_empl' => 'required|integer|min:1|max:10000',
             'descripcion' => 'nullable|string|max:500',
             'destacado' => 'nullable|boolean',
-            'features' => 'nullable|array|max:4',
-            'features.*' => 'nullable|string|max:255',
+            'features' => 'required|array|min:2|max:4',
+            'features.*' => 'required|string|min:3|max:25|regex:/^(?=.*[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ])[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\.,\-&\/\(\)]+$/u',
+            'stripe_price_id' => 'nullable|string|starts_with:price_',
         ];
     }
 
@@ -57,7 +72,8 @@ class UpdatePlanRequest extends FormRequest
             // duracion
             'duracion.required' => 'La duración del plan es obligatoria.',
             'duracion.integer' => 'La duración del plan debe ser un número entero.',
-            'duracion.in' => 'La duración del plan debe ser 1, 3, 6 o 12 meses.',
+            'duracion.min' => 'La duración del plan debe ser al menos :min mes.',
+            'duracion.max' => 'La duración del plan no puede exceder :max meses.',
 
             // num_empl
             'num_empl.required' => 'El número de empleados es obligatorio.',
@@ -70,10 +86,16 @@ class UpdatePlanRequest extends FormRequest
             'descripcion.max' => 'La descripción no puede exceder :max caracteres.',
 
             // features
+            'features.required' => 'Debes ingresar al menos 2 características para el plan.',
             'features.array' => 'Las características deben ser una lista.',
+            'features.min' => 'El plan debe tener al menos :min características.',
             'features.max' => 'Se permite un máximo de :max características.',
-            'features.*.string' => 'Cada característica debe ser texto.',
+            'features.*.required' => 'La característica no puede estar vacía.',
+            'features.*.string' => 'Cada característica debe ser una cadena de texto.',
+            'features.*.min' => 'Cada característica debe tener al menos :min caracteres.',
             'features.*.max' => 'Cada característica no puede exceder :max caracteres.',
+            'features.*.regex' => 'Cada característica debe contener al menos una letra y solo permite letras, números, espacios y los símbolos (/,.&-).',
+            'stripe_price_id.starts_with' => 'El Stripe Price Id debe comenzar con "price_".',
         ];
     }
 }

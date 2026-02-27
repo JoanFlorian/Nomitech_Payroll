@@ -48,7 +48,13 @@ class RegisterRequest extends FormRequest
 
         return [
             // EMPRESA
-            'razon_social' => ['required', 'string', 'min:3', 'max:60'],
+            'razon_social' => [
+                'required',
+                'string',
+                'min:3',
+                'max:60',
+                'regex:/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\.,\-&]+$/u'
+            ],
             'nit' => [
                 'required',
                 'string',
@@ -169,6 +175,7 @@ class RegisterRequest extends FormRequest
             'unique' => 'El :attribute ya se encuentra registrado.',
             'exists' => 'El :attribute seleccionado es inválido.',
             'numeric' => 'El :attribute debe ser un número.',
+            'digits' => 'El :attribute debe tener exactamente :digits dígito(s).',
             'digits_between' => 'El :attribute debe tener entre :min y :max dígitos.',
             'email' => 'El :attribute debe ser una dirección de correo válida.',
             'confirmed' => 'La confirmación de la contraseña no coincide.',
@@ -176,7 +183,15 @@ class RegisterRequest extends FormRequest
 
             // Custom rules/overrides
             'razon_social.required' => 'La razón social es requerida.',
+            'razon_social.regex' => 'La razón social solo puede contener letras, números, espacios y los símbolos (.,-&).',
+            'razon_social.max' => 'La razón social no debe exceder los :max caracteres.',
+            'razon_social.min' => 'La razón social debe tener al menos :min caracteres.',
+            'razon_social.string' => 'La razón social debe ser una cadena de texto.',
+
             'direccion_empresa.required' => 'La dirección de empresa es requerida.',
+            'direccion_empresa.max' => 'La dirección de la empresa no debe exceder los :max caracteres.',
+            'direccion_empresa.string' => 'La dirección de la empresa debe ser una cadena de texto.',
+
             'password.required' => 'La contraseña es requerida.',
             'nit.regex' => 'El NIT debe contener solo números.',
             'documento.regex' => 'El documento debe contener solo números.',

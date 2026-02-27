@@ -72,7 +72,10 @@
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="text-sm text-gray-600">
-                                            {{ $plan->duracion }} {{ Str::plural('mes', $plan->duracion) }}
+                                            @php
+                                                $meses = floor($plan->duracion / 30);
+                                            @endphp
+                                            {{ $meses }} {{ $meses == 1 ? 'mes' : 'meses' }}
                                         </div>
                                     </td>
                                     <td class="px-6 py-4">

@@ -41,16 +41,17 @@ class ForgotPasswordController extends Controller
      */
     public function sendResetLinkEmail(Request $request)
     {
-        $correo = strtolower(trim((string) $request->input('correo', '')));
-
         $request->validate(
-            ['correo' => 'required|email|max:255'],
+            ['correo' => 'required|string|email|max:255'],
             [
                 'correo.required' => 'El campo correo electrónico es obligatorio.',
+                'correo.string' => 'El correo electrónico debe ser texto válido.',
                 'correo.email' => 'El correo electrónico no es válido.',
                 'correo.max' => 'El correo electrónico no puede superar los 255 caracteres.',
             ]
         );
+
+        $correo = strtolower(trim((string) $request->input('correo', '')));
 
         $throttleKey = $this->tokenRequestThrottleKey($correo);
         $cooldownKey = $this->tokenCooldownThrottleKey($correo);

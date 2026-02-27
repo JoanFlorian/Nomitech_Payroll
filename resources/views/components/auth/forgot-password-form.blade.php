@@ -12,7 +12,7 @@
 
     <div class="mb-6">
         <label class="block text-[#424242] text-sm font-medium mb-2">Email</label>
-        <input type="email" name="correo" id="forgot-correo" placeholder="tu@email.com" required
+        <input type="email" name="correo" id="forgot-correo" placeholder="tu@email.com" required maxlength="255"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
             value="{{ old('correo') }}" aria-describedby="forgot-correo-feedback" />
         <p id="forgot-correo-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">El campo correo electrónico es obligatorio.</p>

@@ -3,7 +3,7 @@
     const NUMBERS_REGEX = /^[0-9]+$/;
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const ACCOUNT_REGEX = /^[0-9]{6,20}$/;
-    const INTERNAL_CODE_REGEX = /^[A-Za-z0-9\-]+$/;
+    const INTERNAL_CODE_REGEX = /^[0-9]+$/;
 
     function getErrorElement(form, fieldName) {
         return form.querySelector(`[data-error="${fieldName}"]`);
@@ -153,7 +153,7 @@
             case 'horas_diarias':
                 return validarInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
             case 'codigo_interno':
-                return validarInput(input, INTERNAL_CODE_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 caracteres y solo letras, números o guiones.', showError);
+                return validarInput(input, INTERNAL_CODE_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 dígitos numéricos.', showError);
             default:
                 return true;
         }

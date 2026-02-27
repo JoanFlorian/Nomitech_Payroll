@@ -36,7 +36,7 @@ class Step2Request extends FormRequest
             'nivel_riesgo' => 'bail|required|in:Nivel I,Nivel II,Nivel III,Nivel IV,Nivel V',
 
             // CODIGO INTERNO
-            'codigo_interno' => 'bail|required|string|min:3|max:20|regex:/^[A-Za-z0-9\-]+$/',
+            'codigo_interno' => 'bail|required|string|min:3|max:20|regex:/^[0-9]+$/',
 
             // BOOLEAN CHECK - alto_riesgo (checkbox)
             'alto_riesgo' => 'nullable|boolean',
@@ -134,7 +134,7 @@ class Step2Request extends FormRequest
             'codigo_interno.required' => 'El código interno es obligatorio.',
             'codigo_interno.min'      => 'El código interno debe tener mínimo 3 caracteres.',
             'codigo_interno.max'      => 'El código interno no puede superar 20 caracteres.',
-            'codigo_interno.regex'    => 'El código solo puede contener letras, números y guiones.',
+            'codigo_interno.regex'    => 'El código interno solo puede contener números.',
         ];
     }
 

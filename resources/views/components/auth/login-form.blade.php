@@ -15,15 +15,11 @@
 
     <div class="mb-6">
         <label class="block text-[#424242] text-sm font-medium mb-2">Contraseña</label>
-        <input type="password" name="contrasena" id="login-contrasena" placeholder="••••••••" required
+        <input type="password" name="contrasena" id="login-contrasena" placeholder="••••••••" required maxlength="64"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
             aria-describedby="login-contrasena-feedback" />
         <p id="login-contrasena-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">La contraseña es obligatoria.</p>
-        @error('contrasena')
-            @if (str_contains($message, 'incorrecta'))
-                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-            @endif
-        @enderror
+        @error('contrasena') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
     </div>
 
     <div class="mb-4">

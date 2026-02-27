@@ -26,9 +26,9 @@ class CodeVerificationController extends Controller
      */
     public function showVerifyForm(Request $request)
     {
-        $correo = $request->query('correo');
+        $correo = strtolower(trim((string) $request->query('correo', '')));
 
-        if (!$correo) {
+        if (!$correo || !filter_var($correo, FILTER_VALIDATE_EMAIL) || strlen($correo) > 255) {
             return redirect()->route('password.request');
         }
 

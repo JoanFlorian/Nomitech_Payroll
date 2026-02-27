@@ -80,7 +80,7 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         if ($this->has('codigo_interno')) {
-            $rules['codigo_interno'] = 'string|min:3|max:20|regex:/^[A-Za-z0-9\-]+$/';
+            $rules['codigo_interno'] = 'string|min:3|max:20|regex:/^[0-9]+$/';
         }
 
         if ($this->has('id_arl')) {
@@ -149,7 +149,7 @@ class UpdateEmployeePartialRequest extends FormRequest
             'fecha_fin.after_or_equal' => 'La fecha fin no puede ser menor que la fecha de inicio.',
             'salario.numeric' => 'El salario debe ser un valor numérico.',
             'salario.min' => 'El salario no puede ser negativo.',
-            'codigo_interno.regex' => 'El código solo puede contener letras, números y guiones.',
+            'codigo_interno.regex' => 'El código interno solo puede contener números.',
             'numero_cuenta.regex' => 'El número de cuenta solo puede contener dígitos.',
         ];
     }

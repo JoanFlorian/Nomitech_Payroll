@@ -32,6 +32,15 @@ class Plan extends Model
         'valor' => 'decimal:2',
     ];
 
+    /**
+     * Mutador para el nombre del plan.
+     * Siempre guarda el nombre con la primera letra de cada palabra en mayúscula.
+     */
+    public function setNombreAttribute($value)
+    {
+        $this->attributes['nombre'] = ucwords(mb_strtolower($value));
+    }
+
     public function licencias()
     {
         return $this->hasMany(Licencia::class, 'plan_id', 'id');

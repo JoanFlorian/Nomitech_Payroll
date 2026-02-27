@@ -23,6 +23,7 @@ class PlanController extends Controller
     public function store(StorePlanRequest $request)
     {
         $data = $request->validated();
+        $data['duracion'] = (int) $data['duracion'] * 30;
 
         // Capitalizar el nombre
         $data['nombre'] = ucwords(strtolower($data['nombre']));
@@ -50,6 +51,7 @@ class PlanController extends Controller
     public function update(UpdatePlanRequest $request, Plan $plan)
     {
         $data = $request->validated();
+        $data['duracion'] = (int) $data['duracion'] * 30;
 
         // Capitalizar el nombre
         $data['nombre'] = ucwords(strtolower($data['nombre']));

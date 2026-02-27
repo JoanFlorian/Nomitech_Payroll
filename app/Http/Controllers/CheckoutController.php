@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeSession;
 use App\Enums\PaymentStatus;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class CheckoutController extends Controller
 {
@@ -129,8 +131,8 @@ class CheckoutController extends Controller
      */
     public function checkStatus($sessionId)
     {
-        // 1. Cargar con impaciencia Licencia
-        $pago = Pago::with('licencia')->where('stripe_session_id', $sessionId)->first();
+        // 1. Cargar con impaciencia Licencia y Plan
+        $pago = Pago::with(['licencia.plan', 'plan'])->where('stripe_session_id', $sessionId)->first();
 
         // Verificación de seguridad: Pago no encontrado
         if (!$pago) {
@@ -140,20 +142,40 @@ class CheckoutController extends Controller
         // 2. Check Payment Status
         $isPaid = $pago->estado_pago === PaymentStatus::PAID->value;
 
-        // 3. Verificar estado de la licencia (verificar explícitamente fechas para evitar ambigüedad del atributo is_active)
+        // --- FALLBACK PROACTIVO (Webook tardío) ---
+        // Si no está pagado, y han pasado más de 20 segundos desde la última actualización (creación de sesión)
+        if (!$isPaid && $pago->updated_at->diffInSeconds(Carbon::now()) > 20) {
+            try {
+                Stripe::setApiKey(config('services.stripe.secret'));
+                $stripeSession = StripeSession::retrieve($sessionId);
+
+                // Si Stripe dice que ya está completado, activamos proactivamente
+                if ($stripeSession->payment_status === 'paid' && $stripeSession->status === 'complete') {
+                    $paymentService = app(\App\Services\PaymentService::class);
+                    $paymentService->completePayment($pago, $stripeSession->subscription);
+
+                    // Recargar pago para reflejar cambios
+                    $pago = $pago->fresh(['licencia']);
+                    $isPaid = true;
+                }
+            } catch (\Exception $e) {
+                Log::error("CheckoutController: Fallback check failed for Session: {$sessionId}. Error: " . $e->getMessage());
+            }
+        }
+        // ------------------------------------------
+
+        // 3. Verificar estado de la licencia
         $licencia = $pago->licencia;
 
-        // Verificación de seguridad: la Licencia podría ser nula si la relación se rompe (no debería suceder pero verificación segura)
         $isLicenseActive = false;
         if ($licencia) {
-            $isLicenseActive = $licencia->fecha_fin && $licencia->fecha_fin->gt(now());
+            $isLicenseActive = $licencia->fecha_fin && Carbon::parse($licencia->fecha_fin)->gt(Carbon::now());
         }
 
         // 4. Devolver 'paid' SÓLO si se cumplen ambas condiciones
         if ($isPaid && $isLicenseActive) {
             return response()->json([
                 'status' => 'paid'
-                // NO se devuelve user_id (según lo solicitado por simplicidad y seguridad)
             ]);
         }
 

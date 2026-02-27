@@ -14,7 +14,7 @@ use Carbon\Carbon;
 class ForgotPasswordController extends Controller
 {
     private const MAX_TOKEN_REQUESTS = 5;
-    private const TOKEN_REQUEST_LOCKOUT_SECONDS = 3600;
+    private const TOKEN_REQUEST_LOCKOUT_SECONDS = 300; // Change from 600 to 300 (5 minutes)
     private const TOKEN_REQUEST_COOLDOWN_SECONDS = 60;
 
     private function tokenRequestThrottleKey(string $correo): string
@@ -62,14 +62,17 @@ class ForgotPasswordController extends Controller
             ])->withInput($request->only('correo'))->with('cooldown_seconds', $seconds);
         }
 
-        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_TOKEN_REQUESTS)) {
+        $attempts = RateLimiter::attempts($throttleKey);
+        if ($attempts >= self::MAX_TOKEN_REQUESTS) {
             $seconds = RateLimiter::availableIn($throttleKey);
             $minutes = (int) ceil($seconds / 60);
             $minuteText = $minutes === 1 ? 'minuto' : 'minutos';
 
+            Log::warning("Rate limit reached for {$correo} at ForgotPasswordController. Attempts: {$attempts}");
+
             return back()->withErrors([
-                'correo' => "Ya solicitaste el token 5 veces para este correo. Intenta nuevamente en {$minutes} {$minuteText}.",
-            ])->withInput($request->only('correo'));
+                'correo' => "Has agotado tus 5 intentos. Por seguridad, tu capacidad de enviar códigos se ha bloqueado por {$minutes} {$minuteText}.",
+            ])->withInput($request->only('correo'))->with('cooldown_seconds', $seconds);
         }
 
         $user = Usuario::where('correo', $correo)->first();
@@ -92,6 +95,9 @@ class ForgotPasswordController extends Controller
 
         RateLimiter::hit($cooldownKey, self::TOKEN_REQUEST_COOLDOWN_SECONDS);
         RateLimiter::hit($throttleKey, self::TOKEN_REQUEST_LOCKOUT_SECONDS);
+        $currentAttempts = RateLimiter::attempts($throttleKey);
+
+        Log::info("Code sent to {$correo}. Current attempts: {$currentAttempts}/" . self::MAX_TOKEN_REQUESTS);
 
         // Send Email
         try {
@@ -106,7 +112,19 @@ class ForgotPasswordController extends Controller
             return back()->withErrors(['correo' => 'Hubo un error al enviar el correo. Por favor, intenta de nuevo más tarde.']);
         }
 
+        $statusMessage = 'Hemos enviado un código de verificación a tu correo electrónico.';
+
+        // Add warning message starting from 2nd attempt
+        if ($currentAttempts >= 2 && $currentAttempts <= self::MAX_TOKEN_REQUESTS) {
+            $remaining = max(self::MAX_TOKEN_REQUESTS - $currentAttempts, 0);
+            if ($remaining > 0) {
+                $statusMessage .= " Tienes {$remaining} intentos restantes antes de que el acceso se bloquee por 5 minutos.";
+            } else {
+                $statusMessage .= " Has alcanzado el límite de 5 intentos. No podrás solicitar más códigos por 5 minutos.";
+            }
+        }
+
         return redirect()->route('password.verify.form', ['correo' => $correo])
-            ->with('status', 'Hemos enviado un código de verificación a tu correo electrónico.');
+            ->with('status', $statusMessage);
     }
 }

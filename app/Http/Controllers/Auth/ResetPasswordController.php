@@ -7,10 +7,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use App\Models\Usuario;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+
+use Illuminate\Support\Facades\RateLimiter;
 
 class ResetPasswordController extends Controller
 {
+    private const MAX_RESET_ATTEMPTS = 5;
+    private const RESET_LOCKOUT_SECONDS = 300; // 5 minutes
+
+    private function resetThrottleKey(string $correo): string
+    {
+        return 'password-reset-attempt:' . strtolower(trim($correo));
+    }
+
     private function tokenMatchesRecord(string $token, ?object $record): bool
     {
         if (!$record) {
@@ -98,12 +109,40 @@ class ResetPasswordController extends Controller
             ]
         );
 
+        $throttleKey = $this->resetThrottleKey($correo);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_RESET_ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $minutes = (int) ceil($seconds / 60);
+
+            return back()->withErrors([
+                'correo' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por {$minutes} minutos.",
+            ]);
+        }
+
         $record = DB::table('password_reset_tokens')
             ->where('email', $correo)
             ->first();
 
         if (!$this->tokenMatchesRecord($token, $record)) {
-            return back()->withErrors(['correo' => 'El token de recuperación no es válido o ha expirado.']);
+            RateLimiter::hit($throttleKey, self::RESET_LOCKOUT_SECONDS);
+            $attempts = RateLimiter::attempts($throttleKey);
+
+            if ($attempts >= self::MAX_RESET_ATTEMPTS) {
+                $seconds = RateLimiter::availableIn($throttleKey);
+                $minutes = (int) ceil($seconds / 60);
+
+                Log::warning("Reset lockout triggered for {$correo}. Attempts: {$attempts}");
+
+                return back()->withErrors([
+                    'correo' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por {$minutes} minutos.",
+                ]);
+            }
+
+            $remaining = max(self::MAX_RESET_ATTEMPTS - $attempts, 0);
+            $attemptText = $remaining === 1 ? 'intento' : 'intentos';
+
+            return back()->withErrors(['correo' => "El token de recuperación no es válido o ha expirado. Te quedan {$remaining} {$attemptText}."]);
         }
 
         // Opcional: Verificar la expiración de nuevo
@@ -123,6 +162,9 @@ class ResetPasswordController extends Controller
 
         // Eliminar token
         DB::table('password_reset_tokens')->where('email', $correo)->delete();
+
+        // Clear attempts
+        RateLimiter::clear($throttleKey);
 
         // Clear session
         session()->forget(['password_reset_verified_email', 'password_reset_verified_code']);

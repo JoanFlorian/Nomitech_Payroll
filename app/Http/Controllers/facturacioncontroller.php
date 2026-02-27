@@ -16,7 +16,7 @@ class facturacioncontroller extends Controller
 {
     public function dashboard(Request $request)
     {
-        $selectedYear = $request->query('year', 2026);
+        $selectedYear = $request->query('year', date('Y'));
         $selectedDate = $request->query('date');
 
         // Consulta base para pagos - Usar 'paid' tal como se encuentra en BD
@@ -231,7 +231,7 @@ class facturacioncontroller extends Controller
     public function descargarReporte(Request $request)
     {
         try {
-            $selectedYear = $request->query('year', 2026);
+            $selectedYear = $request->query('year', date('Y'));
             $selectedDate = $request->query('date');
 
             // Reuse dashboard logic for data fetching

@@ -75,6 +75,9 @@ export default (initialData = {}) => ({
                 if (!value) return "La Razón Social es requerida";
                 if (value.length < 3) return "La Razón Social debe tener al menos 3 caracteres";
                 if (value.length > 60) return "La Razón Social no debe exceder los 60 caracteres";
+                if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\.,\-&]+$/.test(value)) {
+                    return "La Razón Social solo puede contener letras, números, espacios y los símbolos (.,-&)";
+                }
                 return null;
             },
             direccion_empresa: () => {

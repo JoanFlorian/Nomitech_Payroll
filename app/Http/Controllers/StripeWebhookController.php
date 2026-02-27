@@ -78,7 +78,7 @@ class StripeWebhookController extends Controller
                 return;
             }
 
-            $pago = Pago::with('licencia')->find($pagoId);
+            $pago = Pago::with(['licencia', 'plan'])->find($pagoId);
 
             if (!$pago) {
                 Log::error("Stripe Webhook: Pago record not found in DB for ID: {$pagoId}");
@@ -87,7 +87,7 @@ class StripeWebhookController extends Controller
 
             Log::info("Stripe Webhook: Pago found.", ['pago_id' => $pago->id, 'estado_actual' => $pago->estado_pago]);
 
-            // 3. Verifián de idempotencia
+            // 3. Verificación de idempotencia
             if ($pago->estado_pago === 'paid') {
                 Log::info("Stripe Webhook: Idempotency check - Pago already processed for ID: {$pago->id}");
                 return;
@@ -107,53 +107,21 @@ class StripeWebhookController extends Controller
                 return;
             }
 
-            // 5. Actualizar Pago
-            $pago->update([
-                'estado_pago' => PaymentStatus::PAID->value,
-                'stripe_subscription_id' => $session->subscription,
-                'fecha_pago' => now(),
-                'stripe_session_id' => $session->id,
-            ]);
-
-            Log::info("Stripe Webhook: Pago updated to PAID.", ['pago_id' => $pago->id]);
-
             // 6. Activar licencia utilizando fechas de Stripe
             $licencia = $pago->licencia;
 
             if ($licencia) {
-                // LÓGICA DE RETORNO: Si faltan las fechas de Stripe, usar fechas locales.
+                // 5. & 6. Delegar activación al PaymentService (Centralizado)
+                $paymentService = app(\App\Services\PaymentService::class);
+                $activated = $paymentService->completePayment($pago, $session->subscription, $subscription);
 
-                $startDate = isset($subscription->current_period_start)
-                    ? \Carbon\Carbon::createFromTimestamp($subscription->current_period_start)
-                    : now();
-
-                $endDate = isset($subscription->current_period_end)
-                    ? \Carbon\Carbon::createFromTimestamp($subscription->current_period_end)
-                    : now()->addDays(30); // Retorno predeterminado: 30 días
-
-                if (!isset($subscription->current_period_start) || !isset($subscription->current_period_end)) {
-                    Log::warning("Stripe Webhook: Subscription dates missing from Stripe event. Applied fallback dates.", [
-                        'subscription_id' => $subscription->id,
-                        'fallback_start' => $startDate->toDateTimeString(),
-                        'fallback_end' => $endDate->toDateTimeString()
+                if ($activated) {
+                    Log::info("Stripe Webhook: Process completed successfully via PaymentService.", [
+                        'pago_id' => $pago->id
                     ]);
                 }
-
-                $licencia->update([
-                    // 'estado' => 'active', // ELIMINADO: El estado se calcula dinámicamente
-                    'fecha_inicio' => $startDate,
-                    'fecha_fin' => $endDate,
-                ]);
-
-                Log::info("Stripe Webhook: License activated.", [
-                    'licencia_id' => $licencia->id,
-                    'start' => $startDate->toDateTimeString(),
-                    'end' => $endDate->toDateTimeString()
-                ]);
             } else {
                 Log::error("Stripe Webhook: License relation missing (NULL) for Pago ID: {$pago->id}");
-                // NO revertimos la actualización genérica de pago, porque el pago FUE recibido.
-                // Pero esto es un problema crítico de coherencia de datos.
             }
         } catch (\Throwable $e) {
             // Captura global para evitar respuesta 500 a Stripe

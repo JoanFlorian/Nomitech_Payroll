@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class ForgotPasswordController extends Controller
@@ -53,25 +54,31 @@ class ForgotPasswordController extends Controller
 
         $throttleKey = $this->tokenRequestThrottleKey($correo);
         $cooldownKey = $this->tokenCooldownThrottleKey($correo);
+        $blockKey = 'password-reset-blocked:' . $correo;
+
+        if (Cache::has($blockKey)) {
+            $unblockTime = Cache::get($blockKey);
+            $seconds = max(0, $unblockTime - now()->timestamp);
+
+            if ($seconds > 0) {
+                $minutes = (int) ceil($seconds / 60);
+                $minuteText = $minutes === 1 ? 'minuto' : 'minutos';
+
+                Log::warning("Rate limit reached for {$correo} at ForgotPasswordController. Blocked.");
+
+                return back()->withErrors([
+                    'correo' => "Has agotado tus 5 intentos. Por seguridad, tu capacidad de enviar códigos se ha bloqueado por {$minutes} {$minuteText}.",
+                ])->withInput($request->only('correo'))->with('cooldown_seconds', $seconds);
+            } else {
+                Cache::forget($blockKey);
+            }
+        }
 
         if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
             $seconds = RateLimiter::availableIn($cooldownKey);
 
             return back()->withErrors([
                 'correo' => "Debes esperar {$seconds} segundos antes de solicitar un nuevo código.",
-            ])->withInput($request->only('correo'))->with('cooldown_seconds', $seconds);
-        }
-
-        $attempts = RateLimiter::attempts($throttleKey);
-        if ($attempts >= self::MAX_TOKEN_REQUESTS) {
-            $seconds = RateLimiter::availableIn($throttleKey);
-            $minutes = (int) ceil($seconds / 60);
-            $minuteText = $minutes === 1 ? 'minuto' : 'minutos';
-
-            Log::warning("Rate limit reached for {$correo} at ForgotPasswordController. Attempts: {$attempts}");
-
-            return back()->withErrors([
-                'correo' => "Has agotado tus 5 intentos. Por seguridad, tu capacidad de enviar códigos se ha bloqueado por {$minutes} {$minuteText}.",
             ])->withInput($request->only('correo'))->with('cooldown_seconds', $seconds);
         }
 
@@ -94,7 +101,7 @@ class ForgotPasswordController extends Controller
         );
 
         RateLimiter::hit($cooldownKey, self::TOKEN_REQUEST_COOLDOWN_SECONDS);
-        RateLimiter::hit($throttleKey, self::TOKEN_REQUEST_LOCKOUT_SECONDS);
+        RateLimiter::hit($throttleKey, 3600); // Mantenemos el historial de intentos por 1 hora
         $currentAttempts = RateLimiter::attempts($throttleKey);
 
         Log::info("Code sent to {$correo}. Current attempts: {$currentAttempts}/" . self::MAX_TOKEN_REQUESTS);
@@ -115,13 +122,14 @@ class ForgotPasswordController extends Controller
         $statusMessage = 'Hemos enviado un código de verificación a tu correo electrónico.';
 
         // Add warning message starting from 2nd attempt
-        if ($currentAttempts >= 2 && $currentAttempts <= self::MAX_TOKEN_REQUESTS) {
+        if ($currentAttempts >= self::MAX_TOKEN_REQUESTS) {
+            Cache::put($blockKey, now()->addMinutes(5)->timestamp, now()->addMinutes(5));
+            RateLimiter::clear($throttleKey);
+
+            $statusMessage .= " Has alcanzado el límite de 5 intentos. No podrás solicitar más códigos por 5 minutos.";
+        } elseif ($currentAttempts >= 2) {
             $remaining = max(self::MAX_TOKEN_REQUESTS - $currentAttempts, 0);
-            if ($remaining > 0) {
-                $statusMessage .= " Tienes {$remaining} intentos restantes antes de que el acceso se bloquee por 5 minutos.";
-            } else {
-                $statusMessage .= " Has alcanzado el límite de 5 intentos. No podrás solicitar más códigos por 5 minutos.";
-            }
+            $statusMessage .= " Tienes {$remaining} intentos restantes antes de que el acceso se bloquee por 5 minutos.";
         }
 
         return redirect()->route('password.verify.form', ['correo' => $correo])

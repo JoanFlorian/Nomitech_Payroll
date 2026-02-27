@@ -194,9 +194,7 @@
                     <div class="col-span-3">
                         <x-form.input name="nit" icon="badge" placeholder="NIT (Solo números)" 
                             x-model="nit" @blur="handleBlur('nit')" @input="handleInput('nit')"
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric"
-                            :readonly="isset($isPendingPayment) && $isPendingPayment"
-                            class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500' : '' }}" />
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric" />
                         <span x-show="errors.nit" x-text="errors.nit" class="text-red-500 text-[11px] leading-tight mt-1 block font-medium"></span>
                     </div>
                     <div class="col-span-1">
@@ -206,10 +204,8 @@
                             @blur="handleBlur('nit_dv')"
                             @input="handleInput('nit_dv')"
                             oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value.length > 1) this.value = this.value.slice(0, 1);"
-                            title="Debe ser numérico de un solo dígito."
-                            :readonly="isset($isPendingPayment) && $isPendingPayment"
-                            class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500 text-center px-0' : '' }}" />
-                        <span x-show="errors.nit_dv && !{{ (isset($isPendingPayment) && $isPendingPayment) ? 'true' : 'false' }}" 
+                            title="Debe ser numérico de un solo dígito." />
+                        <span x-show="errors.nit_dv" 
                               x-text="errors.nit_dv" 
                               class="text-red-500 text-xs mt-1 block font-medium"></span>
                     </div>
@@ -264,7 +260,6 @@
                         x-model="id_tipo_doc"
                         :options="$tiposDocumento" 
                         :searchable="false"
-                        :readonly="isset($isPendingPayment) && $isPendingPayment"
                     />
                     <span x-show="errors.id_tipo_doc" x-text="errors.id_tipo_doc" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
@@ -272,9 +267,7 @@
                 <div>
                     <x-form.input name="documento" icon="numbers" placeholder="Número de Documento" 
                         x-model="documento" @blur="handleBlur('documento')" @input="handleInput('documento')"
-                        oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric"
-                        :readonly="isset($isPendingPayment) && $isPendingPayment"
-                        class="{{ isset($isPendingPayment) && $isPendingPayment ? 'bg-gray-100 cursor-not-allowed text-gray-500' : '' }}" />
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')" inputmode="numeric" />
                     <span x-show="errors.documento" x-text="errors.documento" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
 

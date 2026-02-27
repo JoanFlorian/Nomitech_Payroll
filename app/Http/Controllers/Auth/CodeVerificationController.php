@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class CodeVerificationController extends Controller
@@ -57,6 +58,19 @@ class CodeVerificationController extends Controller
         );
 
         $throttleKey = $this->verifyThrottleKey($correo);
+        $blockKey = 'password-verify-blocked:' . $correo;
+
+        if (Cache::has($blockKey)) {
+            $seconds = max(0, Cache::get($blockKey) - now()->timestamp);
+            if ($seconds > 0) {
+                $minutes = (int) ceil($seconds / 60);
+                return back()->withErrors([
+                    'code' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por {$minutes} minutos.",
+                ]);
+            } else {
+                Cache::forget($blockKey);
+            }
+        }
 
         if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_VERIFY_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -79,17 +93,17 @@ class CodeVerificationController extends Controller
         }
 
         if (!$isValidToken) {
-            RateLimiter::hit($throttleKey, self::VERIFY_LOCKOUT_SECONDS);
+            RateLimiter::hit($throttleKey, 3600); // Mantenemos historial por 1 hora
             $attempts = RateLimiter::attempts($throttleKey);
 
             if ($attempts >= self::MAX_VERIFY_ATTEMPTS) {
-                $seconds = RateLimiter::availableIn($throttleKey);
-                $minutes = (int) ceil($seconds / 60);
+                Cache::put($blockKey, now()->addMinutes(5)->timestamp, now()->addMinutes(5));
+                RateLimiter::clear($throttleKey);
 
-                Log::warning("Verify lockout triggered for {$correo}. Attempts: {$attempts}");
+                Log::warning("Verify lockout triggered for {$correo}. Blocked for 5 minutes.");
 
                 return back()->withErrors([
-                    'code' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por {$minutes} minutos.",
+                    'code' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por 5 minutos.",
                 ]);
             }
 

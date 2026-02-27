@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Usuario;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 
 class ResetPasswordController extends Controller
 {
@@ -110,6 +110,19 @@ class ResetPasswordController extends Controller
         );
 
         $throttleKey = $this->resetThrottleKey($correo);
+        $blockKey = 'password-reset-submit-blocked:' . $correo;
+
+        if (Cache::has($blockKey)) {
+            $seconds = max(0, Cache::get($blockKey) - now()->timestamp);
+            if ($seconds > 0) {
+                $minutes = (int) ceil($seconds / 60);
+                return back()->withErrors([
+                    'correo' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por {$minutes} minutos.",
+                ]);
+            } else {
+                Cache::forget($blockKey);
+            }
+        }
 
         if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_RESET_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -125,17 +138,17 @@ class ResetPasswordController extends Controller
             ->first();
 
         if (!$this->tokenMatchesRecord($token, $record)) {
-            RateLimiter::hit($throttleKey, self::RESET_LOCKOUT_SECONDS);
+            RateLimiter::hit($throttleKey, 3600); // Mantenemos historial por 1 hora
             $attempts = RateLimiter::attempts($throttleKey);
 
             if ($attempts >= self::MAX_RESET_ATTEMPTS) {
-                $seconds = RateLimiter::availableIn($throttleKey);
-                $minutes = (int) ceil($seconds / 60);
+                Cache::put($blockKey, now()->addMinutes(5)->timestamp, now()->addMinutes(5));
+                RateLimiter::clear($throttleKey);
 
-                Log::warning("Reset lockout triggered for {$correo}. Attempts: {$attempts}");
+                Log::warning("Reset lockout triggered for {$correo}. Blocked for 5 minutes.");
 
                 return back()->withErrors([
-                    'correo' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por {$minutes} minutos.",
+                    'correo' => "Has excedido el número de intentos permitidos. Por seguridad, tu acceso ha sido bloqueado por 5 minutos.",
                 ]);
             }
 

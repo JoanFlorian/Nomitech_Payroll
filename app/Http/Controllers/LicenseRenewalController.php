@@ -220,16 +220,31 @@ class LicenseRenewalController extends Controller
                 ]);
             }
 
-            // 4. Create New Payment
-            $pago = Pago::create([
-                'empresa_id' => $empresa->id_empresa,
-                'licencia_id' => $licencia->id,
-                'plan_id' => $plan->id,
-                'proveedor_pago' => 'STRIPE',
-                'valor' => $plan->valor,
-                'moneda' => 'COP',
-                'estado_pago' => PaymentStatus::PENDING->value,
-            ]);
+            // 4. Update existing PENDING payment or create new one (Recovery Flow)
+            // This ensures we don't duplicate pending payments for the same initial registration process.
+            $pago = Pago::where('licencia_id', $licencia->id)
+                ->where('estado_pago', PaymentStatus::PENDING->value)
+                ->first();
+
+            if ($pago) {
+                $pago->update([
+                    'plan_id' => $plan->id,
+                    'valor' => $plan->valor,
+                    // Reset Stripe session info if plan changed to ensure a fresh session is created
+                    'stripe_session_id' => null,
+                    'referencia' => null,
+                ]);
+            } else {
+                $pago = Pago::create([
+                    'empresa_id' => $empresa->id_empresa,
+                    'licencia_id' => $licencia->id,
+                    'plan_id' => $plan->id,
+                    'proveedor_pago' => 'STRIPE',
+                    'valor' => $plan->valor,
+                    'moneda' => 'COP',
+                    'estado_pago' => PaymentStatus::PENDING->value,
+                ]);
+            }
 
             return redirect()->route('checkout.show', ['pago' => $pago->id]);
         });

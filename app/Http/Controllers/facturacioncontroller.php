@@ -11,9 +11,44 @@ use App\Models\Empresa;
 use App\Models\Plan;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class facturacioncontroller extends Controller
 {
+    private function construirConsultaFacturacion(Request $request)
+    {
+        $estadoFiltro = $request->query('estado');
+        $metodoFiltro = $request->query('metodo');
+        $search = $request->query('q');
+
+        $query = Pago::with(['licencia.empresa', 'licencia.plan', 'plan', 'empresa'])
+            ->orderBy('created_at', 'desc');
+
+        if ($estadoFiltro && $estadoFiltro !== 'Todos') {
+            $query->where('estado_pago', strtolower($estadoFiltro));
+        }
+
+        if ($metodoFiltro && $metodoFiltro !== 'Todos') {
+            $query->where('proveedor_pago', strtolower($metodoFiltro));
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('referencia', 'like', "%{$search}%")
+                    ->orWhere('proveedor_pago', 'like', "%{$search}%")
+                    ->orWhereHas('licencia.empresa', function ($q2) use ($search) {
+                        $q2->where('razon_social', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('empresa', function ($q2) use ($search) {
+                        $q2->where('razon_social', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        return $query;
+    }
+
     public function dashboard(Request $request)
     {
         $selectedYear = $request->query('year', date('Y'));
@@ -153,33 +188,12 @@ class facturacioncontroller extends Controller
     {
         $estadoFiltro = $request->query('estado');
         $metodoFiltro = $request->query('metodo');
-        $search = $request->query('q');
 
         $totalTransacciones = Pago::where('estado_pago', 'paid')->sum('valor');
         $suscripcionesActivas = Licencia::where('fecha_fin', '>=', Carbon::now())->count();
         $pendientesPago = Pago::where('estado_pago', 'pending')->count();
 
-        $query = Pago::with(['licencia.empresa', 'licencia.plan', 'plan', 'empresa'])
-            ->orderBy('created_at', 'desc');
-
-        if ($estadoFiltro && $estadoFiltro !== 'Todos') {
-            $query->where('estado_pago', strtolower($estadoFiltro));
-        }
-
-        if ($metodoFiltro && $metodoFiltro !== 'Todos') {
-            $query->where('proveedor_pago', strtolower($metodoFiltro));
-        }
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('referencia', 'like', "%{$search}%")
-                    ->orWhere('proveedor_pago', 'like', "%{$search}%")
-                    ->orWhereHas('licencia.empresa', function ($q2) use ($search) {
-                        $q2->where('razon_social', 'like', "%{$search}%");
-                    });
-            });
-        }
-
+        $query = $this->construirConsultaFacturacion($request);
         $transacciones = $query->paginate(9);
         $metodosDisponibles = Pago::distinct('proveedor_pago')
             ->whereNotNull('proveedor_pago')
@@ -274,6 +288,117 @@ class facturacioncontroller extends Controller
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error al generar reporte PDF: " . $e->getMessage());
             return back()->with('error', 'Hubo un error al generar el reporte PDF. Por favor, intente nuevamente.');
+        }
+    }
+
+    public function exportarFacturacionPdf(Request $request)
+    {
+        try {
+            $pagos = $this->construirConsultaFacturacion($request)->get();
+            $estadoSeleccionado = $request->query('estado', 'Todos');
+            $estadoTexto = match ($estadoSeleccionado) {
+                'paid' => 'Solo pagados',
+                'pending' => 'Pendientes',
+                'failed' => 'Fallidos',
+                default => 'Todos',
+            };
+
+            $busquedaTexto = trim((string) $request->query('q', ''));
+            if ($busquedaTexto === '') {
+                $busquedaTexto = $estadoSeleccionado === 'paid' ? 'Solo pagados' : 'Sin filtro';
+            }
+
+            $data = [
+                'pagos' => $pagos,
+                'fechaGeneracion' => Carbon::now()->format('d/m/Y H:i'),
+                'estadoSeleccionado' => $estadoTexto,
+                'metodoSeleccionado' => $request->query('metodo', 'Todos'),
+                'busqueda' => $busquedaTexto
+            ];
+
+            $pdf = Pdf::loadView('superadmin.facturacion-reporte-pdf', $data)->setPaper('a4', 'landscape');
+
+            return $pdf->download('reporte-facturacion-empresas-' . now()->format('Ymd_His') . '.pdf');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error al generar reporte de facturación en PDF: " . $e->getMessage());
+            return back()->with('error', 'No fue posible generar el reporte PDF de facturación.');
+        }
+    }
+
+    public function exportarFacturacionExcel(Request $request)
+    {
+        try {
+            $pagos = $this->construirConsultaFacturacion($request)->get();
+
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Facturación Empresas');
+
+            $encabezados = [
+                'Empresa',
+                'NIT',
+                'Referencia',
+                'Fecha',
+                'Plan',
+                'Método',
+                'Estado',
+                'Vigencia',
+                'Valor'
+            ];
+
+            $sheet->fromArray($encabezados, null, 'A1');
+
+            $fila = 2;
+            foreach ($pagos as $pago) {
+                $licencia = $pago->licencia;
+                $empresa = $pago->empresa ?? ($licencia ? $licencia->empresa : null);
+                $plan = $pago->plan ?? ($licencia ? $licencia->plan : null);
+
+                $fechaFin = $licencia?->fecha_fin ? Carbon::parse($licencia->fecha_fin) : null;
+                $diasRestantes = $fechaFin ? Carbon::now()->diffInDays($fechaFin, false) : null;
+                $vigencia = is_null($diasRestantes) ? 'Sin vigencia' : ($diasRestantes < 0 ? 'Vencida' : abs((int) floor($diasRestantes)) . ' días');
+
+                $estadoTexto = match ($pago->estado_pago) {
+                    'paid' => 'Pagado',
+                    'pending' => 'Pendiente',
+                    'failed' => 'Fallido',
+                    default => $pago->estado_pago,
+                };
+
+                $fechaPago = $pago->fecha_pago
+                    ? Carbon::parse($pago->fecha_pago)->format('d/m/Y')
+                    : $pago->created_at->format('d/m/Y');
+
+                $sheet->setCellValue('A' . $fila, $empresa->razon_social ?? 'Sin especificar');
+                $sheet->setCellValue('B' . $fila, $empresa->nit ?? 'No especificado');
+                $sheet->setCellValue('C' . $fila, $pago->referencia ?? 'FAC-' . $pago->id);
+                $sheet->setCellValue('D' . $fila, $fechaPago);
+                $sheet->setCellValue('E' . $fila, $plan->nombre ?? 'Plan de suscripción');
+                $sheet->setCellValue('F' . $fila, $pago->proveedor_pago ?? '—');
+                $sheet->setCellValue('G' . $fila, $estadoTexto);
+                $sheet->setCellValue('H' . $fila, $vigencia);
+                $sheet->setCellValue('I' . $fila, (float) $pago->valor);
+                $fila++;
+            }
+
+            foreach (range('A', 'I') as $columna) {
+                $sheet->getColumnDimension($columna)->setAutoSize(true);
+            }
+
+            $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+            $sheet->getStyle('I2:I' . max(2, $fila - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+
+            $writer = new Xlsx($spreadsheet);
+            $nombreArchivo = 'reporte-facturacion-empresas-' . now()->format('Ymd_His') . '.xlsx';
+
+            return response()->streamDownload(function () use ($writer) {
+                $writer->save('php://output');
+            }, $nombreArchivo, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error al generar reporte de facturación en Excel: " . $e->getMessage());
+            return back()->with('error', 'No fue posible generar el reporte Excel de facturación.');
         }
     }
 }

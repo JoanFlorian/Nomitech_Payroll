@@ -4,6 +4,7 @@
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const ACCOUNT_REGEX = /^[0-9]{6,20}$/;
     const INTERNAL_CODE_REGEX = /^[0-9]+$/;
+    const ADDRESS_REGEX = /^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i;
 
     function getErrorElement(form, fieldName) {
         return form.querySelector(`[data-error="${fieldName}"]`);
@@ -104,13 +105,13 @@
             case 'email':
                 return validarInput(input, EMAIL_REGEX.test(value) && value.length <= 255, 'Debe ingresar un correo electrónico válido de máximo 255 caracteres.', showError);
             case 'telefono':
-                return validarInput(input, NUMBERS_REGEX.test(value) && value.length >= 7 && value.length <= 15, 'El teléfono debe tener entre 7 y 15 dígitos numéricos.', showError);
+                return validarInput(input, NUMBERS_REGEX.test(value) && value.length === 10, 'El teléfono debe tener exactamente 10 dígitos numéricos.', showError);
             case 'departamento':
                 return validarInput(input, value !== '', 'El departamento es obligatorio.', showError);
             case 'ciudad':
                 return validarInput(input, value !== '', 'La ciudad es obligatoria.', showError);
             case 'direccion':
-                return validarInput(input, value.length >= 5 && value.length <= 100, 'La dirección debe tener entre 5 y 100 caracteres.', showError);
+                return validarInput(input, value !== '' && value.length <= 150 && ADDRESS_REGEX.test(value), 'La dirección debe incluir texto válido y una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).', showError);
             default:
                 return true;
         }
@@ -329,6 +330,21 @@
         }
 
         const submitButton = form.querySelector('button[type="submit"]');
+        const docInput = getField(form, 'doc');
+        const telefonoInput = getField(form, 'telefono');
+
+        if (docInput) {
+            docInput.addEventListener('input', function () {
+                docInput.value = (docInput.value || '').replace(/\D/g, '').slice(0, 15);
+            });
+        }
+
+        if (telefonoInput) {
+            telefonoInput.addEventListener('input', function () {
+                telefonoInput.value = (telefonoInput.value || '').replace(/\D/g, '').slice(0, 10);
+            });
+        }
+
         initCommonRealtimeValidation(form);
 
         document.addEventListener('selected', function (event) {

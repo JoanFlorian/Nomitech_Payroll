@@ -75,6 +75,8 @@ Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history'])->gr
     // Empleados
     Route::get('/empleados', [App\Http\Controllers\EmployeesController::class, 'index'])->name('empleados.index');
     Route::get('/employees/export', [App\Http\Controllers\EmployeesController::class, 'export'])->name('employees.export');
+    Route::get('/employees/export/excel', [App\Http\Controllers\EmployeesController::class, 'exportarEmpleadosExcel'])->name('employees.export.excel');
+    Route::get('/employees/export/pdf', [App\Http\Controllers\EmployeesController::class, 'exportarEmpleadosPdf'])->name('employees.export.pdf');
     Route::get('/employees/{doc}/edit', [RegistroUsuarios::class, 'editEmployee'])->name('employees.edit');
     Route::post('/employees/{doc}/update', [RegistroUsuarios::class, 'updateEmployee'])->name('employees.update');
 
@@ -103,6 +105,8 @@ Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history'])->gr
 Route::middleware(['auth', 'is_superadmin', 'prevent_back_history'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/', [facturacioncontroller::class, 'dashboard'])->name('index');
     Route::get('/facturacion', [facturacioncontroller::class, 'facturacion'])->name('facturacion');
+    Route::get('/facturacion/exportar/pdf', [facturacioncontroller::class, 'exportarFacturacionPdf'])->name('facturacion.exportar.pdf');
+    Route::get('/facturacion/exportar/excel', [facturacioncontroller::class, 'exportarFacturacionExcel'])->name('facturacion.exportar.excel');
     Route::get('/reporte/descargar', [facturacioncontroller::class, 'descargarReporte'])->name('reporte.descargar');
     Route::get('/factura/{pagoId}/pdf', [facturacioncontroller::class, 'descargarFacturaPdf'])->name('factura.pdf');
     Route::get('/factura/{pagoId}', [facturacioncontroller::class, 'getFactura'])->name('factura');

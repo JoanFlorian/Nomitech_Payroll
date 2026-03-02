@@ -12,9 +12,38 @@
     <div class="mb-8">
         <div class="flex justify-between items-center mb-5">
             <h1 class="text-3xl font-bold text-gray-900">Gestor de Empleados</h1>
-            <a href="{{ route('employees.export') }}" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition duration-200 shadow-md">
-                <i class="fas fa-download mr-2"></i>Exportar a Excel
-            </a>
+            <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                @php
+                    $searchParam = request('search');
+                    $baseParams = $searchParam ? ['search' => $searchParam] : [];
+                    $exportGeneralParams = [];
+                    $exportGeneralParams = $baseParams;
+                    $exportActivosParams = array_merge($baseParams, ['estado' => 'activos']);
+                    $exportInactivosParams = array_merge($baseParams, ['estado' => 'inactivos']);
+                    $exportSinContratoParams = array_merge($baseParams, ['estado' => 'sin_contrato']);
+                    $exportOptions = [
+                        'General (todos) - Excel' => route('employees.export.excel', $exportGeneralParams),
+                        'General (todos) - PDF' => route('employees.export.pdf', $exportGeneralParams),
+                        'Solo activos - Excel' => route('employees.export.excel', $exportActivosParams),
+                        'Solo activos - PDF' => route('employees.export.pdf', $exportActivosParams),
+                        'Solo inactivos - Excel' => route('employees.export.excel', $exportInactivosParams),
+                        'Solo inactivos - PDF' => route('employees.export.pdf', $exportInactivosParams),
+                        'Sin contrato - Excel' => route('employees.export.excel', $exportSinContratoParams),
+                        'Sin contrato - PDF' => route('employees.export.pdf', $exportSinContratoParams),
+                    ];
+                @endphp
+                <select id="exportEmployeesSelect"
+                    class="min-w-[260px] border border-gray-300 rounded-md pl-3 pr-10 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    @foreach ($exportOptions as $label => $url)
+                        <option value="{{ $url }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                <button type="button"
+                    onclick="window.location.href = document.getElementById('exportEmployeesSelect').value"
+                    class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition">
+                    <i class="fas fa-download mr-2"></i>Exportar
+                </button>
+            </div>
         </div>
 
         {{-- BÚSQUEDA Y FILTROS --}}
@@ -204,7 +233,7 @@
     {{-- BOTÓN FLOTANTE --}}
     <button 
         @click="openRegistroModal()"
-        class="fixed bottom-5 right-5 z-40 bg-green-500 hover:bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-3xl font-bold shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95"
+        class="fixed bottom-2 right-5 z-40 bg-green-500 hover:bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-3xl font-bold shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95"
         title="Crear nuevo empleado"
     >
         <span>+</span>
@@ -411,6 +440,9 @@
 
             nextEditStep() {
                 if (this.editWizardStep < 3) {
+                    if (typeof window.validateEditStepByNumber === 'function' && !window.validateEditStepByNumber(this.editWizardStep, true)) {
+                        return;
+                    }
                     this.editWizardStep++;
                 }
             },

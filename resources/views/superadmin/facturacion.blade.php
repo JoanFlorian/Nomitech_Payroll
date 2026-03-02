@@ -8,11 +8,36 @@
                 <h1 class="text-2xl font-bold text-gray-900">Facturación y Transacciones</h1>
                 <p class="text-gray-600 text-sm mt-1">Gestión integral de pagos y vigencia de licencias</p>
             </div>
-            <span
-                class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold">
-                <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                EN LÍNEA
-            </span>
+            <div class="flex items-center gap-2">
+                @php
+                    $exportGeneralParams = [];
+                    $exportPagadosParams = ['estado' => 'paid'];
+                    $exportOptions = [
+                        'General (todas) - Excel' => route('superadmin.facturacion.exportar.excel', $exportGeneralParams),
+                        'General (todas) - PDF' => route('superadmin.facturacion.exportar.pdf', $exportGeneralParams),
+                        'Solo pagados - Excel' => route('superadmin.facturacion.exportar.excel', $exportPagadosParams),
+                        'Solo pagados - PDF' => route('superadmin.facturacion.exportar.pdf', $exportPagadosParams),
+                    ];
+                @endphp
+                <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                    <select id="exportSelect"
+                        class="min-w-[260px] border border-gray-300 rounded-md pl-3 pr-10 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        @foreach ($exportOptions as $label => $url)
+                            <option value="{{ $url }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <button type="button"
+                        onclick="window.location.href = document.getElementById('exportSelect').value"
+                        class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition">
+                        Exportar
+                    </button>
+                </div>
+                <span
+                    class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold">
+                    <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                    EN LÍNEA
+                </span>
+            </div>
         </div>
 
         <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-4">

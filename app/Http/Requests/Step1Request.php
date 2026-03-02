@@ -36,7 +36,7 @@ class Step1Request extends FormRequest
 
             // CONTACTO
             'email' => 'bail|required|email|max:255|unique:usuario,correo',
-            'telefono' => 'bail|required|digits_between:7,15|regex:/^[0-9]+$/',
+            'telefono' => 'bail|required|digits:10|regex:/^[0-9]+$/',
 
             // SELECTS - Mapear a id_ciudad
             'departamento' => 'bail|required|integer|exists:departamento,id_departamento',
@@ -123,7 +123,7 @@ class Step1Request extends FormRequest
             'email.max'      => 'El correo no puede superar 255 caracteres.',
             'email.unique'   => 'El correo electrónico ya está registrado en el sistema.',
             'telefono.required'       => 'El teléfono es obligatorio.',
-            'telefono.digits_between' => 'El teléfono debe tener entre 7 y 15 dígitos.',
+            'telefono.digits'         => 'El teléfono debe tener exactamente 10 dígitos.',
             'telefono.regex'          => 'El teléfono solo puede contener números.',
 
             /*

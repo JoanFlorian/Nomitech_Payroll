@@ -118,25 +118,25 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Primer Nombre</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="primer_nombre" id="editPrimerNombre">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="primer_nombre" id="editPrimerNombre" minlength="3" maxlength="30" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="primer_nombre"></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Otros Nombres</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="otros_nombres" id="editOtrosNombres">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="otros_nombres" id="editOtrosNombres" minlength="3" maxlength="50" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="otros_nombres"></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Primer Apellido</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="primer_apellido" id="editPrimerApellido">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="primer_apellido" id="editPrimerApellido" minlength="3" maxlength="30" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="primer_apellido"></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Segundo Apellido</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="segundo_apellido" id="editSegundoApellido">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="segundo_apellido" id="editSegundoApellido" minlength="3" maxlength="30" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="segundo_apellido"></p>
                         </div>
 
@@ -152,7 +152,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="direccion" id="editDireccion">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize" name="direccion" id="editDireccion" maxlength="150" title="Incluye referencia vial (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).">
                             <p class="error-message text-red-500 text-sm hidden" data-error="direccion"></p>
                         </div>
                     </div>
@@ -290,7 +290,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Número de Cuenta</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="numero_cuenta" id="editNumeroCuenta">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="numero_cuenta" id="editNumeroCuenta" inputmode="numeric" minlength="6" maxlength="20" pattern="[0-9]{6,20}">
                             <p class="error-message text-red-500 text-sm hidden" data-error="numero_cuenta"></p>
                         </div>
 
@@ -364,6 +364,11 @@
 </div>
 
 <script>
+const EDIT_LETTERS_REGEX = /^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/;
+const EDIT_NUMBERS_REGEX = /^[0-9]+$/;
+const EDIT_ACCOUNT_REGEX = /^[0-9]{6,20}$/;
+const EDIT_ADDRESS_REGEX = /^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i;
+
 function normalizeEditFieldValue(field) {
     if (field.type === 'checkbox') {
         return field.checked ? '1' : '0';
@@ -415,6 +420,171 @@ function buildChangedFieldsFormData(form) {
     return { formData, changedCount };
 }
 
+function setEditFieldError(input, message) {
+    if (!input) {
+        return;
+    }
+
+    input.classList.add('border-red-500');
+    const errorEl = document.querySelector(`#editEmployeeForm [data-error="${input.name}"]`);
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+function clearEditFieldError(input) {
+    if (!input) {
+        return;
+    }
+
+    input.classList.remove('border-red-500');
+    const errorEl = document.querySelector(`#editEmployeeForm [data-error="${input.name}"]`);
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('hidden');
+    }
+}
+
+function validateEditInput(input, condition, message, showError = true) {
+    if (!input) {
+        return true;
+    }
+
+    const value = (input.value ?? '').toString().trim();
+
+    if (condition) {
+        if (showError) {
+            clearEditFieldError(input);
+        }
+        return true;
+    }
+
+    if (showError && (value !== '' || input.required)) {
+        setEditFieldError(input, message);
+    }
+
+    return false;
+}
+
+function validateEditField(stepNumber, fieldName, showError = true) {
+    const form = document.getElementById('editEmployeeForm');
+    if (!form) {
+        return true;
+    }
+
+    const input = form.querySelector(`[name="${fieldName}"]`);
+    const value = input ? (input.value ?? '').toString().trim() : '';
+
+    if (stepNumber === 1) {
+        switch (fieldName) {
+            case 'id_tipo_doc':
+                return validateEditInput(input, value !== '', 'El tipo de documento es obligatorio.', showError);
+            case 'primer_nombre':
+                return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El primer nombre debe tener entre 3 y 30 caracteres y solo letras.', showError);
+            case 'otros_nombres':
+                if (value === '') {
+                    if (showError) clearEditFieldError(input);
+                    return true;
+                }
+                return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 50, 'Los otros nombres deben tener entre 3 y 50 caracteres y solo letras.', showError);
+            case 'primer_apellido':
+                return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El primer apellido debe tener entre 3 y 30 caracteres y solo letras.', showError);
+            case 'segundo_apellido':
+                if (value === '') {
+                    if (showError) clearEditFieldError(input);
+                    return true;
+                }
+                return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El segundo apellido debe tener entre 3 y 30 caracteres y solo letras.', showError);
+            case 'id_ciudad':
+                return validateEditInput(input, value !== '', 'La ciudad es obligatoria.', showError);
+            case 'direccion':
+                return validateEditInput(input, value !== '' && value.length <= 150 && EDIT_ADDRESS_REGEX.test(value), 'La dirección debe incluir referencia vial válida (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).', showError);
+            default:
+                return true;
+        }
+    }
+
+    if (stepNumber === 2) {
+        const fechaInicio = form.querySelector('[name="fecha_inicio"]');
+        const fechaInicioValue = fechaInicio ? (fechaInicio.value ?? '').toString().trim() : '';
+
+        switch (fieldName) {
+            case 'id_tipo_trabajador':
+                return validateEditInput(input, value !== '', 'Debe seleccionar el tipo de trabajador.', showError);
+            case 'id_sub_tipo_trabajador':
+                return validateEditInput(input, value !== '', 'Debe seleccionar el sub tipo de trabajador.', showError);
+            case 'id_tipo_contrato':
+                return validateEditInput(input, value !== '', 'Debe seleccionar el tipo de contrato.', showError);
+            case 'id_arl':
+                return validateEditInput(input, value !== '', 'Debe seleccionar la ARL.', showError);
+            case 'fecha_inicio':
+                return validateEditInput(input, value !== '', 'La fecha de inicio es obligatoria.', showError);
+            case 'fecha_fin':
+                if (value === '') {
+                    if (showError) clearEditFieldError(input);
+                    return true;
+                }
+                if (!fechaInicioValue) {
+                    return validateEditInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
+                }
+                return validateEditInput(input, value >= fechaInicioValue, 'La fecha fin no puede ser menor que la fecha de inicio.', showError);
+            case 'horas_diarias':
+                return validateEditInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
+            case 'salario':
+                return validateEditInput(input, value !== '' && !Number.isNaN(Number(value)) && Number(value) >= 0.01 && Number(value) <= 999999999, 'El salario debe estar entre 0.01 y 999999999.', showError);
+            case 'codigo_interno':
+                return validateEditInput(input, EDIT_NUMBERS_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 dígitos numéricos.', showError);
+            case 'nivel_riesgo':
+                return validateEditInput(input, ['Nivel I', 'Nivel II', 'Nivel III', 'Nivel IV', 'Nivel V'].includes(value), 'Debe seleccionar un nivel de riesgo válido.', showError);
+            default:
+                return true;
+        }
+    }
+
+    if (stepNumber === 3) {
+        switch (fieldName) {
+            case 'id_forma_pago':
+                return validateEditInput(input, value !== '', 'Debe seleccionar la forma de pago.', showError);
+            case 'id_metodo_pago':
+                return validateEditInput(input, value !== '', 'Debe seleccionar el método de pago.', showError);
+            case 'tipo_cuenta':
+                return validateEditInput(input, value !== '', 'Debe seleccionar el tipo de cuenta.', showError);
+            case 'numero_cuenta':
+                return validateEditInput(input, EDIT_ACCOUNT_REGEX.test(value), 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.', showError);
+            case 'id_eps':
+                return validateEditInput(input, value !== '', 'Debe seleccionar la EPS.', showError);
+            case 'id_afp':
+                return validateEditInput(input, value !== '', 'Debe seleccionar la AFP.', showError);
+            default:
+                return true;
+        }
+    }
+
+    return true;
+}
+
+function validateEditStepByNumber(stepNumber, showError = true) {
+    const fieldsByStep = {
+        1: ['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion'],
+        2: ['id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_tipo_contrato', 'id_arl', 'fecha_inicio', 'fecha_fin', 'horas_diarias', 'salario', 'codigo_interno', 'nivel_riesgo'],
+        3: ['id_forma_pago', 'id_metodo_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp'],
+    };
+
+    const fields = fieldsByStep[stepNumber] || [];
+    let isValid = true;
+
+    fields.forEach((fieldName) => {
+        if (!validateEditField(stepNumber, fieldName, showError)) {
+            isValid = false;
+        }
+    });
+
+    return isValid;
+}
+
+window.validateEditStepByNumber = validateEditStepByNumber;
+
 function loadEmployee(doc) {
     fetch(`/employees/${doc}/edit`)
         .then(response => {
@@ -422,7 +592,6 @@ function loadEmployee(doc) {
             return response.json();
         })
         .then(data => {
-            // Llenar los campos del formulario
             document.getElementById('editDocField').value = data.usuario.doc;
             document.getElementById('editIdTipoDoc').value = data.usuario.id_tipo_doc;
             document.getElementById('editNumeroDoc').value = data.usuario.doc;
@@ -456,7 +625,6 @@ function loadEmployee(doc) {
                 document.getElementById('editIdAfp').value = contrato.id_afp || '';
                 document.getElementById('editActivo').checked = contrato.activo == 1;
             } else {
-                // No contrato: limpiar campos del contrato
                 document.getElementById('editIdTipoTrabajador').value = '';
                 document.getElementById('editIdSubTipoTrabajador').value = '';
                 document.getElementById('editIdTipoContrato').value = '';
@@ -479,6 +647,7 @@ function loadEmployee(doc) {
             }
 
             snapshotEditFormValues();
+            [1, 2, 3].forEach((step) => validateEditStepByNumber(step, false));
         })
         .catch(error => {
             console.error('Error:', error);
@@ -486,25 +655,21 @@ function loadEmployee(doc) {
         });
 }
 
-// Manejar envío del formulario
 document.getElementById('editEmployeeForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const doc = document.getElementById('editDocField').value;
+
+    if (!validateEditStepByNumber(3, true)) {
+        return;
+    }
+
     const { formData, changedCount } = buildChangedFieldsFormData(this);
 
     if (changedCount === 0) {
         Swal.fire('Sin cambios', 'No hay datos modificados para guardar', 'info');
         return;
     }
-
-    document.querySelectorAll('.error-message').forEach(el => {
-        el.classList.add('hidden');
-        el.textContent = '';
-    });
-    document.querySelectorAll('#editEmployeeForm input, #editEmployeeForm select, #editEmployeeForm textarea').forEach(el => {
-        el.classList.remove('border-red-500');
-    });
 
     fetch(`/employees/${doc}/update`, {
         method: 'POST',
@@ -516,14 +681,10 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
     .then(response => {
         if (response.status === 422) {
             return response.json().then(data => {
-                // Mostrar errores de validación
-                document.querySelectorAll('.error-message').forEach(el => el.classList.add('hidden'));
                 for (const field in data.errors) {
-                    const errorEl = document.querySelector(`[data-error="${field}"]`);
-                    if (errorEl) {
-                        errorEl.textContent = data.errors[field][0];
-                        errorEl.classList.remove('hidden');
-                        errorEl.closest('div').querySelector('input, select, textarea')?.classList.add('border-red-500');
+                    const fieldInput = document.querySelector(`#editEmployeeForm [name="${field}"]`);
+                    if (fieldInput) {
+                        setEditFieldError(fieldInput, data.errors[field][0]);
                     }
                 }
                 throw new Error('Error de validación');
@@ -532,7 +693,7 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
         if (!response.ok) throw new Error('Error al actualizar empleado');
         return response.json();
     })
-    .then(data => {
+    .then(() => {
         Swal.fire('Éxito', 'Empleado actualizado correctamente', 'success').then(() => {
             window.location.reload();
         });

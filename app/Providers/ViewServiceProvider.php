@@ -50,9 +50,7 @@ class ViewServiceProvider extends ServiceProvider
             $tipocuenta = TipoCuenta::all();
             $Eps = Eps::all();
             $Afp = Afp::all();
-            $usuarios = Usuario::all();
-
-            $view->with(compact('pais', 'departamento','ciudad','tipodoc','tipotrabajadores','suptrabajadores','contratos','Arl','formapagos','metodopago','tipocuenta','Eps','Afp','usuarios'));
+            $view->with(compact('pais', 'departamento', 'ciudad', 'tipodoc', 'tipotrabajadores', 'suptrabajadores', 'contratos', 'Arl', 'formapagos', 'metodopago', 'tipocuenta', 'Eps', 'Afp'));
         });
 
 

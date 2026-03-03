@@ -70,8 +70,8 @@ Route::middleware(['auth', 'prevent_back_history'])->group(function () {
     })->name('empresa.select');
 });
 
-// Protected App Routes (Auth + Active License)
-Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history'])->group(function () {
+// Protected App Routes (Auth + Active License + Contractual Access)
+Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'prevent_back_history'])->group(function () {
     // Empleados
     Route::get('/empleados', [App\Http\Controllers\EmployeesController::class, 'index'])->name('empleados.index');
     Route::get('/employees/export', [App\Http\Controllers\EmployeesController::class, 'export'])->name('employees.export');

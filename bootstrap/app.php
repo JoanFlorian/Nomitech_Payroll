@@ -13,13 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             '/stripe/webhook',
-            '/register'
         ]);
 
         $middleware->alias([
             'ensure_active_license' => \App\Http\Middleware\EnsureActiveLicense::class,
             'is_superadmin' => \App\Http\Middleware\CheckSuperAdmin::class,
             'prevent_back_history' => \App\Http\Middleware\PreventBackHistory::class,
+            'contractual_access' => \App\Http\Middleware\CheckContractualAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -11,6 +11,32 @@ class Contrato extends Model
     protected $table = 'contrato';
     protected $primaryKey = 'id_contrato';
 
+    // Estados Laborales
+    public const ESTADO_LABORAL_ACTIVO = 1;
+    public const ESTADO_LABORAL_TERMINADO = 2;
+
+    // Estados de Nómina
+    public const ESTADO_NOMINA_PENDIENTE = 1;
+    public const ESTADO_NOMINA_LIQUIDADO = 2;
+
+    // Periodo de Gracia
+    public const GRACE_PERIOD_DAYS = 3;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::updating(function ($contrato) {
+            // If estado_nomina changes to LIQUIDADO, automatically set the date
+            if (
+                $contrato->isDirty('estado_nomina') &&
+                (int) $contrato->estado_nomina === self::ESTADO_NOMINA_LIQUIDADO
+            ) {
+                $contrato->fecha_liquidacion_final = now();
+            }
+        });
+    }
+
     protected $fillable = [
         'doc',
         'id_empresa',
@@ -32,7 +58,10 @@ class Contrato extends Model
         'horas_diarias',
         'codigo_interno',
         'tipo_cuenta',
-        'numero_cuenta'
+        'numero_cuenta',
+        'estado_laboral',
+        'estado_nomina',
+        'fecha_liquidacion_final'
     ];
 
     protected function casts(): array
@@ -42,6 +71,9 @@ class Contrato extends Model
             'alto_riesgo' => 'boolean',
             'fecha_inicio' => 'date',
             'fecha_fin' => 'date',
+            'estado_laboral' => 'integer',
+            'estado_nomina' => 'integer',
+            'fecha_liquidacion_final' => 'datetime',
         ];
     }
 

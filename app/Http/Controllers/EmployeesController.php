@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Usuario;
+use App\Models\Empleado;
 use App\Models\TipoDoc;
 use App\Models\Departamento;
 use App\Models\Ciudad;
@@ -19,12 +19,13 @@ use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use App\Models\Contrato;
 
 class EmployeesController extends Controller
 {
     private function construirConsultaEmpleados(Request $request)
     {
-        $query = Usuario::with(['contratos.tipoContrato']);
+        $query = Empleado::with(['contratos.tipoContrato']);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -39,11 +40,11 @@ class EmployeesController extends Controller
             $estado = $request->input('estado');
             if ($estado === 'activos') {
                 $query->whereHas('contratos', function ($q) {
-                    $q->where('activo', 1);
+                    $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
                 });
             } elseif ($estado === 'inactivos') {
                 $query->whereHas('contratos', function ($q) {
-                    $q->where('activo', 0);
+                    $q->where('estado_laboral', Contrato::ESTADO_LABORAL_TERMINADO);
                 });
             } elseif ($estado === 'sin_contrato') {
                 $query->doesntHave('contratos');
@@ -77,17 +78,38 @@ class EmployeesController extends Controller
         $Eps = Eps::all();
         $Afp = Afp::all();
 
-        // Obtener conteos para los filtros
-        $totalEmpleados = Usuario::with('contratos')->count();
-        $activosCount = Usuario::whereHas('contratos', function ($q) { $q->where('activo', 1); })->count();
-        $inactivosCount = Usuario::whereHas('contratos', function ($q) { $q->where('activo', 0); })->count();
-        $sinContratoCount = Usuario::doesntHave('contratos')->count();
+        // Obtener conteos para los filtros usando Empleado para aislamiento
+        $totalEmpleados = Empleado::with('contratos')->count();
+        $activosCount = Empleado::whereHas('contratos', function ($q) {
+            $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
+        })->count();
+        $inactivosCount = Empleado::whereHas('contratos', function ($q) {
+            $q->where('estado_laboral', Contrato::ESTADO_LABORAL_TERMINADO);
+        })->count();
+        $sinContratoCount = Empleado::doesntHave('contratos')->count();
 
         // Define the step variable for the view
         $step = $request->input('step', 1);
 
         return view('empleados.index', compact(
-            'empleados', 'tipodoc', 'departamento', 'ciudad', 'tipotrabajadores', 'suptrabajadores', 'contratos', 'Arl', 'formapagos', 'metodopago', 'tipocuenta', 'Eps', 'Afp', 'totalEmpleados', 'activosCount', 'inactivosCount', 'sinContratoCount', 'step'
+            'empleados',
+            'tipodoc',
+            'departamento',
+            'ciudad',
+            'tipotrabajadores',
+            'suptrabajadores',
+            'contratos',
+            'Arl',
+            'formapagos',
+            'metodopago',
+            'tipocuenta',
+            'Eps',
+            'Afp',
+            'totalEmpleados',
+            'activosCount',
+            'inactivosCount',
+            'sinContratoCount',
+            'step'
         ));
     }
 

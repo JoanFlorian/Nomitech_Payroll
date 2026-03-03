@@ -6,6 +6,7 @@ use App\Http\Requests\Step1Request;
 use App\Http\Requests\Step2Request;
 use App\Http\Requests\Step3Request;
 use App\Http\Requests\UpdateEmployeePartialRequest;
+use App\Models\Empleado;
 use App\Models\Usuario;
 use App\Models\Contrato;
 use App\Models\Banco;
@@ -94,19 +95,19 @@ class RegistroUsuarios extends Controller
             DB::transaction(function () use ($allData) {
                 // evitar duplicados creando o recuperando
                 $usuarioData = [
-                    'doc'             => $allData['doc'],
-                    'id_tipo_doc'     => $allData['id_tipo_doc'],
-                    'contrasena'      => Hash::make((string) $allData['doc']),
-                    'primer_nombre'   => $allData['primer_nombre'],
-                    'otros_nombres'   => $allData['otros_nombres'] ?? null,
+                    'doc' => $allData['doc'],
+                    'id_tipo_doc' => $allData['id_tipo_doc'],
+                    'contrasena' => Hash::make((string) $allData['doc']),
+                    'primer_nombre' => $allData['primer_nombre'],
+                    'otros_nombres' => $allData['otros_nombres'] ?? null,
                     'primer_apellido' => $allData['primer_apellido'],
-                    'segundo_apellido'=> $allData['segundo_apellido'] ?? null,
-                    'id_ciudad'       => $allData['id_ciudad'],
-                    'direccion'       => $allData['direccion'] ?? null,
-                    'telefono'        => $allData['telefono'] ?? '0000000000',
-                    'correo'          => $allData['correo'] ?? ((string) $allData['doc']).'@nomitech.local',
-                    'id_rol'          => 3,
-                    'activo'          => true,
+                    'segundo_apellido' => $allData['segundo_apellido'] ?? null,
+                    'id_ciudad' => $allData['id_ciudad'],
+                    'direccion' => $allData['direccion'] ?? null,
+                    'telefono' => $allData['telefono'] ?? '0000000000',
+                    'correo' => $allData['correo'] ?? ((string) $allData['doc']) . '@nomitech.local',
+                    'id_rol' => 3,
+                    'activo' => true,
                 ];
 
                 Usuario::firstOrCreate([
@@ -125,22 +126,22 @@ class RegistroUsuarios extends Controller
                 }
 
                 $contratoData = [
-                    'id_empresa'          => $companyId,
-                    'id_tipo_contrato'    => $allData['id_tipo_contrato'],
-                    'id_tipo_trabajador'  => $allData['id_tipo_trabajador'],
-                    'id_sub_tipo_trabajador'=> $allData['id_sub_tipo_trabajador'],
-                    'id_forma_pago'       => $allData['id_forma_pago'],
-                    'id_metodo_pago'      => $allData['id_metodo_pago'],
-                    'id_arl'              => $allData['id_arl'],
-                    'id_eps'              => $allData['id_eps'],
-                    'id_afp'              => $allData['id_afp'],
-                    'alto_riesgo'         => (int) ($allData['alto_riesgo'] ?? 0),
-                    'nivel_riesgo'        => $allData['nivel_riesgo'] ?? null,
-                    'fecha_inicio'        => $allData['fecha_inicio'],
-                    'fecha_fin'           => $allData['fecha_fin'] ?? null,
-                    'salario_base'        => $allData['salario'] ?? 0,
-                    'activo'              => true,
-                    'doc'                 => $allData['doc'],
+                    'id_empresa' => $companyId,
+                    'id_tipo_contrato' => $allData['id_tipo_contrato'],
+                    'id_tipo_trabajador' => $allData['id_tipo_trabajador'],
+                    'id_sub_tipo_trabajador' => $allData['id_sub_tipo_trabajador'],
+                    'id_forma_pago' => $allData['id_forma_pago'],
+                    'id_metodo_pago' => $allData['id_metodo_pago'],
+                    'id_arl' => $allData['id_arl'],
+                    'id_eps' => $allData['id_eps'],
+                    'id_afp' => $allData['id_afp'],
+                    'alto_riesgo' => (int) ($allData['alto_riesgo'] ?? 0),
+                    'nivel_riesgo' => $allData['nivel_riesgo'] ?? null,
+                    'fecha_inicio' => $allData['fecha_inicio'],
+                    'fecha_fin' => $allData['fecha_fin'] ?? null,
+                    'salario_base' => $allData['salario'] ?? 0,
+                    'activo' => true,
+                    'doc' => $allData['doc'],
                 ];
 
                 $contrato = Contrato::updateOrCreate(
@@ -174,7 +175,8 @@ class RegistroUsuarios extends Controller
                 'message' => 'Empleado registrado correctamente'
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error creando empleado: '.$e->getMessage(),
+            Log::error(
+                'Error creando empleado: ' . $e->getMessage(),
                 [
                     'exception' => $e,
                     'code' => $e->getCode(),
@@ -211,7 +213,7 @@ class RegistroUsuarios extends Controller
      */
     public function editEmployee($doc)
     {
-        $usuario = Usuario::with('contratos')->findOrFail($doc);
+        $usuario = Empleado::with('contratos')->findOrFail($doc);
         $contrato = $usuario->contratos->first();
         $cuenta = null;
 
@@ -234,7 +236,7 @@ class RegistroUsuarios extends Controller
      */
     public function updateEmployee(UpdateEmployeePartialRequest $request, $doc)
     {
-        $usuario = Usuario::findOrFail($doc);
+        $usuario = Empleado::findOrFail($doc);
         $contrato = $usuario->contratos->first();
 
         $data = $request->validated();
@@ -243,13 +245,20 @@ class RegistroUsuarios extends Controller
         DB::transaction(function () use ($usuario, &$contrato, $data) {
             // Actualizar solo los campos del Usuario que se enviaron
             $usuarioData = [];
-            if (isset($data['id_tipo_doc'])) $usuarioData['id_tipo_doc'] = $data['id_tipo_doc'];
-            if (isset($data['primer_nombre'])) $usuarioData['primer_nombre'] = $data['primer_nombre'];
-            if (isset($data['otros_nombres'])) $usuarioData['otros_nombres'] = $data['otros_nombres'];
-            if (isset($data['primer_apellido'])) $usuarioData['primer_apellido'] = $data['primer_apellido'];
-            if (isset($data['segundo_apellido'])) $usuarioData['segundo_apellido'] = $data['segundo_apellido'];
-            if (isset($data['id_ciudad'])) $usuarioData['id_ciudad'] = $data['id_ciudad'];
-            if (isset($data['direccion'])) $usuarioData['direccion'] = $data['direccion'];
+            if (isset($data['id_tipo_doc']))
+                $usuarioData['id_tipo_doc'] = $data['id_tipo_doc'];
+            if (isset($data['primer_nombre']))
+                $usuarioData['primer_nombre'] = $data['primer_nombre'];
+            if (isset($data['otros_nombres']))
+                $usuarioData['otros_nombres'] = $data['otros_nombres'];
+            if (isset($data['primer_apellido']))
+                $usuarioData['primer_apellido'] = $data['primer_apellido'];
+            if (isset($data['segundo_apellido']))
+                $usuarioData['segundo_apellido'] = $data['segundo_apellido'];
+            if (isset($data['id_ciudad']))
+                $usuarioData['id_ciudad'] = $data['id_ciudad'];
+            if (isset($data['direccion']))
+                $usuarioData['direccion'] = $data['direccion'];
 
             if (!empty($usuarioData)) {
                 $usuario->update($usuarioData);
@@ -257,20 +266,34 @@ class RegistroUsuarios extends Controller
 
             // Actualizar solo los campos del Contrato que se enviaron
             $contratoData = [];
-            if (isset($data['id_tipo_contrato'])) $contratoData['id_tipo_contrato'] = $data['id_tipo_contrato'];
-            if (isset($data['id_tipo_trabajador'])) $contratoData['id_tipo_trabajador'] = $data['id_tipo_trabajador'];
-            if (isset($data['id_sub_tipo_trabajador'])) $contratoData['id_sub_tipo_trabajador'] = $data['id_sub_tipo_trabajador'];
-            if (isset($data['id_forma_pago'])) $contratoData['id_forma_pago'] = $data['id_forma_pago'];
-            if (isset($data['id_metodo_pago'])) $contratoData['id_metodo_pago'] = $data['id_metodo_pago'];
-            if (isset($data['id_arl'])) $contratoData['id_arl'] = $data['id_arl'];
-            if (isset($data['id_eps'])) $contratoData['id_eps'] = $data['id_eps'];
-            if (isset($data['id_afp'])) $contratoData['id_afp'] = $data['id_afp'];
-            if (isset($data['alto_riesgo'])) $contratoData['alto_riesgo'] = (int)$data['alto_riesgo'];
-            if (isset($data['nivel_riesgo'])) $contratoData['nivel_riesgo'] = $data['nivel_riesgo'];
-            if (isset($data['fecha_inicio'])) $contratoData['fecha_inicio'] = $data['fecha_inicio'];
-            if (isset($data['fecha_fin'])) $contratoData['fecha_fin'] = $data['fecha_fin'];
-            if (isset($data['salario'])) $contratoData['salario_base'] = $data['salario'];
-            if (isset($data['activo'])) $contratoData['activo'] = (int)$data['activo'];
+            if (isset($data['id_tipo_contrato']))
+                $contratoData['id_tipo_contrato'] = $data['id_tipo_contrato'];
+            if (isset($data['id_tipo_trabajador']))
+                $contratoData['id_tipo_trabajador'] = $data['id_tipo_trabajador'];
+            if (isset($data['id_sub_tipo_trabajador']))
+                $contratoData['id_sub_tipo_trabajador'] = $data['id_sub_tipo_trabajador'];
+            if (isset($data['id_forma_pago']))
+                $contratoData['id_forma_pago'] = $data['id_forma_pago'];
+            if (isset($data['id_metodo_pago']))
+                $contratoData['id_metodo_pago'] = $data['id_metodo_pago'];
+            if (isset($data['id_arl']))
+                $contratoData['id_arl'] = $data['id_arl'];
+            if (isset($data['id_eps']))
+                $contratoData['id_eps'] = $data['id_eps'];
+            if (isset($data['id_afp']))
+                $contratoData['id_afp'] = $data['id_afp'];
+            if (isset($data['alto_riesgo']))
+                $contratoData['alto_riesgo'] = (int) $data['alto_riesgo'];
+            if (isset($data['nivel_riesgo']))
+                $contratoData['nivel_riesgo'] = $data['nivel_riesgo'];
+            if (isset($data['fecha_inicio']))
+                $contratoData['fecha_inicio'] = $data['fecha_inicio'];
+            if (isset($data['fecha_fin']))
+                $contratoData['fecha_fin'] = $data['fecha_fin'];
+            if (isset($data['salario']))
+                $contratoData['salario_base'] = $data['salario'];
+            if (isset($data['activo']))
+                $contratoData['activo'] = (int) $data['activo'];
 
             if ($contrato && !empty($contratoData)) {
                 $contrato->update($contratoData);

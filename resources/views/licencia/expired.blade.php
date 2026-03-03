@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Licencia Expirada | Nomitech</title>
 
     <!-- Fonts -->
@@ -124,7 +125,7 @@
                             @csrf
                             <input type="hidden" name="plan_id" value="{{ $plan->id }}">
                             <button type="submit" class="w-full py-4 rounded-2xl font-extrabold transition-all 
-                                                    {{ $plan->destacado || $plan->id == $currentPlanId
+                                                            {{ $plan->destacado || $plan->id == $currentPlanId
                 ? 'bg-[#1564C0] text-white shadow-lg shadow-[#1564C0]/25 hover:shadow-[#1564C0]/40 hover:-translate-y-0.5 active:translate-y-0'
                 : 'bg-white text-[#1564C0] border-2 border-[#1564C0] hover:bg-[#1564C0] hover:text-white' }}">
                                 {{ $plan->id == $currentPlanId ? 'Renovar ahora' : 'Cambiar y renovar' }}

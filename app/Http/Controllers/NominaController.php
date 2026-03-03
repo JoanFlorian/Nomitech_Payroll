@@ -221,8 +221,12 @@ class NominaController extends Controller
     public function index(Request $request)
     {
         $busqueda = trim((string) $request->input('documento', ''));
+        $empresaId = session('empresa_id');
 
         $salarios = Salario::with('contrato.usuario')
+            ->whereHas('contrato', function ($q) use ($empresaId) {
+                $q->where('id_empresa', $empresaId);
+            })
             ->when($busqueda !== '', function ($q) use ($busqueda) {
                 $term = mb_strtolower($busqueda);
                 $q->whereHas('contrato.usuario', function ($u) use ($busqueda, $term) {
@@ -324,7 +328,7 @@ class NominaController extends Controller
     {
         $request->merge(
             collect(array_keys(self::STEP2_RATES))
-                ->mapWithKeys(fn (string $key) => [$key => $this->parseNumber($request->input($key))])
+                ->mapWithKeys(fn(string $key) => [$key => $this->parseNumber($request->input($key))])
                 ->all()
         );
 
@@ -392,12 +396,14 @@ class NominaController extends Controller
             $comisiones +
             $otrosDevengos;
 
-        session(['nomina.step2_ingresos' => [
-            'bonificaciones' => $bonificaciones,
-            'comisiones' => $comisiones,
-            'otros_devengos' => $otrosDevengos,
-            'total_devengos_final' => $totalDevengosFinal,
-        ]]);
+        session([
+            'nomina.step2_ingresos' => [
+                'bonificaciones' => $bonificaciones,
+                'comisiones' => $comisiones,
+                'otros_devengos' => $otrosDevengos,
+                'total_devengos_final' => $totalDevengosFinal,
+            ]
+        ]);
 
         return redirect()->route('nomina.step3');
     }
@@ -430,9 +436,11 @@ class NominaController extends Controller
     ========================== */
     public function buscarEmpleado($doc)
     {
+        $empresaId = session('empresa_id');
         return DB::table('usuario')
             ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
             ->where('usuario.doc', $doc)
+            ->where('contrato.id_empresa', $empresaId)
             ->where('contrato.activo', 1)
             ->select(
                 'usuario.doc',
@@ -453,6 +461,7 @@ class NominaController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
         $qDoc = preg_replace('/\D+/', '', $q);
+        $empresaId = session('empresa_id');
 
         $nombreExpr = "TRIM(CONCAT(
             usuario.primer_nombre,' ',
@@ -463,6 +472,7 @@ class NominaController extends Controller
 
         $query = DB::table('usuario')
             ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
+            ->where('contrato.id_empresa', $empresaId)
             ->where('contrato.activo', 1)
             ->select(
                 'usuario.doc',
@@ -683,24 +693,24 @@ class NominaController extends Controller
         float $pensionVoluntaria
     ): array {
         return [
-                'id_contrato' => $s1['id_contrato'],
-                'id_periodo' => $periodoId,
-                'id_estado' => $estadoId,
-                'auxilio_transporte' => 162000,
-                'valor_horas_extras_recargos' => $this->parseNumber($s2['valor_horas_extras_recargos'] ?? 0),
-                'bonificaciones' => $this->parseNumber($s2Ingresos['bonificaciones'] ?? 0),
-                'comisiones' => $this->parseNumber($s2Ingresos['comisiones'] ?? 0),
-                'otros_devengos' => $this->parseNumber($s2Ingresos['otros_devengos'] ?? 0),
-                'arl' => $contributions['arl'],
-                'eps' => $contributions['eps'],
-                'afp' => $contributions['afp'],
-                'seguridad_social' => $contributions['seguridad_social'],
-                'aporte_fp' => $contributions['aporte_fp'],
-                'retencion_fuente' => $retencionFuente,
-                'embargo_fiscal' => $embargoFiscal,
-                'pension_voluntaria' => $pensionVoluntaria,
-                'fecha_pago' => $fechaPago,
-                'updated_at' => now(),
-            ];
+            'id_contrato' => $s1['id_contrato'],
+            'id_periodo' => $periodoId,
+            'id_estado' => $estadoId,
+            'auxilio_transporte' => 162000,
+            'valor_horas_extras_recargos' => $this->parseNumber($s2['valor_horas_extras_recargos'] ?? 0),
+            'bonificaciones' => $this->parseNumber($s2Ingresos['bonificaciones'] ?? 0),
+            'comisiones' => $this->parseNumber($s2Ingresos['comisiones'] ?? 0),
+            'otros_devengos' => $this->parseNumber($s2Ingresos['otros_devengos'] ?? 0),
+            'arl' => $contributions['arl'],
+            'eps' => $contributions['eps'],
+            'afp' => $contributions['afp'],
+            'seguridad_social' => $contributions['seguridad_social'],
+            'aporte_fp' => $contributions['aporte_fp'],
+            'retencion_fuente' => $retencionFuente,
+            'embargo_fiscal' => $embargoFiscal,
+            'pension_voluntaria' => $pensionVoluntaria,
+            'fecha_pago' => $fechaPago,
+            'updated_at' => now(),
+        ];
     }
 }

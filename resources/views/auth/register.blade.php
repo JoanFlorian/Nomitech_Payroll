@@ -331,7 +331,7 @@
             </x-form.grid>
 
             <div class="mt-10 flex flex-col-reverse sm:flex-row items-center justify-end gap-4">
-                <x-ui.button-secondary @click="handleBack('{{ route('login') }}')">
+                <x-ui.button-secondary @click="handleBack('/')">
                     Atrás
                 </x-ui.button-secondary>
 

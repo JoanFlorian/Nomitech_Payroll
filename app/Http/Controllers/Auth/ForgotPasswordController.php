@@ -41,20 +41,44 @@ class ForgotPasswordController extends Controller
      */
     public function sendResetLinkEmail(Request $request)
     {
-        $correo = strtolower(trim((string) $request->input('correo', '')));
-
         $request->validate(
-            ['correo' => 'required|email|max:255'],
+            ['correo' => 'required|string|email|max:255'],
             [
                 'correo.required' => 'El campo correo electrónico es obligatorio.',
+                'correo.string' => 'El correo electrónico debe ser texto válido.',
                 'correo.email' => 'El correo electrónico no es válido.',
                 'correo.max' => 'El correo electrónico no puede superar los 255 caracteres.',
             ]
         );
 
+        $correo = strtolower(trim((string) $request->input('correo', '')));
+
         $throttleKey = $this->tokenRequestThrottleKey($correo);
         $cooldownKey = $this->tokenCooldownThrottleKey($correo);
         $blockKey = 'password-reset-blocked:' . $correo;
+
+        $ip = $request->ip();
+        $ipThrottleKey = 'password-reset-ip-request:' . $ip;
+        $ipBlockKey = 'password-reset-blocked-ip:' . $ip;
+
+        // Verificar bloqueo por IP
+        if (Cache::has($ipBlockKey)) {
+            $unblockTime = Cache::get($ipBlockKey);
+            $seconds = max(0, $unblockTime - now()->timestamp);
+
+            if ($seconds > 0) {
+                $minutes = (int) ceil($seconds / 60);
+                $minuteText = $minutes === 1 ? 'minuto' : 'minutos';
+
+                Log::warning("Rate limit reached for IP {$ip} at ForgotPasswordController. Blocked.");
+
+                return back()->withErrors([
+                    'correo' => "Has agotado los intentos permitidos desde tu dispositivo. Por seguridad, se ha bloqueado el acceso por {$minutes} {$minuteText}.",
+                ])->withInput($request->only('correo'))->with('cooldown_seconds', $seconds);
+            } else {
+                Cache::forget($ipBlockKey);
+            }
+        }
 
         if (Cache::has($blockKey)) {
             $unblockTime = Cache::get($blockKey);
@@ -102,9 +126,12 @@ class ForgotPasswordController extends Controller
 
         RateLimiter::hit($cooldownKey, self::TOKEN_REQUEST_COOLDOWN_SECONDS);
         RateLimiter::hit($throttleKey, 3600); // Mantenemos el historial de intentos por 1 hora
-        $currentAttempts = RateLimiter::attempts($throttleKey);
+        RateLimiter::hit($ipThrottleKey, 3600); // Mantenemos el historial por IP también
 
-        Log::info("Code sent to {$correo}. Current attempts: {$currentAttempts}/" . self::MAX_TOKEN_REQUESTS);
+        $currentAttempts = RateLimiter::attempts($throttleKey);
+        $ipAttempts = RateLimiter::attempts($ipThrottleKey);
+
+        Log::info("Code sent to {$correo} from IP {$ip}. Email attempts: {$currentAttempts}/" . self::MAX_TOKEN_REQUESTS . ". IP attempts: {$ipAttempts}/" . self::MAX_TOKEN_REQUESTS);
 
         // Send Email
         try {
@@ -122,13 +149,23 @@ class ForgotPasswordController extends Controller
         $statusMessage = 'Hemos enviado un código de verificación a tu correo electrónico.';
 
         // Add warning message starting from 2nd attempt
-        if ($currentAttempts >= self::MAX_TOKEN_REQUESTS) {
-            Cache::put($blockKey, now()->addMinutes(5)->timestamp, now()->addMinutes(5));
-            RateLimiter::clear($throttleKey);
+        if ($currentAttempts >= self::MAX_TOKEN_REQUESTS || $ipAttempts >= self::MAX_TOKEN_REQUESTS) {
 
-            $statusMessage .= " Has alcanzado el límite de 5 intentos. No podrás solicitar más códigos por 5 minutos.";
-        } elseif ($currentAttempts >= 2) {
-            $remaining = max(self::MAX_TOKEN_REQUESTS - $currentAttempts, 0);
+            // Si el correo o la IP llegaron al límite, bloqueamos ambos y limpiamos ambos contadores
+            Cache::put($blockKey, now()->addMinutes(5)->timestamp, now()->addMinutes(5));
+            Cache::put($ipBlockKey, now()->addMinutes(5)->timestamp, now()->addMinutes(5));
+
+            RateLimiter::clear($throttleKey);
+            RateLimiter::clear($ipThrottleKey);
+
+            if ($currentAttempts >= self::MAX_TOKEN_REQUESTS) {
+                $statusMessage .= " Has alcanzado el límite de 5 intentos para este correo. No podrás solicitar más códigos por 5 minutos.";
+            } else {
+                $statusMessage .= " Has alcanzado el límite de intentos desde tu dispositivo. No podrás solicitar más códigos por 5 minutos.";
+            }
+
+        } elseif ($currentAttempts >= 2 || $ipAttempts >= 2) {
+            $remaining = max(self::MAX_TOKEN_REQUESTS - max($currentAttempts, $ipAttempts), 0);
             $statusMessage .= " Tienes {$remaining} intentos restantes antes de que el acceso se bloquee por 5 minutos.";
         }
 

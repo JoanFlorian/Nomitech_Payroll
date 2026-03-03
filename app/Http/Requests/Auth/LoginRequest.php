@@ -15,7 +15,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'correo' => ['required', 'string', 'email', 'max:255'],
-            'contrasena' => ['required', 'string'],
+            'contrasena' => ['required', 'string', 'max:64'],
         ];
     }
 
@@ -28,6 +28,7 @@ class LoginRequest extends FormRequest
             'correo.max' => 'El correo electrónico no puede superar los 255 caracteres.',
             'contrasena.required' => 'La contraseña es obligatoria.',
             'contrasena.string' => 'La contraseña debe ser texto válido.',
+            'contrasena.max' => 'La contraseña no puede superar los 64 caracteres.',
         ];
     }
 }

@@ -117,8 +117,8 @@
                                     <i class="fas fa-user-tie text-blue-600 text-sm"></i>
                                 </div>
                                 <div class="flex flex-col">
-                                    <p class="font-semibold text-gray-900">{{ $usuario->primer_nombre }} {{ $usuario->primer_apellido }}</p>
-                                    <p class="text-xs text-gray-500">{{ $usuario->otros_nombres }} {{ $usuario->segundo_apellido }}</p>
+                                    <p class="font-semibold text-gray-900">{{ \Illuminate\Support\Str::title(trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? ''))) }}</p>
+                                    <p class="text-xs text-gray-500">{{ \Illuminate\Support\Str::title(trim(($usuario->otros_nombres ?? '') . ' ' . ($usuario->segundo_apellido ?? ''))) }}</p>
                                 </div>
                             </div>
                         </td>
@@ -167,7 +167,7 @@
                                     <i class="fas fa-user-slash text-orange-600 text-sm"></i>
                                 </div>
                                 <div class="flex flex-col">
-                                    <p class="font-semibold text-gray-900">{{ $usuario->primer_nombre }} {{ $usuario->primer_apellido }}</p>
+                                    <p class="font-semibold text-gray-900">{{ \Illuminate\Support\Str::title(trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? ''))) }}</p>
                                     <p class="text-xs text-gray-500">{{ $usuario->email ?? 'Sin email' }}</p>
                                 </div>
                             </div>

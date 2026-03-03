@@ -19,14 +19,14 @@
     <meta property="og:url" content="https://nomitech.com/">
 
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght
-    @400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet">
 
     <!-- Vite Assets -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
 
     <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -100,8 +100,12 @@
             background-color: var(--background-light);
         }
 
-        .landing-page .dark:bg-background-dark {
+        .landing-page.dark .dark\:bg-background-dark {
             background-color: var(--background-dark);
+        }
+
+        .landing-page.dark .dark\:bg-background-dark\/90 {
+            background-color: rgba(15, 23, 42, 0.9);
         }
 
         .landing-page .font-display {
@@ -177,11 +181,11 @@
     </script>
 </head>
 
-<body class="landing-page bg-background-light dark:bg-background-dark font-display text-[#1e293b] dark:text-slate-200 transition-colors duration-300">
+<body class="landing-page bg-background-light font-display text-[#1e293b] transition-colors duration-300">
 
     <!-- HEADER -->
     <header
-        class="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+        class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
         <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <div class="size-9 bg-primary rounded-lg flex items-center justify-center text-white">
@@ -197,7 +201,7 @@
             </nav>
             <div class="flex items-center gap-4">
                 <a href="/login"
-                    class="px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
+                    class="px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
                     Iniciar sesión
                 </a>
                 <a href="#pricing"
@@ -250,9 +254,9 @@
                 <!-- DASHBOARD TARJETA ORIGINAL -->
                 <div class="relative">
                     <div
-                        class="bg-white/95 dark:bg-slate-900 rounded-2xl shadow-2xl p-6 border border-white/20 overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-500">
+                        class="bg-white/95 rounded-2xl shadow-2xl p-6 border border-white/20 overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-500">
                         <div class="flex items-center justify-between mb-8">
-                            <h3 class="font-bold text-slate-800 dark:text-white">Resumen de Nómina</h3>
+                            <h3 class="font-bold text-slate-800">Resumen de Nómina</h3>
                             <div class="flex gap-2">
                                 <div class="size-3 rounded-full bg-red-400"></div>
                                 <div class="size-3 rounded-full bg-amber-400"></div>
@@ -261,7 +265,7 @@
                         </div>
                         <div class="space-y-6">
                             <div
-                                class="flex justify-between items-center p-4 bg-background-light dark:bg-slate-800 rounded-xl">
+                                class="flex justify-between items-center p-4 bg-background-light rounded-xl">
                                 <div>
                                     <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">
                                         Total procesado
@@ -275,16 +279,16 @@
                                 </span>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
-                                <div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                                <div class="p-4 border border-slate-200 rounded-xl">
                                     <p class="text-xs font-bold text-slate-500 mb-1">Total empleados</p>
                                     <p class="text-xl font-bold">45</p>
                                 </div>
-                                <div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+                                <div class="p-4 border border-slate-200 rounded-xl">
                                     <p class="text-xs font-bold text-slate-500 mb-1">Estado</p>
                                     <p class="text-xl font-bold text-accent">Activo</p>
                                 </div>
                             </div>
-                            <div class="bg-slate-100 dark:bg-slate-800 h-24 rounded-xl flex items-end p-2 gap-1">
+                            <div class="bg-slate-100 h-24 rounded-xl flex items-end p-2 gap-1">
                                 <div class="bg-primary/40 w-full rounded-t-sm" style="height: 40%"></div>
                                 <div class="bg-primary/60 w-full rounded-t-sm" style="height: 60%"></div>
                                 <div class="bg-primary/40 w-full rounded-t-sm" style="height: 30%"></div>
@@ -295,7 +299,7 @@
                     </div>
 
                     <div
-                        class="absolute -bottom-8 -left-8 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 max-w-[200px] hidden md:block">
+                        class="absolute -bottom-8 -left-8 bg-white p-4 rounded-xl shadow-xl border border-slate-100 max-w-[200px] hidden md:block">
                         <div class="flex items-center gap-3">
                             <div class="size-10 bg-accent/10 rounded-full flex items-center justify-center text-accent">
                                 <span class="material-symbols-outlined">verified_user</span>
@@ -320,7 +324,7 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 <div
-                    class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all">
+                    class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-all">
                     <div class="size-12 bg-primary/5 rounded-xl flex items-center justify-center text-primary mb-5">
                         <span class="material-symbols-outlined text-2xl">groups</span>
                     </div>
@@ -329,7 +333,7 @@
                     </p>
                 </div>
                 <div
-                    class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all">
+                    class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-all">
                     <div class="size-12 bg-primary/5 rounded-xl flex items-center justify-center text-primary mb-5">
                         <span class="material-symbols-outlined text-2xl">payments</span>
                     </div>
@@ -338,7 +342,7 @@
                         configurables.</p>
                 </div>
                 <div
-                    class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all">
+                    class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-all">
                     <div class="size-12 bg-primary/5 rounded-xl flex items-center justify-center text-primary mb-5">
                         <span class="material-symbols-outlined text-2xl">account_balance</span>
                     </div>
@@ -346,7 +350,7 @@
                     <p class="text-sm text-slate-500">Cálculo preciso de provisiones y seguridad social (PILA).</p>
                 </div>
                 <div
-                    class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all">
+                    class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-all">
                     <div class="size-12 bg-primary/5 rounded-xl flex items-center justify-center text-primary mb-5">
                         <span class="material-symbols-outlined text-2xl">update</span>
                     </div>
@@ -355,7 +359,7 @@
                         colombiana.</p>
                 </div>
                 <div
-                    class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all">
+                    class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-all">
                     <div class="size-12 bg-primary/5 rounded-xl flex items-center justify-center text-primary mb-5">
                         <span class="material-symbols-outlined text-2xl">description</span>
                     </div>
@@ -366,7 +370,7 @@
         </section>
 
         <!-- WORKFLOW -->
-        <section class="py-24 bg-slate-50 dark:bg-slate-900/50" id="workflow">
+        <section class="py-24 bg-slate-50" id="workflow">
             <div class="max-w-7xl mx-auto px-6">
                 <div class="flex flex-col lg:flex-row gap-16 items-center">
                     <div class="lg:w-1/2">
@@ -419,7 +423,7 @@
 
                     <div class="lg:w-1/2 w-full">
                         <div
-                            class="bg-white dark:bg-slate-800 rounded-3xl p-2 shadow-2xl border border-slate-200 dark:border-slate-700">
+                            class="bg-white rounded-3xl p-2 shadow-2xl border border-slate-200">
                             <div class="bg-primary rounded-2xl p-12 text-center text-white">
                                 <span class="material-symbols-outlined text-[64px] mb-6">bolt</span>
                                 <h3 class="text-2xl font-bold mb-4">¿Listo para optimizar?</h3>
@@ -444,7 +448,7 @@
                 <div class="order-2 lg:order-1">
                     <div class="grid grid-cols-2 gap-6">
                         <div
-                            class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                            class="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
                             <span class="material-symbols-outlined text-accent text-4xl mb-4">gavel</span>
                             <h4 class="font-bold mb-2">Cumplimiento DIAN</h4>
                             <p class="text-xs text-slate-500">
@@ -452,7 +456,7 @@
                             </p>
                         </div>
                         <div
-                            class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                            class="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
                             <span class="material-symbols-outlined text-accent text-4xl mb-4">shield_with_heart</span>
                             <h4 class="font-bold mb-2">Preparado para UGPP</h4>
                             <p class="text-xs text-slate-500">
@@ -460,7 +464,7 @@
                             </p>
                         </div>
                         <div
-                            class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                            class="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
                             <span class="material-symbols-outlined text-accent text-4xl mb-4">lock</span>
                             <h4 class="font-bold mb-2">Seguridad de datos</h4>
                             <p class="text-xs text-slate-500">
@@ -468,7 +472,7 @@
                             </p>
                         </div>
                         <div
-                            class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                            class="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
                             <span class="material-symbols-outlined text-accent text-4xl mb-4">fact_check</span>
                             <h4 class="font-bold mb-2">Auditoría completa</h4>
                             <p class="text-xs text-slate-500">
@@ -487,7 +491,7 @@
                         Nomitech es más que software: es tu respaldo legal. Actualizamos constantemente el sistema para
                         cumplir con la DIAN, la UGPP y el Ministerio de Trabajo.
                     </p>
-                    <div class="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-800 rounded-xl inline-flex">
+                    <div class="flex items-center gap-3 p-4 bg-slate-100 rounded-xl inline-flex">
                         <span class="material-symbols-outlined text-primary">verified_user</span>
                         <span class="text-sm font-bold">Cumplimiento 100% garantizado</span>
                     </div>
@@ -496,7 +500,7 @@
         </section>
 
         <!-- PRICING -->
-        <section class="py-24 bg-white dark:bg-slate-900" id="pricing">
+        <section class="py-24 bg-white" id="pricing">
             <div class="max-w-7xl mx-auto px-6">
                 <div class="text-center mb-20">
                     <h2 class="text-3xl lg:text-4xl font-extrabold mb-4">Elige tu plan</h2>
@@ -510,7 +514,7 @@
                     <div class="swiper-wrapper">
                         @forelse($planes as $plan)
                             <div class="swiper-slide">
-                                <div class="h-full p-8 rounded-3xl {{ $plan->destacado ? 'border-2 border-primary bg-white dark:bg-slate-900 shadow-xl' : 'border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50' }} flex flex-col">
+                                <div class="h-full p-8 rounded-3xl {{ $plan->destacado ? 'border-2 border-primary bg-white shadow-xl' : 'border border-slate-200 bg-slate-50' }} flex flex-col">
                                     @if($plan->destacado)
                                         <span class="inline-block mb-4 px-4 py-1 text-xs font-bold text-primary bg-primary/10 rounded-full w-fit">
                                             Más popular
@@ -535,14 +539,14 @@
                                         @endif
                                     </ul>
                                     <a href="{{ route('register.create', ['plan_id' => $plan->id]) }}"
-                                        class="w-full py-3 rounded-xl {{ $plan->destacado ? 'bg-primary text-white font-bold hover:opacity-90' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold hover:bg-slate-100 dark:hover:bg-slate-700' }} text-center transition-all">
+                                        class="w-full py-3 rounded-xl {{ $plan->destacado ? 'bg-primary text-white font-bold hover:opacity-90' : 'bg-white border border-slate-200 font-bold hover:bg-slate-100' }} text-center transition-all">
                                         {{ $plan->destacado ? 'Comenzar ahora' : 'Elegir plan' }}
                                     </a>
                                 </div>
                             </div>
                         @empty
                             <div class="swiper-slide">
-                                <div class="p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex flex-col text-center">
+                                <div class="p-8 rounded-3xl border border-slate-200 bg-slate-50 flex flex-col text-center">
                                     <p class="text-slate-500">No hay planes disponibles</p>
                                 </div>
                             </div>

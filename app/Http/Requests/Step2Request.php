@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\TipoTrabajador;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Validator;
 
 class Step2Request extends FormRequest
 {
@@ -18,7 +21,7 @@ class Step2Request extends FormRequest
         return [
             // FECHAS
             'fecha_inicio' => 'bail|required|date',
-            'fecha_fin' => 'bail|nullable|date|after_or_equal:fecha_inicio',
+            'fecha_fin' => 'bail|nullable|date|after:fecha_inicio',
 
             // HORAS
             'horas_diarias' => 'bail|required|integer|min:1|max:12',
@@ -30,7 +33,7 @@ class Step2Request extends FormRequest
             'id_arl'                  => 'bail|required|integer|exists:arl,id_arl',
 
             // SALARIO
-            'salario' => 'bail|required|numeric|min:0.01|max:999999999',
+            'salario' => 'bail|required|numeric|min:0|max:999999999',
 
             // NIVEL RIESGO
             'nivel_riesgo' => 'bail|required|in:Nivel I,Nivel II,Nivel III,Nivel IV,Nivel V',
@@ -60,7 +63,7 @@ class Step2Request extends FormRequest
             |--------------------------------------------------------------------------
             */
             'fecha_fin.date' => 'Debe ingresar una fecha válida.',
-            'fecha_fin.after_or_equal' => 'La fecha fin no puede ser menor que la fecha de inicio.',
+            'fecha_fin.after' => 'La fecha fin debe ser posterior a la fecha de inicio.',
 
             /*
             |--------------------------------------------------------------------------
@@ -115,7 +118,7 @@ class Step2Request extends FormRequest
             */
             'salario.required' => 'El salario es obligatorio.',
             'salario.numeric'  => 'El salario debe ser un valor numérico.',
-            'salario.min'      => 'El salario debe ser mayor que cero.',
+            'salario.min'      => 'El salario no puede ser negativo.',
             'salario.max'      => 'El salario es demasiado alto.',
 
             /*
@@ -138,15 +141,128 @@ class Step2Request extends FormRequest
         ];
     }
 
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $idTipoContrato = (int) $this->input('id_tipo_contrato');
+            $salario = (float) $this->input('salario', 0);
+
+            if ($idTipoContrato <= 0) {
+                return;
+            }
+
+            $smmlv = (float) config('nomina.salario_minimo', config('nomina.smmlv'));
+
+            if ($smmlv <= 0) {
+                return;
+            }
+
+            if (in_array($idTipoContrato, [1, 2, 3], true)) {
+                if ($salario < $smmlv) {
+                    $validator->errors()->add(
+                        'salario',
+                        'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.'
+                    );
+                }
+                return;
+            }
+
+            if ($idTipoContrato === 5 || $idTipoContrato === 6) {
+                return;
+            }
+
+            if ($idTipoContrato === 4) {
+                $etapaAprendiz = $this->resolveAprendizStage();
+
+                if ($etapaAprendiz === 'lectiva') {
+                    $minimoAprendiz = $smmlv * 0.75;
+                    if ($salario < $minimoAprendiz) {
+                        $validator->errors()->add(
+                            'salario',
+                            'Para etapa lectiva, el salario base no puede ser inferior al 75% del salario mínimo legal vigente.'
+                        );
+                    }
+                    return;
+                }
+
+                if ($etapaAprendiz === 'productiva') {
+                    if ($salario < $smmlv) {
+                        $validator->errors()->add(
+                            'salario',
+                            'Para etapa productiva, el salario base no puede ser inferior al salario mínimo legal vigente.'
+                        );
+                    }
+                    return;
+                }
+
+                $validator->errors()->add(
+                    'salario',
+                    'Para contrato de aprendizaje debe indicar la etapa del aprendiz (lectiva o productiva).'
+                );
+            }
+        });
+    }
+
+    private function resolveAprendizStage(): ?string
+    {
+        $etapa = Str::of((string) $this->input('etapa_aprendiz', ''))
+            ->ascii()
+            ->lower()
+            ->trim()
+            ->toString();
+
+        if (Str::contains($etapa, 'lectiva')) {
+            return 'lectiva';
+        }
+
+        if (Str::contains($etapa, 'productiva')) {
+            return 'productiva';
+        }
+
+        $idTipoTrabajador = $this->input('id_tipo_trabajador');
+        if (!$idTipoTrabajador) {
+            return null;
+        }
+
+        $tipoTrabajadorNombre = TipoTrabajador::query()
+            ->where('id_tipo_trabajador', $idTipoTrabajador)
+            ->value('nombre');
+
+        if (!$tipoTrabajadorNombre) {
+            return null;
+        }
+
+        $nombreNormalizado = Str::of($tipoTrabajadorNombre)
+            ->ascii()
+            ->lower()
+            ->toString();
+
+        if (Str::contains($nombreNormalizado, 'lectiva')) {
+            return 'lectiva';
+        }
+
+        if (Str::contains($nombreNormalizado, 'productiva')) {
+            return 'productiva';
+        }
+
+        return null;
+    }
+
     /**
      * Prepare the data for validation. Ensure alto_riesgo is always 0 or 1
      * regardless of whether the checkbox was checked.
      */
     protected function prepareForValidation(): void
     {
-        $this->merge([
+        $payload = [
             'alto_riesgo' => $this->has('alto_riesgo') ? 1 : 0,
-        ]);
+        ];
+
+        if (!$this->has('salario') && $this->has('salario_base')) {
+            $payload['salario'] = $this->input('salario_base');
+        }
+
+        $this->merge($payload);
     }
 
     /**

@@ -416,6 +416,10 @@
             },
             
             closeModals() {
+                if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+                    return;
+                }
+
                 this.showRegistroModal = false;
                 this.showEditModal = false;
                 this.wizardStep = 1;
@@ -441,6 +445,9 @@
             nextEditStep() {
                 if (this.editWizardStep < 3) {
                     if (typeof window.validateEditStepByNumber === 'function' && !window.validateEditStepByNumber(this.editWizardStep, true)) {
+                        if (typeof window.showEditValidationAlert === 'function') {
+                            window.showEditValidationAlert('No puedes continuar hasta corregir los errores del formulario.');
+                        }
                         return;
                     }
                     this.editWizardStep++;
@@ -511,6 +518,10 @@
         });
 
     });
+
+    window.employeeValidationRules = {
+        smmlv: Number(@json((float) config('nomina.salario_minimo', config('nomina.smmlv', 0))))
+    };
 </script>
 @endsection
 

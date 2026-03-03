@@ -211,6 +211,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin</label>
                             <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="fecha_fin" id="editFechaFin">
+                            <p class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de inicio.</p>
                             <p class="error-message text-red-500 text-sm hidden" data-error="fecha_fin"></p>
                         </div>
 
@@ -368,6 +369,72 @@ const EDIT_LETTERS_REGEX = /^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/;
 const EDIT_NUMBERS_REGEX = /^[0-9]+$/;
 const EDIT_ACCOUNT_REGEX = /^[0-9]{6,20}$/;
 const EDIT_ADDRESS_REGEX = /^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i;
+const EDIT_SMMLV = Number(@json((float) config('nomina.salario_minimo', config('nomina.smmlv', 0))));
+
+function resolveEditAprendizStage(form) {
+    const etapaInput = form.querySelector('[name="etapa_aprendiz"]');
+    const etapaValue = etapaInput ? (etapaInput.value ?? '').toString().trim().toLowerCase() : '';
+
+    if (etapaValue.includes('lectiva')) {
+        return 'lectiva';
+    }
+
+    if (etapaValue.includes('productiva')) {
+        return 'productiva';
+    }
+
+    const tipoTrabajadorInput = form.querySelector('[name="id_tipo_trabajador"]');
+    const tipoTrabajadorValue = tipoTrabajadorInput ? (tipoTrabajadorInput.value ?? '').toString().trim() : '';
+
+    if (tipoTrabajadorValue === '12') {
+        return 'lectiva';
+    }
+
+    if (tipoTrabajadorValue === '19') {
+        return 'productiva';
+    }
+
+    const selectedText = tipoTrabajadorInput && tipoTrabajadorInput.selectedOptions && tipoTrabajadorInput.selectedOptions[0]
+        ? (tipoTrabajadorInput.selectedOptions[0].textContent ?? '').toString().toLowerCase()
+        : '';
+
+    if (selectedText.includes('lectiva')) {
+        return 'lectiva';
+    }
+
+    if (selectedText.includes('productiva')) {
+        return 'productiva';
+    }
+
+    return null;
+}
+
+function updateEditFechaFinMin() {
+    const fechaInicioInput = document.getElementById('editFechaInicio');
+    const fechaFinInput = document.getElementById('editFechaFin');
+
+    if (!fechaFinInput) {
+        return;
+    }
+
+    const fechaInicioValue = fechaInicioInput ? (fechaInicioInput.value ?? '').toString().trim() : '';
+
+    if (!fechaInicioValue) {
+        fechaFinInput.removeAttribute('min');
+        return;
+    }
+
+    const nextDate = new Date(`${fechaInicioValue}T00:00:00`);
+    nextDate.setDate(nextDate.getDate() + 1);
+    const minFechaFin = nextDate.toISOString().split('T')[0];
+    fechaFinInput.setAttribute('min', minFechaFin);
+
+    const fechaFinValue = (fechaFinInput.value ?? '').toString().trim();
+    if (fechaFinValue !== '' && fechaFinValue <= fechaInicioValue) {
+        fechaFinInput.value = '';
+        clearEditFieldError(fechaFinInput);
+    }
+}
 
 function normalizeEditFieldValue(field) {
     if (field.type === 'checkbox') {
@@ -467,6 +534,36 @@ function validateEditInput(input, condition, message, showError = true) {
     return false;
 }
 
+function getFirstEditErrorMessage() {
+    const form = document.getElementById('editEmployeeForm');
+    if (!form) {
+        return null;
+    }
+
+    const firstError = form.querySelector('.error-message:not(.hidden)');
+    if (!firstError) {
+        return null;
+    }
+
+    const message = (firstError.textContent ?? '').toString().trim();
+    return message !== '' ? message : null;
+}
+
+function showEditValidationAlert(message = null) {
+    const errorMessage = message || getFirstEditErrorMessage() || 'No puedes continuar hasta corregir los errores del formulario.';
+
+    Swal.fire({
+        icon: 'warning',
+        title: 'Corrige los errores',
+        text: errorMessage,
+        confirmButtonColor: '#1565C0',
+        allowOutsideClick: false,
+        allowEscapeKey: false
+    });
+}
+
+window.showEditValidationAlert = showEditValidationAlert;
+
 function validateEditField(stepNumber, fieldName, showError = true) {
     const form = document.getElementById('editEmployeeForm');
     if (!form) {
@@ -528,11 +625,52 @@ function validateEditField(stepNumber, fieldName, showError = true) {
                 if (!fechaInicioValue) {
                     return validateEditInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
                 }
-                return validateEditInput(input, value >= fechaInicioValue, 'La fecha fin no puede ser menor que la fecha de inicio.', showError);
+                return validateEditInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
             case 'horas_diarias':
                 return validateEditInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
             case 'salario':
-                return validateEditInput(input, value !== '' && !Number.isNaN(Number(value)) && Number(value) >= 0.01 && Number(value) <= 999999999, 'El salario debe estar entre 0.01 y 999999999.', showError);
+                if (value === '') {
+                    return validateEditInput(input, false, 'El salario es obligatorio.', showError);
+                }
+
+                const salario = Number(value);
+                if (Number.isNaN(salario) || salario < 0 || salario > 999999999) {
+                    return validateEditInput(input, false, 'El salario debe estar entre 0 y 999999999.', showError);
+                }
+
+                const tipoContratoInput = form.querySelector('[name="id_tipo_contrato"]');
+                const idTipoContrato = Number(tipoContratoInput ? tipoContratoInput.value : 0);
+
+                if (idTipoContrato === 1 || idTipoContrato === 2 || idTipoContrato === 3) {
+                    return validateEditInput(
+                        input,
+                        EDIT_SMMLV > 0 ? salario >= EDIT_SMMLV : true,
+                        'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.',
+                        showError
+                    );
+                }
+
+                if (idTipoContrato === 4) {
+                    const etapaAprendiz = resolveEditAprendizStage(form);
+
+                    if (!etapaAprendiz) {
+                        return validateEditInput(input, false, 'Para contrato de aprendizaje debe indicar la etapa del aprendiz (lectiva o productiva).', showError);
+                    }
+
+                    if (etapaAprendiz === 'lectiva') {
+                        const minimoLectiva = EDIT_SMMLV > 0 ? EDIT_SMMLV * 0.75 : 0;
+                        return validateEditInput(input, salario >= minimoLectiva, 'Para etapa lectiva, el salario base no puede ser inferior al 75% del salario mínimo legal vigente.', showError);
+                    }
+
+                    return validateEditInput(
+                        input,
+                        EDIT_SMMLV > 0 ? salario >= EDIT_SMMLV : true,
+                        'Para etapa productiva, el salario base no puede ser inferior al salario mínimo legal vigente.',
+                        showError
+                    );
+                }
+
+                return validateEditInput(input, true, '', showError);
             case 'codigo_interno':
                 return validateEditInput(input, EDIT_NUMBERS_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 dígitos numéricos.', showError);
             case 'nivel_riesgo':
@@ -565,6 +703,11 @@ function validateEditField(stepNumber, fieldName, showError = true) {
 }
 
 function validateEditStepByNumber(stepNumber, showError = true) {
+    const form = document.getElementById('editEmployeeForm');
+    if (!form) {
+        return true;
+    }
+
     const fieldsByStep = {
         1: ['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion'],
         2: ['id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_tipo_contrato', 'id_arl', 'fecha_inicio', 'fecha_fin', 'horas_diarias', 'salario', 'codigo_interno', 'nivel_riesgo'],
@@ -574,7 +717,33 @@ function validateEditStepByNumber(stepNumber, showError = true) {
     const fields = fieldsByStep[stepNumber] || [];
     let isValid = true;
 
+    const tipoContratoField = form.querySelector('[name="id_tipo_contrato"]');
+    const tipoTrabajadorField = form.querySelector('[name="id_tipo_trabajador"]');
+    const tipoContratoChanged = tipoContratoField
+        ? normalizeEditFieldValue(tipoContratoField) !== (tipoContratoField.dataset.initialValue ?? '').toString()
+        : false;
+    const tipoTrabajadorChanged = tipoTrabajadorField
+        ? normalizeEditFieldValue(tipoTrabajadorField) !== (tipoTrabajadorField.dataset.initialValue ?? '').toString()
+        : false;
+    const forceValidateSalary = stepNumber === 2 && (tipoContratoChanged || tipoTrabajadorChanged);
+
     fields.forEach((fieldName) => {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (!field) {
+            return;
+        }
+
+        const initialValue = (field.dataset.initialValue ?? '').toString();
+        const currentValue = normalizeEditFieldValue(field);
+        const hasChanged = currentValue !== initialValue;
+
+        if (!hasChanged && !(forceValidateSalary && fieldName === 'salario')) {
+            if (showError) {
+                clearEditFieldError(field);
+            }
+            return;
+        }
+
         if (!validateEditField(stepNumber, fieldName, showError)) {
             isValid = false;
         }
@@ -611,6 +780,7 @@ function loadEmployee(doc) {
                 document.getElementById('editIdArl').value = contrato.id_arl || '';
                 document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
                 document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                updateEditFechaFinMin();
                 document.getElementById('editHorasDiarias').value = contrato.horas_diarias || '';
                 document.getElementById('editSalario').value = contrato.salario_base || '';
                 document.getElementById('editCodigoInterno').value = contrato.codigo_interno || '';
@@ -631,6 +801,7 @@ function loadEmployee(doc) {
                 document.getElementById('editIdArl').value = '';
                 document.getElementById('editFechaInicio').value = '';
                 document.getElementById('editFechaFin').value = '';
+                updateEditFechaFinMin();
                 document.getElementById('editHorasDiarias').value = '';
                 document.getElementById('editSalario').value = '';
                 document.getElementById('editCodigoInterno').value = '';
@@ -660,7 +831,16 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
 
     const doc = document.getElementById('editDocField').value;
 
-    if (!validateEditStepByNumber(3, true)) {
+    const invalidStep = [1, 2, 3].find((step) => !validateEditStepByNumber(step, true));
+    if (invalidStep) {
+        if (typeof getEmpleadosModuleData === 'function') {
+            const moduleData = getEmpleadosModuleData();
+            if (moduleData) {
+                moduleData.editWizardStep = invalidStep;
+            }
+        }
+
+        showEditValidationAlert('No puedes finalizar hasta corregir los errores del formulario.');
         return;
     }
 
@@ -681,12 +861,61 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
     .then(response => {
         if (response.status === 422) {
             return response.json().then(data => {
+                const fieldStepMap = {
+                    id_tipo_doc: 1,
+                    primer_nombre: 1,
+                    otros_nombres: 1,
+                    primer_apellido: 1,
+                    segundo_apellido: 1,
+                    id_ciudad: 1,
+                    direccion: 1,
+                    id_tipo_trabajador: 2,
+                    id_sub_tipo_trabajador: 2,
+                    id_tipo_contrato: 2,
+                    id_arl: 2,
+                    fecha_inicio: 2,
+                    fecha_fin: 2,
+                    horas_diarias: 2,
+                    salario: 2,
+                    salario_base: 2,
+                    codigo_interno: 2,
+                    nivel_riesgo: 2,
+                    id_forma_pago: 3,
+                    id_metodo_pago: 3,
+                    tipo_cuenta: 3,
+                    numero_cuenta: 3,
+                    id_eps: 3,
+                    id_afp: 3,
+                };
+
+                let firstFieldWithError = null;
+                let firstMessage = null;
+
                 for (const field in data.errors) {
+                    if (!firstFieldWithError) {
+                        firstFieldWithError = field;
+                        firstMessage = Array.isArray(data.errors[field]) ? data.errors[field][0] : data.errors[field];
+                    }
+
                     const fieldInput = document.querySelector(`#editEmployeeForm [name="${field}"]`);
                     if (fieldInput) {
                         setEditFieldError(fieldInput, data.errors[field][0]);
                     }
                 }
+
+                const errorStep = fieldStepMap[firstFieldWithError] || 3;
+                if (typeof getEmpleadosModuleData === 'function') {
+                    const moduleData = getEmpleadosModuleData();
+                    if (moduleData) {
+                        moduleData.editWizardStep = errorStep;
+                    }
+                }
+
+                if (typeof window.showEditValidationAlert === 'function') {
+                    const fallbackMessage = 'No puedes guardar cambios hasta corregir los errores del formulario.';
+                    window.showEditValidationAlert(firstMessage || fallbackMessage);
+                }
+
                 throw new Error('Error de validación');
             });
         }
@@ -704,5 +933,40 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
             Swal.fire('Error', 'No se pudo actualizar el empleado', 'error');
         }
     });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const editFechaInicio = document.getElementById('editFechaInicio');
+    const editTipoContrato = document.getElementById('editIdTipoContrato');
+    const editTipoTrabajador = document.getElementById('editIdTipoTrabajador');
+    const editSalario = document.getElementById('editSalario');
+
+    if (editFechaInicio) {
+        editFechaInicio.addEventListener('change', updateEditFechaFinMin);
+        editFechaInicio.addEventListener('input', updateEditFechaFinMin);
+    }
+
+    if (editTipoContrato) {
+        editTipoContrato.addEventListener('change', function () {
+            if (!editSalario) {
+                return;
+            }
+
+            validateEditField(2, 'salario', true);
+        });
+    }
+
+    if (editTipoTrabajador) {
+        editTipoTrabajador.addEventListener('change', function () {
+            if (!editSalario) {
+                return;
+            }
+
+            const contractId = Number((editTipoContrato ? editTipoContrato.value : '').toString().trim() || 0);
+            if (contractId === 4) {
+                validateEditField(2, 'salario', true);
+            }
+        });
+    }
 });
 </script>

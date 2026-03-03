@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Contrato;
+use App\Models\TipoTrabajador;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Str;
 
 class UpdateEmployeePartialRequest extends FormRequest
 {
@@ -69,7 +72,7 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         if ($this->has('fecha_fin')) {
-            $rules['fecha_fin'] = 'bail|nullable|date|after_or_equal:fecha_inicio';
+            $rules['fecha_fin'] = 'bail|nullable|date|after:fecha_inicio';
         }
 
         if ($this->has('id_tipo_trabajador')) {
@@ -85,7 +88,7 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         if ($this->has('salario')) {
-            $rules['salario'] = 'bail|required|numeric|min:0.01|max:999999999';
+            $rules['salario'] = 'bail|required|numeric|min:0|max:999999999';
         }
 
         if ($this->has('codigo_interno')) {
@@ -184,7 +187,7 @@ class UpdateEmployeePartialRequest extends FormRequest
             'fecha_inicio.date'     => 'Debe ingresar una fecha válida.',
 
             'fecha_fin.date'           => 'Debe ingresar una fecha válida.',
-            'fecha_fin.after_or_equal' => 'La fecha fin no puede ser menor que la fecha de inicio.',
+            'fecha_fin.after'          => 'La fecha fin debe ser posterior a la fecha de inicio.',
 
             'horas_diarias.required' => 'Las horas diarias son obligatorias.',
             'horas_diarias.integer'  => 'Las horas diarias deben ser un número entero.',
@@ -209,7 +212,7 @@ class UpdateEmployeePartialRequest extends FormRequest
 
             'salario.required' => 'El salario es obligatorio.',
             'salario.numeric'  => 'El salario debe ser un valor numérico.',
-            'salario.min'      => 'El salario debe ser mayor que cero.',
+            'salario.min'      => 'El salario no puede ser negativo.',
             'salario.max'      => 'El salario es demasiado alto.',
 
             'nivel_riesgo.required' => 'Debe seleccionar el nivel de riesgo.',
@@ -248,6 +251,144 @@ class UpdateEmployeePartialRequest extends FormRequest
         ];
     }
 
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator) {
+            $doc = (string) ($this->route('doc') ?? $this->input('doc') ?? '');
+
+            $requiresSalaryValidation = $this->hasAny([
+                'salario',
+                'salario_base',
+                'id_tipo_contrato',
+                'id_tipo_trabajador',
+                'etapa_aprendiz',
+            ]);
+
+            if (!$requiresSalaryValidation) {
+                return;
+            }
+
+            $contratoActual = null;
+            if ($doc !== '') {
+                $contratoActual = Contrato::query()->where('doc', $doc)->first();
+            }
+
+            $salario = $this->has('salario')
+                ? (float) $this->input('salario')
+                : ($this->has('salario_base')
+                    ? (float) $this->input('salario_base')
+                    : (float) ($contratoActual?->salario_base ?? 0));
+
+            $idTipoContrato = (int) ($this->input('id_tipo_contrato') ?? ($contratoActual?->id_tipo_contrato ?? 0));
+            $idTipoTrabajador = (int) ($this->input('id_tipo_trabajador') ?? ($contratoActual?->id_tipo_trabajador ?? 0));
+
+            if ($idTipoContrato <= 0) {
+                return;
+            }
+
+            $smmlv = (float) config('nomina.salario_minimo', config('nomina.smmlv'));
+            if ($smmlv <= 0) {
+                return;
+            }
+
+            if (in_array($idTipoContrato, [1, 2, 3], true)) {
+                if ($salario < $smmlv) {
+                    $validator->errors()->add(
+                        'salario',
+                        'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.'
+                    );
+                }
+                return;
+            }
+
+            if ($idTipoContrato === 5 || $idTipoContrato === 6) {
+                return;
+            }
+
+            if ($idTipoContrato === 4) {
+                $etapaAprendiz = $this->resolveAprendizStage($idTipoTrabajador);
+
+                if ($etapaAprendiz === 'lectiva') {
+                    $minimoLectiva = $smmlv * 0.75;
+                    if ($salario < $minimoLectiva) {
+                        $validator->errors()->add(
+                            'salario',
+                            'Para etapa lectiva, el salario base no puede ser inferior al 75% del salario mínimo legal vigente.'
+                        );
+                    }
+                    return;
+                }
+
+                if ($etapaAprendiz === 'productiva') {
+                    if ($salario < $smmlv) {
+                        $validator->errors()->add(
+                            'salario',
+                            'Para etapa productiva, el salario base no puede ser inferior al salario mínimo legal vigente.'
+                        );
+                    }
+                    return;
+                }
+
+                $validator->errors()->add(
+                    'salario',
+                    'Para contrato de aprendizaje debe indicar la etapa del aprendiz (lectiva o productiva).'
+                );
+            }
+        });
+    }
+
+    private function resolveAprendizStage(?int $idTipoTrabajador = null): ?string
+    {
+        $etapa = Str::of((string) $this->input('etapa_aprendiz', ''))
+            ->ascii()
+            ->lower()
+            ->trim()
+            ->toString();
+
+        if (Str::contains($etapa, 'lectiva')) {
+            return 'lectiva';
+        }
+
+        if (Str::contains($etapa, 'productiva')) {
+            return 'productiva';
+        }
+
+        if (!$idTipoTrabajador) {
+            return null;
+        }
+
+        if ($idTipoTrabajador === 12) {
+            return 'lectiva';
+        }
+
+        if ($idTipoTrabajador === 19) {
+            return 'productiva';
+        }
+
+        $tipoTrabajadorNombre = TipoTrabajador::query()
+            ->where('id_tipo_trabajador', $idTipoTrabajador)
+            ->value('nombre');
+
+        if (!$tipoTrabajadorNombre) {
+            return null;
+        }
+
+        $normalized = Str::of($tipoTrabajadorNombre)
+            ->ascii()
+            ->lower()
+            ->toString();
+
+        if (Str::contains($normalized, 'lectiva')) {
+            return 'lectiva';
+        }
+
+        if (Str::contains($normalized, 'productiva')) {
+            return 'productiva';
+        }
+
+        return null;
+    }
+
     /**
      * Prepare the data for validation.
      * Mapea alto_riesgo y activo correctamente.
@@ -275,6 +416,11 @@ class UpdateEmployeePartialRequest extends FormRequest
         // Mapear numero_documento a doc si es necesario
         if ($this->has('numero_documento') && !$this->has('doc')) {
             $this->merge(['doc' => $this->input('numero_documento')]);
+        }
+
+        // Compatibilidad por si llega salario_base en lugar de salario
+        if (!$this->has('salario') && $this->has('salario_base')) {
+            $this->merge(['salario' => $this->input('salario_base')]);
         }
     }
 

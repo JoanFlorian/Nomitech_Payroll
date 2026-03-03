@@ -186,12 +186,10 @@ class RegistroUsuarios extends Controller
                 ]
             );
 
-            $jsonError = [
+            return response()->json([
                 'success' => false,
                 'errors' => ['general' => ['Error al registrar empleado']],
-            ];
-
-            return response()->json($jsonError, 500);
+            ], 500);
         }
     }
 
@@ -242,7 +240,7 @@ class RegistroUsuarios extends Controller
         $data = $request->validated();
 
         // Usar transacción para actualizar
-        DB::transaction(function () use ($usuario, &$contrato, $data) {
+        DB::transaction(function () use ($usuario, $contrato, $data) {
             // Actualizar solo los campos del Usuario que se enviaron
             $usuarioData = [];
             if (isset($data['id_tipo_doc']))

@@ -5,6 +5,7 @@
     const ACCOUNT_REGEX = /^[0-9]{6,20}$/;
     const INTERNAL_CODE_REGEX = /^[0-9]+$/;
     const ADDRESS_REGEX = /^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i;
+    const EMPLOYEE_SMMLV = Number(window.employeeValidationRules?.smmlv ?? 0);
 
     function getErrorElement(form, fieldName) {
         return form.querySelector(`[data-error="${fieldName}"]`);
@@ -73,6 +74,44 @@
         return form.querySelector(`[name="${name}"]`);
     }
 
+    function resolveAprendizStage(form) {
+        const etapaInput = getField(form, 'etapa_aprendiz');
+        const etapaValue = (etapaInput ? etapaInput.value : '').toString().trim().toLowerCase();
+
+        if (etapaValue.includes('lectiva')) {
+            return 'lectiva';
+        }
+
+        if (etapaValue.includes('productiva')) {
+            return 'productiva';
+        }
+
+        const tipoTrabajador = getField(form, 'id_tipo_trabajador');
+        const tipoTrabajadorValue = (tipoTrabajador ? tipoTrabajador.value : '').toString().trim();
+
+        if (tipoTrabajadorValue === '12') {
+            return 'lectiva';
+        }
+
+        if (tipoTrabajadorValue === '19') {
+            return 'productiva';
+        }
+
+        const selectedText = tipoTrabajador && tipoTrabajador.selectedOptions && tipoTrabajador.selectedOptions[0]
+            ? (tipoTrabajador.selectedOptions[0].textContent || '').toString().toLowerCase()
+            : '';
+
+        if (selectedText.includes('lectiva')) {
+            return 'lectiva';
+        }
+
+        if (selectedText.includes('productiva')) {
+            return 'productiva';
+        }
+
+        return null;
+    }
+
     function validateStep1Field(form, fieldName, showError = true) {
         const input = getField(form, fieldName);
         const value = input ? (input.value || '').trim() : '';
@@ -138,13 +177,49 @@
                     return validarInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
                 }
 
-                return validarInput(input, value >= fechaInicioValue, 'La fecha fin no puede ser menor que la fecha de inicio.', showError);
+                return validarInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
             case 'id_tipo_contrato':
                 return validarInput(input, value !== '', 'El tipo de contrato es obligatorio.', showError);
             case 'nivel_riesgo':
                 return validarInput(input, value !== '', 'El nivel de riesgo es obligatorio.', showError);
             case 'salario':
-                return validarInput(input, value !== '' && !Number.isNaN(Number(value)) && Number(value) >= 0.01 && Number(value) <= 999999999, 'El salario debe estar entre 0.01 y 999999999.', showError);
+                if (value === '') {
+                    return validarInput(input, false, 'El salario es obligatorio.', showError);
+                }
+
+                const salario = Number(value);
+                if (Number.isNaN(salario) || salario < 0 || salario > 999999999) {
+                    return validarInput(input, false, 'El salario debe estar entre 0 y 999999999.', showError);
+                }
+
+                const contractInput = getField(form, 'id_tipo_contrato');
+                const contractId = Number(contractInput ? contractInput.value : 0);
+
+                if (contractId === 1 || contractId === 2 || contractId === 3) {
+                    return validarInput(
+                        input,
+                        EMPLOYEE_SMMLV > 0 ? salario >= EMPLOYEE_SMMLV : true,
+                        'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.',
+                        showError
+                    );
+                }
+
+                if (contractId === 4) {
+                    const etapaAprendiz = resolveAprendizStage(form);
+
+                    if (!etapaAprendiz) {
+                        return validarInput(input, false, 'Para contrato de aprendizaje debe indicar la etapa del aprendiz (lectiva o productiva).', showError);
+                    }
+
+                    if (etapaAprendiz === 'lectiva') {
+                        const minimoLectiva = EMPLOYEE_SMMLV > 0 ? EMPLOYEE_SMMLV * 0.75 : 0;
+                        return validarInput(input, salario >= minimoLectiva, 'Para etapa lectiva, el salario base no puede ser inferior al 75% del salario mínimo legal vigente.', showError);
+                    }
+
+                    return validarInput(input, EMPLOYEE_SMMLV > 0 ? salario >= EMPLOYEE_SMMLV : true, 'Para etapa productiva, el salario base no puede ser inferior al salario mínimo legal vigente.', showError);
+                }
+
+                return validarInput(input, true, '', showError);
             case 'id_tipo_trabajador':
                 return validarInput(input, value !== '', 'El tipo de trabajador es obligatorio.', showError);
             case 'id_sub_tipo_trabajador':
@@ -403,6 +478,59 @@
         }
 
         const submitButton = form.querySelector('button[type="submit"]');
+        const fechaInicioInput = getField(form, 'fecha_inicio');
+        const fechaFinInput = getField(form, 'fecha_fin');
+
+        function updateFechaFinMin() {
+            if (!fechaFinInput) {
+                return;
+            }
+
+            const fechaInicioValue = fechaInicioInput ? (fechaInicioInput.value || '').trim() : '';
+            if (!fechaInicioValue) {
+                fechaFinInput.removeAttribute('min');
+                return;
+            }
+
+            const nextDate = new Date(`${fechaInicioValue}T00:00:00`);
+            nextDate.setDate(nextDate.getDate() + 1);
+            const minFechaFin = nextDate.toISOString().split('T')[0];
+            fechaFinInput.setAttribute('min', minFechaFin);
+
+            const fechaFinValue = (fechaFinInput.value || '').trim();
+            if (fechaFinValue !== '' && fechaFinValue <= fechaInicioValue) {
+                fechaFinInput.value = '';
+                clearFieldError(fechaFinInput);
+            }
+        }
+
+        if (fechaInicioInput) {
+            fechaInicioInput.addEventListener('change', updateFechaFinMin);
+            fechaInicioInput.addEventListener('input', updateFechaFinMin);
+        }
+
+        const tipoContratoInput = getField(form, 'id_tipo_contrato');
+        const tipoTrabajadorInput = getField(form, 'id_tipo_trabajador');
+        const salarioInput = getField(form, 'salario');
+
+        if (tipoContratoInput) {
+            tipoContratoInput.addEventListener('change', function () {
+                if (salarioInput) {
+                    validateStep2Field(form, 'salario', true);
+                }
+            });
+        }
+
+        if (tipoTrabajadorInput) {
+            tipoTrabajadorInput.addEventListener('change', function () {
+                const contractId = Number((tipoContratoInput ? tipoContratoInput.value : '').toString().trim() || 0);
+                if (contractId === 4 && salarioInput) {
+                    validateStep2Field(form, 'salario', true);
+                }
+            });
+        }
+
+        updateFechaFinMin();
         initCommonRealtimeValidation(form);
 
         form.addEventListener('submit', function (event) {

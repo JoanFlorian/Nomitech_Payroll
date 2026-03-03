@@ -10,17 +10,25 @@
             <p class="text-sm text-gray-500">Gestiona y revisa el estado de las empresas</p>
         </div>
 
-        <form method="GET" class="flex gap-2">
-            <div class="relative">
-                <input type="text" name="buscar" placeholder="Buscar por nombre o NIT"
-                    class="pl-10 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    value="{{ request('buscar') }}">
-                <i class="bi bi-search absolute left-3 top-2.5 text-gray-400"></i>
-            </div>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg transition">
-                Buscar
-            </button>
-        </form>
+        <div class="flex flex-col sm:flex-row gap-2">
+            <a href="{{ route('superadmin.empresas.reporte-excel', request()->only(['buscar', 'estado'])) }}"
+                class="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition text-sm">
+                <i class="bi bi-file-earmark-excel"></i>
+                Reporte de empresas
+            </a>
+
+            <form method="GET" class="flex gap-2">
+                <div class="relative">
+                    <input type="text" name="buscar" placeholder="Buscar por nombre o NIT"
+                        class="pl-10 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value="{{ request('buscar') }}">
+                    <i class="bi bi-search absolute left-3 top-2.5 text-gray-400"></i>
+                </div>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg transition">
+                    Buscar
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Filtros -->

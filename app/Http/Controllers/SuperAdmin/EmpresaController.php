@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
 class EmpresaController extends Controller
 {
     public function index(Request $request)
@@ -60,6 +64,76 @@ class EmpresaController extends Controller
         return view('superadmin.empresas', compact('empresas'));
     }
 
+    public function exportarReporteExcel(Request $request)
+    {
+        $query = Empresa::with(['licencia.plan', 'ciudad']);
+
+        if ($request->buscar) {
+            $buscar = $request->buscar;
+            $query->where(function ($q) use ($buscar) {
+                $q->where('razon_social', 'like', '%' . $buscar . '%')
+                    ->orWhere('nit', 'like', '%' . $buscar . '%');
+            });
+        }
+
+        $empresas = $query->orderBy('razon_social')->get();
+
+        if ($request->estado && $request->estado !== 'todas') {
+            $estadoFiltro = $request->estado;
+            $empresas = $empresas->filter(function ($empresa) use ($estadoFiltro) {
+                $estado = optional($empresa->licencia)->estado ?? 'pendiente_pago';
+                return $estado === $estadoFiltro;
+            })->values();
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Reporte Empresas');
+
+        $sheet->fromArray([
+            ['Reporte de Empresas'],
+            ['Fecha de generación', now()->format('Y-m-d H:i:s')],
+            [],
+            ['Razón social', 'NIT', 'Correo', 'Teléfono', 'Ciudad', 'Plan', 'Estado licencia', 'Vencimiento'],
+        ], null, 'A1');
+
+        $fila = 5;
+        foreach ($empresas as $empresa) {
+            $sheet->fromArray([
+                [
+                    $empresa->razon_social,
+                    $empresa->nit,
+                    $empresa->correo,
+                    $empresa->telefono,
+                    optional($empresa->ciudad)->nombre ?? '-',
+                    optional(optional($empresa->licencia)->plan)->nombre ?? 'Demo',
+                    mb_strtoupper(str_replace('_', ' ', optional($empresa->licencia)->estado ?? 'pendiente_pago'), 'UTF-8'),
+                    optional($empresa->licencia)->fecha_fin ?? 'No aplica',
+                ]
+            ], null, 'A' . $fila);
+
+            $fila++;
+        }
+
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2:B2')->getFont()->setBold(true);
+        $sheet->getStyle('A4:H4')->getFont()->setBold(true);
+
+        foreach (range('A', 'H') as $columna) {
+            $sheet->getColumnDimension($columna)->setAutoSize(true);
+        }
+
+        $fileName = 'reporte-empresas-' . now()->format('Ymd-His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
     public function show(Empresa $empresa)
     {
         $empresa->load(['licencia.plan', 'representante', 'ciudad']);
@@ -107,6 +181,58 @@ class EmpresaController extends Controller
             'message' => $existeEnOtraEmpresa
                 ? 'Este correo ya está registrado en otra empresa.'
                 : '',
+        ]);
+    }
+
+    public function descargarCertificadoExcel(Empresa $empresa)
+    {
+        $empresa->loadMissing(['licencia.plan', 'representante', 'ciudad']);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Certificado');
+
+        $estadoLicencia = optional($empresa->licencia)->estado ?? 'pendiente_pago';
+        $nombrePlan = optional(optional($empresa->licencia)->plan)->nombre ?? 'Demo';
+        $representante = trim(implode(' ', array_filter([
+            optional($empresa->representante)->primer_nombre,
+            optional($empresa->representante)->otros_nombres,
+            optional($empresa->representante)->primer_apellido,
+            optional($empresa->representante)->segundo_apellido,
+        ])));
+
+        $sheet->fromArray([
+            ['Certificado de Empresa Cliente'],
+            ['Fecha de generación', now()->format('Y-m-d H:i:s')],
+            [],
+            ['Razón social', $empresa->razon_social],
+            ['NIT', $empresa->nit],
+            ['Correo', $empresa->correo],
+            ['Teléfono', $empresa->telefono],
+            ['Dirección', $empresa->direccion],
+            ['Ciudad', optional($empresa->ciudad)->nombre ?? '-'],
+            ['Representante legal', $representante !== '' ? $representante : 'No asignado'],
+            ['Documento representante', $empresa->doc_representante],
+            ['Plan', $nombrePlan],
+            ['Estado de licencia', mb_strtoupper(str_replace('_', ' ', $estadoLicencia), 'UTF-8')],
+            ['Fecha vencimiento licencia', optional($empresa->licencia)->fecha_fin ?? 'No aplica'],
+        ], null, 'A1');
+
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2:B2')->getFont()->setBold(true);
+        $sheet->getStyle('A4:A14')->getFont()->setBold(true);
+        $sheet->getColumnDimension('A')->setAutoSize(true);
+        $sheet->getColumnDimension('B')->setAutoSize(true);
+
+        $nombreBase = Str::slug($empresa->razon_social ?: 'empresa');
+        $fileName = "certificado-{$nombreBase}.xlsx";
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 

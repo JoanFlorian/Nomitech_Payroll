@@ -15,7 +15,13 @@
     <!-- MENU -->
     <nav class="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
 
-        <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rgit pull origin developounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+        <a href="/dashboard" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+       {{ request()->is('dashboard*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+        <i class="bi bi-grid text-lg"></i>
+        Dashboard
+     </a>
+
+        <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
            {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-people text-lg"></i>
             Empleados
@@ -33,19 +39,9 @@
             Roles
         </a>
 
-        <a href="/usuarios" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-            {{ request()->is('usuarios*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-person-circle text-lg"></i>
-            Usuarios
-        </a>
-
-        <a href="/departamentos" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-            {{ request()->is('departamentos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-building text-lg"></i>
-            Departamentos
-        </a>
-
-        <a href="/reportes" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+       
+       
+        <a href="{{ route('reportes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
             {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-bar-chart text-lg"></i>
             Reportes

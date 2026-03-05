@@ -17,9 +17,9 @@
 
         <a href="/dashboard" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
        {{ request()->is('dashboard*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-        <i class="bi bi-grid text-lg"></i>
-        Dashboard
-     </a>
+            <i class="bi bi-grid text-lg"></i>
+            Dashboard
+        </a>
 
         <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
            {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
@@ -27,7 +27,7 @@
             Empleados
         </a>
 
-        <a href="/nomina" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+        <a href="{{ route('nomina.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
            {{ request()->is('nomina*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-receipt text-lg"></i>
             Nómina
@@ -39,14 +39,18 @@
             Novedades
         </a>
 
+        <a href="{{ route('periodos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+           {{ request()->is('periodos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-calendar3 text-lg"></i>
+            Periodos de Liquidación
+        </a>
+
         <a href="/roles" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
             {{ request()->is('roles*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-person-badge text-lg"></i>
             Roles
         </a>
 
-       
-       
         <a href="{{ route('reportes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
             {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-bar-chart text-lg"></i>

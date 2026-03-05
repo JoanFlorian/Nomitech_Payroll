@@ -1,0 +1,104 @@
+{{-- MODAL CERRAR PERIODO --}}
+<div id="modalCerrarPeriodo" class="hidden fixed inset-0 z-[60] overflow-y-auto" aria-labelledby="modal-title"
+    role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"
+            onclick="document.getElementById('modalCerrarPeriodo').classList.add('hidden')"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div
+            class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-red-50/50">
+                <h3 class="text-lg font-bold text-red-900">Cerrar Periodo de Liquidación</h3>
+                <button onclick="document.getElementById('modalCerrarPeriodo').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="formCerrarPeriodo" method="POST">
+                @csrf
+                <div class="px-6 py-6 space-y-4">
+                    <div class="p-4 bg-red-50 border border-red-100 rounded-xl">
+                        <p class="text-sm text-red-800 font-medium">
+                            ¿Está seguro de cerrar el periodo <span id="cierre_rango" class="font-bold"></span>?
+                        </p>
+                        <p class="text-xs text-red-600 mt-2">
+                            Esta acción bloqueará nuevas liquidaciones y modificaciones en este ciclo. Asegúrese de
+                            haber generado todos los comprobantes necesarios.
+                        </p>
+                    </div>
+
+                    {{-- Generación Automática --}}
+                    <div class="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-3">
+                        <div class="flex items-start gap-3">
+                            <input type="checkbox" name="generar_siguiente" id="generar_siguiente" value="1" checked
+                                class="mt-1.5 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <div>
+                                <label for="generar_siguiente" class="text-sm font-bold text-blue-900 cursor-pointer">
+                                    Generar automáticamente el siguiente periodo
+                                </label>
+                                <p class="text-xs text-blue-700 mt-0.5">Basado en la frecuencia actual.</p>
+                            </div>
+                        </div>
+
+                        <div id="preview_siguiente" class="hidden pl-7 pt-1 border-t border-blue-100 mt-2">
+                            <p class="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Sugerencia:</p>
+                            <p class="text-xs text-blue-900 mt-1">
+                                <span id="sug_rango" class="font-extrabold text-blue-600"></span>
+                                <span id="sug_freq"
+                                    class="ml-2 px-2 py-0.5 bg-blue-200 text-blue-700 rounded text-[10px] font-bold uppercase"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row-reverse gap-3 rounded-b-2xl">
+                    <button type="submit"
+                        class="w-full sm:w-auto px-6 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-200 transition-all">
+                        Confirmar y Cerrar
+                    </button>
+                    <button type="button"
+                        onclick="document.getElementById('modalCerrarPeriodo').classList.add('hidden')"
+                        class="w-full sm:w-auto px-6 py-2.5 bg-white text-gray-700 text-sm font-bold rounded-xl border border-gray-300 hover:bg-gray-50 transition-all">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirModalCierre(id, inicio, fin) {
+        const modal = document.getElementById('modalCerrarPeriodo');
+        const form = document.getElementById('formCerrarPeriodo');
+        const rangeText = document.getElementById('cierre_rango');
+        const previewSiguiente = document.getElementById('preview_siguiente');
+        const sugRango = document.getElementById('sug_rango');
+        const sugFreq = document.getElementById('sug_freq');
+
+        form.action = `/periodos/${id}/cerrar`;
+        rangeText.textContent = `${inicio} - ${fin}`;
+
+        // Reset preview
+        previewSiguiente.classList.add('hidden');
+
+        // Fetch suggestion
+        fetch(`/periodos/${id}/suggest`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    sugRango.textContent = `${data.inicio_formato} - ${data.fin_formato}`;
+                    sugFreq.textContent = data.tipo_frecuencia;
+                    previewSiguiente.classList.remove('hidden');
+                }
+            });
+
+        modal.classList.remove('hidden');
+    }
+</script>

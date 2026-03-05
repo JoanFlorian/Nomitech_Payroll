@@ -15,7 +15,7 @@
     <!-- MENU -->
     <nav class="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
 
-        <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+        <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rgit pull origin developounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
            {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-people text-lg"></i>
             Empleados

@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Salario;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class NominaController extends Controller
 {
@@ -215,15 +219,61 @@ class NominaController extends Controller
         return is_numeric($normalized) ? (float) $normalized : 0.0;
     }
 
-    /* ==========================
-       INDEX
-    ========================== */
-    public function index(Request $request)
+    private function parsePeriodoRango(string $periodo): array
+    {
+        $periodo = trim($periodo);
+        if ($periodo === '') {
+            return [null, null];
+        }
+
+        $partes = preg_split('/\s+(?:to|a)\s+/i', $periodo) ?: [];
+
+        if (count($partes) === 2) {
+            $inicio = $this->parseFechaFlexible($partes[0]);
+            $fin = $this->parseFechaFlexible($partes[1]);
+
+            return [$inicio, $fin];
+        }
+
+        $fechaUnica = $this->parseFechaFlexible($periodo);
+
+        return [$fechaUnica, $fechaUnica];
+    }
+
+    private function parseFechaFlexible(?string $fecha): ?string
+    {
+        $fecha = trim((string) $fecha);
+        if ($fecha === '') {
+            return null;
+        }
+
+        foreach (['d/m/Y', 'Y-m-d', 'Y-m'] as $formato) {
+            try {
+                $parsed = Carbon::createFromFormat($formato, $fecha);
+
+                if ($formato === 'Y-m') {
+                    return $parsed->startOfMonth()->toDateString();
+                }
+
+                return $parsed->toDateString();
+            } catch (\Throwable $e) {
+            }
+        }
+
+        try {
+            return Carbon::parse($fecha)->toDateString();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function construirConsultaNomina(Request $request)
     {
         $busqueda = trim((string) $request->input('documento', ''));
+        $periodo = trim((string) $request->input('periodo', ''));
         $empresaId = session('empresa_id');
 
-        $salarios = Salario::with('contrato.usuario')
+        $query = Salario::with('contrato.usuario')
             ->whereHas('contrato', function ($q) use ($empresaId) {
                 $q->where('id_empresa', $empresaId);
             })
@@ -236,12 +286,105 @@ class NominaController extends Controller
                             ["%{$term}%"]
                         );
                 });
-            })
+            });
+
+        if ($periodo !== '') {
+            [$fechaInicio, $fechaFin] = $this->parsePeriodoRango($periodo);
+
+            if ($fechaInicio && $fechaFin) {
+                if ($fechaInicio > $fechaFin) {
+                    [$fechaInicio, $fechaFin] = [$fechaFin, $fechaInicio];
+                }
+                $query->whereBetween('fecha_pago', [$fechaInicio, $fechaFin]);
+            } elseif ($fechaInicio) {
+                $query->whereDate('fecha_pago', $fechaInicio);
+            }
+        }
+
+        return $query;
+    }
+
+    /* ==========================
+       INDEX
+    ========================== */
+    public function index(Request $request)
+    {
+        $salarios = $this->construirConsultaNomina($request)
             ->orderByDesc('fecha_pago')
             ->paginate(4)
             ->withQueryString();
 
         return view('nomina.index', compact('salarios'));
+    }
+
+    public function exportarNominaExcel(Request $request)
+    {
+        $salarios = $this->construirConsultaNomina($request)
+            ->orderByDesc('fecha_pago')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Nómina');
+
+        $encabezados = [
+            'Documento',
+            'Empleado',
+            'Fecha Pago',
+            'Salario Inicial',
+            'Devengos',
+            'Deducciones',
+            'Salario Neto',
+        ];
+
+        $sheet->fromArray($encabezados, null, 'A1');
+        $sheet->getStyle('A1:G1')->getFont()->setBold(true);
+
+        $fila = 2;
+        foreach ($salarios as $salario) {
+            $fechaPago = $salario->fecha_pago ? Carbon::parse($salario->fecha_pago)->format('Y-m-d') : '';
+            $sheet->setCellValue('A' . $fila, $salario->contrato->usuario->doc ?? '');
+            $sheet->setCellValue('B' . $fila, $salario->contrato->usuario->nombre_completo ?? '');
+            $sheet->setCellValue('C' . $fila, $fechaPago);
+            $sheet->setCellValue('D' . $fila, (float) ($salario->contrato->salario_base ?? 0));
+            $sheet->setCellValue('E' . $fila, (float) $salario->total_devengos);
+            $sheet->setCellValue('F' . $fila, (float) $salario->total_deducciones);
+            $sheet->setCellValue('G' . $fila, (float) $salario->salario_neto);
+            $fila++;
+        }
+
+        foreach (range('A', 'G') as $columna) {
+            $sheet->getColumnDimension($columna)->setAutoSize(true);
+        }
+
+        if ($fila > 2) {
+            $sheet->getStyle('D2:G' . ($fila - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'nomina-' . now()->format('Ymd_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function exportarNominaPdf(Request $request)
+    {
+        $salarios = $this->construirConsultaNomina($request)
+            ->orderByDesc('fecha_pago')
+            ->get();
+
+        $pdf = Pdf::loadView('nomina.reporte-pdf', [
+            'salarios' => $salarios,
+            'fechaGeneracion' => now()->format('d/m/Y H:i'),
+            'busqueda' => $request->query('documento', 'Sin filtro'),
+            'periodo' => $request->query('periodo', 'Sin filtro'),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('reporte-nomina-' . now()->format('Ymd_His') . '.pdf');
     }
 
     /* ==========================

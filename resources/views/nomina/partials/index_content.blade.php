@@ -13,6 +13,7 @@
             <input type="text"
                    id="periodo-liquidacion"
                    name="periodo"
+                     value="{{ request('periodo') }}"
                    placeholder="Seleccionar fecha"
                    class="w-full border border-gray-300 bg-white px-4 py-2.5 rounded-xl hover:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:outline-none cursor-pointer transition">
         </div>
@@ -26,6 +27,27 @@
                    value="{{ request('documento') }}"
                    placeholder="Documento o nombres"
                    class="w-full border border-gray-300 bg-white px-4 py-2.5 rounded-xl hover:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:outline-none transition">
+        </div>
+
+        <div class="md:col-span-2 flex flex-wrap gap-2 justify-end">
+            <button type="submit"
+                    formaction="{{ route('nomina.index') }}"
+                    class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition">
+                <i class="bi bi-funnel"></i>
+                Aplicar
+            </button>
+            <button type="submit"
+                    formaction="{{ route('nomina.export.pdf') }}"
+                    class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg transition">
+                <i class="bi bi-file-earmark-pdf"></i>
+                PDF
+            </button>
+            <button type="submit"
+                    formaction="{{ route('nomina.export.excel') }}"
+                    class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition">
+                <i class="bi bi-file-earmark-excel"></i>
+                Excel
+            </button>
         </div>
 
     </form>

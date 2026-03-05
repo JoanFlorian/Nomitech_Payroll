@@ -6,6 +6,13 @@
     <form method="GET" action="{{ route('nomina.index') }}"
             class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
 
+        <button type="submit"
+                class="sr-only"
+                tabindex="-1"
+                aria-hidden="true">
+            Buscar
+        </button>
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">
                 Periodo de liquidacion
@@ -23,19 +30,16 @@
                 Buscar empleado
             </label>
             <input type="text"
+                   id="buscar-empleado"
                    name="documento"
+                   list="empleados-sugeridos"
                    value="{{ request('documento') }}"
                    placeholder="Documento o nombres"
                    class="w-full border border-gray-300 bg-white px-4 py-2.5 rounded-xl hover:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:outline-none transition">
+            <datalist id="empleados-sugeridos"></datalist>
         </div>
 
         <div class="md:col-span-2 flex flex-wrap gap-2 justify-end">
-            <button type="submit"
-                    formaction="{{ route('nomina.index') }}"
-                    class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition">
-                <i class="bi bi-funnel"></i>
-                Aplicar
-            </button>
             <button type="submit"
                     formaction="{{ route('nomina.export.pdf') }}"
                     class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg transition">
@@ -108,7 +112,7 @@
                         </td>
 
                         <td class="px-4 py-3 text-gray-900 font-medium">
-                            {{ $salario->contrato->usuario->nombre_completo }}
+                            {{ \Illuminate\Support\Str::title(mb_strtolower((string) ($salario->contrato->usuario->nombre_completo ?? ''))) }}
                         </td>
 
                         <td class="px-4 py-3 text-right text-gray-700 whitespace-nowrap">

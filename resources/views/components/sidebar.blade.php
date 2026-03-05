@@ -40,7 +40,6 @@
         </a>
 
        
-       
         <a href="{{ route('reportes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
             {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-bar-chart text-lg"></i>

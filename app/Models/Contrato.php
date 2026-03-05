@@ -91,4 +91,9 @@ class Contrato extends Model
     {
         return $this->hasMany(Salario::class, 'id_contrato');
     }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'id_empresa', 'id_empresa');
+    }
 }

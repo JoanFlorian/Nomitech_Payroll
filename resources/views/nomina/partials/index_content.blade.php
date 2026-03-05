@@ -101,12 +101,6 @@
 
         <div class="md:col-span-2 flex flex-wrap gap-2 justify-end">
             <button type="submit"
-                    formaction="{{ route('nomina.index') }}"
-                    class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition">
-                <i class="bi bi-funnel"></i>
-                Aplicar
-            </button>
-            <button type="submit"
                     formaction="{{ route('nomina.export.pdf') }}"
                     class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg transition">
                 <i class="bi bi-file-earmark-pdf"></i>

@@ -33,6 +33,12 @@
             Nómina
         </a>
 
+        <a href="{{ route('novedades.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+            {{ request()->is('novedades*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-journal-text text-lg"></i>
+            Novedades
+        </a>
+
         <a href="/roles" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
             {{ request()->is('roles*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-person-badge text-lg"></i>

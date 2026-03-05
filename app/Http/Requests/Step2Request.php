@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\TipoContrato;
 use App\Models\TipoTrabajador;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -146,8 +147,17 @@ class Step2Request extends FormRequest
         $validator->after(function (Validator $validator) {
             $idTipoContrato = (int) $this->input('id_tipo_contrato');
             $salario = (float) $this->input('salario', 0);
+            $fechaFin = $this->input('fecha_fin');
 
             if ($idTipoContrato <= 0) {
+                return;
+            }
+
+            if ($this->isIndefiniteContract($idTipoContrato) && !empty($fechaFin)) {
+                $validator->errors()->add(
+                    'fecha_fin',
+                    'Para contrato indefinido no debe registrar fecha de fin.'
+                );
                 return;
             }
 
@@ -201,6 +211,24 @@ class Step2Request extends FormRequest
                 );
             }
         });
+    }
+
+    private function isIndefiniteContract(int $idTipoContrato): bool
+    {
+        $nombreTipoContrato = TipoContrato::query()
+            ->where('id_tipo_contrato', $idTipoContrato)
+            ->value('nombre');
+
+        if (!$nombreTipoContrato) {
+            return false;
+        }
+
+        $nombreNormalizado = Str::of($nombreTipoContrato)
+            ->ascii()
+            ->lower()
+            ->toString();
+
+        return Str::contains($nombreNormalizado, 'indefinid');
     }
 
     private function resolveAprendizStage(): ?string

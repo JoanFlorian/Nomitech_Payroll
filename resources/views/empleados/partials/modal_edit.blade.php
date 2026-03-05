@@ -211,7 +211,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin</label>
                             <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="fecha_fin" id="editFechaFin">
-                            <p class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de inicio.</p>
+                            <p id="editFechaFinHint" class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de inicio.</p>
                             <p class="error-message text-red-500 text-sm hidden" data-error="fecha_fin"></p>
                         </div>
 
@@ -412,8 +412,14 @@ function resolveEditAprendizStage(form) {
 function updateEditFechaFinMin() {
     const fechaInicioInput = document.getElementById('editFechaInicio');
     const fechaFinInput = document.getElementById('editFechaFin');
+    const tipoContratoInput = document.getElementById('editIdTipoContrato');
 
     if (!fechaFinInput) {
+        return;
+    }
+
+    if (isEditIndefiniteContractSelected(tipoContratoInput)) {
+        fechaFinInput.removeAttribute('min');
         return;
     }
 
@@ -434,6 +440,57 @@ function updateEditFechaFinMin() {
         fechaFinInput.value = '';
         clearEditFieldError(fechaFinInput);
     }
+}
+
+function isEditIndefiniteContractSelected(tipoContratoInput) {
+    if (!tipoContratoInput) {
+        return false;
+    }
+
+    const selectedOption = tipoContratoInput.selectedOptions && tipoContratoInput.selectedOptions[0]
+        ? tipoContratoInput.selectedOptions[0]
+        : null;
+
+    if (!selectedOption) {
+        return false;
+    }
+
+    const optionText = (selectedOption.textContent ?? '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return optionText.includes('indefinid');
+}
+
+function syncEditFechaFinByContractType() {
+    const fechaFinInput = document.getElementById('editFechaFin');
+    const fechaFinHint = document.getElementById('editFechaFinHint');
+    const tipoContratoInput = document.getElementById('editIdTipoContrato');
+
+    if (!fechaFinInput) {
+        return;
+    }
+
+    const isIndefinite = isEditIndefiniteContractSelected(tipoContratoInput);
+
+    if (isIndefinite) {
+        fechaFinInput.value = '';
+        fechaFinInput.setAttribute('disabled', 'disabled');
+        fechaFinInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        clearEditFieldError(fechaFinInput);
+
+        if (fechaFinHint) {
+            fechaFinHint.textContent = 'Contrato indefinido: no debe registrar fecha de fin.';
+        }
+
+        return;
+    }
+
+    fechaFinInput.removeAttribute('disabled');
+    fechaFinInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+
+    if (fechaFinHint) {
+        fechaFinHint.textContent = 'Debe ser posterior a la fecha de inicio.';
+    }
+
+    updateEditFechaFinMin();
 }
 
 function normalizeEditFieldValue(field) {
@@ -618,6 +675,13 @@ function validateEditField(stepNumber, fieldName, showError = true) {
             case 'fecha_inicio':
                 return validateEditInput(input, value !== '', 'La fecha de inicio es obligatoria.', showError);
             case 'fecha_fin':
+                {
+                    const tipoContratoInput = form.querySelector('[name="id_tipo_contrato"]');
+                    if (isEditIndefiniteContractSelected(tipoContratoInput)) {
+                        return validateEditInput(input, value === '', 'Para contrato indefinido no debe registrar fecha de fin.', showError);
+                    }
+                }
+
                 if (value === '') {
                     if (showError) clearEditFieldError(input);
                     return true;
@@ -780,7 +844,7 @@ function loadEmployee(doc) {
                 document.getElementById('editIdArl').value = contrato.id_arl || '';
                 document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
                 document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
-                updateEditFechaFinMin();
+                syncEditFechaFinByContractType();
                 document.getElementById('editHorasDiarias').value = contrato.horas_diarias || '';
                 document.getElementById('editSalario').value = contrato.salario_base || '';
                 document.getElementById('editCodigoInterno').value = contrato.codigo_interno || '';
@@ -801,7 +865,7 @@ function loadEmployee(doc) {
                 document.getElementById('editIdArl').value = '';
                 document.getElementById('editFechaInicio').value = '';
                 document.getElementById('editFechaFin').value = '';
-                updateEditFechaFinMin();
+                syncEditFechaFinByContractType();
                 document.getElementById('editHorasDiarias').value = '';
                 document.getElementById('editSalario').value = '';
                 document.getElementById('editCodigoInterno').value = '';
@@ -948,6 +1012,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (editTipoContrato) {
         editTipoContrato.addEventListener('change', function () {
+            syncEditFechaFinByContractType();
+            validateEditField(2, 'fecha_fin', true);
+
             if (!editSalario) {
                 return;
             }
@@ -968,5 +1035,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    syncEditFechaFinByContractType();
 });
 </script>

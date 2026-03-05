@@ -13,7 +13,11 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\CodeVerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
+
+use App\Http\Controllers\NovedadController;
+
 use App\Http\Controllers\ReportesController;
+
 use Illuminate\Http\Request;
 
 Route::get('/', [PricingController::class, 'index']);
@@ -103,10 +107,18 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
     Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);
 
+
+    // Novedades
+    Route::get('/novedades', [NovedadController::class, 'index'])->name('novedades.index');
+    Route::post('/novedades', [NovedadController::class, 'store'])->name('novedades.store');
+    Route::put('/novedades/{id_novedad}', [NovedadController::class, 'update'])->name('novedades.update');
+    Route::delete('/novedades/{id_novedad}', [NovedadController::class, 'destroy'])->name('novedades.destroy');
+
     // Reportes
     Route::get('/reportes', [ReportesController::class, 'index'])->name('reportes.index');
     Route::get('/reportes/exportar/pdf', [ReportesController::class, 'exportarPdf'])->name('reportes.export.pdf');
     Route::get('/reportes/exportar/excel', [ReportesController::class, 'exportarExcel'])->name('reportes.export.excel');
+
 });
 
 // Superadmin routes protected by auth and role

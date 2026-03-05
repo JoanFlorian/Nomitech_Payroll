@@ -42,6 +42,8 @@
             <a href="{{ route('nomina.index') }}" class="flex items-center px-4 py-3 hover:bg-white/10 rounded-lg">
                 <span class="material-icons mr-3">receipt_long</span> Nómina
             </a>
+            <a href="{{ route('novedades.index') }}" class="flex items-center px-4 py-3 hover:bg-white/10 rounded-lg">
+                <span class="material-icons mr-3">event_note</span> Novedades
         </nav>
     </aside>
 

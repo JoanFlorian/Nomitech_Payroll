@@ -112,6 +112,23 @@
         return null;
     }
 
+    function isIndefiniteContractSelected(contractInput) {
+        if (!contractInput) {
+            return false;
+        }
+
+        const selectedOption = contractInput.selectedOptions && contractInput.selectedOptions[0]
+            ? contractInput.selectedOptions[0]
+            : null;
+
+        if (!selectedOption) {
+            return false;
+        }
+
+        const optionText = (selectedOption.textContent || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        return optionText.includes('indefinid');
+    }
+
     function validateStep1Field(form, fieldName, showError = true) {
         const input = getField(form, fieldName);
         const value = input ? (input.value || '').trim() : '';
@@ -166,6 +183,20 @@
             case 'fecha_inicio':
                 return validarInput(input, value !== '', 'La fecha de ingreso es obligatoria.', showError);
             case 'fecha_fin':
+                {
+                    const contractInput = getField(form, 'id_tipo_contrato');
+                    const isIndefiniteContract = isIndefiniteContractSelected(contractInput);
+
+                    if (isIndefiniteContract) {
+                        return validarInput(
+                            input,
+                            value === '',
+                            'Para contrato indefinido no debe registrar fecha de fin.',
+                            showError
+                        );
+                    }
+                }
+
                 if (value === '') {
                     if (showError) {
                         clearFieldError(input);
@@ -480,9 +511,16 @@
         const submitButton = form.querySelector('button[type="submit"]');
         const fechaInicioInput = getField(form, 'fecha_inicio');
         const fechaFinInput = getField(form, 'fecha_fin');
+        const fechaFinHint = document.getElementById('fecha_fin_hint');
+        const tipoContratoInput = getField(form, 'id_tipo_contrato');
 
         function updateFechaFinMin() {
             if (!fechaFinInput) {
+                return;
+            }
+
+            if (isIndefiniteContractSelected(tipoContratoInput)) {
+                fechaFinInput.removeAttribute('min');
                 return;
             }
 
@@ -504,17 +542,48 @@
             }
         }
 
+        function syncFechaFinByContractType() {
+            if (!fechaFinInput) {
+                return;
+            }
+
+            const isIndefiniteContract = isIndefiniteContractSelected(tipoContratoInput);
+
+            if (isIndefiniteContract) {
+                fechaFinInput.value = '';
+                fechaFinInput.setAttribute('disabled', 'disabled');
+                fechaFinInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+                clearFieldError(fechaFinInput);
+
+                if (fechaFinHint) {
+                    fechaFinHint.textContent = 'Contrato indefinido: no debe registrar fecha de fin.';
+                }
+
+                return;
+            }
+
+            fechaFinInput.removeAttribute('disabled');
+            fechaFinInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+
+            if (fechaFinHint) {
+                fechaFinHint.textContent = 'Debe ser posterior a la fecha de inicio.';
+            }
+
+            updateFechaFinMin();
+        }
+
         if (fechaInicioInput) {
             fechaInicioInput.addEventListener('change', updateFechaFinMin);
             fechaInicioInput.addEventListener('input', updateFechaFinMin);
         }
 
-        const tipoContratoInput = getField(form, 'id_tipo_contrato');
         const tipoTrabajadorInput = getField(form, 'id_tipo_trabajador');
         const salarioInput = getField(form, 'salario');
 
         if (tipoContratoInput) {
             tipoContratoInput.addEventListener('change', function () {
+                syncFechaFinByContractType();
+                validateStep2Field(form, 'fecha_fin', true);
                 if (salarioInput) {
                     validateStep2Field(form, 'salario', true);
                 }
@@ -530,7 +599,7 @@
             });
         }
 
-        updateFechaFinMin();
+        syncFechaFinByContractType();
         initCommonRealtimeValidation(form);
 
         form.addEventListener('submit', function (event) {

@@ -12,13 +12,56 @@ use App\Models\Contrato;
 use App\Models\Banco;
 use App\Models\Empresa;
 use App\Models\Cuenta;
+use App\Models\TipoContrato;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class RegistroUsuarios extends Controller
 {
+    private function resolveCompanyId(): ?int
+    {
+        $sessionCompanyId = (int) session('empresa_id');
+        if ($sessionCompanyId > 0) {
+            return $sessionCompanyId;
+        }
+
+        $authUser = Auth::user();
+        if ($authUser && method_exists($authUser, 'empresa')) {
+            $relatedCompanyId = (int) $authUser->empresa()->value('empresa.id_empresa');
+            if ($relatedCompanyId > 0) {
+                return $relatedCompanyId;
+            }
+        }
+
+        $fallbackCompanyId = (int) Empresa::query()->value('id_empresa');
+        return $fallbackCompanyId > 0 ? $fallbackCompanyId : null;
+    }
+
+    private function isIndefiniteContract(?int $idTipoContrato): bool
+    {
+        if (!$idTipoContrato) {
+            return false;
+        }
+
+        $nombreTipoContrato = TipoContrato::query()
+            ->where('id_tipo_contrato', $idTipoContrato)
+            ->value('nombre');
+
+        if (!$nombreTipoContrato) {
+            return false;
+        }
+
+        $nombreNormalizado = Str::of($nombreTipoContrato)
+            ->ascii()
+            ->lower()
+            ->toString();
+
+        return Str::contains($nombreNormalizado, 'indefinid');
+    }
+
     /**
      * PASO 1 - Validar y guardar en sesión datos personales
      */
@@ -116,18 +159,21 @@ class RegistroUsuarios extends Controller
 
                 // contrato (uso updateOrCreate para no generar múltiples registros si
                 // el formulario se envía más de una vez)
-                $companyId = optional(Auth::user())->empresa_id;
-                if (empty($companyId)) {
-                    $companyId = Empresa::query()->value('id_empresa');
-                }
+                $companyId = $this->resolveCompanyId();
 
                 if (empty($companyId)) {
                     throw new \RuntimeException('No hay empresas configuradas para registrar el contrato.');
                 }
 
+                $idTipoContrato = (int) $allData['id_tipo_contrato'];
+                $fechaFin = $allData['fecha_fin'] ?? null;
+                if ($this->isIndefiniteContract($idTipoContrato)) {
+                    $fechaFin = null;
+                }
+
                 $contratoData = [
                     'id_empresa' => $companyId,
-                    'id_tipo_contrato' => $allData['id_tipo_contrato'],
+                    'id_tipo_contrato' => $idTipoContrato,
                     'id_tipo_trabajador' => $allData['id_tipo_trabajador'],
                     'id_sub_tipo_trabajador' => $allData['id_sub_tipo_trabajador'],
                     'id_forma_pago' => $allData['id_forma_pago'],
@@ -138,9 +184,14 @@ class RegistroUsuarios extends Controller
                     'alto_riesgo' => (int) ($allData['alto_riesgo'] ?? 0),
                     'nivel_riesgo' => $allData['nivel_riesgo'] ?? null,
                     'fecha_inicio' => $allData['fecha_inicio'],
-                    'fecha_fin' => $allData['fecha_fin'] ?? null,
+                    'fecha_fin' => $fechaFin,
                     'salario_base' => $allData['salario'] ?? 0,
+                    'salario' => $allData['salario'] ?? 0,
+                    'horas_diarias' => $allData['horas_diarias'] ?? null,
+                    'codigo_interno' => $allData['codigo_interno'] ?? null,
                     'activo' => true,
+                    'estado_laboral' => Contrato::ESTADO_LABORAL_ACTIVO,
+                    'estado_nomina' => Contrato::ESTADO_NOMINA_PENDIENTE,
                     'doc' => $allData['doc'],
                 ];
 
@@ -293,14 +344,16 @@ class RegistroUsuarios extends Controller
             if (isset($data['activo']))
                 $contratoData['activo'] = (int) $data['activo'];
 
+            $resolvedTipoContrato = (int) ($data['id_tipo_contrato'] ?? ($contrato?->id_tipo_contrato ?? 0));
+            if ($this->isIndefiniteContract($resolvedTipoContrato)) {
+                $contratoData['fecha_fin'] = null;
+            }
+
             if ($contrato && !empty($contratoData)) {
                 $contrato->update($contratoData);
             } elseif (!$contrato && !empty($contratoData)) {
                 // Create new contrato if none exists for this usuario
-                $companyId = optional(Auth::user())->empresa_id;
-                if (empty($companyId)) {
-                    $companyId = Empresa::query()->value('id_empresa');
-                }
+                $companyId = $this->resolveCompanyId();
 
                 if (empty($companyId)) {
                     throw new \RuntimeException('No hay empresas configuradas para actualizar el contrato.');

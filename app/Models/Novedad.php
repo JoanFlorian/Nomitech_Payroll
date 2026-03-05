@@ -14,15 +14,29 @@ class Novedad extends Model
     protected $fillable = [
         'id_tipo_novedad',
         'id_salario',
+        'empleado_id',
+        'tipo_novedad_nombre',
+        'fecha',
         'fecha_inicio',
         'fecha_fin',
+        'unidad_cantidad',
+        'dias',
+        'horas',
         'cantidad',
+        'es_remunerado',
+        'salario_base',
+        'valor_calculado',
+        'observaciones',
+        'pago_manual',
+        'valor_novedad',
         'pago'
     ];
 
     protected $casts = [
+        'fecha' => 'date',
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
+        'es_remunerado' => 'boolean',
     ];
 
     public function tipoNovedad()

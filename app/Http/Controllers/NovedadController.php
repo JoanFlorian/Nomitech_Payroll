@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreNovedadEmpleadoRequest;
 use App\Http\Requests\UpdateNovedadEmpleadoRequest;
+use App\Models\Empleado;
 use App\Models\Novedad;
 use App\Models\Salario;
 use App\Models\TipoNovedad;
-use App\Models\Usuario;
 use App\Services\CalculoNovedadService;
 
 class NovedadController extends Controller
@@ -18,7 +18,9 @@ class NovedadController extends Controller
 
     public function index()
     {
-        $empleados = Usuario::query()
+        $empresaId = (int) session('empresa_id');
+
+        $empleados = Empleado::query()
             ->select('doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido')
             ->whereHas('contratos.salarios')
             ->orderBy('primer_nombre')
@@ -39,11 +41,16 @@ class NovedadController extends Controller
 
         $novedades = Novedad::query()
             ->with(['tipoNovedad', 'salario.contrato.usuario'])
+            ->when($empresaId > 0, function ($query) use ($empresaId) {
+                $query->whereHas('salario.contrato', function ($q) use ($empresaId) {
+                    $q->where('id_empresa', $empresaId);
+                });
+            })
             ->orderByDesc('id_novedad')
             ->get();
 
         $empleadosBusqueda = $empleados
-            ->map(function (Usuario $empleado) use ($salarios) {
+            ->map(function (Empleado $empleado) use ($salarios) {
                 $nombres = trim(implode(' ', array_filter([
                     $empleado->primer_nombre,
                     $empleado->otros_nombres,

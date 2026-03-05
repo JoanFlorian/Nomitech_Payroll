@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreNovedadEmpleadoRequest extends FormRequest
 {
@@ -13,8 +14,18 @@ class StoreNovedadEmpleadoRequest extends FormRequest
 
     public function rules(): array
     {
+        $empresaId = (int) session('empresa_id');
+
         return [
-            'empleado_id' => 'bail|required|exists:usuario,doc',
+            'empleado_id' => [
+                'bail',
+                'required',
+                Rule::exists('contrato', 'doc')->where(function ($query) use ($empresaId) {
+                    if ($empresaId > 0) {
+                        $query->where('id_empresa', $empresaId);
+                    }
+                }),
+            ],
             'tipo_novedad' => 'bail|required|string|in:licencia,incapacidad,permiso,suspension,suspensión',
             'unidad_cantidad' => 'bail|required|in:dias,horas',
             'dias' => 'bail|nullable|numeric|min:0|max:999999999.99|required_if:unidad_cantidad,dias|prohibited_unless:unidad_cantidad,dias',

@@ -8,9 +8,14 @@ class CalculoNovedadService
 {
     public function obtenerSalarioEmpleado(string $empleadoId): ?Salario
     {
+        $empresaId = (int) session('empresa_id');
+
         return Salario::query()
             ->join('contrato', 'contrato.id_contrato', '=', 'salario.id_contrato')
             ->where('contrato.doc', $empleadoId)
+            ->when($empresaId > 0, function ($query) use ($empresaId) {
+                $query->where('contrato.id_empresa', $empresaId);
+            })
             ->orderByDesc('salario.id_salario')
             ->select('salario.*', 'contrato.salario_base as contrato_salario_base')
             ->first();

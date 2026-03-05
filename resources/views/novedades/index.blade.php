@@ -497,6 +497,31 @@
 			updateCreateEstimatedValue();
 		};
 
+		let highlightedSuggestionIndex = -1;
+
+		const getSuggestionOptions = () => Array.from(suggestions.querySelectorAll('.employee-option'));
+
+		const updateSuggestionHighlight = (index) => {
+			const options = getSuggestionOptions();
+			options.forEach((option, optionIndex) => {
+				const isActive = optionIndex === index;
+				option.classList.toggle('bg-blue-50', isActive);
+				option.classList.toggle('text-blue-800', isActive);
+			});
+
+			highlightedSuggestionIndex = index;
+			if (index >= 0 && options[index]) {
+				options[index].scrollIntoView({ block: 'nearest' });
+			}
+		};
+
+		const selectEmployeeByDoc = (doc) => {
+			const employee = employees.find((item) => String(item.doc || '') === String(doc || ''));
+			if (employee) {
+				setEmployeeSelection(employee);
+			}
+		};
+
 		const setEmployeeSelection = (employee) => {
 			docEmpleadoInput.value = employee.doc || '';
 			const fullName = toTitleCase(employee.nombre_completo || '');
@@ -506,27 +531,41 @@
 			employeeDetails.classList.remove('hidden');
 			suggestions.classList.add('hidden');
 			suggestions.innerHTML = '';
+			highlightedSuggestionIndex = -1;
 			updateCreateEstimatedValue();
 		};
 
-		const renderSuggestions = (query) => {
-			if (!query) {
-				suggestions.innerHTML = '';
-				suggestions.classList.add('hidden');
-				return;
-			}
+		const renderSuggestions = (query, options = {}) => {
+			const { showAllOnEmpty = false } = options;
 
+			const normalizedQuery = normalize(query);
 			const matches = employees
 				.filter((employee) => {
+					if (!normalizedQuery && showAllOnEmpty) {
+						return true;
+					}
+
+					if (!normalizedQuery) {
+						return false;
+					}
+
 					const fullName = normalize(employee.nombre_completo);
 					const documentNumber = normalize(employee.doc);
-					return fullName.includes(query) || documentNumber.includes(query);
+					return fullName.includes(normalizedQuery) || documentNumber.includes(normalizedQuery);
 				})
-				.slice(0, 8);
+				.slice(0, 12);
+
+			if (!normalizedQuery && !showAllOnEmpty) {
+				suggestions.innerHTML = '';
+				suggestions.classList.add('hidden');
+				highlightedSuggestionIndex = -1;
+				return;
+			}
 
 			if (matches.length === 0) {
 				suggestions.innerHTML = '<li class="px-3 py-2 text-sm text-gray-500">No se encontraron empleados.</li>';
 				suggestions.classList.remove('hidden');
+				highlightedSuggestionIndex = -1;
 				return;
 			}
 
@@ -543,12 +582,18 @@
 				.join('');
 
 			suggestions.classList.remove('hidden');
+			highlightedSuggestionIndex = -1;
 
 			suggestions.querySelectorAll('.employee-option').forEach((option) => {
 				option.addEventListener('click', () => {
-					const employee = employees.find((item) => item.doc === option.dataset.doc);
-					if (employee) {
-						setEmployeeSelection(employee);
+					selectEmployeeByDoc(option.dataset.doc);
+				});
+
+				option.addEventListener('mouseenter', () => {
+					const options = getSuggestionOptions();
+					const index = options.indexOf(option);
+					if (index >= 0) {
+						updateSuggestionHighlight(index);
 					}
 				});
 			});
@@ -556,13 +601,62 @@
 
 		employeeSearch?.addEventListener('input', () => {
 			clearEmployeeSelection();
-			renderSuggestions(normalize(employeeSearch.value));
+			renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
 			clearFieldError('employee');
+		});
+
+		employeeSearch?.addEventListener('focus', () => {
+			renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
+		});
+
+		employeeSearch?.addEventListener('click', () => {
+			renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
+		});
+
+		employeeSearch?.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape') {
+				suggestions.classList.add('hidden');
+				highlightedSuggestionIndex = -1;
+				return;
+			}
+
+			if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter') {
+				return;
+			}
+
+			if (suggestions.classList.contains('hidden')) {
+				renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
+			}
+
+			const options = getSuggestionOptions();
+			if (!options.length) {
+				return;
+			}
+
+			if (event.key === 'ArrowDown') {
+				event.preventDefault();
+				const nextIndex = highlightedSuggestionIndex < options.length - 1 ? highlightedSuggestionIndex + 1 : 0;
+				updateSuggestionHighlight(nextIndex);
+				return;
+			}
+
+			if (event.key === 'ArrowUp') {
+				event.preventDefault();
+				const prevIndex = highlightedSuggestionIndex > 0 ? highlightedSuggestionIndex - 1 : options.length - 1;
+				updateSuggestionHighlight(prevIndex);
+				return;
+			}
+
+			if (event.key === 'Enter' && highlightedSuggestionIndex >= 0) {
+				event.preventDefault();
+				selectEmployeeByDoc(options[highlightedSuggestionIndex]?.dataset?.doc);
+			}
 		});
 
 		document.addEventListener('click', (event) => {
 			if (!suggestions.contains(event.target) && event.target !== employeeSearch) {
 				suggestions.classList.add('hidden');
+				highlightedSuggestionIndex = -1;
 			}
 		});
 

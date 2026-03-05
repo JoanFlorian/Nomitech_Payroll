@@ -89,7 +89,8 @@
                     <th class="px-4 py-3 text-right font-semibold tracking-wide">Salario inicial</th>
                     <th class="px-4 py-3 text-left font-semibold tracking-wide">Devengos</th>
                     <th class="px-4 py-3 text-left font-semibold tracking-wide">Deducciones</th>
-                    <th class="px-4 py-3 text-right font-semibold tracking-wide">Salario base</th>
+                    <th class="px-4 py-3 text-right font-semibold tracking-wide">Novedades</th>
+                    <th class="px-4 py-3 text-right font-semibold tracking-wide">Salario final</th>
                 </tr>
             </thead>
 
@@ -130,14 +131,28 @@
                             ) }})
                         </td>
 
+                        @if ((float) ($salario->total_novedades ?? 0) > 0)
+                            <td class="px-4 py-3 text-right font-medium whitespace-nowrap text-emerald-600">
+                                +${{ number_format((float) $salario->total_novedades, 0, ',', '.') }}
+                            </td>
+                        @elseif ((float) ($salario->total_novedades ?? 0) < 0)
+                            <td class="px-4 py-3 text-right font-medium whitespace-nowrap text-red-600">
+                                -${{ number_format(abs((float) $salario->total_novedades), 0, ',', '.') }}
+                            </td>
+                        @else
+                            <td class="px-4 py-3 text-right font-medium whitespace-nowrap text-gray-500">
+                                No tiene
+                            </td>
+                        @endif
+
                         <td class="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
-                            ${{ number_format($salario->salario_neto, 0, ',', '.') }}
+                            ${{ number_format(((float) $salario->salario_neto) + ((float) ($salario->total_novedades ?? 0)), 0, ',', '.') }}
                         </td>
 
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center py-10 text-gray-400">
+                        <td colspan="8" class="text-center py-10 text-gray-400">
                             No hay registros de nomina
                         </td>
                     </tr>

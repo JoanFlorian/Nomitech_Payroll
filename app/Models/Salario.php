@@ -43,7 +43,6 @@ class Salario extends Model
         return
             ($this->eps ?? 0) +
             ($this->afp ?? 0) +
-            ($this->arl ?? 0) +
             ($this->aporte_fp ?? 0) +
             ($this->retencion_fuente ?? 0) +
             ($this->embargo_fiscal ?? 0) +

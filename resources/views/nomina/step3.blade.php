@@ -50,38 +50,34 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">EPS (salud)</label>
-                                    <input id="eps" name="eps" type="number" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
+                                    <input id="eps" name="eps" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">AFP (pensión)</label>
-                                    <input id="afp" name="afp" type="number" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">ARL (riesgos laborales)</label>
-                                    <input id="arl" name="arl" type="number" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
+                                    <input id="afp" name="afp" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Aporte a fondo de pensión</label>
-                                    <input id="aporte_fp" name="aporte_fp" type="number" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
+                                    <input id="aporte_fp" name="aporte_fp" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Total seguridad social</label>
-                                    <input id="seguridad_social" name="seguridad_social" type="number" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
+                                    <input id="seguridad_social" name="seguridad_social" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
                                 </div>
 
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Retención en la fuente</label>
-                                    <input id="retencion_fuente" name="retencion_fuente" type="number" min="0" step="0.01" value="{{ old('retencion_fuente', $step3['retencion_fuente'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
+                                    <input id="retencion_fuente" name="retencion_fuente" type="text" inputmode="decimal" value="{{ old('retencion_fuente', $step3['retencion_fuente'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
                                     @error('retencion_fuente')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Embargo fiscal</label>
-                                    <input id="embargo_fiscal" name="embargo_fiscal" type="number" min="0" step="0.01" value="{{ old('embargo_fiscal', $step3['embargo_fiscal'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
+                                    <input id="embargo_fiscal" name="embargo_fiscal" type="text" inputmode="decimal" value="{{ old('embargo_fiscal', $step3['embargo_fiscal'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
                                     @error('embargo_fiscal')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Pensión voluntaria</label>
-                                    <input id="pension_voluntaria" name="pension_voluntaria" type="number" min="0" step="0.01" value="{{ old('pension_voluntaria', $step3['pension_voluntaria'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
+                                    <input id="pension_voluntaria" name="pension_voluntaria" type="text" inputmode="decimal" value="{{ old('pension_voluntaria', $step3['pension_voluntaria'] ?? 0) }}" class="manual-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm" placeholder="0">
                                     @error('pension_voluntaria')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                                 </div>
                             </div>
@@ -111,12 +107,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const APPLIES_SOCIAL_SECURITY = Boolean(@json((bool)($rules['aplica_seguridad_social'] ?? true)));
     const EPS_RATE = Number(@json((float)($rules['rates']['eps'] ?? config('nomina.rates.eps', 0.04))));
     const AFP_RATE = Number(@json((float)($rules['rates']['afp'] ?? config('nomina.rates.afp', 0.04))));
-    const ARL_RATE = Number(@json((float)($rules['rates']['arl'] ?? config('nomina.rates.arl', 0.00522))));
     const FP_RATE = Number(@json((float)($rules['rates']['aporte_fp'] ?? config('nomina.rates.aporte_fp', 0.01))));
     const FP_SMMLV_THRESHOLD = Number(@json((float)($rules['aporte_fp_smmlv_threshold'] ?? config('nomina.aporte_fp_smmlv_threshold', 4))));
     const SMMLV = Number(@json(config('nomina.smmlv', 1423500)));
 
     const money = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v || 0);
+    const numberFormatter = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const formatInputNumber = (v) => numberFormatter.format(Number(v || 0));
     const normalizeNumberString = (raw) => {
         if (raw === '' || raw === null || raw === undefined) return '';
 
@@ -166,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sanitize = (input) => {
         const parsed = toNumber(input.value);
         if (Number.isNaN(parsed)) { input.classList.add('border-red-500'); return false; }
-        input.value = parsed.toString();
+        input.value = formatInputNumber(parsed);
         input.classList.remove('border-red-500');
         return true;
     };
@@ -174,9 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const calc = () => {
         const eps = APPLIES_SOCIAL_SECURITY ? salarioBase * EPS_RATE : 0;
         const afp = APPLIES_SOCIAL_SECURITY ? salarioBase * AFP_RATE : 0;
-        const arl = APPLIES_SOCIAL_SECURITY ? salarioBase * ARL_RATE : 0;
         const aporteFp = APPLIES_SOCIAL_SECURITY && salarioBase >= (SMMLV * FP_SMMLV_THRESHOLD) ? salarioBase * FP_RATE : 0;
-        const seguridadSocial = APPLIES_SOCIAL_SECURITY ? (eps + afp + arl) : 0;
+        const seguridadSocial = APPLIES_SOCIAL_SECURITY ? (eps + afp) : 0;
 
         const retencion = toNumber(document.getElementById('retencion_fuente').value) || 0;
         const embargo = toNumber(document.getElementById('embargo_fiscal').value) || 0;
@@ -185,11 +181,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalDeducciones = seguridadSocial + aporteFp + retencion + embargo + pensionVol;
         const neto = totalDevengos - totalDeducciones;
 
-        document.getElementById('eps').value = eps.toFixed(2);
-        document.getElementById('afp').value = afp.toFixed(2);
-        document.getElementById('arl').value = arl.toFixed(2);
-        document.getElementById('aporte_fp').value = aporteFp.toFixed(2);
-        document.getElementById('seguridad_social').value = seguridadSocial.toFixed(2);
+        document.getElementById('eps').value = formatInputNumber(eps);
+        document.getElementById('afp').value = formatInputNumber(afp);
+        document.getElementById('aporte_fp').value = formatInputNumber(aporteFp);
+        document.getElementById('seguridad_social').value = formatInputNumber(seguridadSocial);
 
         document.getElementById('resumen_devengos').textContent = money(totalDevengos);
         document.getElementById('resumen_deducciones').textContent = money(totalDeducciones);
@@ -259,6 +254,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         calc();
+    });
+
+    manualInputs.forEach((input) => {
+        const parsed = toNumber(input.value);
+        if (!Number.isNaN(parsed)) {
+            input.value = formatInputNumber(parsed);
+        }
     });
 
     calc();

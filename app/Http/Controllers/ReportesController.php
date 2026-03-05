@@ -141,7 +141,7 @@ class ReportesController extends Controller
         )';
 
         $deduccionesExpr = '(
-            s.eps + s.afp + s.arl + s.aporte_fp
+            s.eps + s.afp + s.aporte_fp
             + s.retencion_fuente + s.embargo_fiscal + s.pension_voluntaria
         )';
 

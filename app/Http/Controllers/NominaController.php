@@ -104,7 +104,7 @@ class NominaController extends Controller
         $eps = $salarioBase * (float) ($rules['rates']['eps'] ?? 0);
         $afp = $salarioBase * (float) ($rules['rates']['afp'] ?? 0);
         $arl = $salarioBase * (float) ($rules['rates']['arl'] ?? 0);
-        $seguridadSocial = $eps + $afp + $arl;
+        $seguridadSocial = $eps + $afp;
         $fpThreshold = (float) ($rules['aporte_fp_smmlv_threshold'] ?? 4);
         $fpRate = (float) ($rules['rates']['aporte_fp'] ?? 0);
         $aporteFp = $salarioBase >= ($smmlv * $fpThreshold) ? ($salarioBase * $fpRate) : 0;
@@ -274,6 +274,12 @@ class NominaController extends Controller
         $empresaId = session('empresa_id');
 
         $query = Salario::with('contrato.usuario')
+            ->select('salario.*')
+            ->addSelect([
+                'total_novedades' => DB::table('novedad')
+                    ->selectRaw('COALESCE(SUM(pago), 0)')
+                    ->whereColumn('novedad.id_salario', 'salario.id_salario'),
+            ])
             ->whereHas('contrato', function ($q) use ($empresaId) {
                 $q->where('id_empresa', $empresaId);
             })

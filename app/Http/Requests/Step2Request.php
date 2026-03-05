@@ -290,7 +290,43 @@ class Step2Request extends FormRequest
             $payload['salario'] = $this->input('salario_base');
         }
 
+        if (isset($payload['salario']) || $this->has('salario')) {
+            $salarioInput = $payload['salario'] ?? $this->input('salario');
+            $salarioNormalizado = $this->normalizeLocalizedNumber($salarioInput);
+            if ($salarioNormalizado !== null) {
+                $payload['salario'] = $salarioNormalizado;
+            }
+        }
+
         $this->merge($payload);
+    }
+
+    private function normalizeLocalizedNumber(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $value = preg_replace('/\s+/', '', (string) $value);
+        $value = preg_replace('/[^\d,.-]/', '', $value);
+
+        if ($value === '' || $value === '-' || $value === ',' || $value === '.') {
+            return null;
+        }
+
+        $lastComma = strrpos($value, ',');
+        $lastDot = strrpos($value, '.');
+        $decimalPos = max($lastComma !== false ? $lastComma : -1, $lastDot !== false ? $lastDot : -1);
+
+        if ($decimalPos >= 0) {
+            $integerPart = preg_replace('/[.,]/', '', substr($value, 0, $decimalPos));
+            $decimalPart = preg_replace('/[.,]/', '', substr($value, $decimalPos + 1));
+            $normalized = ($integerPart === '' ? '0' : $integerPart) . '.' . $decimalPart;
+        } else {
+            $normalized = preg_replace('/[.,]/', '', $value);
+        }
+
+        return is_numeric($normalized) ? (float) $normalized : null;
     }
 
     /**

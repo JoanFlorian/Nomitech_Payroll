@@ -50,8 +50,18 @@
 						<label for="novelty-type" class="block text-sm font-medium text-gray-700 mb-1">Tipo de novedad</label>
 						<select id="novelty-type" name="tipo_novedad" class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] transition">
 							<option value="">Seleccione un tipo</option>
-							@foreach (['Licencia', 'Incapacidad', 'Permiso', 'Suspensión'] as $tipoNovedad)
-								<option value="{{ $tipoNovedad }}" {{ old('tipo_novedad') === $tipoNovedad ? 'selected' : '' }}>{{ $tipoNovedad }}</option>
+							@foreach ([
+								['value' => 'incapacidad_enfermedad_general', 'label' => 'Incapacidad enfermedad general'],
+								['value' => 'incapacidad_laboral_arl', 'label' => 'Incapacidad laboral (ARL)'],
+								['value' => 'licencia_maternidad', 'label' => 'Licencia de maternidad'],
+								['value' => 'licencia_paternidad', 'label' => 'Licencia de paternidad'],
+								['value' => 'licencia_remunerada', 'label' => 'Licencia remunerada'],
+								['value' => 'licencia_no_remunerada', 'label' => 'Licencia no remunerada'],
+								['value' => 'permiso_remunerado', 'label' => 'Permiso remunerado'],
+								['value' => 'permiso_no_remunerado', 'label' => 'Permiso no remunerado'],
+								['value' => 'suspension_contrato', 'label' => 'Suspensión del contrato'],
+							] as $tipoNovedad)
+								<option value="{{ $tipoNovedad['value'] }}" {{ old('tipo_novedad') === $tipoNovedad['value'] ? 'selected' : '' }}>{{ $tipoNovedad['label'] }}</option>
 							@endforeach
 						</select>
 						<div id="licencia-remunerada-wrap" class="mt-2 hidden">
@@ -86,7 +96,7 @@
 
 					<div>
 						<label for="quantity-days" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en días</label>
-						<input id="quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
+						<input id="quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="30" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
 						<p id="quantity-days-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('cantidad_dias')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -95,7 +105,7 @@
 
 					<div>
 						<label for="quantity-hours" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en horas</label>
-						<input id="quantity-hours" name="cantidad_horas" type="number" step="0.01" min="0.01" value="{{ old('cantidad_horas') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 8">
+						<input id="quantity-hours" name="cantidad_horas" type="number" step="0.01" min="0.01" max="240" value="{{ old('cantidad_horas') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 8">
 						<p id="quantity-hours-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('cantidad_horas')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -147,6 +157,9 @@
 
 					<div class="md:col-span-2 rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3">
 						<p class="text-xs uppercase tracking-wide text-blue-700 font-semibold">Valor estimado</p>
+						<div class="mt-2">
+							<span id="novelty-nature-badge" class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 border border-gray-200">Naturaleza: -</span>
+						</div>
 						<p id="estimated-value" class="mt-1 text-xl font-bold text-blue-900">$ 0</p>
 						<p id="estimated-note" class="mt-1 text-xs text-blue-700">Selecciona empleado, tipo y cantidad para calcular automáticamente.</p>
 					</div>

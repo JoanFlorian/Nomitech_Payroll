@@ -17,10 +17,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class RegistroUsuarios extends Controller
 {
+    /** @var array<int, string>|null */
+    private static ?array $contratoColumnsCache = null;
+
     private function resolveCompanyId(): ?int
     {
         $sessionCompanyId = (int) session('empresa_id');
@@ -60,6 +64,19 @@ class RegistroUsuarios extends Controller
             ->toString();
 
         return Str::contains($nombreNormalizado, 'indefinid');
+    }
+
+    private function filterContratoData(array $data): array
+    {
+        if (self::$contratoColumnsCache === null) {
+            self::$contratoColumnsCache = Schema::getColumnListing('contrato');
+        }
+
+        return array_filter(
+            $data,
+            fn ($key) => in_array($key, self::$contratoColumnsCache, true),
+            ARRAY_FILTER_USE_KEY
+        );
     }
 
     /**
@@ -186,7 +203,6 @@ class RegistroUsuarios extends Controller
                     'fecha_inicio' => $allData['fecha_inicio'],
                     'fecha_fin' => $fechaFin,
                     'salario_base' => $allData['salario'] ?? 0,
-                    'salario' => $allData['salario'] ?? 0,
                     'horas_diarias' => $allData['horas_diarias'] ?? null,
                     'codigo_interno' => $allData['codigo_interno'] ?? null,
                     'activo' => true,
@@ -194,6 +210,8 @@ class RegistroUsuarios extends Controller
                     'estado_nomina' => Contrato::ESTADO_NOMINA_PENDIENTE,
                     'doc' => $allData['doc'],
                 ];
+
+                $contratoData = $this->filterContratoData($contratoData);
 
                 $contrato = Contrato::updateOrCreate(
                     ['doc' => $allData['doc']],
@@ -363,6 +381,7 @@ class RegistroUsuarios extends Controller
                     ['doc' => $usuario->doc, 'id_empresa' => $companyId],
                     $contratoData
                 );
+                $contratoData = $this->filterContratoData($contratoData);
                 $contrato = Contrato::create($contratoData);
             }
 

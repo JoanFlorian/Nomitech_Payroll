@@ -223,7 +223,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salario Base</label>
-                            <input type="number" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="salario" id="editSalario">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="salario" id="editSalario" inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
                             <p class="error-message text-red-500 text-sm hidden" data-error="salario"></p>
                         </div>
 
@@ -370,6 +370,38 @@ const EDIT_NUMBERS_REGEX = /^[0-9]+$/;
 const EDIT_ACCOUNT_REGEX = /^[0-9]{6,20}$/;
 const EDIT_ADDRESS_REGEX = /^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i;
 const EDIT_SMMLV = Number(@json((float) config('nomina.salario_minimo', config('nomina.smmlv', 0))));
+const EDIT_SALARY_FORMATTER = new Intl.NumberFormat('es-CO', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+});
+
+function parseEditLocalizedNumber(rawValue) {
+    const value = (rawValue ?? '').toString().trim();
+    if (value === '') {
+        return NaN;
+    }
+
+    // Salary base in COP is handled as integer; strip separators/decimals to avoid cursor-reset issues.
+    const sanitized = value.replace(/\s+/g, '').replace(/[^\d-]/g, '');
+    const isNegative = sanitized.startsWith('-');
+    const digits = sanitized.replace(/-/g, '');
+
+    if (digits === '') {
+        return NaN;
+    }
+
+    const parsed = Number(isNegative ? `-${digits}` : digits);
+    return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function formatEditLocalizedNumber(rawValue) {
+    const numericValue = parseEditLocalizedNumber(rawValue);
+    if (!Number.isFinite(numericValue)) {
+        return '';
+    }
+
+    return EDIT_SALARY_FORMATTER.format(numericValue);
+}
 
 function resolveEditAprendizStage(form) {
     const etapaInput = form.querySelector('[name="etapa_aprendiz"]');
@@ -496,6 +528,11 @@ function syncEditFechaFinByContractType() {
 function normalizeEditFieldValue(field) {
     if (field.type === 'checkbox') {
         return field.checked ? '1' : '0';
+    }
+
+    if (field.name === 'salario') {
+        const parsedSalary = parseEditLocalizedNumber(field.value);
+        return Number.isFinite(parsedSalary) ? String(parsedSalary) : '';
     }
 
     return (field.value ?? '').toString().trim();
@@ -697,7 +734,7 @@ function validateEditField(stepNumber, fieldName, showError = true) {
                     return validateEditInput(input, false, 'El salario es obligatorio.', showError);
                 }
 
-                const salario = Number(value);
+                const salario = parseEditLocalizedNumber(value);
                 if (Number.isNaN(salario) || salario < 0 || salario > 999999999) {
                     return validateEditInput(input, false, 'El salario debe estar entre 0 y 999999999.', showError);
                 }
@@ -846,7 +883,7 @@ function loadEmployee(doc) {
                 document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
                 syncEditFechaFinByContractType();
                 document.getElementById('editHorasDiarias').value = contrato.horas_diarias || '';
-                document.getElementById('editSalario').value = contrato.salario_base || '';
+                document.getElementById('editSalario').value = formatEditLocalizedNumber(contrato.salario_base || '');
                 document.getElementById('editCodigoInterno').value = contrato.codigo_interno || '';
                 document.getElementById('editNivelRiesgo').value = contrato.nivel_riesgo || '';
                 document.getElementById('editAltoRiesgo').checked = contrato.alto_riesgo == 1;
@@ -1034,6 +1071,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 validateEditField(2, 'salario', true);
             }
         });
+    }
+
+    if (editSalario) {
+        editSalario.addEventListener('input', function () {
+            editSalario.value = formatEditLocalizedNumber(editSalario.value);
+        });
+
+        editSalario.addEventListener('blur', function () {
+            editSalario.value = formatEditLocalizedNumber(editSalario.value);
+        });
+
+        editSalario.value = formatEditLocalizedNumber(editSalario.value);
     }
 
     syncEditFechaFinByContractType();

@@ -66,19 +66,49 @@
 				$nombreCompleto = $nombreCompleto ? \Illuminate\Support\Str::title($nombreCompleto) : '';
 
 				$tipoNombre = $novedad->tipoNovedad->nombre ?? 'Sin tipo';
-				$tipo = mb_strtolower($tipoNombre);
+				$tipo = \Illuminate\Support\Str::of($tipoNombre)->ascii()->lower()->replace(' ', '_')->toString();
+				$tipo = match ($tipo) {
+					'incapacidad', 'incapacidad_enfermedad', 'incapacidad_enfermedad_general' => 'incapacidad_enfermedad_general',
+					'licencia_de_maternidad', 'licencia_maternidad' => 'licencia_maternidad',
+					'licencia_de_paternidad', 'licencia_paternidad' => 'licencia_paternidad',
+					'licencia_remunerada' => 'licencia_remunerada',
+					'licencia', 'licencia_no_remunerada' => 'licencia_no_remunerada',
+					'permiso_remunerado' => 'permiso_remunerado',
+					'permiso', 'permiso_no_remunerado' => 'permiso_no_remunerado',
+					'suspension', 'suspension_del_contrato', 'suspension_contrato' => 'suspension_contrato',
+					default => $tipo,
+				};
+
+				$tipoLabel = match ($tipo) {
+					'incapacidad_enfermedad_general' => 'Incapacidad enfermedad general',
+					'licencia_maternidad' => 'Licencia de maternidad',
+					'licencia_paternidad' => 'Licencia de paternidad',
+					'licencia_remunerada' => 'Licencia remunerada',
+					'licencia_no_remunerada' => 'Licencia no remunerada',
+					'permiso_remunerado' => 'Permiso remunerado',
+					'permiso_no_remunerado' => 'Permiso no remunerado',
+					'suspension_contrato' => 'Suspensión del contrato',
+					default => $tipoNombre,
+				};
 				$iniciales = strtoupper(mb_substr($empleado->primer_nombre ?? 'N', 0, 1) . mb_substr($empleado->primer_apellido ?? 'N', 0, 1));
 				$unidadCantidad = $novedad->unidad_cantidad ?? 'dias';
 				$unidadLabel = $unidadCantidad === 'horas' ? 'horas' : 'días';
 				$cantidadDisplay = rtrim(rtrim(number_format((float) $novedad->cantidad, 2, '.', ''), '0'), '.');
 
 				$badgeClass = match ($tipo) {
-					'licencia' => 'bg-blue-100 text-blue-700',
-					'incapacidad' => 'bg-emerald-100 text-emerald-700',
-					'permiso' => 'bg-indigo-100 text-indigo-700',
-					'suspensión', 'suspension' => 'bg-amber-100 text-amber-700',
+					'incapacidad_enfermedad_general' => 'bg-emerald-100 text-emerald-700',
+					'licencia_maternidad', 'licencia_paternidad', 'licencia_remunerada', 'licencia_no_remunerada' => 'bg-blue-100 text-blue-700',
+					'permiso_remunerado', 'permiso_no_remunerado' => 'bg-indigo-100 text-indigo-700',
+					'suspension_contrato' => 'bg-amber-100 text-amber-700',
 					default => 'bg-gray-100 text-gray-700',
 				};
+
+				$naturaleza = in_array($tipo, ['incapacidad_enfermedad_general', 'licencia_maternidad', 'licencia_paternidad', 'licencia_remunerada', 'permiso_remunerado'], true)
+					? 'DEVENGADO'
+					: 'DEDUCCION';
+				$naturalezaBadgeClass = $naturaleza === 'DEVENGADO'
+					? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+					: 'bg-red-50 text-red-700 border border-red-200';
 			@endphp
 
 			<article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden hover:shadow-md transition-all duration-300">
@@ -135,7 +165,10 @@
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-4 text-sm">
 						<div>
 							<p class="text-gray-500 mb-1">Tipo de novedad</p>
-							<p class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $badgeClass }}">{{ $tipoNombre }}</p>
+							<div class="flex flex-wrap items-center gap-2">
+								<p class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold {{ $badgeClass }}">{{ $tipoLabel }}</p>
+								<p class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold {{ $naturalezaBadgeClass }}">{{ $naturaleza }}</p>
+							</div>
 						</div>
 						<div>
 							<p class="text-gray-500 mb-1">Fecha inicio</p>
@@ -196,6 +229,7 @@
 		const oldEditData = @json($oldEditDataJs);
 		const updateUrlTemplate = @json(route('novedades.update', ['id_novedad' => '__ID__']));
 		const deleteUrlTemplate = @json(route('novedades.destroy', ['id_novedad' => '__ID__']));
+		const previewCalculationUrl = @json(route('novedades.calculo.preview'));
 
 		const modal = document.getElementById('novelty-modal');
 		const addNoveltyBtn = document.getElementById('add-novelty-btn');
@@ -220,6 +254,7 @@
 		const paymentInput = document.getElementById('payment');
 		const estimatedValueElement = document.getElementById('estimated-value');
 		const estimatedNoteElement = document.getElementById('estimated-note');
+		const noveltyNatureBadge = document.getElementById('novelty-nature-badge');
 		const licenciaRemuneradaWrap = document.getElementById('licencia-remunerada-wrap');
 		const licenciaRemuneradaInput = document.getElementById('licencia-remunerada');
 		const remuneradaLabel = document.getElementById('remunerada-label');
@@ -251,6 +286,7 @@
 		const editPaymentInput = document.getElementById('edit-payment');
 		const editEstimatedValueElement = document.getElementById('edit-estimated-value');
 		const editEstimatedNoteElement = document.getElementById('edit-estimated-note');
+		const editNoveltyNatureBadge = document.getElementById('edit-novelty-nature-badge');
 		const editLicenciaRemuneradaWrap = document.getElementById('edit-licencia-remunerada-wrap');
 		const editLicenciaRemuneradaInput = document.getElementById('edit-licencia-remunerada');
 		const editRemuneradaLabel = document.getElementById('edit-remunerada-label');
@@ -359,44 +395,100 @@
 			return formatter.format(Math.round(numericValue));
 		};
 
+		const normalizeNoveltyType = (value) => {
+			const normalized = normalize(value).replace(/\s+/g, '_');
+			const mapped = {
+				incapacidad: 'incapacidad_enfermedad_general',
+				incapacidad_enfermedad: 'incapacidad_enfermedad_general',
+				incapacidad_enfermedad_general: 'incapacidad_enfermedad_general',
+				incapacidad_enfermedad_general_: 'incapacidad_enfermedad_general',
+				incapacidad_laboral: 'incapacidad_laboral_arl',
+				incapacidad_laboral_arl: 'incapacidad_laboral_arl',
+				licencia: 'licencia_no_remunerada',
+				licencia_de_maternidad: 'licencia_maternidad',
+				licencia_maternidad: 'licencia_maternidad',
+				licencia_de_paternidad: 'licencia_paternidad',
+				licencia_paternidad: 'licencia_paternidad',
+				licencia_remunerada: 'licencia_remunerada',
+				licencia_no_remunerada: 'licencia_no_remunerada',
+				permiso: 'permiso_no_remunerado',
+				permiso_remunerado: 'permiso_remunerado',
+				permiso_no_remunerado: 'permiso_no_remunerado',
+				suspension: 'suspension_contrato',
+				suspension_del_contrato: 'suspension_contrato',
+				suspension_contrato: 'suspension_contrato',
+			};
+
+			return mapped[normalized] || normalized;
+		};
+
+		const isDevengadoType = (tipo) => {
+			const tipoNormalizado = normalizeNoveltyType(tipo);
+			return [
+				'incapacidad_enfermedad_general',
+				'incapacidad_laboral_arl',
+				'licencia_maternidad',
+				'licencia_paternidad',
+				'licencia_remunerada',
+				'permiso_remunerado',
+			].includes(tipoNormalizado);
+		};
+
+		const updateNatureBadge = (badgeElement, tipo) => {
+			if (!badgeElement) return;
+
+			if (!tipo) {
+				badgeElement.textContent = 'Naturaleza: -';
+				badgeElement.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 border border-gray-200';
+				return;
+			}
+
+			const isDevengado = isDevengadoType(tipo);
+			badgeElement.textContent = `Naturaleza: ${isDevengado ? 'DEVENGADO' : 'DEDUCCION'}`;
+			badgeElement.className = isDevengado
+				? 'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
+				: 'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-50 text-red-700 border border-red-200';
+		};
+
 		const getEmployeeByDoc = (doc) => {
 			if (!doc) return null;
 			return employees.find((employee) => String(employee.doc || '') === String(doc)) || null;
 		};
 
-		const getEmployeeSalary = (doc) => {
-			const employee = getEmployeeByDoc(doc);
-			const salary = Number(employee?.salario_base || 0);
-			return Number.isFinite(salary) ? salary : 0;
-		};
+		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-		const calculateEstimatedValue = ({ tipo, unidad, cantidad, salarioBase, licenciaRemunerada, pagoManual }) => {
-			if (Number.isFinite(pagoManual)) {
-				return pagoManual;
+		const fetchCalculationPreview = async ({ doc, tipo, unidad, dias, horas, pagoManual }) => {
+			const payload = {
+				empleado_id: doc,
+				tipo_novedad: normalizeNoveltyType(tipo),
+				unidad_cantidad: unidad,
+				pago_manual: Number.isFinite(pagoManual) ? pagoManual : null,
+			};
+
+			if (unidad === 'dias') {
+				payload.dias = dias;
 			}
 
-			if (!tipo || !unidad || !Number.isFinite(cantidad) || cantidad <= 0 || !Number.isFinite(salarioBase) || salarioBase <= 0) {
-				return 0;
+			if (unidad === 'horas') {
+				payload.horas = horas;
 			}
 
-			const salarioDia = salarioBase / 30;
-			const salarioHora = salarioBase / 240;
+			const response = await fetch(previewCalculationUrl, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+					'X-CSRF-TOKEN': csrfToken,
+				},
+				body: JSON.stringify(payload),
+			});
 
-			switch ((tipo || '').toLowerCase()) {
-				case 'licencia':
-					return licenciaRemunerada ? 0 : -(salarioDia * cantidad);
-				case 'incapacidad':
-					return -((salarioDia * 0.6667) * cantidad);
-				case 'permiso':
-					return licenciaRemunerada
-						? 0
-						: -(unidad === 'horas' ? (salarioHora * cantidad) : (salarioDia * cantidad));
-				case 'suspensión':
-				case 'suspension':
-					return -(salarioDia * cantidad);
-				default:
-					return 0;
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || result?.success === false) {
+				throw new Error(result?.message || 'No fue posible calcular la novedad.');
 			}
+
+			return result;
 		};
 
 		const getCreateCantidad = () => {
@@ -413,80 +505,88 @@
 			return 0;
 		};
 
-		const updateCreateEstimatedValue = () => {
+		const updateCreateEstimatedValue = async () => {
 			if (!estimatedValueElement || !estimatedNoteElement) return;
 
 			const doc = docEmpleadoInput.value;
 			const unit = getSelectedCreateUnit();
 			const cantidad = getCreateCantidad();
 			const tipo = (noveltyType.value || '').toLowerCase();
-			const salarioBase = getEmployeeSalary(doc);
+			updateNatureBadge(noveltyNatureBadge, tipo);
 			const paymentValue = paymentInput.value ? getPaymentNumber() : NaN;
-			const estimated = calculateEstimatedValue({
-				tipo,
-				unidad: unit,
-				cantidad,
-				salarioBase,
-				licenciaRemunerada: !!licenciaRemuneradaInput?.checked,
-				pagoManual: paymentValue,
-			});
-
-			estimatedValueElement.textContent = formatCurrency(estimated);
 
 			if (Number.isFinite(paymentValue) && paymentValue >= 0) {
-				estimatedNoteElement.textContent = 'Se está usando el pago manual ingresado.';
-				return;
+				estimatedNoteElement.textContent = 'Se está usando el pago manual ingresado (cálculo respaldado por backend).';
 			}
 
-			if (!doc) {
+			if (!doc || !tipo || !unit || !Number.isFinite(cantidad) || cantidad < 0) {
+				estimatedValueElement.textContent = formatCurrency(0);
 				estimatedNoteElement.textContent = 'Selecciona empleado, tipo y cantidad para calcular automáticamente.';
 				return;
 			}
 
-			if (!salarioBase) {
-				estimatedNoteElement.textContent = 'No se encontró salario base para el empleado seleccionado.';
-				return;
-			}
+			try {
+				const result = await fetchCalculationPreview({
+					doc,
+					tipo,
+					unidad: unit,
+					dias: unit === 'dias' ? cantidad : 0,
+					horas: unit === 'horas' ? cantidad : 0,
+					pagoManual: paymentValue,
+				});
 
-			estimatedNoteElement.textContent = 'Cálculo automático según salario base y tipo de novedad.';
+				estimatedValueElement.textContent = formatCurrency(result.valor || 0);
+				const isDevengado = (result.operacion || '').toLowerCase() === 'devengado';
+				updateNatureBadge(noveltyNatureBadge, isDevengado ? 'permiso_remunerado' : 'permiso_no_remunerado');
+				estimatedNoteElement.textContent = isDevengado
+					? 'Cálculo automático validado en backend. Naturaleza: DEVENGADO (suma al salario).'
+					: 'Cálculo automático validado en backend. Naturaleza: DEDUCCION (resta al salario).';
+			} catch (error) {
+				estimatedValueElement.textContent = formatCurrency(0);
+				estimatedNoteElement.textContent = error.message || 'No se pudo calcular el valor automáticamente.';
+			}
 		};
 
-		const updateEditEstimatedValue = () => {
+		const updateEditEstimatedValue = async () => {
 			if (!editEstimatedValueElement || !editEstimatedNoteElement) return;
 
 			const doc = editDocEmpleadoInput.value;
 			const unit = getSelectedEditUnit();
 			const cantidad = getEditCantidad();
 			const tipo = (editNoveltyTypeInput.value || '').toLowerCase();
-			const salarioBase = getEmployeeSalary(doc);
+			updateNatureBadge(editNoveltyNatureBadge, tipo);
 			const paymentValue = editPaymentInput.value ? getEditPaymentNumber() : NaN;
-			const estimated = calculateEstimatedValue({
-				tipo,
-				unidad: unit,
-				cantidad,
-				salarioBase,
-				licenciaRemunerada: !!editLicenciaRemuneradaInput?.checked,
-				pagoManual: paymentValue,
-			});
-
-			editEstimatedValueElement.textContent = formatCurrency(estimated);
 
 			if (Number.isFinite(paymentValue) && paymentValue >= 0) {
-				editEstimatedNoteElement.textContent = 'Se está usando el pago manual ingresado.';
-				return;
+				editEstimatedNoteElement.textContent = 'Se está usando el pago manual ingresado (cálculo respaldado por backend).';
 			}
 
-			if (!doc) {
+			if (!doc || !tipo || !unit || !Number.isFinite(cantidad) || cantidad < 0) {
+				editEstimatedValueElement.textContent = formatCurrency(0);
 				editEstimatedNoteElement.textContent = 'Selecciona empleado, tipo y cantidad para calcular automáticamente.';
 				return;
 			}
 
-			if (!salarioBase) {
-				editEstimatedNoteElement.textContent = 'No se encontró salario base para el empleado seleccionado.';
-				return;
-			}
+			try {
+				const result = await fetchCalculationPreview({
+					doc,
+					tipo,
+					unidad: unit,
+					dias: unit === 'dias' ? cantidad : 0,
+					horas: unit === 'horas' ? cantidad : 0,
+					pagoManual: paymentValue,
+				});
 
-			editEstimatedNoteElement.textContent = 'Cálculo automático según salario base y tipo de novedad.';
+				editEstimatedValueElement.textContent = formatCurrency(result.valor || 0);
+				const isDevengado = (result.operacion || '').toLowerCase() === 'devengado';
+				updateNatureBadge(editNoveltyNatureBadge, isDevengado ? 'permiso_remunerado' : 'permiso_no_remunerado');
+				editEstimatedNoteElement.textContent = isDevengado
+					? 'Cálculo automático validado en backend. Naturaleza: DEVENGADO (suma al salario).'
+					: 'Cálculo automático validado en backend. Naturaleza: DEDUCCION (resta al salario).';
+			} catch (error) {
+				editEstimatedValueElement.textContent = formatCurrency(0);
+				editEstimatedNoteElement.textContent = error.message || 'No se pudo calcular el valor automáticamente.';
+			}
 		};
 
 		const clearEmployeeSelection = () => {
@@ -715,13 +815,12 @@
 		};
 
 		const updateLicenciaRemuneradaVisibility = () => {
-			const type = (noveltyType.value || '').toLowerCase();
-			const supportsRemunerada = type === 'licencia' || type === 'permiso';
+			const supportsRemunerada = false;
 			if (licenciaRemuneradaWrap) {
 				licenciaRemuneradaWrap.classList.toggle('hidden', !supportsRemunerada);
 			}
 			if (remuneradaLabel) {
-				remuneradaLabel.textContent = type === 'permiso' ? 'Permiso remunerado' : 'Licencia remunerada';
+				remuneradaLabel.textContent = 'Novedad remunerada';
 			}
 			if (!supportsRemunerada && licenciaRemuneradaInput) {
 				licenciaRemuneradaInput.checked = false;
@@ -729,8 +828,8 @@
 		};
 
 		const updateCreateQuantityMode = () => {
-			const type = (noveltyType.value || '').toLowerCase();
-			const allowsHours = type === 'permiso';
+			const type = normalizeNoveltyType(noveltyType.value || '');
+			const allowsHours = type === 'permiso_remunerado' || type === 'permiso_no_remunerado';
 
 			if (!allowsHours && createUnitDaysRadio) {
 				createUnitDaysRadio.checked = true;
@@ -756,13 +855,12 @@
 		};
 
 		const updateEditLicenciaRemuneradaVisibility = () => {
-			const type = (editNoveltyTypeInput.value || '').toLowerCase();
-			const supportsRemunerada = type === 'licencia' || type === 'permiso';
+			const supportsRemunerada = false;
 			if (editLicenciaRemuneradaWrap) {
 				editLicenciaRemuneradaWrap.classList.toggle('hidden', !supportsRemunerada);
 			}
 			if (editRemuneradaLabel) {
-				editRemuneradaLabel.textContent = type === 'permiso' ? 'Permiso remunerado' : 'Licencia remunerada';
+				editRemuneradaLabel.textContent = 'Novedad remunerada';
 			}
 			if (!supportsRemunerada && editLicenciaRemuneradaInput) {
 				editLicenciaRemuneradaInput.checked = false;
@@ -770,8 +868,8 @@
 		};
 
 		const updateEditQuantityMode = () => {
-			const type = (editNoveltyTypeInput.value || '').toLowerCase();
-			const allowsHours = type === 'permiso';
+			const type = normalizeNoveltyType(editNoveltyTypeInput.value || '');
+			const allowsHours = type === 'permiso_remunerado' || type === 'permiso_no_remunerado';
 
 			if (!allowsHours && editUnitDaysRadio) {
 				editUnitDaysRadio.checked = true;
@@ -983,7 +1081,7 @@
 			editEmployeeDocInput.value = data.doc || '';
 			editEmployeeNameInput.value = toTitleCase(data.nombres || '');
 			editEmployeeLastnameInput.value = toTitleCase(data.apellidos || '');
-			editNoveltyTypeInput.value = data.tipo || '';
+			editNoveltyTypeInput.value = normalizeNoveltyType(data.tipo || '');
 			if (editLicenciaRemuneradaInput) {
 				editLicenciaRemuneradaInput.checked = String(data.licenciaRemunerada ?? '1') !== '0';
 			}
@@ -1082,9 +1180,13 @@
 					isValid = false;
 					showFieldError('quantityDays', 'Debe ingresar la cantidad en días.');
 					markInvalid(quantityDaysInput);
-				} else if (Number(quantityDaysInput.value) <= 0) {
+				} else if (Number(quantityDaysInput.value) < 0) {
 					isValid = false;
-					showFieldError('quantityDays', 'La cantidad de días debe ser mayor a 0.');
+					showFieldError('quantityDays', 'La cantidad de días no puede ser negativa.');
+					markInvalid(quantityDaysInput);
+				} else if (Number(quantityDaysInput.value) > 30) {
+					isValid = false;
+					showFieldError('quantityDays', 'La cantidad de días no puede superar 30.');
 					markInvalid(quantityDaysInput);
 				}
 			}
@@ -1094,9 +1196,13 @@
 					isValid = false;
 					showFieldError('quantityHours', 'Debe ingresar la cantidad en horas.');
 					markInvalid(quantityHoursInput);
-				} else if (Number(quantityHoursInput.value) <= 0) {
+				} else if (Number(quantityHoursInput.value) < 0) {
 					isValid = false;
-					showFieldError('quantityHours', 'La cantidad de horas debe ser mayor a 0.');
+					showFieldError('quantityHours', 'La cantidad de horas no puede ser negativa.');
+					markInvalid(quantityHoursInput);
+				} else if (Number(quantityHoursInput.value) > 240) {
+					isValid = false;
+					showFieldError('quantityHours', 'La cantidad de horas no puede superar 240.');
 					markInvalid(quantityHoursInput);
 				}
 			}
@@ -1150,9 +1256,13 @@
 					isValid = false;
 					showEditFieldError('quantityDays', 'Debe ingresar la cantidad en días.');
 					markInvalid(editQuantityDaysInput);
-				} else if (Number(editQuantityDaysInput.value) <= 0) {
+				} else if (Number(editQuantityDaysInput.value) < 0) {
 					isValid = false;
-					showEditFieldError('quantityDays', 'La cantidad de días debe ser mayor a 0.');
+					showEditFieldError('quantityDays', 'La cantidad de días no puede ser negativa.');
+					markInvalid(editQuantityDaysInput);
+				} else if (Number(editQuantityDaysInput.value) > 30) {
+					isValid = false;
+					showEditFieldError('quantityDays', 'La cantidad de días no puede superar 30.');
 					markInvalid(editQuantityDaysInput);
 				}
 			}
@@ -1162,9 +1272,13 @@
 					isValid = false;
 					showEditFieldError('quantityHours', 'Debe ingresar la cantidad en horas.');
 					markInvalid(editQuantityHoursInput);
-				} else if (Number(editQuantityHoursInput.value) <= 0) {
+				} else if (Number(editQuantityHoursInput.value) < 0) {
 					isValid = false;
-					showEditFieldError('quantityHours', 'La cantidad de horas debe ser mayor a 0.');
+					showEditFieldError('quantityHours', 'La cantidad de horas no puede ser negativa.');
+					markInvalid(editQuantityHoursInput);
+				} else if (Number(editQuantityHoursInput.value) > 240) {
+					isValid = false;
+					showEditFieldError('quantityHours', 'La cantidad de horas no puede superar 240.');
 					markInvalid(editQuantityHoursInput);
 				}
 			}

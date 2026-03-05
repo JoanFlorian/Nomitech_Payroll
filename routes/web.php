@@ -15,6 +15,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
 
 use App\Http\Controllers\NovedadController;
+use App\Http\Controllers\NovedadCalculoController;
 
 use App\Http\Controllers\ReportesController;
 
@@ -110,6 +111,7 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
 
     // Novedades
     Route::get('/novedades', [NovedadController::class, 'index'])->name('novedades.index');
+    Route::post('/novedades/calculo/preview', [NovedadCalculoController::class, 'preview'])->name('novedades.calculo.preview');
     Route::post('/novedades', [NovedadController::class, 'store'])->name('novedades.store');
     Route::put('/novedades/{id_novedad}', [NovedadController::class, 'update'])->name('novedades.update');
     Route::delete('/novedades/{id_novedad}', [NovedadController::class, 'destroy'])->name('novedades.destroy');

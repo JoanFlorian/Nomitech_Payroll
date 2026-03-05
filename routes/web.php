@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\CodeVerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
+use App\Http\Controllers\ReportesController;
 use Illuminate\Http\Request;
 
 Route::get('/', [PricingController::class, 'index']);
@@ -96,9 +97,16 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/nomina/step-2/ingresos', [NominaController::class, 'step2Ingresos'])->name('nomina.step2.ingresos');
     Route::post('/nomina/step-2/ingresos', [NominaController::class, 'postStep2Ingresos'])->name('nomina.step2.ingresos.post');
     Route::get('/nomina/step-3', [NominaController::class, 'step3'])->name('nomina.step3');
+    Route::get('/nomina/export/excel', [NominaController::class, 'exportarNominaExcel'])->name('nomina.export.excel');
+    Route::get('/nomina/export/pdf', [NominaController::class, 'exportarNominaPdf'])->name('nomina.export.pdf');
     Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.store');
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
     Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);
+
+    // Reportes
+    Route::get('/reportes', [ReportesController::class, 'index'])->name('reportes.index');
+    Route::get('/reportes/exportar/pdf', [ReportesController::class, 'exportarPdf'])->name('reportes.export.pdf');
+    Route::get('/reportes/exportar/excel', [ReportesController::class, 'exportarExcel'])->name('reportes.export.excel');
 });
 
 // Superadmin routes protected by auth and role

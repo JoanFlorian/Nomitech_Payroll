@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Contrato;
+use App\Models\TipoContrato;
 use App\Models\TipoTrabajador;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -256,6 +257,21 @@ class UpdateEmployeePartialRequest extends FormRequest
         $validator->after(function (\Illuminate\Validation\Validator $validator) {
             $doc = (string) ($this->route('doc') ?? $this->input('doc') ?? '');
 
+            $contratoActual = null;
+            if ($doc !== '') {
+                $contratoActual = Contrato::query()->where('doc', $doc)->first();
+            }
+
+            $idTipoContratoFecha = (int) ($this->input('id_tipo_contrato') ?? ($contratoActual?->id_tipo_contrato ?? 0));
+            $fechaFin = $this->input('fecha_fin');
+
+            if ($idTipoContratoFecha > 0 && $this->isIndefiniteContract($idTipoContratoFecha) && !empty($fechaFin)) {
+                $validator->errors()->add(
+                    'fecha_fin',
+                    'Para contrato indefinido no debe registrar fecha de fin.'
+                );
+            }
+
             $requiresSalaryValidation = $this->hasAny([
                 'salario',
                 'salario_base',
@@ -266,11 +282,6 @@ class UpdateEmployeePartialRequest extends FormRequest
 
             if (!$requiresSalaryValidation) {
                 return;
-            }
-
-            $contratoActual = null;
-            if ($doc !== '') {
-                $contratoActual = Contrato::query()->where('doc', $doc)->first();
             }
 
             $salario = $this->has('salario')
@@ -335,6 +346,24 @@ class UpdateEmployeePartialRequest extends FormRequest
                 );
             }
         });
+    }
+
+    private function isIndefiniteContract(int $idTipoContrato): bool
+    {
+        $nombreTipoContrato = TipoContrato::query()
+            ->where('id_tipo_contrato', $idTipoContrato)
+            ->value('nombre');
+
+        if (!$nombreTipoContrato) {
+            return false;
+        }
+
+        $normalized = Str::of($nombreTipoContrato)
+            ->ascii()
+            ->lower()
+            ->toString();
+
+        return Str::contains($normalized, 'indefinid');
     }
 
     private function resolveAprendizStage(?int $idTipoTrabajador = null): ?string

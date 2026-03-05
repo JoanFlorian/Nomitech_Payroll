@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\CodeVerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
+use App\Http\Controllers\NovedadController;
 use Illuminate\Http\Request;
 
 Route::get('/', [PricingController::class, 'index']);
@@ -99,6 +100,12 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.store');
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
     Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);
+
+    // Novedades
+    Route::get('/novedades', [NovedadController::class, 'index'])->name('novedades.index');
+    Route::post('/novedades', [NovedadController::class, 'store'])->name('novedades.store');
+    Route::put('/novedades/{id_novedad}', [NovedadController::class, 'update'])->name('novedades.update');
+    Route::delete('/novedades/{id_novedad}', [NovedadController::class, 'destroy'])->name('novedades.destroy');
 });
 
 // Superadmin routes protected by auth and role

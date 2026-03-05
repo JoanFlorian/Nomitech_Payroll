@@ -25,7 +25,11 @@ class EmployeesController extends Controller
 {
     private function construirConsultaEmpleados(Request $request)
     {
-        $query = Empleado::with(['contratos.tipoContrato']);
+        $query = Empleado::with([
+            'contratos' => function ($q) {
+                $q->orderByDesc('id_contrato')->with('tipoContrato');
+            }
+        ])->orderByDesc('created_at')->orderByDesc('doc');
 
         if ($request->filled('search')) {
             $search = $request->input('search');

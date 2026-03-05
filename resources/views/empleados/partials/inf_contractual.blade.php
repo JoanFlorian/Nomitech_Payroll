@@ -55,7 +55,7 @@
             <input type="date" id="fecha_fin" name="fecha_fin"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"/>
-            <p class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de inicio.</p>
+            <p id="fecha_fin_hint" class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de inicio.</p>
             <div class="error-message invalid-feedback" data-error="fecha_fin"></div>
         </div>
 

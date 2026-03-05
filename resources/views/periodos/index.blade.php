@@ -1,0 +1,329 @@
+@extends('layouts.app')
+
+@section('title', 'Gestión de Periodos')
+@section('page-title', 'PERIODOS DE NÓMINA')
+
+@section('content')
+
+@php($periodos = $periodos ?? collect())
+
+<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 md:p-8">
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h2 class="text-xl font-bold text-gray-900 tracking-tight">Periodos de Nómina</h2>
+            <p class="text-sm text-gray-500 mt-1">Gestione los periodos de liquidación y exportaciones bancarias.</p>
+        </div>
+    </div>
+
+    {{-- TABLA DE PERIODOS --}}
+    <div class="overflow-x-auto rounded-xl border border-gray-200">
+        <table class="w-full text-sm border-collapse min-w-[800px]">
+
+            <thead class="bg-blue-600 text-white">
+                <tr>
+                    <th class="px-5 py-4 text-left font-semibold tracking-wide">Frecuencia</th>
+                    <th class="px-5 py-4 text-left font-semibold tracking-wide">Fecha Inicio</th>
+                    <th class="px-5 py-4 text-left font-semibold tracking-wide">Fecha Fin</th>
+                    <th class="px-5 py-4 text-center font-semibold tracking-wide">Estado</th>
+                    <th class="px-5 py-4 text-center font-semibold tracking-wide">Comprobantes</th>
+                    <th class="px-5 py-4 text-right font-semibold tracking-wide">Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody class="bg-white">
+                @forelse($periodos as $periodo)
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+
+                    <td class="px-5 py-4">
+                        @php($color = match ($periodo->tipo_frecuencia) {
+                            'mensual' => 'bg-blue-100 text-blue-700',
+                            'quincenal' => 'bg-purple-100 text-purple-700',
+                            'decenal' => 'bg-indigo-100 text-indigo-700',
+                            default => 'bg-gray-100 text-gray-700'
+                        })
+                        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider {{ $color }}">
+                            {{ $periodo->tipo_frecuencia }}
+                        </span>
+                    </td>
+
+                    <td class="px-5 py-4 text-gray-700 font-medium">
+                        {{ $periodo->fecha_inicio->format('d/m/Y') }}
+                    </td>
+
+                    <td class="px-5 py-4 text-gray-700 font-medium">
+                        {{ $periodo->fecha_fin->format('d/m/Y') }}
+                    </td>
+
+                    <td class="px-5 py-4 text-center">
+                        @php($statusColor = match ($periodo->estado) {
+                            'abierto' => 'bg-green-100 text-green-700',
+                            'cerrado' => 'bg-gray-100 text-gray-600',
+                            'pendiente' => 'bg-yellow-100 text-yellow-700',
+                            default => 'bg-gray-100 text-gray-700'
+                        })
+                        <span class="px-3 py-1 rounded-lg text-[11px] font-bold uppercase {{ $statusColor }}">
+                            {{ $periodo->estado }}
+                        </span>
+                    </td>
+
+                    <td class="px-5 py-4 text-center text-gray-500 font-medium">
+                        {{ $periodo->salarios()->count() }} registros
+                    </td>
+
+                    <td class="px-5 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            @if($periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO || $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_PENDIENTE)
+                                {{-- Boton Liquidar --}}
+                                <a href="{{ route('periodos.select', $periodo->id_periodo) }}"
+                                    class="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                    <span>Liquidar</span>
+                                </a>
+
+                                {{-- Boton Cerrar --}}
+                                <button type="button"
+                                    onclick="abrirModalCierre({{ $periodo->id_periodo }}, '{{ $periodo->fecha_inicio->format('d/m/Y') }}', '{{ $periodo->fecha_fin->format('d/m/Y') }}')"
+                                    class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
+                                    Cerrar
+                                </button>
+                            @endif
+
+                            @if($periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO)
+                                {{-- Boton Exportar --}}
+                                <a href="{{ route('periodos.exportar', ['id' => $periodo->id_periodo, 'banco' => 'bancolombia']) }}"
+                                    class="flex items-center gap-1.5 bg-green-50 text-green-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-600 hover:text-white transition-all shadow-sm">
+                                    <span>Exportar</span>
+                                </a>
+                            @endif
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="6" class="text-center py-16">
+                        <div class="flex flex-col items-center">
+                            <span class="text-4xl mb-4">📅</span>
+                            <h3 class="text-lg font-semibold text-gray-900">No hay periodos activos</h3>
+                            <p class="text-gray-500 mt-1">Los periodos se generan automáticamente al cerrar el anterior.
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    @if(method_exists($periodos, 'links'))
+        <div class="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <p class="text-sm text-gray-500">
+                Mostrando {{ $periodos->firstItem() ?? 0 }} a {{ $periodos->lastItem() ?? 0 }} de {{ $periodos->total() }}
+                periodos
+            </p>
+            <div>
+                {{ $periodos->links() }}
+            </div>
+        </div>
+    @endif
+
+</div>
+
+{{-- BOTÓN FLOTANTE --}}
+<button onclick="document.getElementById('modalNuevoPeriodo').classList.remove('hidden')"
+    class="fixed bottom-8 right-8 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl hover:bg-blue-700 transition-all flex items-center justify-center group z-40 transform hover:scale-110">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 transition-transform group-hover:rotate-90" fill="none"
+        viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+    </svg>
+</button>
+
+{{-- MODAL NUEVO PERIODO --}}
+<div id="modalNuevoPeriodo" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+    role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"
+            onclick="document.getElementById('modalNuevoPeriodo').classList.add('hidden')"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div
+            class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-900" id="modal-title">Nuevo Periodo de Liquidación</h3>
+                <button onclick="document.getElementById('modalNuevoPeriodo').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <form action="{{ route('periodos.store') }}" method="POST">
+                @csrf
+                <div class="px-6 py-6 space-y-5">
+                    {{-- Empresa --}}
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Empresa</label>
+                        <select name="id_empresa" required
+                            class="w-full border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2.5">
+                            @foreach($empresas as $empresa)
+                                <option value="{{ $empresa->id_empresa }}" {{ session('empresa_id') == $empresa->id_empresa ? 'selected' : '' }}>
+                                    {{ $empresa->razon_social }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Frecuencia --}}
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Frecuencia</label>
+                        <select name="tipo_frecuencia" id="tipo_frecuencia" required
+                            class="w-full border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2.5">
+                            <option value="mensual">Mensual (1-30/31)</option>
+                            <option value="quincenal">Quincenal (1-15 / 16-Fin)</option>
+                            <option value="decenal">Decenal (1-10 / 11-20 / 21-Fin)</option>
+                            <option value="semanal">Semanal (7 días)</option>
+                            <option value="catorcenal">Catorcenal (14 días)</option>
+                            <option value="otro">Personalizado (Otro)</option>
+                        </select>
+                    </div>
+
+                    {{-- Fechas --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Fecha
+                                Inicio</label>
+                            <input type="date" name="fecha_inicio" id="fecha_inicio" required
+                                class="w-full border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                value="{{ date('Y-m-01') }}">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Fecha
+                                Fin</label>
+                            <input type="date" name="fecha_fin" id="fecha_fin" required
+                                class="w-full border-gray-200 bg-gray-50 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                readonly>
+                            <p id="hint_fecha" class="text-[10px] text-blue-600 mt-1 font-medium italic"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row-reverse gap-3 rounded-b-2xl">
+                    <button type="submit"
+                        class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">
+                        Crear Periodo
+                    </button>
+                    <button type="button" onclick="document.getElementById('modalNuevoPeriodo').classList.add('hidden')"
+                        class="w-full sm:w-auto px-6 py-2.5 bg-white text-gray-700 text-sm font-bold rounded-xl border border-gray-300 hover:bg-gray-50 transition-all">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@include('periodos.partials.modal_cerrar')
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const freqSelect = document.getElementById('tipo_frecuencia');
+        const startInput = document.getElementById('fecha_inicio');
+        const endInput = document.getElementById('fecha_fin');
+        const hintText = document.getElementById('hint_fecha');
+
+        function updateEndDate() {
+            const freq = freqSelect.value;
+            const startVal = startInput.value;
+
+            if (!startVal) return;
+
+            if (freq === 'otro') {
+                endInput.readOnly = false;
+                endInput.classList.remove('bg-gray-50', 'border-gray-200');
+                endInput.classList.add('bg-white', 'border-gray-300');
+                hintText.textContent = "Defina el rango libremente (máx 2 meses).";
+                return;
+            }
+
+            // Standard frequencies
+            endInput.readOnly = true;
+            endInput.classList.add('bg-gray-50', 'border-gray-200');
+            endInput.classList.remove('bg-white', 'border-gray-300');
+
+            const date = new Date(startVal + 'T00:00:00');
+            let endDate = new Date(date);
+
+            if (freq === 'mensual') {
+                endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                hintText.textContent = "Calculado: Fin de mes.";
+            } else if (freq === 'quincenal') {
+                if (date.getDate() <= 15) {
+                    endDate.setDate(15);
+                } else {
+                    endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                }
+                hintText.textContent = "Calculado: Quincena estándar.";
+            } else if (freq === 'decenal') {
+                if (date.getDate() <= 10) {
+                    endDate.setDate(10);
+                } else if (date.getDate() <= 20) {
+                    endDate.setDate(20);
+                } else {
+                    endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                }
+                hintText.textContent = "Calculado: Decena estándar.";
+            } else if (freq === 'semanal') {
+                endDate.setDate(date.getDate() + 6);
+                hintText.textContent = "Calculado: +6 días.";
+            } else if (freq === 'catorcenal') {
+                endDate.setDate(date.getDate() + 13);
+                hintText.textContent = "Calculado: +13 días.";
+            }
+
+            const y = endDate.getFullYear();
+            const m = String(endDate.getMonth() + 1).padStart(2, '0');
+            const d = String(endDate.getDate()).padStart(2, '0');
+            endInput.value = `${y}-${m}-${d}`;
+        }
+
+        freqSelect.addEventListener('change', updateEndDate);
+        startInput.addEventListener('change', updateEndDate);
+
+        // Init
+        updateEndDate();
+    });
+
+    function abrirModalCierre(id, inicio, fin) {
+        const modal = document.getElementById('modalCerrarPeriodo');
+        const form = document.getElementById('formCerrarPeriodo');
+        const rangeText = document.getElementById('cierre_rango');
+        const previewSiguiente = document.getElementById('preview_siguiente');
+        const sugRango = document.getElementById('sug_rango');
+        const sugFreq = document.getElementById('sug_freq');
+
+        form.action = `/periodos/${id}/cerrar`;
+        rangeText.textContent = `${inicio} - ${fin}`;
+
+        // Reset preview
+        previewSiguiente.classList.add('hidden');
+
+        // Fetch suggestion
+        fetch(`/periodos/${id}/suggest`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    sugRango.textContent = `${data.inicio_formato} - ${data.fin_formato}`;
+                    sugFreq.textContent = data.tipo_frecuencia;
+                    previewSiguiente.classList.remove('hidden');
+                }
+            });
+
+        modal.classList.remove('hidden');
+    }
+</script>
+
+@endsection

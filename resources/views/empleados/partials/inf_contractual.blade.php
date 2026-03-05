@@ -126,13 +126,12 @@
             <label class="block text-sm font-medium text-gray-700 mb-1" for="salario">
                 Salario básico
             </label>
-            <input type="number" id="salario" placeholder="Ej: 2000000"
+            <input type="text" id="salario" placeholder="Ej: 2.000.000,00"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                 name="salario"
-                min="0.01"
-                max="999999999"
-                step="0.01"
+                inputmode="decimal"
+                autocomplete="off"
                 required/>
             <div class="error-message invalid-feedback" data-error="salario"></div>
         </div>

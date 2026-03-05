@@ -6,6 +6,38 @@
     const INTERNAL_CODE_REGEX = /^[0-9]+$/;
     const ADDRESS_REGEX = /^(?=.*[A-Za-z])(?=.*(calle|carrera|cra\.?|cl\.?|av\.?|avenida|transversal|diagonal|#|no\.?)).+$/i;
     const EMPLOYEE_SMMLV = Number(window.employeeValidationRules?.smmlv ?? 0);
+    const SALARY_FORMATTER = new Intl.NumberFormat('es-CO', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    });
+
+    function parseLocalizedNumber(rawValue) {
+        const value = (rawValue || '').toString().trim();
+        if (value === '') {
+            return NaN;
+        }
+
+        // Salary base in COP is handled as integer; strip separators/decimals to avoid cursor-reset issues.
+        const sanitized = value.replace(/\s+/g, '').replace(/[^\d-]/g, '');
+        const isNegative = sanitized.startsWith('-');
+        const digits = sanitized.replace(/-/g, '');
+
+        if (digits === '') {
+            return NaN;
+        }
+
+        const parsed = Number(isNegative ? `-${digits}` : digits);
+        return Number.isFinite(parsed) ? parsed : NaN;
+    }
+
+    function formatLocalizedNumber(rawValue) {
+        const numericValue = parseLocalizedNumber(rawValue);
+        if (!Number.isFinite(numericValue)) {
+            return '';
+        }
+
+        return SALARY_FORMATTER.format(numericValue);
+    }
 
     function getErrorElement(form, fieldName) {
         return form.querySelector(`[data-error="${fieldName}"]`);
@@ -218,7 +250,7 @@
                     return validarInput(input, false, 'El salario es obligatorio.', showError);
                 }
 
-                const salario = Number(value);
+                const salario = parseLocalizedNumber(value);
                 if (Number.isNaN(salario) || salario < 0 || salario > 999999999) {
                     return validarInput(input, false, 'El salario debe estar entre 0 y 999999999.', showError);
                 }
@@ -364,6 +396,13 @@
         }
 
         const formData = new FormData(form);
+        const salaryInput = getField(form, 'salario');
+        if (salaryInput) {
+            const parsedSalary = parseLocalizedNumber(salaryInput.value);
+            if (Number.isFinite(parsedSalary)) {
+                formData.set('salario', String(parsedSalary));
+            }
+        }
 
         try {
             const response = await fetch(form.action, {
@@ -579,6 +618,20 @@
 
         const tipoTrabajadorInput = getField(form, 'id_tipo_trabajador');
         const salarioInput = getField(form, 'salario');
+
+        if (salarioInput) {
+            salarioInput.addEventListener('input', function () {
+                const formatted = formatLocalizedNumber(salarioInput.value);
+                salarioInput.value = formatted;
+            });
+
+            salarioInput.addEventListener('blur', function () {
+                const formatted = formatLocalizedNumber(salarioInput.value);
+                salarioInput.value = formatted;
+            });
+
+            salarioInput.value = formatLocalizedNumber(salarioInput.value);
+        }
 
         if (tipoContratoInput) {
             tipoContratoInput.addEventListener('change', function () {

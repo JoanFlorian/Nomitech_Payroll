@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PeriodoLiquidacion;
 use App\Models\Salario;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -118,44 +119,32 @@ class NominaController extends Controller
         ];
     }
 
-    private function resolvePeriodoId($fechaPago): int
+    private function getActivePeriod(): ?PeriodoLiquidacion
     {
-        $timestamp = strtotime((string) $fechaPago) ?: time();
-        $fechaInicio = date('Y-m-01', $timestamp);
-        $fechaFin = date('Y-m-t', $timestamp);
+        $activePeriodId = session('active_period_id');
+        $empresaId = session('empresa_id');
 
-        $periodoId = DB::table('periodo_liquidacion')
-            ->whereDate('fecha_inicio', $fechaInicio)
-            ->whereDate('fecha_fin', $fechaFin)
-            ->value('id_periodo');
-
-        if ($periodoId) {
-            return (int) $periodoId;
+        if ($activePeriodId) {
+            $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
+                ->where('id_periodo', $activePeriodId)
+                ->first();
+            if ($periodo)
+                return $periodo;
         }
 
-        return (int) DB::table('periodo_liquidacion')->insertGetId([
-            'fecha_inicio' => $fechaInicio,
-            'fecha_fin' => $fechaFin,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ], 'id_periodo');
-    }
+        // Fallback: Último abierto
+        $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
+            ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
+            ->orderByDesc('fecha_inicio')
+            ->first();
 
-    private function resolveEstadoId(): int
-    {
-        $estadoId = DB::table('estado')->orderBy('id_estado')->value('id_estado');
-
-        if ($estadoId) {
-            return (int) $estadoId;
+        if ($periodo) {
+            session(['active_period_id' => $periodo->id_periodo]);
         }
 
-        return (int) DB::table('estado')->insertGetId([
-            'nombre' => 'Activo',
-            'descripcion' => 'Estado creado automáticamente para nómina',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ], 'id_estado');
+        return $periodo;
     }
+
 
     private function parseNumber($value): float
     {
@@ -273,6 +262,8 @@ class NominaController extends Controller
         $periodo = trim((string) $request->input('periodo', ''));
         $empresaId = session('empresa_id');
 
+        $periodoActivo = $this->getActivePeriod();
+
         $query = Salario::with('contrato.usuario')
             ->select('salario.*')
             ->addSelect([
@@ -282,6 +273,9 @@ class NominaController extends Controller
             ])
             ->whereHas('contrato', function ($q) use ($empresaId) {
                 $q->where('id_empresa', $empresaId);
+            })
+            ->when($periodoActivo, function ($q) use ($periodoActivo) {
+                $q->where('id_periodo', $periodoActivo->id_periodo);
             })
             ->when($busqueda !== '', function ($q) use ($busqueda) {
                 $term = mb_strtolower($busqueda);
@@ -315,12 +309,13 @@ class NominaController extends Controller
     ========================== */
     public function index(Request $request)
     {
+        $periodoActivo = $this->getActivePeriod();
         $salarios = $this->construirConsultaNomina($request)
             ->orderByDesc('fecha_pago')
-            ->paginate(4)
+            ->paginate(10)
             ->withQueryString();
 
-        return view('nomina.index', compact('salarios'));
+        return view('nomina.index', compact('salarios', 'periodoActivo'));
     }
 
     public function exportarNominaExcel(Request $request)
@@ -409,13 +404,44 @@ class NominaController extends Controller
 
         $isEditing = (bool) (session('nomina.editing_id') || $request->boolean('editing'));
 
-        return view('nomina.step1', compact('step1', 'isEditing'));
+        $empresaId = session('empresa_id');
+        $periodoActivo = $this->getActivePeriod();
+
+        $salarios = Salario::with('contrato.usuario')
+            ->whereHas('contrato', function ($q) use ($empresaId) {
+                $q->where('id_empresa', $empresaId);
+            })
+            ->when($periodoActivo, function ($q) use ($periodoActivo) {
+                $q->where('id_periodo', $periodoActivo->id_periodo);
+            })
+            ->orderByDesc('fecha_pago')
+            ->limit(10)
+            ->get();
+
+        return view('nomina.step1', compact('step1', 'isEditing', 'salarios', 'periodoActivo'));
     }
 
     public function postStep1(Request $request)
     {
         $data = $request->all();
         $data['salario_base'] = $this->parseNumber($request->input('salario_base'));
+
+        // Phase 2: Use explicit period from session
+        $periodoId = session('active_period_id');
+
+        if (!$periodoId) {
+            return redirect()->route('periodos.index')->with('error', 'Debe seleccionar un periodo antes de liquidar.');
+        }
+
+        $periodo = DB::table('periodo_liquidacion')
+            ->where('id_periodo', $periodoId)
+            ->select('estado')
+            ->first();
+
+        if ($periodo && $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO) {
+            abort(403, 'El periodo seleccionado se encuentra cerrado y no permite nuevas liquidaciones o novedades.');
+        }
+
         session(['nomina.step1' => $data]);
         return redirect()->route('nomina.step2');
     }
@@ -425,11 +451,13 @@ class NominaController extends Controller
         $registro = DB::table('salario as s')
             ->join('contrato as c', 'c.id_contrato', '=', 's.id_contrato')
             ->join('usuario as u', 'u.doc', '=', 'c.doc')
+            ->join('periodo_liquidacion as p', 'p.id_periodo', '=', 's.id_periodo')
             ->where('s.id_salario', $idSalario)
             ->select(
                 's.id_salario',
                 's.id_contrato',
                 's.fecha_pago',
+                'p.estado as periodo_estado',
                 's.valor_horas_extras_recargos',
                 's.bonificaciones',
                 's.comisiones',
@@ -446,6 +474,10 @@ class NominaController extends Controller
 
         if (!$registro) {
             return redirect()->route('nomina.index')->with('error', 'No se encontró el registro de nómina a editar.');
+        }
+
+        if ($registro->periodo_estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO) {
+            abort(403, 'No se puede editar una nómina de un periodo cerrado.');
         }
 
         session()->forget('nomina');
@@ -470,7 +502,21 @@ class NominaController extends Controller
         $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
         $step2 = session('nomina.step2', []);
 
-        return view('nomina.step2', compact('salarioBase', 'step2'));
+        $empresaId = session('empresa_id');
+        $periodoActivo = $this->getActivePeriod();
+
+        $salarios = Salario::with('contrato.usuario')
+            ->whereHas('contrato', function ($q) use ($empresaId) {
+                $q->where('id_empresa', $empresaId);
+            })
+            ->when($periodoActivo, function ($q) use ($periodoActivo) {
+                $q->where('id_periodo', $periodoActivo->id_periodo);
+            })
+            ->orderByDesc('fecha_pago')
+            ->limit(10)
+            ->get();
+
+        return view('nomina.step2', compact('salarioBase', 'step2', 'salarios', 'periodoActivo'));
     }
 
     public function postStep2(Request $request)
@@ -508,9 +554,24 @@ class NominaController extends Controller
         }
 
         $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
+        $s2 = session('nomina.step2');
         $step2Ingresos = session('nomina.step2_ingresos', []);
 
-        return view('nomina.step2_ingresos', compact('salarioBase', 's2', 'step2Ingresos'));
+        $empresaId = session('empresa_id');
+        $periodoActivo = $this->getActivePeriod();
+
+        $salarios = Salario::with('contrato.usuario')
+            ->whereHas('contrato', function ($q) use ($empresaId) {
+                $q->where('id_empresa', $empresaId);
+            })
+            ->when($periodoActivo, function ($q) use ($periodoActivo) {
+                $q->where('id_periodo', $periodoActivo->id_periodo);
+            })
+            ->orderByDesc('fecha_pago')
+            ->limit(10)
+            ->get();
+
+        return view('nomina.step2_ingresos', compact('salarioBase', 's2', 'step2Ingresos', 'salarios', 'periodoActivo'));
     }
 
     public function postStep2Ingresos(Request $request)
@@ -577,7 +638,21 @@ class NominaController extends Controller
         $step3 = session('nomina.step3', []);
         $isEditing = (bool) session('nomina.editing_id');
 
-        return view('nomina.step3', compact('salarioBase', 'totalDevengos', 'rules', 'step3', 'isEditing'));
+        $empresaId = session('empresa_id');
+        $periodoActivo = $this->getActivePeriod();
+
+        $salarios = Salario::with('contrato.usuario')
+            ->whereHas('contrato', function ($q) use ($empresaId) {
+                $q->where('id_empresa', $empresaId);
+            })
+            ->when($periodoActivo, function ($q) use ($periodoActivo) {
+                $q->where('id_periodo', $periodoActivo->id_periodo);
+            })
+            ->orderByDesc('fecha_pago')
+            ->limit(10)
+            ->get();
+
+        return view('nomina.step3', compact('salarioBase', 'totalDevengos', 'rules', 'step3', 'isEditing', 'salarios', 'periodoActivo'));
     }
 
     /* ==========================
@@ -590,7 +665,10 @@ class NominaController extends Controller
             ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
             ->where('usuario.doc', $doc)
             ->where('contrato.id_empresa', $empresaId)
-            ->where('contrato.activo', 1)
+            ->where(function ($q) {
+                $q->where('contrato.estado_laboral', \App\Models\Contrato::ESTADO_LABORAL_ACTIVO)
+                    ->orWhere('contrato.estado_nomina', \App\Models\Contrato::ESTADO_NOMINA_PENDIENTE);
+            })
             ->select(
                 'usuario.doc',
                 DB::raw("CONCAT(
@@ -622,7 +700,10 @@ class NominaController extends Controller
         $query = DB::table('usuario')
             ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
             ->where('contrato.id_empresa', $empresaId)
-            ->where('contrato.activo', 1)
+            ->where(function ($q) {
+                $q->where('contrato.estado_laboral', \App\Models\Contrato::ESTADO_LABORAL_ACTIVO)
+                    ->orWhere('contrato.estado_nomina', \App\Models\Contrato::ESTADO_NOMINA_PENDIENTE);
+            })
             ->select(
                 'usuario.doc',
                 DB::raw("{$nombreExpr} as nombre"),
@@ -689,8 +770,35 @@ class NominaController extends Controller
             $contributions = $this->calculateContributions($salarioBase, $rules);
 
             $fechaPago = $s1['fecha_pago'] ?? now()->toDateString();
-            $periodoId = $this->resolvePeriodoId($fechaPago);
-            $estadoId = $this->resolveEstadoId();
+            $periodoId = session('active_period_id');
+
+            if (!$periodoId) {
+                throw new \Exception('Debe seleccionar un periodo antes de liquidar.');
+            }
+
+            $estado = \App\Models\Salario::ESTADO_LIQUIDADO;
+
+            if (!$isEditing) {
+                // 1. Validar pago duplicado PRIMERO
+                $existe = DB::table('salario')
+                    ->where('id_contrato', $s1['id_contrato'])
+                    ->where('id_periodo', $periodoId)
+                    ->exists();
+
+                if ($existe) {
+                    return back()->with('error', 'Ya existe un registro de nómina para este empleado en el periodo seleccionado (Mes ' . date('m/Y', strtotime($fechaPago)) . ').');
+                }
+
+                // 2. Verificar estado del periodo
+                $periodo = DB::table('periodo_liquidacion')
+                    ->where('id_periodo', $periodoId)
+                    ->select('estado')
+                    ->first();
+
+                if ($periodo && $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO) {
+                    abort(403, 'El periodo seleccionado se encuentra cerrado y no permite liquidaciones o novedades.');
+                }
+            }
 
             $retencionFuente = $this->parseNumber($validated['retencion_fuente'] ?? 0);
             $embargoFiscal = $this->parseNumber($validated['embargo_fiscal'] ?? 0);
@@ -701,7 +809,7 @@ class NominaController extends Controller
                 $s2,
                 $s2Ingresos,
                 $periodoId,
-                $estadoId,
+                $estado,
                 $contributions,
                 $fechaPago,
                 $retencionFuente,
@@ -709,15 +817,43 @@ class NominaController extends Controller
                 $pensionVoluntaria
             );
 
-            if ($isEditing) {
-                DB::table('salario')
-                    ->where('id_salario', (int) session('nomina.editing_id'))
-                    ->update($payload);
-            } else {
-                DB::table('salario')->insert(array_merge($payload, [
-                    'created_at' => now(),
-                ]));
-            }
+            // 3. Persistencia Transaccional
+            DB::transaction(function () use ($isEditing, $payload, $periodoId) {
+                if (!$isEditing) {
+                    $periodo = DB::table('periodo_liquidacion')
+                        ->where('id_periodo', $periodoId)
+                        ->select('estado')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($periodo && $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_PENDIENTE) {
+                        // La primera liquidación abre el periodo automáticamente
+                        DB::table('periodo_liquidacion')
+                            ->where('id_periodo', $periodoId)
+                            ->update([
+                                'estado' => \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO,
+                                'updated_at' => now()
+                            ]);
+                    }
+
+                    DB::table('salario')->insert(array_merge($payload, [
+                        'created_at' => now(),
+                    ]));
+                } else {
+                    $periodo = DB::table('periodo_liquidacion')
+                        ->where('id_periodo', $periodoId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($periodo && $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO) {
+                        abort(403, 'No se puede modificar una nómina de un periodo que ha sido cerrado recientemente.');
+                    }
+
+                    DB::table('salario')
+                        ->where('id_salario', (int) session('nomina.editing_id'))
+                        ->update($payload);
+                }
+            });
 
             session()->forget('nomina');
 
@@ -834,7 +970,7 @@ class NominaController extends Controller
         array $s2,
         array $s2Ingresos,
         int $periodoId,
-        int $estadoId,
+        string $estado,
         array $contributions,
         string $fechaPago,
         float $retencionFuente,
@@ -844,7 +980,7 @@ class NominaController extends Controller
         return [
             'id_contrato' => $s1['id_contrato'],
             'id_periodo' => $periodoId,
-            'id_estado' => $estadoId,
+            'estado' => $estado,
             'auxilio_transporte' => 162000,
             'valor_horas_extras_recargos' => $this->parseNumber($s2['valor_horas_extras_recargos'] ?? 0),
             'bonificaciones' => $this->parseNumber($s2Ingresos['bonificaciones'] ?? 0),

@@ -15,6 +15,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
 
 use App\Http\Controllers\NovedadController;
+use App\Http\Controllers\NovedadCalculoController;
 
 use App\Http\Controllers\ReportesController;
 
@@ -107,18 +108,30 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
     Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);
 
-
-    // Novedades
+    // Novedades y Reportes
     Route::get('/novedades', [NovedadController::class, 'index'])->name('novedades.index');
+    Route::post('/novedades/calculo/preview', [NovedadCalculoController::class, 'preview'])->name('novedades.calculo.preview');
     Route::post('/novedades', [NovedadController::class, 'store'])->name('novedades.store');
     Route::put('/novedades/{id_novedad}', [NovedadController::class, 'update'])->name('novedades.update');
     Route::delete('/novedades/{id_novedad}', [NovedadController::class, 'destroy'])->name('novedades.destroy');
 
-    // Reportes
     Route::get('/reportes', [ReportesController::class, 'index'])->name('reportes.index');
     Route::get('/reportes/exportar/pdf', [ReportesController::class, 'exportarPdf'])->name('reportes.export.pdf');
     Route::get('/reportes/exportar/excel', [ReportesController::class, 'exportarExcel'])->name('reportes.export.excel');
 
+    // Gestión de Periodos
+    Route::get('/periodos', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'index'])
+        ->name('periodos.index');
+    Route::post('/periodos', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'store'])
+        ->name('periodos.store');
+    Route::get('/periodos/{id}/select', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'select'])
+        ->name('periodos.select');
+    Route::get('/periodos/{id}/suggest', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'suggestNext'])
+        ->name('periodos.suggest');
+    Route::post('/periodos/{id}/cerrar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'close'])
+        ->name('periodos.cerrar');
+    Route::get('/periodos/{id}/exportar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'exportar'])
+        ->name('periodos.exportar');
 });
 
 // Superadmin routes protected by auth and role

@@ -12,6 +12,18 @@ use App\Services\CalculoNovedadService;
 
 class NovedadController extends Controller
 {
+    private const TIPOS_NOVEDAD_LABELS = [
+        'incapacidad_enfermedad_general' => 'Incapacidad enfermedad general',
+        'incapacidad_laboral_arl' => 'Incapacidad laboral (ARL)',
+        'licencia_maternidad' => 'Licencia de maternidad',
+        'licencia_paternidad' => 'Licencia de paternidad',
+        'licencia_remunerada' => 'Licencia remunerada',
+        'licencia_no_remunerada' => 'Licencia no remunerada',
+        'permiso_remunerado' => 'Permiso remunerado',
+        'permiso_no_remunerado' => 'Permiso no remunerado',
+        'suspension_contrato' => 'Suspensión del contrato',
+    ];
+
     public function __construct(private readonly CalculoNovedadService $calculoNovedadService)
     {
     }
@@ -89,7 +101,7 @@ class NovedadController extends Controller
                 ->with('open_novedad_modal', true);
         }
 
-        $tipoNombre = ucfirst((string) $data['tipo_novedad']);
+        $tipoNombre = $this->resolverNombreTipoNovedad((string) $data['tipo_novedad']);
         $tipoNovedad = TipoNovedad::firstOrCreate(['nombre' => $tipoNombre]);
 
         $salarioBase = (float) ($salario->contrato_salario_base ?? optional($salario->contrato)->salario_base ?? 0);
@@ -133,7 +145,7 @@ class NovedadController extends Controller
                 ->withInput();
         }
 
-        $tipoNombre = ucfirst((string) $data['tipo_novedad']);
+        $tipoNombre = $this->resolverNombreTipoNovedad((string) $data['tipo_novedad']);
         $tipoNovedad = TipoNovedad::firstOrCreate(['nombre' => $tipoNombre]);
 
         $salarioBase = (float) ($salario->contrato_salario_base ?? optional($salario->contrato)->salario_base ?? 0);
@@ -170,5 +182,12 @@ class NovedadController extends Controller
         Novedad::query()->findOrFail($id_novedad)->delete();
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se eliminó correctamente.');
+    }
+
+    private function resolverNombreTipoNovedad(string $tipoNovedad): string
+    {
+        $key = strtolower(trim($tipoNovedad));
+
+        return self::TIPOS_NOVEDAD_LABELS[$key] ?? ucfirst(str_replace('_', ' ', $key));
     }
 }

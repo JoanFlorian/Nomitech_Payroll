@@ -8,6 +8,10 @@ class Salario extends Model
 {
     protected $table = 'salario';
 
+    // Estados de Salario (Nómina)
+    public const ESTADO_LIQUIDADO = 'liquidado';
+    public const ESTADO_BORRADOR = 'borrador';
+
     protected $appends = [
         'total_devengos',
         'total_deducciones',
@@ -18,6 +22,11 @@ class Salario extends Model
     public function contrato()
     {
         return $this->belongsTo(Contrato::class, 'id_contrato');
+    }
+
+    public function periodo()
+    {
+        return $this->belongsTo(PeriodoLiquidacion::class, 'id_periodo');
     }
 
     /* =======================

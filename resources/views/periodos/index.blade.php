@@ -90,10 +90,15 @@
 
                             @if($periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO)
                                 {{-- Boton Exportar --}}
-                                <a href="{{ route('periodos.exportar', ['id' => $periodo->id_periodo, 'banco' => 'bancolombia']) }}"
-                                    class="flex items-center gap-1.5 bg-green-50 text-green-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-600 hover:text-white transition-all shadow-sm">
-                                    <span>Exportar</span>
-                                </a>
+                                <button type="button" onclick="abrirModalExportar({{ $periodo->id_periodo }})"
+                                    class="flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    <span>Exportar Pagos</span>
+                                </button>
                             @endif
                         </div>
                     </td>
@@ -140,14 +145,25 @@
 {{-- MODAL NUEVO PERIODO --}}
 <div id="modalNuevoPeriodo" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
     role="dialog" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"
-            onclick="document.getElementById('modalNuevoPeriodo').classList.add('hidden')"></div>
+    <div class="flex items-center justify-center min-h-screen p-4 text-center sm:p-0">
+        <!-- Fondo oscuro con figuritas decorativas -->
+        <div class="fixed inset-0 bg-gray-900/85 transition-opacity" aria-hidden="true"
+            onclick="document.getElementById('modalNuevoPeriodo').classList.add('hidden')">
+            <!-- Figuritas decorativas Marca: Azul #1565C0, Verde #2AA58C -->
+            <div class="absolute top-[5%] left-[10%] w-32 h-32 rounded-full bg-[#1565C0]/20 blur-[2px] rotate-12"></div>
+            <div class="absolute top-[15%] right-[15%] w-48 h-48 rounded-3xl bg-[#2AA58C]/15 blur-[1px] -rotate-12">
+            </div>
+            <div class="absolute bottom-[10%] left-[20%] w-40 h-40 rounded-xl bg-[#2AA58C]/20 rotate-45"></div>
+            <div class="absolute bottom-[20%] right-[10%] w-56 h-56 rounded-full bg-[#1565C0]/15 blur-[3px]"></div>
+            <div class="absolute top-[40%] left-[-5%] w-24 h-24 rounded-full bg-[#2AA58C]/25"></div>
+            <div class="absolute top-[55%] right-[-5%] w-36 h-36 rounded-2xl bg-[#1565C0]/20 -rotate-6"></div>
+            <div class="absolute top-[70%] left-[45%] w-16 h-16 rounded-full bg-[#2AA58C]/20"></div>
+        </div>
 
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
         <div
-            class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
+            class="relative inline-block overflow-hidden text-left align-middle transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:max-w-lg sm:w-full border border-gray-100 sm:-translate-y-12">
             <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                 <h3 class="text-lg font-bold text-gray-900" id="modal-title">Nuevo Periodo de Liquidación</h3>
                 <button onclick="document.getElementById('modalNuevoPeriodo').classList.add('hidden')"
@@ -162,19 +178,8 @@
             <form action="{{ route('periodos.store') }}" method="POST">
                 @csrf
                 <div class="px-6 py-6 space-y-5">
-                    {{-- Empresa --}}
-                    <div>
-                        <label
-                            class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Empresa</label>
-                        <select name="id_empresa" required
-                            class="w-full border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2.5">
-                            @foreach($empresas as $empresa)
-                                <option value="{{ $empresa->id_empresa }}" {{ session('empresa_id') == $empresa->id_empresa ? 'selected' : '' }}>
-                                    {{ $empresa->razon_social }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                    {{-- Empresa (Hidden since multi-company is not supported yet) --}}
+                    <input type="hidden" name="id_empresa" value="{{ session('empresa_id') }}">
 
                     {{-- Frecuencia --}}
                     <div>
@@ -227,6 +232,7 @@
 </div>
 
 @include('periodos.partials.modal_cerrar')
+@include('periodos.partials.modal_exportar')
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {

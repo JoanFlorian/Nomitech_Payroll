@@ -96,4 +96,13 @@ class Contrato extends Model
     {
         return $this->belongsTo(Empresa::class, 'id_empresa', 'id_empresa');
     }
+
+    /**
+     * Relación con la cuenta bancaria activa.
+     */
+    public function cuentaActiva()
+    {
+        return $this->hasOne(Cuenta::class, 'id_contrato', 'id_contrato')
+            ->where('activo', true);
+    }
 }

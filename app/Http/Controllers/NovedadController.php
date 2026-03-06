@@ -17,10 +17,14 @@ class NovedadController extends Controller
         'incapacidad_laboral_arl' => 'Incapacidad laboral (ARL)',
         'licencia_maternidad' => 'Licencia de maternidad',
         'licencia_paternidad' => 'Licencia de paternidad',
+        'licencia_luto' => 'Licencia por luto',
         'licencia_remunerada' => 'Licencia remunerada',
         'licencia_no_remunerada' => 'Licencia no remunerada',
+        'calamidad_domestica' => 'Calamidad doméstica',
+        'cita_medica' => 'Cita médica',
         'permiso_remunerado' => 'Permiso remunerado',
         'permiso_no_remunerado' => 'Permiso no remunerado',
+        'ausencia_injustificada' => 'Ausencia injustificada',
         'suspension_contrato' => 'Suspensión del contrato',
     ];
 

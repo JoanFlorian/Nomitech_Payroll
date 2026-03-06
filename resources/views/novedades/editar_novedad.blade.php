@@ -40,10 +40,14 @@
                                 ['value' => 'incapacidad_laboral_arl', 'label' => 'Incapacidad laboral (ARL)'],
                                 ['value' => 'licencia_maternidad', 'label' => 'Licencia de maternidad'],
                                 ['value' => 'licencia_paternidad', 'label' => 'Licencia de paternidad'],
+                                ['value' => 'licencia_luto', 'label' => 'Licencia por luto'],
                                 ['value' => 'licencia_remunerada', 'label' => 'Licencia remunerada'],
                                 ['value' => 'licencia_no_remunerada', 'label' => 'Licencia no remunerada'],
+                                ['value' => 'calamidad_domestica', 'label' => 'Calamidad doméstica'],
+                                ['value' => 'cita_medica', 'label' => 'Cita médica'],
                                 ['value' => 'permiso_remunerado', 'label' => 'Permiso remunerado'],
                                 ['value' => 'permiso_no_remunerado', 'label' => 'Permiso no remunerado'],
+                                ['value' => 'ausencia_injustificada', 'label' => 'Ausencia injustificada'],
                                 ['value' => 'suspension_contrato', 'label' => 'Suspensión del contrato'],
                             ] as $tipoNovedad)
                                 <option value="{{ $tipoNovedad['value'] }}" {{ old('tipo_novedad') === $tipoNovedad['value'] ? 'selected' : '' }}>{{ $tipoNovedad['label'] }}</option>
@@ -81,7 +85,7 @@
 
                     <div>
                         <label for="edit-quantity-days" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en días</label>
-                        <input id="edit-quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="30" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
+                        <input id="edit-quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="126" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
                         <p id="edit-quantity-days-error" class="mt-1 text-xs text-red-600 hidden"></p>
                         @error('cantidad_dias')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -122,6 +126,7 @@
                             <input id="edit-payment-display" type="text" class="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Valor a pagar o descontar por esta novedad" autocomplete="off">
                         </div>
                         <input type="hidden" id="edit-payment" name="pago_manual" value="{{ old('pago_manual', old('pago')) }}">
+                        <p id="edit-payment-auto-message" class="mt-1 text-xs text-blue-700 hidden">Esta novedad se calcula automáticamente según el salario del empleado y la cantidad de días u horas registradas.</p>
                         <p id="edit-payment-error" class="mt-1 text-xs text-red-600 hidden"></p>
                         @error('pago_manual')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>

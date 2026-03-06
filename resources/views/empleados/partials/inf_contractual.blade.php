@@ -147,8 +147,7 @@
                 inputmode="numeric"
                 minlength="3"
                 maxlength="20"
-                pattern="[0-9]+"
-                required/>
+                pattern="[0-9]+"/>
             <div class="error-message invalid-feedback" data-error="codigo_interno"></div>
         </div>
 

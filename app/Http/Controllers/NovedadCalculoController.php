@@ -25,13 +25,16 @@ class NovedadCalculoController extends Controller
 
         $salarioBase = (float) ($salario->contrato_salario_base ?? optional($salario->contrato)->salario_base ?? 0);
         $valor = $this->calculoNovedadService->calcularValor($data, $salarioBase);
-        $operacion = $this->calculoNovedadService->resolverOperacion((string) ($data['tipo_novedad'] ?? ''));
+        $tipoNovedad = (string) ($data['tipo_novedad'] ?? '');
+        $operacion = $this->calculoNovedadService->resolverOperacionConContexto($tipoNovedad, $data);
+        $esAutomatica = $this->calculoNovedadService->esNovedadAutomatica($tipoNovedad);
 
         return response()->json([
             'success' => true,
             'valor' => $valor,
             'operacion' => $operacion,
             'salario_base' => $salarioBase,
+            'es_automatica' => $esAutomatica,
             'usa_pago_manual' => isset($data['pago_manual']) && $data['pago_manual'] !== null && $data['pago_manual'] !== '',
         ]);
     }

@@ -93,7 +93,7 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         if ($this->has('codigo_interno')) {
-            $rules['codigo_interno'] = 'bail|required|string|min:3|max:20|regex:/^[0-9]+$/';
+            $rules['codigo_interno'] = 'bail|nullable|string|min:3|max:20|regex:/^[0-9]+$/';
         }
 
         if ($this->has('id_arl')) {
@@ -219,7 +219,6 @@ class UpdateEmployeePartialRequest extends FormRequest
             'nivel_riesgo.required' => 'Debe seleccionar el nivel de riesgo.',
             'nivel_riesgo.in'       => 'El nivel de riesgo seleccionado no es válido.',
 
-            'codigo_interno.required' => 'El código interno es obligatorio.',
             'codigo_interno.min'      => 'El código interno debe tener mínimo 3 caracteres.',
             'codigo_interno.max'      => 'El código interno no puede superar 20 caracteres.',
             'codigo_interno.regex'    => 'El código interno solo puede contener números.',

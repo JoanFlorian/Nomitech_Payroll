@@ -55,10 +55,14 @@
 								['value' => 'incapacidad_laboral_arl', 'label' => 'Incapacidad laboral (ARL)'],
 								['value' => 'licencia_maternidad', 'label' => 'Licencia de maternidad'],
 								['value' => 'licencia_paternidad', 'label' => 'Licencia de paternidad'],
+								['value' => 'licencia_luto', 'label' => 'Licencia por luto'],
 								['value' => 'licencia_remunerada', 'label' => 'Licencia remunerada'],
 								['value' => 'licencia_no_remunerada', 'label' => 'Licencia no remunerada'],
+								['value' => 'calamidad_domestica', 'label' => 'Calamidad doméstica'],
+								['value' => 'cita_medica', 'label' => 'Cita médica'],
 								['value' => 'permiso_remunerado', 'label' => 'Permiso remunerado'],
 								['value' => 'permiso_no_remunerado', 'label' => 'Permiso no remunerado'],
+								['value' => 'ausencia_injustificada', 'label' => 'Ausencia injustificada'],
 								['value' => 'suspension_contrato', 'label' => 'Suspensión del contrato'],
 							] as $tipoNovedad)
 								<option value="{{ $tipoNovedad['value'] }}" {{ old('tipo_novedad') === $tipoNovedad['value'] ? 'selected' : '' }}>{{ $tipoNovedad['label'] }}</option>
@@ -96,7 +100,7 @@
 
 					<div>
 						<label for="quantity-days" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en días</label>
-						<input id="quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="30" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
+						<input id="quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="126" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
 						<p id="quantity-days-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('cantidad_dias')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -144,6 +148,7 @@
 						</div>
 						<input type="hidden" id="payment" name="pago_manual" value="{{ old('pago_manual', old('pago')) }}">
 						<p class="mt-2 text-xs text-gray-500 italic">Ingrese el valor correspondiente que será aplicado en la nómina.</p>
+						<p id="payment-auto-message" class="mt-1 text-xs text-blue-700 hidden">Esta novedad se calcula automáticamente según el salario del empleado y la cantidad de días u horas registradas.</p>
 						<p id="payment-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('pago_manual')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>

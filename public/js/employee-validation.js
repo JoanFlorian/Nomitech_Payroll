@@ -167,7 +167,22 @@
 
         switch (fieldName) {
             case 'id_tipo_doc':
-                return validarInput(input, value !== '', 'El tipo de documento es obligatorio.', showError);
+                if (!input) {
+                    return false;
+                }
+
+                if (value !== '') {
+                    if (showError) {
+                        clearFieldError(input);
+                    }
+                    return true;
+                }
+
+                if (showError) {
+                    setFieldError(input, 'El tipo de documento es obligatorio.');
+                }
+
+                return false;
             case 'doc':
                 return validarInput(input, NUMBERS_REGEX.test(value) && value.length >= 5 && value.length <= 15, 'El documento debe tener entre 5 y 15 dígitos numéricos.', showError);
             case 'primer_nombre':
@@ -292,6 +307,13 @@
             case 'horas_diarias':
                 return validarInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
             case 'codigo_interno':
+                if (value === '') {
+                    if (showError) {
+                        clearFieldError(input);
+                    }
+                    return true;
+                }
+
                 return validarInput(input, INTERNAL_CODE_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 dígitos numéricos.', showError);
             default:
                 return true;
@@ -490,6 +512,18 @@
             });
         }
 
+        ['primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido'].forEach(function (fieldName) {
+            const fieldInput = getField(form, fieldName);
+            if (!fieldInput) {
+                return;
+            }
+
+            fieldInput.addEventListener('input', function () {
+                // Keep only letters (including accents) and spaces.
+                fieldInput.value = (fieldInput.value || '').replace(/[^a-zA-ZÁÉÍÓÚáéíóúñÑ\s]/g, '');
+            });
+        });
+
         initCommonRealtimeValidation(form);
 
         document.addEventListener('selected', function (event) {
@@ -618,6 +652,13 @@
 
         const tipoTrabajadorInput = getField(form, 'id_tipo_trabajador');
         const salarioInput = getField(form, 'salario');
+        const codigoInternoInput = getField(form, 'codigo_interno');
+
+        if (codigoInternoInput) {
+            codigoInternoInput.addEventListener('input', function () {
+                codigoInternoInput.value = (codigoInternoInput.value || '').replace(/\D/g, '').slice(0, 20);
+            });
+        }
 
         if (salarioInput) {
             salarioInput.addEventListener('input', function () {
@@ -670,6 +711,14 @@
         }
 
         const submitButton = form.querySelector('button[type="submit"]');
+        const numeroCuentaInput = getField(form, 'numero_cuenta');
+
+        if (numeroCuentaInput) {
+            numeroCuentaInput.addEventListener('input', function () {
+                numeroCuentaInput.value = (numeroCuentaInput.value || '').replace(/\D/g, '').slice(0, 20);
+            });
+        }
+
         initCommonRealtimeValidation(form);
 
         form.addEventListener('submit', function (event) {

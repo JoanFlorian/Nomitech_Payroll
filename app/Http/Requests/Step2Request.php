@@ -40,7 +40,7 @@ class Step2Request extends FormRequest
             'nivel_riesgo' => 'bail|required|in:Nivel I,Nivel II,Nivel III,Nivel IV,Nivel V',
 
             // CODIGO INTERNO
-            'codigo_interno' => 'bail|required|string|min:3|max:20|regex:/^[0-9]+$/',
+            'codigo_interno' => 'bail|nullable|string|min:3|max:20|regex:/^[0-9]+$/',
 
             // BOOLEAN CHECK - alto_riesgo (checkbox)
             'alto_riesgo' => 'nullable|boolean',
@@ -135,7 +135,6 @@ class Step2Request extends FormRequest
             | CÓDIGO INTERNO
             |--------------------------------------------------------------------------
             */
-            'codigo_interno.required' => 'El código interno es obligatorio.',
             'codigo_interno.min'      => 'El código interno debe tener mínimo 3 caracteres.',
             'codigo_interno.max'      => 'El código interno no puede superar 20 caracteres.',
             'codigo_interno.regex'    => 'El código interno solo puede contener números.',
@@ -296,6 +295,11 @@ class Step2Request extends FormRequest
             if ($salarioNormalizado !== null) {
                 $payload['salario'] = $salarioNormalizado;
             }
+        }
+
+        if ($this->has('codigo_interno')) {
+            $codigoInterno = trim((string) $this->input('codigo_interno'));
+            $payload['codigo_interno'] = $codigoInterno === '' ? null : $codigoInterno;
         }
 
         $this->merge($payload);

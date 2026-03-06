@@ -773,6 +773,11 @@ function validateEditField(stepNumber, fieldName, showError = true) {
 
                 return validateEditInput(input, true, '', showError);
             case 'codigo_interno':
+                if (value === '') {
+                    if (showError) clearEditFieldError(input);
+                    return true;
+                }
+
                 return validateEditInput(input, EDIT_NUMBERS_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 dígitos numéricos.', showError);
             case 'nivel_riesgo':
                 return validateEditInput(input, ['Nivel I', 'Nivel II', 'Nivel III', 'Nivel IV', 'Nivel V'].includes(value), 'Debe seleccionar un nivel de riesgo válido.', showError);
@@ -1041,6 +1046,31 @@ document.addEventListener('DOMContentLoaded', function () {
     const editTipoContrato = document.getElementById('editIdTipoContrato');
     const editTipoTrabajador = document.getElementById('editIdTipoTrabajador');
     const editSalario = document.getElementById('editSalario');
+    const editCodigoInterno = document.getElementById('editCodigoInterno');
+    const editNumeroCuenta = document.getElementById('editNumeroCuenta');
+
+    ['editPrimerNombre', 'editOtrosNombres', 'editPrimerApellido', 'editSegundoApellido'].forEach(function (id) {
+        const input = document.getElementById(id);
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener('input', function () {
+            input.value = (input.value ?? '').toString().replace(/[^a-zA-ZÁÉÍÓÚáéíóúñÑ\s]/g, '');
+        });
+    });
+
+    if (editCodigoInterno) {
+        editCodigoInterno.addEventListener('input', function () {
+            editCodigoInterno.value = (editCodigoInterno.value ?? '').toString().replace(/\D/g, '').slice(0, 20);
+        });
+    }
+
+    if (editNumeroCuenta) {
+        editNumeroCuenta.addEventListener('input', function () {
+            editNumeroCuenta.value = (editNumeroCuenta.value ?? '').toString().replace(/\D/g, '').slice(0, 20);
+        });
+    }
 
     if (editFechaInicio) {
         editFechaInicio.addEventListener('change', updateEditFechaFinMin);

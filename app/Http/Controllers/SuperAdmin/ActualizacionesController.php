@@ -301,8 +301,8 @@ class ActualizacionesController extends Controller
                 'reglas' => ['regex:/^[0-9]{6,15}$/'],
             ],
             'telefono' => [
-                'reglas' => ['regex:/^[0-9]{1,11}$/'],
-                'mensajes' => ['regex' => 'El teléfono solo puede contener números y máximo 11 dígitos'],
+                'reglas' => ['regex:/^[0-9]{10}$/'],
+                'mensajes' => ['regex' => 'El teléfono debe contener exactamente 10 dígitos numéricos'],
             ],
             'razon_social' => [
                 'reglas' => ['min:2', 'max:120', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s\.\,&\-]+$/'],
@@ -310,7 +310,11 @@ class ActualizacionesController extends Controller
             ],
             'direccion' => [
                 'reglas' => ['min:5', 'max:120', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s#\-\.,]+$/'],
-                'mensajes' => ['regex' => 'La dirección contiene caracteres no permitidos'],
+                'mensajes' => [
+                    'min' => 'La dirección debe tener mínimo 5 caracteres',
+                    'max' => 'La dirección no puede tener más de 120 caracteres',
+                    'regex' => 'La dirección contiene caracteres no permitidos',
+                ],
             ],
             'seguridad_social' => [
                 'reglas' => ['in:0,1'],

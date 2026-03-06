@@ -15,6 +15,7 @@ const formatCOP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', cur
 
 let timer = null;
 let lastResults = [];
+let selectedEmployee = null;
 
 const hideErrors = () => [errorMsg, fechaError].forEach(el => el.classList.add('hidden'));
 const showError = (text) => { errorMsg.textContent = text; errorMsg.classList.remove('hidden'); };
@@ -23,7 +24,81 @@ const markNeutral = (el) => { el.classList.remove('border-red-500','border-green
 const markError = (el) => { el.classList.remove('border-gray-300','border-green-500','focus:border-blue-500','focus:border-green-500'); el.classList.add('border-red-500','focus:border-red-500'); };
 const markOk = (el) => { el.classList.remove('border-gray-300','border-red-500','focus:border-blue-500','focus:border-red-500'); el.classList.add('border-green-500','focus:border-green-500'); };
 
+function showAlert(text) {
+    const existing = document.getElementById('nominaCustomAlert');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'nominaCustomAlert';
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.zIndex = '9999';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.padding = '16px';
+    overlay.style.background = 'rgba(15, 23, 42, 0.45)';
+
+    const card = document.createElement('div');
+    card.style.width = '100%';
+    card.style.maxWidth = '460px';
+    card.style.background = '#ffffff';
+    card.style.border = '1px solid #e2e8f0';
+    card.style.borderRadius = '16px';
+    card.style.boxShadow = '0 20px 45px rgba(15, 23, 42, 0.28)';
+    card.style.overflow = 'hidden';
+    card.style.transform = 'translateY(6px) scale(0.98)';
+    card.style.opacity = '0';
+    card.style.transition = 'all 150ms ease-out';
+
+    card.innerHTML = `
+        <div style="height: 6px; background: linear-gradient(90deg, #fbbf24 0%, #fb923c 55%, #ef4444 100%);"></div>
+        <div style="padding: 20px;">
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <div style="height: 32px; width: 32px; min-width: 32px; border-radius: 999px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-weight: 700;">!</div>
+                <div style="flex: 1; min-width: 0;">
+                    <h4 style="margin: 0; font-size: 14px; line-height: 20px; color: #0f172a; font-weight: 700;">Validacion requerida</h4>
+                    <p id="nominaCustomAlertMessage" style="margin: 6px 0 0; font-size: 14px; line-height: 20px; color: #475569;"></p>
+                </div>
+            </div>
+            <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
+                <button type="button" data-alert-close style="padding: 10px 16px; border: 0; border-radius: 10px; background: #2563eb; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    `;
+
+    overlay.appendChild(card);
+
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => {
+        card.style.transform = 'translateY(0) scale(1)';
+        card.style.opacity = '1';
+    });
+
+    const message = overlay.querySelector('#nominaCustomAlertMessage');
+    const closeButton = overlay.querySelector('[data-alert-close]');
+    if (message) message.textContent = text;
+
+    const closeAlert = () => {
+        overlay.remove();
+        empleadoInput.focus();
+    };
+
+    if (closeButton) {
+        closeButton.addEventListener('click', closeAlert);
+        closeButton.focus();
+    }
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeAlert();
+    });
+}
+
 function clearEmployeeData() {
+    docInput.value = '';
     $('nombre').value = '';
     $('telefono').value = '';
     $('salario_base').value = '';
@@ -50,6 +125,10 @@ function selectEmployee(emp) {
     empleadoInput.value = `${emp.nombre || ''} - ${emp.doc}`.trim();
     docInput.value = emp.doc || '';
     idContratoInput.value = emp.id_contrato || '';
+    selectedEmployee = {
+        doc: emp.doc || '',
+        id_contrato: emp.id_contrato || ''
+    };
     $('nombre').value = emp.nombre || '';
     $('telefono').value = emp.telefono || '';
     $('salario_base').value = emp.salario_base ? formatCOP(emp.salario_base) : '';
@@ -76,6 +155,12 @@ async function fetchEmployees(term = '') {
 
 async function hydrateSavedEmployee() {
     if (!docInput.value) return;
+    if (docInput.value && idContratoInput.value) {
+        selectedEmployee = {
+            doc: docInput.value,
+            id_contrato: idContratoInput.value
+        };
+    }
     if ($('nombre').value && $('telefono').value && $('salario_base').value) {
         markOk(empleadoInput);
         return;
@@ -93,9 +178,19 @@ async function hydrateSavedEmployee() {
 }
 
 function validateEmployee() {
-    if (docInput.value && idContratoInput.value) return markOk(empleadoInput), true;
+    const hasValidSelection = Boolean(
+        selectedEmployee &&
+        selectedEmployee.doc &&
+        selectedEmployee.id_contrato &&
+        docInput.value &&
+        idContratoInput.value &&
+        String(selectedEmployee.doc) === String(docInput.value) &&
+        String(selectedEmployee.id_contrato) === String(idContratoInput.value)
+    );
+
+    if (hasValidSelection) return markOk(empleadoInput), true;
     markError(empleadoInput);
-    showError('Selecciona un empleado de la lista.');
+    showError('Debes seleccionar un empleado válido de la lista.');
     return false;
 }
 
@@ -116,7 +211,7 @@ function validateFecha() {
 if (!isEditingNomina) {
     empleadoInput.addEventListener('focus', () => fetchEmployees(empleadoInput.value.trim()));
     empleadoInput.addEventListener('input', () => {
-        docInput.value = '';
+        selectedEmployee = null;
         clearEmployeeData();
         hideErrors();
         markNeutral(empleadoInput);
@@ -140,7 +235,14 @@ document.addEventListener('click', (e) => {
 fechaInput.addEventListener('change', validateFecha);
 form.addEventListener('submit', (e) => {
     hideErrors();
-    if (!(validateEmployee() && validateFecha())) e.preventDefault();
+    const employeeValid = validateEmployee();
+    const fechaValid = validateFecha();
+    if (!(employeeValid && fechaValid)) {
+        e.preventDefault();
+        if (!employeeValid) {
+            showAlert('Debes seleccionar un empleado válido de la lista.');
+        }
+    }
 });
 
 hydrateSavedEmployee();

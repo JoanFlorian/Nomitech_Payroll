@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\PeriodoLiquidacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\NominaExportacion;
+use App\Services\Banking\BankExportService;
+use Illuminate\Support\Facades\Storage;
 
 class PeriodoLiquidacionController extends Controller
 {
@@ -23,12 +26,7 @@ class PeriodoLiquidacionController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        // Obtener empresas vinculadas al usuario para el selector del modal
-        $empresas = auth()->user()->id_rol == 4
-            ? \App\Models\Empresa::all()
-            : auth()->user()->empresa()->get();
-
-        return view('periodos.index', compact('periodos', 'empresas'));
+        return view('periodos.index', compact('periodos'));
     }
 
     /**
@@ -121,7 +119,10 @@ class PeriodoLiquidacionController extends Controller
             // Guardar en sesión
             session(['active_period_id' => $periodo->id_periodo]);
 
-            return redirect()->route('nomina.index')->with('success', "Periodo seleccionado: {$periodo->fecha_inicio->format('d/m/Y')} - {$periodo->fecha_fin->format('d/m/Y')}");
+            $fechaInicioStr = \Carbon\Carbon::parse($periodo->getRawOriginal('fecha_inicio'))->format('d/m/Y');
+            $fechaFinStr = \Carbon\Carbon::parse($periodo->getRawOriginal('fecha_fin'))->format('d/m/Y');
+
+            return redirect()->route('nomina.index')->with('success', "Periodo seleccionado: {$fechaInicioStr} - {$fechaFinStr}");
 
         } catch (\Exception $e) {
             return redirect()->route('periodos.index')->with('error', 'Periodo no válido o no encontrado.');
@@ -183,25 +184,27 @@ class PeriodoLiquidacionController extends Controller
     }
 
     /**
-     * Sugerencia del siguiente periodo basado en el actual.
+     * Resumen previo para el modal de exportación.
      */
-    public function suggestNext($id)
+    public function getExportPreview($id)
     {
         try {
             $periodo = PeriodoLiquidacion::where('id_periodo', $id)
                 ->where('id_empresa', session('empresa_id'))
                 ->firstOrFail();
 
-            $nextStart = $periodo->fecha_fin->copy()->addDay();
-            $nextEnd = PeriodoLiquidacion::calculateEndDate($nextStart, $periodo->tipo_frecuencia);
+            $salarios = $periodo->salarios()
+                ->where('estado', \App\Models\Salario::ESTADO_LIQUIDADO)
+                ->with('contrato')
+                ->get();
+
+            $total = $salarios->sum('salario_neto');
 
             return response()->json([
                 'success' => true,
-                'inicio' => $nextStart->format('Y-m-d'),
-                'fin' => $nextEnd ? $nextEnd->format('Y-m-d') : null,
-                'inicio_formato' => $nextStart->format('d/m/Y'),
-                'fin_formato' => $nextEnd ? $nextEnd->format('d/m/Y') : 'N/A',
-                'tipo_frecuencia' => $periodo->tipo_frecuencia
+                'periodo' => \Carbon\Carbon::parse($periodo->fecha_inicio)->format('M Y'),
+                'empleados' => $salarios->count(),
+                'total' => number_format($total, 2, ',', '.')
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
@@ -209,38 +212,49 @@ class PeriodoLiquidacionController extends Controller
     }
 
     /**
-     * Endpoint para exportación bancaria.
-     * 
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
+     * Endpoint para generar exportación bancaria.
      */
-    public function exportar(Request $request, $id)
+    public function exportar(Request $request, $id, BankExportService $service)
     {
         try {
-            $periodo = PeriodoLiquidacion::find($id);
+            $result = $service->generarArchivo($id, $request->input('formato', 'CSV'));
 
-            if (!$periodo || $periodo->estado !== PeriodoLiquidacion::ESTADO_CERRADO) {
-                return redirect()->route('periodos.index')->with('error', 'Solo se pueden exportar archivos de periodos cerrados.');
-            }
-
-            $banco = $request->query('banco');
-
-            if (!$banco) {
-                return redirect()->back()->with('error', 'Debe seleccionar un banco para la exportación.');
-            }
-
-            $generator = \App\Services\Banking\BankFileFactory::make($banco);
-            $content = $generator->generate($id);
-
-            $fileName = "nomina_periodo_{$id}.txt";
-
-            return response($content)
-                ->header('Content-Type', 'text/plain')
-                ->header('Content-Disposition', "attachment; filename=\"{$fileName}\"");
+            return response()->json([
+                'success' => true,
+                'message' => 'Archivo generado exitosamente.',
+                'archivo_url' => $result['archivo_url'],
+                'download_url' => route('periodos.exportar.descargar', $result['exportacion']->id),
+                'total_empleados' => $result['total_empleados'],
+                'total_pagado' => $result['total_pagado']
+            ]);
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error en exportación: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Descarga un archivo de exportación previamente generado.
+     */
+    public function downloadExport($id)
+    {
+        try {
+            $export = NominaExportacion::where('id', $id)
+                ->where('id_empresa', session('empresa_id'))
+                ->firstOrFail();
+
+            if (!Storage::disk('public')->exists($export->archivo_path)) {
+                throw new \Exception('El archivo físico no existe.');
+            }
+
+            $fullPath = Storage::disk('public')->path($export->archivo_path);
+            return response()->download($fullPath);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al descargar: ' . $e->getMessage());
         }
     }
 }

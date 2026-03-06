@@ -128,10 +128,14 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
         ->name('periodos.select');
     Route::get('/periodos/{id}/suggest', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'suggestNext'])
         ->name('periodos.suggest');
+    Route::get('/periodos/{id}/export-preview', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'getExportPreview'])
+        ->name('periodos.export.preview');
     Route::post('/periodos/{id}/cerrar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'close'])
         ->name('periodos.cerrar');
-    Route::get('/periodos/{id}/exportar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'exportar'])
+    Route::post('/periodos/{id}/exportar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'exportar'])
         ->name('periodos.exportar');
+    Route::get('/periodos/exportacion/{id}/descargar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'downloadExport'])
+        ->name('periodos.exportar.descargar');
 });
 
 // Superadmin routes protected by auth and role

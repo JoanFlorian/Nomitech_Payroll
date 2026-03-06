@@ -16,7 +16,7 @@ class UpdateCiudadRequest extends FormRequest
         $id = $this->route('id');
 
         return [
-            'codigo' => 'bail|required|string|regex:/^[0-9]+$/|min:2|max:11|unique:ciudad,codigo,' . $id . ',id_ciudad',
+            'codigo' => 'bail|required|string|regex:/^[0-9]+$/|min:6|max:10|unique:ciudad,codigo,' . $id . ',id_ciudad',
             'nombre' => 'bail|required|string|regex:/^[A-Za-zÁ-Úá-úñÑ\s]+$/|min:2|max:100|unique:ciudad,nombre,' . $id . ',id_ciudad',
             'cod_dep' => 'bail|required|exists:departamento,codigo',
         ];
@@ -26,9 +26,9 @@ class UpdateCiudadRequest extends FormRequest
     {
         return [
             'codigo.required' => 'El código es obligatorio.',
-            'codigo.regex' => 'El código debe contener solo números positivos.',
-            'codigo.min' => 'El código debe tener al menos 2 dígitos.',
-            'codigo.max' => 'El código no puede tener más de 11 dígitos.',
+            'codigo.regex' => 'El código solo puede contener números.',
+            'codigo.min' => 'Código inválido. El código debe tener mínimo 6 dígitos.',
+            'codigo.max' => 'El código no puede tener más de 10 dígitos numéricos.',
             'codigo.unique' => 'El código ya se encuentra registrado.',
 
             'nombre.required' => 'El nombre es obligatorio.',

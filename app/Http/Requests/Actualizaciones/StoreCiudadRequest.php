@@ -14,7 +14,7 @@ class StoreCiudadRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'codigo' => 'bail|required|string|regex:/^[0-9]{8}$/|unique:ciudad,codigo',
+            'codigo' => 'bail|required|string|regex:/^[0-9]+$/|min:6|max:10|unique:ciudad,codigo',
             'nombre' => 'bail|required|string|regex:/^[A-Za-zÁ-Úá-úñÑ\s]+$/|min:2|max:100|unique:ciudad,nombre',
             'id_departamento' => 'bail|required|exists:departamento,id_departamento',
         ];
@@ -24,7 +24,9 @@ class StoreCiudadRequest extends FormRequest
     {
         return [
             'codigo.required' => 'El código es obligatorio.',
-            'codigo.regex' => 'El código debe tener exactamente 8 dígitos numéricos.',
+            'codigo.regex' => 'El código solo puede contener números.',
+            'codigo.min' => 'Código inválido. El código debe tener mínimo 6 dígitos.',
+            'codigo.max' => 'El código no puede tener más de 10 dígitos numéricos.',
             'codigo.unique' => 'El código ya se encuentra registrado.',
 
             'nombre.required' => 'El nombre es obligatorio.',

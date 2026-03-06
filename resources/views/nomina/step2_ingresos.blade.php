@@ -5,7 +5,7 @@
 
 @section('content')
 @php($s3 = $step2Ingresos ?? [])
-@php($s2 = $step2 ?? [])
+@php($s2 = $s2 ?? [])
 
 <div class="relative">
 
@@ -72,6 +72,7 @@
                             <input type="hidden" id="salario_base_mensual" value="{{ $salarioBase ?? 0 }}">
                             <input type="hidden" id="total_horas_extra" value="{{ $s2['total_horas_extra'] ?? 0 }}">
                             <input type="hidden" id="total_recargos" value="{{ $s2['total_recargos'] ?? 0 }}">
+                            <input type="hidden" id="total_devengos_parcial" value="{{ $s2['total_devengos_parcial'] ?? 0 }}">
 
                             <div class="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
 
@@ -79,7 +80,12 @@
                                     Resumen
                                 </h4>
 
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+
+                                    <div class="rounded-lg bg-white border border-blue-100 p-3">
+                                        <div class="text-xs text-gray-500">Horas + recargos</div>
+                                        <div id="resumen_horas_recargos" class="font-semibold text-gray-800">$0</div>
+                                    </div>
 
                                     <div class="rounded-lg bg-white border border-blue-100 p-3">
                                         <div class="text-xs text-gray-500">Devengos parcial</div>
@@ -113,8 +119,15 @@
                                         value="{{ old('bonificaciones', $s3['bonificaciones'] ?? 0) }}"
                                         type="text"
                                         inputmode="decimal"
+                                        maxlength="15"
                                         class="devengo-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs"
                                     >
+
+                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.</p>
+
+                                    @error('bonificaciones')
+                                        <p class="text-xs text-red-600 mt-1 font-medium">{{ $message }}</p>
+                                    @enderror
                                 </div>
 
                                 <div>
@@ -127,8 +140,15 @@
                                         value="{{ old('comisiones', $s3['comisiones'] ?? 0) }}"
                                         type="text"
                                         inputmode="decimal"
+                                        maxlength="15"
                                         class="devengo-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs"
                                     >
+
+                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.</p>
+
+                                    @error('comisiones')
+                                        <p class="text-xs text-red-600 mt-1 font-medium">{{ $message }}</p>
+                                    @enderror
                                 </div>
 
                                 <div class="md:col-span-2">
@@ -142,8 +162,15 @@
                                         value="{{ old('otros_devengos', $s3['otros_devengos'] ?? 0) }}"
                                         type="text"
                                         inputmode="decimal"
+                                        maxlength="15"
                                         class="devengo-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs"
                                     >
+
+                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.</p>
+
+                                    @error('otros_devengos')
+                                        <p class="text-xs text-red-600 mt-1 font-medium">{{ $message }}</p>
+                                    @enderror
 
                                 </div>
 
@@ -183,9 +210,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    const salarioBase = Number(document.getElementById('salario_base_mensual').value || 0);
-    const totalHorasExtra = Number(document.getElementById('total_horas_extra').value || 0);
-    const totalRecargos = Number(document.getElementById('total_recargos').value || 0);
+    const MAX_OTROS_INGRESOS = 999999999;
 
     const inputs = document.querySelectorAll('.devengo-input');
 
@@ -246,11 +271,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return Number.isFinite(num) && num >= 0 ? num : 0;
     };
 
+    const salarioBase = toNumber(document.getElementById('salario_base_mensual')?.value || 0);
+    const totalHorasExtra = toNumber(document.getElementById('total_horas_extra')?.value || 0);
+    const totalRecargos = toNumber(document.getElementById('total_recargos')?.value || 0);
+    const parcialFromStep2 = toNumber(document.getElementById('total_devengos_parcial')?.value || 0);
+
     const get = name => toNumber(document.querySelector(`[name="${name}"]`)?.value || 0);
 
     const calcular = () => {
-
-        const parcial = salarioBase + totalHorasExtra + totalRecargos;
+        const totalHorasRecargos = totalHorasExtra + totalRecargos;
+        const parcial = parcialFromStep2 > 0 ? parcialFromStep2 : (salarioBase + totalHorasRecargos);
 
         const otros =
             get('bonificaciones') +
@@ -259,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const final = parcial + otros;
 
+        document.getElementById('resumen_horas_recargos').textContent = money(totalHorasRecargos);
         document.getElementById('resumen_parcial').textContent = money(parcial);
         document.getElementById('resumen_otros').textContent = money(otros);
         document.getElementById('resumen_final').textContent = money(final);
@@ -272,14 +303,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         input.addEventListener('blur', ()=>{
-            input.value = formatInputNumber(get(input.name));
+            input.value = formatInputNumber(Math.min(get(input.name), MAX_OTROS_INGRESOS));
             calcular();
         });
     });
 
     inputs.forEach((input) => {
-        input.value = formatInputNumber(get(input.name));
+        input.value = formatInputNumber(Math.min(get(input.name), MAX_OTROS_INGRESOS));
     });
+
+    const form = document.getElementById('formStep2Ingresos');
+    if (form) {
+        form.addEventListener('submit', (event) => {
+            let hasErrors = false;
+
+            inputs.forEach((input) => {
+                const value = Math.min(get(input.name), MAX_OTROS_INGRESOS);
+                input.value = formatInputNumber(value);
+
+                if (!Number.isFinite(value) || value < 0 || value > MAX_OTROS_INGRESOS) {
+                    hasErrors = true;
+                    input.classList.add('border-red-500');
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+            });
+
+            if (hasErrors) {
+                event.preventDefault();
+            }
+        });
+    }
 
     calcular();
 

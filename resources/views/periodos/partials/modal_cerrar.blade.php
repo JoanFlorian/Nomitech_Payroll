@@ -1,14 +1,25 @@
 {{-- MODAL CERRAR PERIODO --}}
-<div id="modalCerrarPeriodo" class="hidden fixed inset-0 z-[60] overflow-y-auto" aria-labelledby="modal-title"
+<div id="modalCerrarPeriodo" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
     role="dialog" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"
-            onclick="document.getElementById('modalCerrarPeriodo').classList.add('hidden')"></div>
+    <div class="flex items-center justify-center min-h-screen p-4 text-center sm:p-0">
+        <!-- Fondo oscuro con figuritas decorativas -->
+        <div class="fixed inset-0 bg-gray-900/85 transition-opacity" aria-hidden="true"
+            onclick="document.getElementById('modalCerrarPeriodo').classList.add('hidden')">
+            <!-- Figuritas decorativas Marca: Azul #1565C0, Verde #2AA58C -->
+            <div class="absolute top-[5%] left-[10%] w-32 h-32 rounded-full bg-[#1565C0]/20 blur-[2px] rotate-12"></div>
+            <div class="absolute top-[15%] right-[15%] w-48 h-48 rounded-3xl bg-[#2AA58C]/15 blur-[1px] -rotate-12">
+            </div>
+            <div class="absolute bottom-[10%] left-[20%] w-40 h-40 rounded-xl bg-[#2AA58C]/20 rotate-45"></div>
+            <div class="absolute bottom-[20%] right-[10%] w-56 h-56 rounded-full bg-[#1565C0]/15 blur-[3px]"></div>
+            <div class="absolute top-[40%] left-[-5%] w-24 h-24 rounded-full bg-[#2AA58C]/25"></div>
+            <div class="absolute top-[55%] right-[-5%] w-36 h-36 rounded-2xl bg-[#1565C0]/20 -rotate-6"></div>
+            <div class="absolute top-[70%] left-[45%] w-16 h-16 rounded-full bg-[#2AA58C]/20"></div>
+        </div>
 
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
         <div
-            class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
+            class="relative inline-block overflow-hidden text-left align-middle transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:max-w-lg sm:w-full border border-gray-100 sm:-translate-y-12">
             <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-red-50/50">
                 <h3 class="text-lg font-bold text-red-900">Cerrar Periodo de Liquidación</h3>
                 <button onclick="document.getElementById('modalCerrarPeriodo').classList.add('hidden')"

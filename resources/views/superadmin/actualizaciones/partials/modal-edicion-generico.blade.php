@@ -298,7 +298,7 @@
         }
     }
 
-    function validarCampoCodigoEdicion(inputCodigo, mostrarAlerta = false) {
+    function validarCampoCodigoEdicion(inputCodigo, mostrarAlerta = false, esCodigoCiudad = false) {
         if (!inputCodigo) {
             return true;
         }
@@ -313,7 +313,21 @@
             return false;
         }
 
-        if (valor.length > 0 && valor.length !== 8) {
+        if (esCodigoCiudad && valor.length > 0 && valor.length < 6) {
+            if (mostrarAlerta) {
+                mostrarAlertaCodigoInvalidoEdicion('Código inválido. El código debe tener mínimo 6 dígitos.');
+            }
+            return false;
+        }
+
+        if (esCodigoCiudad && valor.length > 10) {
+            if (mostrarAlerta) {
+                mostrarAlertaCodigoInvalidoEdicion('El código no puede tener más de 10 dígitos.');
+            }
+            return false;
+        }
+
+        if (!esCodigoCiudad && valor.length > 0 && valor.length !== 8) {
             if (mostrarAlerta) {
                 mostrarAlertaCodigoInvalidoEdicion('El código debe tener exactamente 8 dígitos.');
             }
@@ -436,23 +450,25 @@
 
         const inputCodigo = contenedor.querySelector('input[name="codigo"]');
         if (inputCodigo) {
+            const esCodigoCiudad = configuracion.tipo === 'ciudades';
             inputCodigo.setAttribute('inputmode', 'numeric');
-            inputCodigo.setAttribute('minlength', '8');
-            inputCodigo.setAttribute('maxlength', '8');
-            inputCodigo.setAttribute('pattern', '[0-9]{8}');
+            inputCodigo.setAttribute('minlength', esCodigoCiudad ? '6' : '8');
+            inputCodigo.setAttribute('maxlength', esCodigoCiudad ? '10' : '8');
+            inputCodigo.setAttribute('pattern', esCodigoCiudad ? '[0-9]{6,10}' : '[0-9]{8}');
 
             inputCodigo.addEventListener('input', function () {
                 const valorOriginal = this.value;
-                const soloNumeros = valorOriginal.replace(/\D/g, '').slice(0, 8);
+                const maxLen = esCodigoCiudad ? 10 : 8;
+                const soloNumeros = valorOriginal.replace(/\D/g, '').slice(0, maxLen);
 
                 if (valorOriginal !== soloNumeros) {
                     this.value = soloNumeros;
-                    mostrarToastCodigoEdicion('Solo números y máximo 8 dígitos.');
+                    mostrarToastCodigoEdicion(esCodigoCiudad ? 'Solo números y máximo 10 dígitos.' : 'Solo números y máximo 8 dígitos.');
                 }
             });
 
             inputCodigo.addEventListener('blur', function () {
-                validarCampoCodigoEdicion(this, true);
+                validarCampoCodigoEdicion(this, true, esCodigoCiudad);
             });
         }
 
@@ -502,9 +518,15 @@
 
         const inputCodigo8 = formulario.querySelector('input[name="codigo"]');
         if (inputCodigo8) {
+            const esCodigoCiudad = formulario.querySelector('input[name="tipo"]')?.value === 'ciudades';
             const valorCodigo = (inputCodigo8.value || '').trim();
-            if (valorCodigo && !/^\d{8}$/.test(valorCodigo)) {
-                mostrarAlertaValidacionEdicion('El campo Código debe tener exactamente 8 dígitos numéricos.');
+            const patron = esCodigoCiudad ? /^\d{6,10}$/ : /^\d{8}$/;
+            if (valorCodigo && !patron.test(valorCodigo)) {
+                mostrarAlertaValidacionEdicion(
+                    esCodigoCiudad
+                        ? 'Código inválido. El código debe tener mínimo 6 dígitos.'
+                        : 'El campo Código debe tener exactamente 8 dígitos numéricos.'
+                );
                 inputCodigo8.focus();
                 return false;
             }
@@ -533,7 +555,8 @@
         if (formEdicion) {
             formEdicion.addEventListener('submit', function (e) {
                 const inputCodigo = this.querySelector('input[name="codigo"]');
-                if (!validarCampoCodigoEdicion(inputCodigo, true)) {
+                const esCodigoCiudad = this.querySelector('input[name="tipo"]')?.value === 'ciudades';
+                if (!validarCampoCodigoEdicion(inputCodigo, true, esCodigoCiudad)) {
                     e.preventDefault();
                     inputCodigo?.focus();
                     return;

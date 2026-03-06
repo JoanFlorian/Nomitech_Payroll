@@ -32,7 +32,7 @@
                     </label>
                     <select name="cod_dep" class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-200 transition bg-white hover:border-gray-400" required>
                         <option value="">-- Selecciona un departamento --</option>
-                        @foreach($departamentos ?? [] as $departamento)
+                        @foreach(collect($departamentos ?? [])->filter() as $departamento)
                             <option value="{{ $departamento->codigo }}">
                                 {{ $departamento->nombre }}
                             </option>
@@ -50,10 +50,10 @@
                         name="codigo" 
                         placeholder="05001" 
                         inputmode="numeric"
-                        minlength="8"
-                        maxlength="8"
-                        pattern="[0-9]{8}"
-                        title="El código debe contener exactamente 8 dígitos."
+                        minlength="6"
+                        maxlength="10"
+                        pattern="[0-9]{6,10}"
+                        title="Código inválido. El código debe tener mínimo 6 dígitos."
                         class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-green-500 focus:ring-3 focus:ring-green-200 transition hover:border-gray-400" 
                         required
                     >
@@ -110,7 +110,7 @@
 
         if (inputCodigo) {
             inputCodigo.addEventListener('input', function () {
-                this.value = (this.value || '').replace(/\D/g, '').slice(0, 8);
+                this.value = (this.value || '').replace(/\D/g, '').slice(0, 10);
             });
         }
 
@@ -129,6 +129,22 @@
             formCiudad.addEventListener('submit', function (e) {
                 if (!this.checkValidity()) {
                     e.preventDefault();
+                    const firstInvalid = this.querySelector(':invalid');
+                    const validationMessage = firstInvalid?.validationMessage || 'Revisa los campos del formulario.';
+
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Datos inválidos',
+                            text: validationMessage,
+                            confirmButtonColor: '#2563eb'
+                        }).then(() => {
+                            firstInvalid?.focus();
+                            this.reportValidity();
+                        });
+                        return;
+                    }
+
                     this.reportValidity();
                 }
             });

@@ -250,8 +250,16 @@ class ActualizacionesController extends Controller
 
         $reglasPorClave = [
             'codigo' => [
-                'reglas' => ['regex:/^[0-9]{8}$/'],
-                'mensajes' => ['regex' => 'El código debe tener exactamente 8 dígitos numéricos'],
+                'reglas' => $tipo === 'ciudades'
+                    ? ['regex:/^[0-9]+$/', 'min:6', 'max:10']
+                    : ['regex:/^[0-9]{8}$/'],
+                'mensajes' => $tipo === 'ciudades'
+                    ? [
+                        'regex' => 'El código solo puede contener números',
+                        'min' => 'Código inválido. El código debe tener mínimo 6 dígitos.',
+                        'max' => 'El código no puede tener más de 10 dígitos numéricos',
+                    ]
+                    : ['regex' => 'El código debe tener exactamente 8 dígitos numéricos'],
             ],
             'nombre' => [
                 'reglas' => ['min:2', 'max:100', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$/'],
@@ -327,6 +335,8 @@ class ActualizacionesController extends Controller
                 $appendRule($clave, 'integer');
             } else {
                 $appendRule($clave, 'string');
+                // Defensive default to avoid unexpectedly large payloads in text-like fields.
+                $appendRule($clave, 'max:255');
             }
 
             if ($c['requerido'] ?? false) {
@@ -367,6 +377,8 @@ class ActualizacionesController extends Controller
     private function normalizarEntrada(array $entrada): array
     {
         $camposTexto = ['nombre', 'razon_social', 'direccion', 'descripcion'];
+        $camposNumericos = ['codigo', 'id_eps', 'id_banco', 'id_arl', 'nit', 'doc_representante', 'telefono', 'cod_dep'];
+        $camposSelect = ['id_ciudad', 'id_departamento', 'seguridad_social'];
 
         foreach ($entrada as $clave => $valor) {
             if (!is_string($valor)) {
@@ -380,7 +392,27 @@ class ActualizacionesController extends Controller
                 $valorLimpio = preg_replace('/\s{2,}/', ' ', $valorLimpio);
             }
 
+            if (in_array($clave, $camposNumericos, true)) {
+                $valorLimpio = preg_replace('/\D+/', '', $valorLimpio);
+            }
+
+            if ($clave === 'codigo_alfa2') {
+                $valorLimpio = preg_replace('/[^A-Za-z]/', '', $valorLimpio);
+            }
+
+            if ($clave === 'correo') {
+                $valorLimpio = mb_strtolower($valorLimpio, 'UTF-8');
+            }
+
             $valorLimpio = mb_strtoupper($valorLimpio, 'UTF-8');
+
+            if ($clave === 'correo') {
+                $valorLimpio = mb_strtolower($valorLimpio, 'UTF-8');
+            }
+
+            if (in_array($clave, $camposSelect, true) && is_numeric($valorLimpio)) {
+                $valorLimpio = (string) ((int) $valorLimpio);
+            }
 
             $entrada[$clave] = $valorLimpio;
         }

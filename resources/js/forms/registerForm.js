@@ -100,21 +100,25 @@ export default (initialData = {}) => ({
             primer_apellido: () => {
                 if (!value) return "El Primer Apellido es requerido";
                 if (value.length < 3 || value.length > 60) return "El Primer Apellido debe tener entre 3 y 60 caracteres";
+                if (/[0-9]/.test(value)) return "El Primer Apellido no puede contener números";
                 return null;
             },
             segundo_apellido: () => {
                 if (!value) return null; // Opcional
                 if (value.length < 3 || value.length > 60) return "El Segundo Apellido debe tener entre 3 y 60 caracteres";
+                if (/[0-9]/.test(value)) return "El Segundo Apellido no puede contener números";
                 return null;
             },
             primer_nombre: () => {
                 if (!value) return "El Primer Nombre es requerido";
                 if (value.length < 3 || value.length > 60) return "El Primer Nombre debe tener entre 3 y 60 caracteres";
+                if (/[0-9]/.test(value)) return "El Primer Nombre no puede contener números";
                 return null;
             },
             otros_nombres: () => {
                 if (!value) return null; // Nullable
                 if (value.length < 3 || value.length > 60) return "Los Otros Nombres deben tener entre 3 y 60 caracteres";
+                if (/[0-9]/.test(value)) return "Los Otros Nombres no pueden contener números";
                 return null;
             },
             telefono_celular: () => {

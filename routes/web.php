@@ -119,6 +119,12 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/reportes/exportar/pdf', [ReportesController::class, 'exportarPdf'])->name('reportes.export.pdf');
     Route::get('/reportes/exportar/excel', [ReportesController::class, 'exportarExcel'])->name('reportes.export.excel');
 
+    // Provisiones
+    Route::get('/provisiones', [\App\Http\Controllers\ProvisionesController::class, 'index'])->name('provisiones.index');
+
+    // Nómina Electrónica
+    Route::get('/nomina-electronica', [\App\Http\Controllers\NominaElectronicaController::class, 'index'])->name('nomina-electronica.index');
+
     // Gestión de Periodos
     Route::get('/periodos', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'index'])
         ->name('periodos.index');

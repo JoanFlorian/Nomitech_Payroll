@@ -274,28 +274,32 @@
                 <!-- PRIMER APELLIDO -->
                 <div>
                     <x-form.input name="primer_apellido" icon="person_outline" placeholder="Primer apellido" 
-                        x-model="primer_apellido" @blur="handleBlur('primer_apellido')" @input="handleInput('primer_apellido')" />
+                        x-model="primer_apellido" @blur="handleBlur('primer_apellido')" @input="handleInput('primer_apellido')"
+                        oninput="this.value = this.value.replace(/[0-9]/g, '')" />
                     <span x-show="errors.primer_apellido" x-text="errors.primer_apellido" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
                 
                 <!-- SEGUNDO APELLIDO -->
                 <div>
                     <x-form.input name="segundo_apellido" icon="person_outline" placeholder="Segundo apellido" 
-                        x-model="segundo_apellido" @blur="handleBlur('segundo_apellido')" @input="handleInput('segundo_apellido')" />
+                        x-model="segundo_apellido" @blur="handleBlur('segundo_apellido')" @input="handleInput('segundo_apellido')"
+                        oninput="this.value = this.value.replace(/[0-9]/g, '')" />
                     <span x-show="errors.segundo_apellido" x-text="errors.segundo_apellido" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
                 
                 <!-- PRIMER NOMBRE -->
                 <div>
                     <x-form.input name="primer_nombre" icon="person" placeholder="Primer nombre" 
-                        x-model="primer_nombre" @blur="handleBlur('primer_nombre')" @input="handleInput('primer_nombre')" />
+                        x-model="primer_nombre" @blur="handleBlur('primer_nombre')" @input="handleInput('primer_nombre')"
+                        oninput="this.value = this.value.replace(/[0-9]/g, '')" />
                     <span x-show="errors.primer_nombre" x-text="errors.primer_nombre" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
                 
                 <!-- OTROS NOMBRES -->
                 <div>
                     <x-form.input name="otros_nombres" icon="person" placeholder="Otros nombres" 
-                        x-model="otros_nombres" @blur="handleBlur('otros_nombres')" @input="handleInput('otros_nombres')" />
+                        x-model="otros_nombres" @blur="handleBlur('otros_nombres')" @input="handleInput('otros_nombres')"
+                        oninput="this.value = this.value.replace(/[0-9]/g, '')" />
                     <span x-show="errors.otros_nombres" x-text="errors.otros_nombres" class="text-red-500 text-xs mt-1 block"></span>
                 </div>
 

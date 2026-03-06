@@ -17,15 +17,18 @@
         <div class="absolute h-1 bg-[rgb(16,185,129)] rounded-full w-1/3"></div>
 
         <div class="absolute -top-3 left-0 w-full flex justify-between">
-            <div class="w-6 h-6 bg-[rgb(16,185,129)] text-white rounded-full flex items-center justify-center text-xs font-bold">
+            <div
+                class="w-6 h-6 bg-[rgb(16,185,129)] text-white rounded-full flex items-center justify-center text-xs font-bold">
                 1
             </div>
 
-            <div class="w-6 h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs font-bold">
+            <div
+                class="w-6 h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs font-bold">
                 2
             </div>
 
-            <div class="w-6 h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs font-bold">
+            <div
+                class="w-6 h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs font-bold">
                 3
             </div>
         </div>
@@ -41,9 +44,10 @@
                 Tipo de documento
             </label>
             <select
-                class="form-select mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"  name="id_tipo_doc">
+                class="form-select mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                name="id_tipo_doc">
                 <option value="">Seleccionar...</option>
-                @foreach ( $tipodoc as $tipodo )
+                @foreach ($tipodoc as $tipodo)
                     <option value="{{ $tipodo->id_tipo_doc }}">{{ $tipodo->nombre }}</option>
                 @endforeach
             </select>
@@ -52,18 +56,11 @@
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
-                Número de documento 
+                Número de documento
             </label>
-            <input
-                type="text"
-                placeholder="Ej: 1234567890"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
-                name="doc"
-                inputmode="numeric"
-                minlength="5"
-                maxlength="15"
-                pattern="[0-9]{5,15}"
-                required>
+            <input type="text" placeholder="Ej: 1234567890"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                name="doc" inputmode="numeric" minlength="5" maxlength="15" pattern="[0-9]{5,15}" required>
             <div class="error-message invalid-feedback" data-error="doc"></div>
         </div>
 
@@ -71,14 +68,10 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Primer apellido
             </label>
-            <input
-                type="text"
-                placeholder="Ej: Pérez"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
-                name="primer_apellido"
-                minlength="3"
-                maxlength="30"
-                required>
+            <input type="text" placeholder="Ej: Pérez"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize"
+                name="primer_apellido" minlength="3" maxlength="30"
+                oninput="this.value = this.value.replace(/[0-9]/g, '')" required>
             <div class="error-message invalid-feedback" data-error="primer_apellido"></div>
         </div>
 
@@ -86,13 +79,10 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Segundo apellido
             </label>
-            <input
-                type="text"
-                placeholder="Ej: Gómez"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
-                name="segundo_apellido"
-                minlength="3"
-                maxlength="30">
+            <input type="text" placeholder="Ej: Gómez"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize"
+                name="segundo_apellido" minlength="3" maxlength="30"
+                oninput="this.value = this.value.replace(/[0-9]/g, '')">
             <div class="error-message invalid-feedback" data-error="segundo_apellido"></div>
         </div>
 
@@ -100,14 +90,10 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Primer nombre
             </label>
-            <input
-                type="text"
-                placeholder="Ej: Juan"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
-                name="primer_nombre"
-                minlength="3"
-                maxlength="30"
-                required>
+            <input type="text" placeholder="Ej: Juan"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize"
+                name="primer_nombre" minlength="3" maxlength="30"
+                oninput="this.value = this.value.replace(/[0-9]/g, '')" required>
             <div class="error-message invalid-feedback" data-error="primer_nombre"></div>
         </div>
 
@@ -115,13 +101,10 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Otros nombres
             </label>
-            <input
-                type="text"
-                placeholder="Ej: Carlos"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
-                name="otros_nombres"
-                minlength="3"
-                maxlength="50">
+            <input type="text" placeholder="Ej: Carlos"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize"
+                name="otros_nombres" minlength="3" maxlength="50"
+                oninput="this.value = this.value.replace(/[0-9]/g, '')">
             <div class="error-message invalid-feedback" data-error="otros_nombres"></div>
         </div>
 
@@ -129,13 +112,9 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Correo electrónico
             </label>
-            <input
-                type="email"
-                placeholder="Ej: empleado@empresa.com"
+            <input type="email" placeholder="Ej: empleado@empresa.com"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                name="email"
-                maxlength="255"
-                required>
+                name="email" maxlength="255" required>
             <div class="error-message invalid-feedback" data-error="email"></div>
         </div>
 
@@ -143,30 +122,18 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Teléfono
             </label>
-            <input
-                type="text"
-                placeholder="Ej: 3001234567"
+            <input type="text" placeholder="Ej: 3001234567"
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                name="telefono"
-                inputmode="numeric"
-                minlength="10"
-                maxlength="10"
-                pattern="[0-9]{10}"
-                required>
+                name="telefono" inputmode="numeric" minlength="10" maxlength="10" pattern="[0-9]{10}" required>
             <div class="error-message invalid-feedback" data-error="telefono"></div>
         </div>
 
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
-                Departamento 
+                Departamento
             </label>
-            <x-form.searchable-select
-                name="departamento"
-                id="deptStep1"
-                icon="location_on"
-                placeholder="Departamento"
-                :options="$departamento->pluck('nombre', 'id_departamento')"
-            />
+            <x-form.searchable-select name="departamento" id="deptStep1" icon="location_on" placeholder="Departamento"
+                :options="$departamento->pluck('nombre', 'id_departamento')" />
             <div class="error-message invalid-feedback" data-error="departamento"></div>
         </div>
 
@@ -174,13 +141,8 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Ciudad
             </label>
-            <x-form.searchable-select
-                name="ciudad"
-                id="cityStep1"
-                icon="location_city"
-                placeholder="Ciudad / Municipio"
-                :options="[]"
-            />
+            <x-form.searchable-select name="ciudad" id="cityStep1" icon="location_city" placeholder="Ciudad / Municipio"
+                :options="[]" />
             <div class="error-message invalid-feedback" data-error="ciudad"></div>
         </div>
 
@@ -188,33 +150,26 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Dirección
             </label>
-            <input
-                type="text"
-                placeholder="Ej: Calle 10 #42-15"
-                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize" 
-                name="direccion"
-                maxlength="150"
-                title="Incluye referencia vial (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No)."
-                required>
+            <input type="text" placeholder="Ej: Calle 10 #42-15"
+                class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm capitalize"
+                name="direccion" maxlength="150"
+                title="Incluye referencia vial (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No)." required>
             <div class="error-message invalid-feedback" data-error="direccion"></div>
         </div>
 
     </div>
 
     <div class="mt-10 flex justify-end gap-3">
-        <button
-            type="button"
-            @click="closeModals()"
+        <button type="button" @click="closeModals()"
             class="bg-gray-200 text-gray-800 font-medium py-2 px-6 rounded-md hover:bg-gray-300 transition">
             Cancelar
         </button>
-        <button
-            type="submit"
+        <button type="submit"
             class="bg-[rgb(16,185,129)] text-white font-medium py-2 px-6 rounded-md hover:bg-[rgb(14,160,112)] transition">
             Continuar
         </button>
     </div>
-</form> 
+</form>
 
 <script>
     function searchableSelect(config) {

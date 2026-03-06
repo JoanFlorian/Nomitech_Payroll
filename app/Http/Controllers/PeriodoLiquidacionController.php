@@ -20,13 +20,59 @@ class PeriodoLiquidacionController extends Controller
     public function index(Request $request)
     {
         $empresaId = session('empresa_id');
+        $estado = $request->input('estado');
+        $mes = $request->input('mes');
+        $anio = $request->input('anio');
 
-        $periodos = PeriodoLiquidacion::where('id_empresa', $empresaId)
-            ->orderByDesc('fecha_inicio')
+        $query = PeriodoLiquidacion::where('id_empresa', $empresaId);
+
+        // Filtro por Estado
+        if ($estado && $estado !== 'todos') {
+            $query->where('estado', $estado);
+        }
+
+        // Filtro por Mes
+        if ($mes) {
+            $query->whereMonth('fecha_inicio', $mes);
+        }
+
+        // Filtro por Año
+        if ($anio) {
+            $query->whereYear('fecha_inicio', $anio);
+        }
+
+        // --- CÁLCULO DE RANGOS PERMITIDOS PARA EL FRONTEND ---
+        $empresa = \App\Models\Empresa::find($empresaId);
+        $licencia = $empresa->licencia;
+        $minDate = null;
+        $maxDate = null;
+        $isRestrictedByLicense = false;
+        $licenceMessage = '';
+
+        if ($licencia && $licencia->fecha_inicio) {
+            $fechaLicStart = \Carbon\Carbon::parse($licencia->fecha_inicio);
+            $minDate = $fechaLicStart->copy()->startOfMonth()->toDateString();
+
+            // Regla del día 25
+            if ($fechaLicStart->day > 25) {
+                // Mes actual + Mes siguiente
+                $maxDate = $fechaLicStart->copy()->addMonth()->endOfMonth()->toDateString();
+                $isRestrictedByLicense = false;
+                $licenceMessage = 'Su licencia (post-25) le permite crear periodos en el mes actual y el siguiente.';
+            } else {
+                // Solo mes actual
+                $maxDate = $fechaLicStart->copy()->endOfMonth()->toDateString();
+                $isRestrictedByLicense = true;
+                $licenceMessage = 'Su licencia (pre-25) limita la creación de periodos al mes actual de compra/renovación.';
+            }
+        }
+        // -----------------------------------------------------
+
+        $periodos = $query->orderByDesc('fecha_inicio')
             ->paginate(10)
             ->withQueryString();
 
-        return view('periodos.index', compact('periodos'));
+        return view('periodos.index', compact('periodos', 'estado', 'mes', 'anio', 'minDate', 'maxDate', 'isRestrictedByLicense', 'licenceMessage'));
     }
 
     /**
@@ -54,13 +100,27 @@ class PeriodoLiquidacionController extends Controller
                 }
             }
 
-            // Calcular fecha fin si no es "otro"
-            if ($frecuencia !== PeriodoLiquidacion::FRECUENCIA_OTRO) {
-                $fechaFin = PeriodoLiquidacion::calculateEndDate($fechaInicio, $frecuencia);
-            } else {
-                $fechaFin = \Carbon\Carbon::parse($request->input('fecha_fin'));
+            $fechaFin = ($frecuencia === PeriodoLiquidacion::FRECUENCIA_OTRO)
+                ? \Carbon\Carbon::parse($request->input('fecha_fin'))
+                : PeriodoLiquidacion::calculateEndDate($fechaInicio, $frecuencia);
 
-                // Validaciones para "Otro"
+            // --- REFUERZO DE TOPE DE MES EN BACKEND (Licencia pre-25) ---
+            $empresa = \App\Models\Empresa::find($empresaId);
+            $licencia = $empresa->licencia;
+
+            if ($licencia && $licencia->fecha_inicio) {
+                $fechaLicStart = \Carbon\Carbon::parse($licencia->fecha_inicio);
+                if ($fechaLicStart->day <= 25) {
+                    $ultimoDiaMes = $fechaInicio->copy()->endOfMonth();
+                    if ($fechaFin->greaterThan($ultimoDiaMes)) {
+                        $fechaFin = $ultimoDiaMes;
+                    }
+                }
+            }
+            // ------------------------------------------------------------
+
+            // Validaciones para "Otro" si la frecuencia es "otro"
+            if ($frecuencia === PeriodoLiquidacion::FRECUENCIA_OTRO) {
                 // 1. Duración máxima 2 meses
                 if ($fechaInicio->diffInMonths($fechaFin) >= 2) {
                     throw new \Exception('La duración del periodo personalizado no puede exceder los 2 meses.');
@@ -79,10 +139,52 @@ class PeriodoLiquidacionController extends Controller
             // Evitar duplicados exactos
             $existe = PeriodoLiquidacion::where('id_empresa', $empresaId)
                 ->where('fecha_inicio', $fechaInicio->toDateString())
-                ->where('fecha_fin', $fechaFin->toDateString())
                 ->exists();
 
             if ($existe) {
+                throw new \Exception('Ya existe un periodo con esta fecha de inicio.');
+            }
+
+            // --- RESTRICCIÓN POR FECHA DE LICENCIA (Regla del Día 25) ---
+            $empresa = \App\Models\Empresa::find($empresaId);
+            $licencia = $empresa->licencia;
+
+            if ($licencia && $licencia->fecha_inicio) {
+                $fechaLicStart = \Carbon\Carbon::parse($licencia->fecha_inicio);
+                $diaLicencia = $fechaLicStart->day;
+                $mesLicencia = $fechaLicStart->month;
+                $anioLicencia = $fechaLicStart->year;
+
+                $mesSolicitado = $fechaInicio->month;
+                $anioSolicitado = $fechaInicio->year;
+
+                // Definir meses permitidos
+                // Siempre se permite el mes de compra/renovación
+                $permitidoActual = ($mesSolicitado == $mesLicencia && $anioSolicitado == $anioLicencia);
+
+                // Si es mayor a 25, se permite también el mes siguiente
+                $permitidoSiguiente = false;
+                if ($diaLicencia > 25) {
+                    $siguienteMes = $fechaLicStart->copy()->addMonth();
+                    $permitidoSiguiente = ($mesSolicitado == $siguienteMes->month && $anioSolicitado == $siguienteMes->year);
+                }
+
+                if (!$permitidoActual && !$permitidoSiguiente) {
+                    $errorMsg = ($diaLicencia > 25)
+                        ? 'Debido a que su licencia fue adquirida después del día 25, solo puede crear periodos para el mes actual o el siguiente.'
+                        : 'Su licencia fue adquirida antes del día 25, por lo tanto solo puede crear periodos dentro del mes de la compra/renovación.';
+                    throw new \Exception($errorMsg);
+                }
+            }
+            // -----------------------------------------------------------
+
+            // Evitar duplicados por rango de fechas
+            $existeRango = PeriodoLiquidacion::where('id_empresa', $empresaId)
+                ->where('fecha_inicio', $fechaInicio->toDateString())
+                ->where('fecha_fin', $fechaFin->toDateString())
+                ->exists();
+
+            if ($existeRango) {
                 throw new \Exception('Ya existe un periodo con el mismo rango de fechas para esta empresa.');
             }
 

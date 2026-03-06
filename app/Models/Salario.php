@@ -65,6 +65,6 @@ class Salario extends Model
 
     public function getSalarioNetoAttribute()
     {
-        return $this->total_devengos - $this->total_deducciones;
+        return $this->total_devengos - $this->total_deducciones + ($this->total_novedades ?? 0);
     }
 }

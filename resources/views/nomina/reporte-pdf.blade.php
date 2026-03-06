@@ -81,11 +81,15 @@
         </thead>
         <tbody>
             @forelse ($salarios as $salario)
+                @php
+                    $contrato = $salario->contrato;
+                    $usuario = $contrato?->usuario;
+                @endphp
                 <tr>
-                    <td>{{ $salario->contrato->usuario->doc ?? '' }}</td>
-                    <td>{{ $salario->contrato->usuario->nombre_completo ?? '' }}</td>
+                    <td>{{ $usuario?->doc ?? '' }}</td>
+                    <td>{{ $usuario?->nombre_completo ?? '' }}</td>
                     <td>{{ $salario->fecha_pago ? \Carbon\Carbon::parse($salario->fecha_pago)->format('Y-m-d') : '' }}</td>
-                    <td class="text-right">${{ number_format((float) ($salario->contrato->salario_base ?? 0), 0, ',', '.') }}</td>
+                    <td class="text-right">${{ number_format((float) ($contrato?->salario_base ?? 0), 0, ',', '.') }}</td>
                     <td class="text-right">${{ number_format((float) $salario->total_devengos, 0, ',', '.') }}</td>
                     <td class="text-right">${{ number_format((float) $salario->total_deducciones, 0, ',', '.') }}</td>
                     <td class="text-right">${{ number_format((float) $salario->salario_neto, 0, ',', '.') }}</td>

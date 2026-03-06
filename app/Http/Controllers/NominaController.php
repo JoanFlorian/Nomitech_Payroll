@@ -16,8 +16,13 @@ class NominaController extends Controller
 {
     private const VALIDATION_MESSAGES = [
         '*.numeric' => 'Este campo debe ser numérico.',
+        '*.integer' => 'Este campo debe ser un número entero.',
         '*.min' => 'Este campo no puede ser negativo.',
+        '*.max' => 'El valor excede el máximo permitido.',
     ];
+
+    private const STEP2_MAX_HOURS = 744;
+    private const STEP2_INGRESOS_MAX = 999999999;
 
     private const STEP2_RATES = [
         'horas_extra_diurnas' => 1.25,
@@ -152,7 +157,8 @@ class NominaController extends Controller
             return 0.0;
         }
 
-        if (is_numeric($value)) {
+        // Keep native numeric types fast; strings are normalized below to support locale formats.
+        if (is_int($value) || is_float($value)) {
             return (float) $value;
         }
 
@@ -344,10 +350,13 @@ class NominaController extends Controller
         $fila = 2;
         foreach ($salarios as $salario) {
             $fechaPago = $salario->fecha_pago ? Carbon::parse($salario->fecha_pago)->format('Y-m-d') : '';
-            $sheet->setCellValue('A' . $fila, $salario->contrato->usuario->doc ?? '');
-            $sheet->setCellValue('B' . $fila, $salario->contrato->usuario->nombre_completo ?? '');
+            $contrato = $salario->contrato;
+            $usuario = $contrato?->usuario;
+
+            $sheet->setCellValue('A' . $fila, $usuario?->doc ?? '');
+            $sheet->setCellValue('B' . $fila, $usuario?->nombre_completo ?? '');
             $sheet->setCellValue('C' . $fila, $fechaPago);
-            $sheet->setCellValue('D' . $fila, (float) ($salario->contrato->salario_base ?? 0));
+            $sheet->setCellValue('D' . $fila, (float) ($contrato?->salario_base ?? 0));
             $sheet->setCellValue('E' . $fila, (float) $salario->total_devengos);
             $sheet->setCellValue('F' . $fila, (float) $salario->total_deducciones);
             $sheet->setCellValue('G' . $fila, (float) $salario->salario_neto);
@@ -423,8 +432,40 @@ class NominaController extends Controller
 
     public function postStep1(Request $request)
     {
+        $isEditing = (bool) session('nomina.editing_id');
+
+        $validated = $request->validate([
+            'empleado_busqueda' => 'required|string|max:120',
+            'doc' => 'required|string|max:50',
+            'id_contrato' => 'required|integer|min:1',
+            'fecha_pago' => 'required|date',
+        ], [
+            'empleado_busqueda.required' => 'Debes seleccionar un empleado válido de la lista.',
+            'doc.required' => 'Debes seleccionar un empleado válido de la lista.',
+            'id_contrato.required' => 'Debes seleccionar un empleado válido de la lista.',
+            'id_contrato.integer' => 'Debes seleccionar un empleado válido de la lista.',
+        ]);
+
+        $empleado = $this->resolveNominaEmployeeContract(
+            (string) $validated['doc'],
+            (int) $validated['id_contrato'],
+            !$isEditing
+        );
+
+        if (!$empleado) {
+            return back()
+                ->withInput()
+                ->with('error', 'Debes seleccionar un empleado válido de la lista.');
+        }
+
         $data = $request->all();
-        $data['salario_base'] = $this->parseNumber($request->input('salario_base'));
+        $data['doc'] = (string) $empleado->doc;
+        $data['id_contrato'] = (int) $empleado->id_contrato;
+        $data['nombre'] = (string) ($empleado->nombre ?? '');
+        $data['telefono'] = (string) ($empleado->telefono ?? '');
+        $data['salario_base'] = $this->parseNumber($empleado->salario_base ?? 0);
+        $data['empleado_busqueda'] = trim($data['nombre'] . ' - ' . $data['doc']);
+        $data['fecha_pago'] = (string) $validated['fecha_pago'];
 
         // Phase 2: Use explicit period from session
         $periodoId = session('active_period_id');
@@ -516,7 +557,9 @@ class NominaController extends Controller
             ->limit(10)
             ->get();
 
-        return view('nomina.step2', compact('salarioBase', 'step2', 'salarios', 'periodoActivo'));
+        $step2Rates = self::STEP2_RATES;
+
+        return view('nomina.step2', compact('salarioBase', 'step2', 'salarios', 'periodoActivo', 'step2Rates'));
     }
 
     public function postStep2(Request $request)
@@ -527,10 +570,22 @@ class NominaController extends Controller
                 ->all()
         );
 
-        $validated = $request->validate(
-            array_fill_keys(array_keys(self::STEP2_RATES), 'nullable|numeric|min:0'),
-            self::VALIDATION_MESSAGES
-        );
+        $step2Rules = collect(array_keys(self::STEP2_RATES))
+            ->mapWithKeys(fn(string $key) => [$key => 'nullable|integer|min:0|max:' . self::STEP2_MAX_HOURS])
+            ->all();
+
+        $validated = $request->validate($step2Rules, self::VALIDATION_MESSAGES);
+
+        $totalHorasMes = collect(array_keys(self::STEP2_RATES))
+            ->sum(fn(string $key) => (int) ($validated[$key] ?? 0));
+
+        if ($totalHorasMes > self::STEP2_MAX_HOURS) {
+            return back()
+                ->withErrors([
+                    'total_horas_mes' => 'La suma total de horas no puede superar 744 horas en un mes.',
+                ])
+                ->withInput();
+        }
 
         $s1 = session('nomina.step1');
         if (!$s1) {
@@ -583,9 +638,9 @@ class NominaController extends Controller
         ]);
 
         $validated = $request->validate([
-            'bonificaciones' => 'nullable|numeric|min:0',
-            'comisiones' => 'nullable|numeric|min:0',
-            'otros_devengos' => 'nullable|numeric|min:0',
+            'bonificaciones' => 'nullable|numeric|min:0|max:' . self::STEP2_INGRESOS_MAX,
+            'comisiones' => 'nullable|numeric|min:0|max:' . self::STEP2_INGRESOS_MAX,
+            'otros_devengos' => 'nullable|numeric|min:0|max:' . self::STEP2_INGRESOS_MAX,
         ], self::VALIDATION_MESSAGES);
 
         $s1 = session('nomina.step1');
@@ -598,13 +653,16 @@ class NominaController extends Controller
         $comisiones = $this->parseNumber($validated['comisiones'] ?? 0);
         $otrosDevengos = $this->parseNumber($validated['otros_devengos'] ?? 0);
 
-        $totalDevengosFinal =
-            $this->parseNumber($s1['salario_base'] ?? 0) +
-            $this->parseNumber($s2['total_horas_extra'] ?? 0) +
-            $this->parseNumber($s2['total_recargos'] ?? 0) +
-            $bonificaciones +
-            $comisiones +
-            $otrosDevengos;
+        $devengosParcial = $this->parseNumber(
+            $s2['total_devengos_parcial']
+            ?? (
+                $this->parseNumber($s1['salario_base'] ?? 0) +
+                $this->parseNumber($s2['total_horas_extra'] ?? 0) +
+                $this->parseNumber($s2['total_recargos'] ?? 0)
+            )
+        );
+
+        $totalDevengosFinal = $devengosParcial + $bonificaciones + $comisiones + $otrosDevengos;
 
         session([
             'nomina.step2_ingresos' => [
@@ -748,6 +806,17 @@ class NominaController extends Controller
 
             $isEditing = (bool) session('nomina.editing_id');
 
+            $empleado = $this->resolveNominaEmployeeContract(
+                (string) ($s1['doc'] ?? ''),
+                (int) ($s1['id_contrato'] ?? 0),
+                !$isEditing
+            );
+
+            if (!$empleado) {
+                return redirect()->route('nomina.step1')
+                    ->with('error', 'Debes seleccionar un empleado válido de la lista.');
+            }
+
             $request->merge([
                 'retencion_fuente' => $this->parseNumber($request->input('retencion_fuente')),
                 'embargo_fiscal' => $this->parseNumber($request->input('embargo_fiscal')),
@@ -865,14 +934,42 @@ class NominaController extends Controller
         }
     }
 
+    private function resolveNominaEmployeeContract(string $doc, int $idContrato, bool $requireActive = true): ?object
+    {
+        $empresaId = session('empresa_id');
+
+        $query = DB::table('usuario')
+            ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
+            ->where('contrato.id_empresa', $empresaId)
+            ->where('usuario.doc', $doc)
+            ->where('contrato.id_contrato', $idContrato)
+            ->select(
+                'usuario.doc',
+                DB::raw("TRIM(CONCAT(usuario.primer_nombre,' ',IFNULL(usuario.otros_nombres,''),' ',usuario.primer_apellido,' ',IFNULL(usuario.segundo_apellido,''))) as nombre"),
+                'usuario.telefono',
+                'contrato.salario_base',
+                'contrato.id_contrato'
+            );
+
+        if ($requireActive) {
+            $query->where(function ($q) {
+                $q->where('contrato.estado_laboral', \App\Models\Contrato::ESTADO_LABORAL_ACTIVO)
+                    ->orWhere('contrato.estado_nomina', \App\Models\Contrato::ESTADO_NOMINA_PENDIENTE);
+            });
+        }
+
+        return $query->first();
+    }
+
     private function buildStep2SessionData(float $salarioBase, array $validated): array
     {
-        $valorHoraNormal = $salarioBase / 240;
+        $horasMes = (float) config('nomina.horas_mes', 240);
+        $valorHoraNormal = $horasMes > 0 ? ($salarioBase / $horasMes) : 0;
         $cantidades = [];
         $valores = [];
 
         foreach (self::STEP2_RATES as $key => $multiplier) {
-            $cantidad = $this->parseNumber($validated[$key] ?? 0);
+            $cantidad = (int) round($this->parseNumber($validated[$key] ?? 0));
             $cantidades[$key] = $cantidad;
             $valores["valor_{$key}"] = $cantidad * ($valorHoraNormal * $multiplier);
         }
@@ -901,10 +998,11 @@ class NominaController extends Controller
     private function buildEditingSessionPayload(object $registro): array
     {
         $salarioBase = $this->parseNumber($registro->salario_base ?? 0);
-        $valorHoraNormal = $salarioBase > 0 ? ($salarioBase / 240) : 0;
+        $horasMes = (float) config('nomina.horas_mes', 240);
+        $valorHoraNormal = ($salarioBase > 0 && $horasMes > 0) ? ($salarioBase / $horasMes) : 0;
         $valorHorasExtrasRecargos = $this->parseNumber($registro->valor_horas_extras_recargos ?? 0);
         $horasExtraDiurnas = ($valorHoraNormal > 0)
-            ? round(($valorHorasExtrasRecargos / ($valorHoraNormal * self::STEP2_RATES['horas_extra_diurnas'])), 2)
+            ? (int) round($valorHorasExtrasRecargos / ($valorHoraNormal * self::STEP2_RATES['horas_extra_diurnas']))
             : 0;
 
         $totalDevengosFinal =

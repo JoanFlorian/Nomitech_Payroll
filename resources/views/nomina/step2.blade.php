@@ -24,9 +24,9 @@
                <span class="text-lg">&times;</span>
             </a>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                <div class="lg:col-span-4">
+                <div class="lg:col-span-1">
 
                     <div class="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 text-white p-6 md:p-8 shadow-lg">
 
@@ -41,6 +41,7 @@
                         <p class="text-blue-100 mt-3 text-sm">
                             Horas extras y recargos.
                         </p>
+            
 
                         <div class="mt-6">
 
@@ -57,9 +58,14 @@
 
                     </div>
 
+                    <div class="mt-4 rounded-2xl border border-blue-100 bg-white/80 p-5 shadow-sm">
+                        <div class="text-sm font-semibold text-slate-800">Consejo rapido</div>
+                        <p class="text-xs text-slate-500 mt-1">Usa el documento del empleado tal como aparece en el contrato.</p>
+                    </div>
+
                 </div>
 
-                <div class="lg:col-span-8">
+                <div class="lg:col-span-2">
 
                     <div class="bg-white/90 rounded-2xl shadow-md border border-gray-100 p-6 md:p-8">
 
@@ -102,6 +108,10 @@
 
                                 </div>
 
+                                <p id="totalHorasError" class="mt-3 text-sm text-red-600 font-medium {{ $errors->has('total_horas_mes') ? '' : 'hidden' }}">
+                                    {{ $errors->first('total_horas_mes') }}
+                                </p>
+
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -128,13 +138,21 @@
 
                                     <input 
                                         name="{{ $name }}"
-                                        value="{{ old($name, $s2[$name] ?? 0) }}"
+                                        value="{{ (int) old($name, $s2[$name] ?? 0) }}"
                                         type="number"
                                         min="0"
-                                        step="0.01"
+                                        max="744"
+                                        step="1"
+                                        inputmode="numeric"
                                         class="devengo-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs focus:border-blue-500 focus:outline-none transition bg-white shadow-sm"
                                         placeholder="0"
                                     >
+
+                                    <p class="text-[11px] text-gray-500 mt-1">Solo numeros enteros entre 0 y 744.</p>
+
+                                    @error($name)
+                                        <p class="text-xs text-red-600 mt-1 font-medium">{{ $message }}</p>
+                                    @enderror
 
                                     <p class="text-xs text-gray-500 mt-1">
                                         Valor calculado:
@@ -170,7 +188,7 @@
             </div>
 
         </div>
-
+        
     </div>
 
 </div>
@@ -181,11 +199,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const form = document.getElementById('formStep2Horas');
     const inputs = document.querySelectorAll('.devengo-input');
+    const totalHorasError = document.getElementById('totalHorasError');
+    const MAX_HOURS = 744;
+    const TOTAL_HOURS_MESSAGE = 'La suma total de horas no puede superar 744 horas en un mes.';
+    let hasAttemptedSubmit = false;
 
     const baseMensual = Number(document.getElementById('salario_base_mensual').value || 0);
 
-    const horasMes = {{ config('nomina.horas_mes') }};
-    const recargos = @json(config('nomina.recargos'));
+    const horasMes = {{ (float) config('nomina.horas_mes', 240) }};
+    const rates = @json($step2Rates ?? []);
 
     const money = v => new Intl.NumberFormat('es-CO', {
         style: 'currency',
@@ -193,22 +215,58 @@ document.addEventListener('DOMContentLoaded', () => {
         maximumFractionDigits: 0
     }).format(v || 0);
 
-    const get = name => Number(form.querySelector(`[name="${name}"]`)?.value || 0);
-
-    const rates = {
-
-        horas_extra_diurnas: recargos.extra_diurna,
-        horas_extra_nocturnas: recargos.extra_nocturna,
-        horas_extra_dominicales_diurnas: recargos.extra_dominical_diurna ?? 2,
-        horas_extra_dominicales_nocturnas: recargos.extra_dominical_nocturna ?? 2.5,
-
-        recargo_nocturno: recargos.recargo_nocturno,
-        recargo_dominical_diurno: recargos.dominical_festivo,
-        recargo_dominical_nocturno: recargos.dominical_festivo + recargos.recargo_nocturno,
-        recargo_festivo_diurno: recargos.dominical_festivo,
-        recargo_festivo_nocturno: recargos.dominical_festivo + recargos.recargo_nocturno
-
+    const normalizeHours = (value) => {
+        const digitsOnly = String(value ?? '').replace(/[^0-9]/g, '');
+        const parsed = digitsOnly ? parseInt(digitsOnly, 10) : 0;
+        const safe = Number.isFinite(parsed) ? parsed : 0;
+        return Math.min(MAX_HOURS, Math.max(0, safe));
     };
+
+    const isRawInvalid = (rawValue) => {
+        const raw = String(rawValue ?? '').trim();
+        if (raw === '') return false;
+        if (!/^\d+$/.test(raw)) return true;
+        const n = parseInt(raw, 10);
+        return Number.isNaN(n) || n < 0 || n > MAX_HOURS;
+    };
+
+    const normalizeInput = (input) => {
+        const normalized = normalizeHours(input.value);
+        input.value = normalized;
+        return normalized;
+    };
+
+    const setInputError = (input, enabled) => {
+        if (enabled) {
+            input.classList.add('border-red-500');
+            return;
+        }
+        input.classList.remove('border-red-500');
+    };
+
+    const setAllInputsError = (enabled) => {
+        inputs.forEach((input) => setInputError(input, enabled));
+    };
+
+    const validateTotalHours = (showFeedback = false) => {
+        const totalHours = Array.from(inputs).reduce((acc, input) => acc + normalizeHours(input.value), 0);
+        const isValid = totalHours <= MAX_HOURS;
+
+        if (!isValid && showFeedback) {
+            totalHorasError.textContent = TOTAL_HOURS_MESSAGE;
+            totalHorasError.classList.remove('hidden');
+            return false;
+        }
+
+        if (isValid || !showFeedback) {
+            totalHorasError.textContent = '';
+            totalHorasError.classList.add('hidden');
+        }
+
+        return true;
+    };
+
+    const get = name => normalizeHours(form.querySelector(`[name="${name}"]`)?.value || 0);
 
     const calcular = () => {
 
@@ -244,12 +302,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     inputs.forEach(input => {
         input.addEventListener('input', () => {
-            if (input.value < 0) input.value = 0;
+            normalizeInput(input);
+            if (hasAttemptedSubmit) {
+                setInputError(input, false);
+            }
+            if (validateTotalHours(hasAttemptedSubmit)) {
+                setAllInputsError(false);
+            }
+            calcular();
+        });
+
+        input.addEventListener('blur', () => {
+            normalizeInput(input);
+            if (hasAttemptedSubmit) {
+                setInputError(input, false);
+            }
+            if (validateTotalHours(hasAttemptedSubmit)) {
+                setAllInputsError(false);
+            }
             calcular();
         });
     });
 
+    form.addEventListener('submit', (event) => {
+        hasAttemptedSubmit = true;
+        let hasErrors = false;
+
+        inputs.forEach((input) => {
+            const rawInvalid = isRawInvalid(input.value);
+            normalizeInput(input);
+
+            if (rawInvalid) {
+                hasErrors = true;
+                setInputError(input, true);
+            } else {
+                setInputError(input, false);
+            }
+        });
+
+        const totalHoursValid = validateTotalHours(true);
+        if (!totalHoursValid) {
+            hasErrors = true;
+            setAllInputsError(true);
+        }
+
+        if (hasErrors) {
+            event.preventDefault();
+        }
+    });
+
     calcular();
+    validateTotalHours(false);
 
 });
 

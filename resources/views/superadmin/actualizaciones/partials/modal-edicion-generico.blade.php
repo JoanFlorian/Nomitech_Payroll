@@ -157,6 +157,13 @@
         return (valor || '').replace(/\s{2,}/g, ' ').trim();
     }
 
+    function limpiarDireccionEdicion(valor) {
+        return (valor || '')
+            .replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s#\-\.,]/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
     function configurarValidacionesCamposEdicion(contenedor) {
         const inputNombre = contenedor.querySelector('input[name="nombre"]');
         if (inputNombre) {
@@ -242,26 +249,26 @@
         const inputTelefono = contenedor.querySelector('input[name="telefono"]');
         if (inputTelefono) {
             inputTelefono.setAttribute('inputmode', 'numeric');
-            inputTelefono.setAttribute('pattern', '^[0-9]{1,11}$');
-            inputTelefono.setAttribute('maxlength', '11');
-            inputTelefono.setAttribute('title', 'El teléfono solo permite números y máximo 11 dígitos.');
+            inputTelefono.setAttribute('pattern', '^[0-9]{10}$');
+            inputTelefono.setAttribute('maxlength', '10');
+            inputTelefono.setAttribute('title', 'El teléfono debe tener exactamente 10 dígitos numéricos.');
 
             inputTelefono.addEventListener('input', function () {
                 const valorOriginal = this.value;
-                const valorLimpio = limpiarTelefonoEdicion(this.value).slice(0, 11);
+                const valorLimpio = limpiarTelefonoEdicion(this.value).slice(0, 10);
                 this.value = valorLimpio;
 
                 if (valorOriginal !== valorLimpio) {
-                    mostrarToastEnVivoEdicion('telefono', 'Teléfono: solo números y máximo 11 dígitos.');
+                    mostrarToastEnVivoEdicion('telefono', 'Teléfono: solo números y exactamente 10 dígitos.');
                 }
 
-                if (valorOriginal.length > 11) {
-                    mostrarToastEnVivoEdicion('telefono-max', 'Teléfono: máximo 11 dígitos.');
+                if (valorOriginal.length > 10) {
+                    mostrarToastEnVivoEdicion('telefono-max', 'Teléfono: máximo 10 dígitos.');
                 }
             });
 
             inputTelefono.addEventListener('blur', function () {
-                this.value = limpiarTelefonoEdicion(this.value).slice(0, 11);
+                this.value = limpiarTelefonoEdicion(this.value).slice(0, 10);
             });
         }
 
@@ -275,9 +282,23 @@
 
         const inputDireccion = contenedor.querySelector('input[name="direccion"]');
         if (inputDireccion) {
+            inputDireccion.setAttribute('pattern', '^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\\s#\\-\\.,]+$');
+            inputDireccion.setAttribute('minlength', '5');
             inputDireccion.setAttribute('maxlength', '120');
+            inputDireccion.setAttribute('title', 'La dirección debe tener entre 5 y 120 caracteres y solo usar letras, números, espacios y # - . ,');
+
+            inputDireccion.addEventListener('input', function () {
+                const valorOriginal = this.value;
+                const valorLimpio = limpiarDireccionEdicion(valorOriginal).slice(0, 120);
+                this.value = valorLimpio;
+
+                if (valorOriginal !== valorLimpio) {
+                    mostrarToastEnVivoEdicion('direccion', 'Dirección: usa solo letras, números, espacios y # - . ,');
+                }
+            });
+
             inputDireccion.addEventListener('blur', function () {
-                this.value = limpiarTextoBasicoEdicion(this.value);
+                this.value = limpiarDireccionEdicion(this.value).slice(0, 120);
             });
         }
 
@@ -509,8 +530,8 @@
         const inputTelefono = formulario.querySelector('input[name="telefono"]');
         if (inputTelefono) {
             const valorTelefono = (inputTelefono.value || '').trim();
-            if (valorTelefono && !/^\d{1,11}$/.test(valorTelefono)) {
-                mostrarAlertaValidacionEdicion('El campo Teléfono solo permite números y máximo 11 dígitos.');
+            if (valorTelefono && !/^\d{10}$/.test(valorTelefono)) {
+                mostrarAlertaValidacionEdicion('El campo Teléfono debe tener exactamente 10 dígitos numéricos.');
                 inputTelefono.focus();
                 return false;
             }
@@ -544,6 +565,24 @@
                     : 'El código debe tener solo números entre 6 y 15 dígitos.');
                 inputCodigoEntidad.focus();
                 return false;
+            }
+        }
+
+        const inputDireccion = formulario.querySelector('input[name="direccion"]');
+        if (inputDireccion) {
+            const valorDireccion = (inputDireccion.value || '').trim();
+            if (valorDireccion) {
+                if (valorDireccion.length < 5 || valorDireccion.length > 120) {
+                    mostrarAlertaValidacionEdicion('El campo Dirección debe tener entre 5 y 120 caracteres.');
+                    inputDireccion.focus();
+                    return false;
+                }
+
+                if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s#\-\.,]+$/.test(valorDireccion)) {
+                    mostrarAlertaValidacionEdicion('El campo Dirección contiene caracteres no permitidos.');
+                    inputDireccion.focus();
+                    return false;
+                }
             }
         }
 

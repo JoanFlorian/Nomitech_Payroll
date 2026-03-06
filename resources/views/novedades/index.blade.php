@@ -24,6 +24,7 @@
 			<button
 				id="add-novelty-btn"
 				type="button"
+				onclick="window.__openNoveltyModal && window.__openNoveltyModal()"
 				class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:bg-emerald-600 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
 			>
 				<span class="material-icons text-[20px]">add</span>

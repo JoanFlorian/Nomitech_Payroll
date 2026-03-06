@@ -5,7 +5,7 @@
 
 		<div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between relative z-10">
 			<h3 class="text-xl md:text-2xl font-bold text-gray-800">Registrar Novedad</h3>
-			<button type="button" id="close-modal-btn" class="w-9 h-9 inline-flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 transition">
+			<button type="button" id="close-modal-btn" onclick="window.__closeNoveltyModal && window.__closeNoveltyModal()" class="w-9 h-9 inline-flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 transition">
 				<span class="material-icons text-[20px]">close</span>
 			</button>
 		</div>
@@ -172,9 +172,25 @@
 			</div>
 
 			<div class="bg-gray-50 px-6 py-4 flex justify-end items-center border-t border-gray-200">
-				<button id="cancel-btn" type="button" class="bg-gray-200 text-gray-700 font-medium py-2 px-6 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-300 mr-3">Cancelar</button>
+				<button id="cancel-btn" type="button" onclick="window.__closeNoveltyModal && window.__closeNoveltyModal()" class="bg-gray-200 text-gray-700 font-medium py-2 px-6 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-300 mr-3">Cancelar</button>
 				<button id="save-btn" type="submit" class="bg-emerald-500 text-white font-medium py-2 px-6 rounded-md shadow-sm hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-300">Guardar</button>
 			</div>
 		</form>
 	</div>
 </div>
+
+<script>
+	window.__openNoveltyModal = function () {
+		const modal = document.getElementById('novelty-modal');
+		if (!modal) return;
+		modal.classList.remove('hidden');
+		modal.classList.add('flex');
+	};
+
+	window.__closeNoveltyModal = function () {
+		const modal = document.getElementById('novelty-modal');
+		if (!modal) return;
+		modal.classList.remove('flex');
+		modal.classList.add('hidden');
+	};
+</script>

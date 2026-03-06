@@ -86,28 +86,12 @@ class PeriodoLiquidacion extends Model
 
         return match ($frequency) {
             self::FRECUENCIA_SEMANAL => $start->copy()->addDays(6),
-            self::FRECUENCIA_DECENAL => self::calcDecenal($start),
+            self::FRECUENCIA_DECENAL => $start->copy()->addDays(9),
             self::FRECUENCIA_CATORCENAL => $start->copy()->addDays(13),
-            self::FRECUENCIA_QUINCENAL => self::calcQuincenal($start),
+            self::FRECUENCIA_QUINCENAL => $start->copy()->addDays(14),
             self::FRECUENCIA_MENSUAL => $start->copy()->endOfMonth(),
             default => null,
         };
-    }
-
-    private static function calcDecenal(\Carbon\Carbon $start): \Carbon\Carbon
-    {
-        if ($start->day <= 10)
-            return $start->copy()->day(10);
-        if ($start->day <= 20)
-            return $start->copy()->day(20);
-        return $start->copy()->endOfMonth();
-    }
-
-    private static function calcQuincenal(\Carbon\Carbon $start): \Carbon\Carbon
-    {
-        if ($start->day <= 15)
-            return $start->copy()->day(15);
-        return $start->copy()->endOfMonth();
     }
 
     public function salarios()

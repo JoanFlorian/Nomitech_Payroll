@@ -16,18 +16,75 @@
         </div>
     </div>
 
+    {{-- FILTROS --}}
+    <div class="mb-8 border-b border-gray-100 pb-6">
+        <form action="{{ route('periodos.index') }}" method="GET" class="space-y-6">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                {{-- Filtros por Estado (Tabs) --}}
+                <div class="flex-1">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Filtrar por Estado</label>
+                    <div class="inline-flex p-1 bg-gray-100 rounded-xl">
+                        @php($currentEstado = $estado ?? 'todos')
+                        @foreach(['todos' => 'Todos', 'abierto' => 'Abiertos', 'pendiente' => 'Pendientes', 'cerrado' => 'Cerrados'] as $val => $label)
+                            <a href="{{ route('periodos.index', array_merge(request()->query(), ['estado' => $val, 'page' => 1])) }}"
+                                class="px-4 py-2 rounded-lg text-xs font-bold transition-all {{ $currentEstado == $val ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
+                                {{ $label }}
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Filtros por Fecha --}}
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Mes</label>
+                        <select name="mes" onchange="this.form.submit()" 
+                            class="bg-gray-50 border-gray-200 rounded-xl text-[11px] font-bold focus:ring-blue-500 focus:border-blue-500 py-2 min-w-[130px]">
+                            <option value="">Cualquier Mes</option>
+                            @foreach(['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] as $i => $m)
+                                <option value="{{ $i + 1 }}" {{ ($mes == ($i + 1)) ? 'selected' : '' }}>{{ $m }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Año</label>
+                        <select name="anio" onchange="this.form.submit()"
+                            class="bg-gray-50 border-gray-200 rounded-xl text-[11px] font-bold focus:ring-blue-500 focus:border-blue-500 py-2 min-w-[90px]">
+                            <option value="">Año</option>
+                            @for($y = date('Y'); $y >= 2024; $y--)
+                                <option value="{{ $y }}" {{ $anio == $y ? 'selected' : '' }}>{{ $y }}</option>
+                            @endfor
+                        </select>
+                    </div>
+
+                    @if(($estado && $estado !== 'todos') || $mes || $anio)
+                        <a href="{{ route('periodos.index') }}" 
+                            class="flex items-center justify-center h-[38px] w-[38px] bg-white border border-gray-200 text-gray-400 rounded-xl hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all shadow-sm group"
+                            title="Limpiar Filtros">
+                            <span class="material-icons text-sm group-hover:rotate-90 transition-transform">filter_alt_off</span>
+                        </a>
+                    @endif
+                </div>
+            </div>
+            
+            {{-- Preservar estado actual cuando se cambia el mes/año via submit --}}
+            <input type="hidden" name="estado" value="{{ $estado ?? 'todos' }}">
+        </form>
+    </div>
+
     {{-- TABLA DE PERIODOS --}}
     <div class="overflow-x-auto rounded-xl border border-gray-200">
-        <table class="w-full text-sm border-collapse min-w-[800px]">
+        <table class="w-full text-sm border-collapse">
 
             <thead class="bg-blue-600 text-white">
                 <tr>
-                    <th class="px-5 py-4 text-left font-semibold tracking-wide">Frecuencia</th>
-                    <th class="px-5 py-4 text-left font-semibold tracking-wide">Fecha Inicio</th>
-                    <th class="px-5 py-4 text-left font-semibold tracking-wide">Fecha Fin</th>
-                    <th class="px-5 py-4 text-center font-semibold tracking-wide">Estado</th>
-                    <th class="px-5 py-4 text-center font-semibold tracking-wide">Comprobantes</th>
-                    <th class="px-5 py-4 text-right font-semibold tracking-wide">Acciones</th>
+                    <th class="px-4 py-3 text-left font-semibold tracking-wide text-xs">Frecuencia</th>
+                    <th class="px-4 py-3 text-left font-semibold tracking-wide text-xs">Fecha Inicio</th>
+                    <th class="px-4 py-3 text-left font-semibold tracking-wide text-xs">Fecha Fin</th>
+                    <th class="px-4 py-3 text-center font-semibold tracking-wide text-xs">Estado</th>
+                    <th class="px-4 py-3 text-center font-semibold tracking-wide text-xs">Comprobantes</th>
+                    <th class="px-4 py-3 text-right font-semibold tracking-wide text-xs">Acciones</th>
                 </tr>
             </thead>
 
@@ -35,7 +92,7 @@
                 @forelse($periodos as $periodo)
                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
 
-                    <td class="px-5 py-4">
+                    <td class="px-4 py-3 text-xs">
                         @php($color = match ($periodo->tipo_frecuencia) {
                             'mensual' => 'bg-blue-100 text-blue-700',
                             'quincenal' => 'bg-purple-100 text-purple-700',
@@ -47,15 +104,15 @@
                         </span>
                     </td>
 
-                    <td class="px-5 py-4 text-gray-700 font-medium">
+                    <td class="px-4 py-3 text-gray-700 font-medium text-xs">
                         {{ $periodo->fecha_inicio->format('d/m/Y') }}
                     </td>
 
-                    <td class="px-5 py-4 text-gray-700 font-medium">
+                    <td class="px-4 py-3 text-gray-700 font-medium text-xs">
                         {{ $periodo->fecha_fin->format('d/m/Y') }}
                     </td>
 
-                    <td class="px-5 py-4 text-center">
+                    <td class="px-4 py-3 text-center">
                         @php($statusColor = match ($periodo->estado) {
                             'abierto' => 'bg-green-100 text-green-700',
                             'cerrado' => 'bg-gray-100 text-gray-600',
@@ -67,11 +124,11 @@
                         </span>
                     </td>
 
-                    <td class="px-5 py-4 text-center text-gray-500 font-medium">
+                    <td class="px-4 py-3 text-center text-gray-500 font-medium text-xs">
                         {{ $periodo->salarios()->count() }} registros
                     </td>
 
-                    <td class="px-5 py-4 text-right">
+                    <td class="px-4 py-3 text-right">
                         <div class="flex items-center justify-end gap-2">
                             @if($periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO || $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_PENDIENTE)
                                 {{-- Boton Liquidar --}}
@@ -202,16 +259,25 @@
                             <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Fecha
                                 Inicio</label>
                             <input type="date" name="fecha_inicio" id="fecha_inicio" required
-                                class="w-full border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                value="{{ date('Y-m-01') }}">
+                                min="{{ $minDate ?? '' }}" max="{{ $maxDate ?? '' }}"
+                                class="w-full border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2"
+                                value="{{ old('fecha_inicio', (isset($minDate) && date('Y-m-d') < $minDate) ? $minDate : date('Y-m-d')) }}">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Fecha
                                 Fin</label>
                             <input type="date" name="fecha_fin" id="fecha_fin" required
-                                class="w-full border-gray-200 bg-gray-50 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                min="{{ $minDate ?? '' }}" max="{{ $maxDate ?? '' }}"
+                                class="w-full border-gray-200 bg-gray-50 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2"
                                 readonly>
-                            <p id="hint_fecha" class="text-[10px] text-blue-600 mt-1 font-medium italic"></p>
+                            <div class="flex flex-col gap-1 mt-1">
+                                <p id="hint_fecha" class="text-[10px] text-blue-600 font-medium italic"></p>
+                                @if($minDate && $maxDate)
+                                    <p class="text-[9px] text-gray-400 leading-tight">
+                                        Rango permitido: {{ \Carbon\Carbon::parse($minDate)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($maxDate)->format('d/m/Y') }}
+                                    </p>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -241,6 +307,8 @@
         const endInput = document.getElementById('fecha_fin');
         const hintText = document.getElementById('hint_fecha');
 
+        const isRestricted = @json($isRestrictedByLicense);
+
         function updateEndDate() {
             const freq = freqSelect.value;
             const startVal = startInput.value;
@@ -251,7 +319,7 @@
                 endInput.readOnly = false;
                 endInput.classList.remove('bg-gray-50', 'border-gray-200');
                 endInput.classList.add('bg-white', 'border-gray-300');
-                hintText.textContent = "Defina el rango libremente (máx 2 meses).";
+                hintText.textContent = "Defina el rango libremente.";
                 return;
             }
 
@@ -260,35 +328,60 @@
             endInput.classList.add('bg-gray-50', 'border-gray-200');
             endInput.classList.remove('bg-white', 'border-gray-300');
 
-            const date = new Date(startVal + 'T00:00:00');
-            let endDate = new Date(date);
-
+            // Parse start date accurately
+            const [year, month, day] = startVal.split('-').map(Number);
+            let startDate = new Date(year, month - 1, day);
+            let endDate = new Date(startDate);
+            
+            // Initial calculation based on frequency
+            let label = "";
             if (freq === 'mensual') {
-                endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-                hintText.textContent = "Calculado: Fin de mes.";
+                endDate = new Date(year, month, 0); // Last day of start month
+                label = "Fin de mes.";
             } else if (freq === 'quincenal') {
-                if (date.getDate() <= 15) {
-                    endDate.setDate(15);
-                } else {
-                    endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-                }
-                hintText.textContent = "Calculado: Quincena estándar.";
+                endDate.setDate(startDate.getDate() + 14);
+                label = "+14 días.";
             } else if (freq === 'decenal') {
-                if (date.getDate() <= 10) {
-                    endDate.setDate(10);
-                } else if (date.getDate() <= 20) {
-                    endDate.setDate(20);
-                } else {
-                    endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-                }
-                hintText.textContent = "Calculado: Decena estándar.";
+                endDate.setDate(startDate.getDate() + 9);
+                label = "+9 días.";
             } else if (freq === 'semanal') {
-                endDate.setDate(date.getDate() + 6);
-                hintText.textContent = "Calculado: +6 días.";
+                endDate.setDate(startDate.getDate() + 6);
+                label = "+6 días.";
             } else if (freq === 'catorcenal') {
-                endDate.setDate(date.getDate() + 13);
-                hintText.textContent = "Calculado: +13 días.";
+                endDate.setDate(startDate.getDate() + 13);
+                label = "+13 días.";
             }
+
+            // APLICA RESTRICCIÓN DE MES ACTUAL (Licencia pre-25)
+            if (isRestricted) {
+                const lastDayOfMonth = new Date(year, month, 0);
+                if (endDate > lastDayOfMonth) {
+                    endDate = lastDayOfMonth;
+                    
+                    // RECALCULAR FECHA INICIO PARA MANTENER DURACIÓN DENTRO DEL MES
+                    let newStartDate = new Date(endDate);
+                    if (freq === 'quincenal') newStartDate.setDate(endDate.getDate() - 14);
+                    else if (freq === 'decenal') newStartDate.setDate(endDate.getDate() - 9);
+                    else if (freq === 'semanal') newStartDate.setDate(endDate.getDate() - 6);
+                    else if (freq === 'catorcenal') newStartDate.setDate(endDate.getDate() - 13);
+                    else if (freq === 'mensual') newStartDate.setDate(1);
+
+                    // Actualizar input de inicio
+                    const yS = newStartDate.getFullYear();
+                    const mS = String(newStartDate.getMonth() + 1).padStart(2, '0');
+                    const dS = String(newStartDate.getDate()).padStart(2, '0');
+                    startInput.value = `${yS}-${mS}-${dS}`;
+
+                    label += " (Periodo ajustado al mes actual por su licencia)";
+                    hintText.classList.replace('text-blue-600', 'text-red-500');
+                } else {
+                    hintText.classList.replace('text-red-500', 'text-blue-600');
+                }
+            } else {
+                hintText.classList.replace('text-red-500', 'text-blue-600');
+            }
+
+            hintText.textContent = `Calculado: ${label}`;
 
             const y = endDate.getFullYear();
             const m = String(endDate.getMonth() + 1).padStart(2, '0');

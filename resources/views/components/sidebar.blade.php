@@ -15,10 +15,10 @@
     <!-- MENU -->
     <nav class="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
 
-        <a href="/dashboard" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-       {{ request()->is('dashboard*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-grid text-lg"></i>
-            Dashboard
+        <a href="{{ route('reportes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+       {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-bar-chart text-lg"></i>
+            Reportes
         </a>
 
         <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
@@ -33,35 +33,28 @@
             Nómina
         </a>
 
+        <a href="{{ route('nomina-electronica.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+           {{ request()->is('nomina-electronica*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-send-check text-lg"></i>
+            Nómina Electrónica
+        </a>
+
         <a href="{{ route('novedades.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
             {{ request()->is('novedades*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-journal-text text-lg"></i>
             Novedades
         </a>
 
+        <a href="{{ route('provisiones.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+            {{ request()->routeIs('provisiones.index') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-box-seam text-lg"></i>
+            Provisiones
+        </a>
+
         <a href="{{ route('periodos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
            {{ request()->is('periodos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
             <i class="bi bi-calendar3 text-lg"></i>
             Periodos de Liquidación
-        </a>
-
-        <a href="/roles" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-            {{ request()->is('roles*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-person-badge text-lg"></i>
-            Roles
-        </a>
-
-       
-        <a href="{{ route('reportes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-            {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-bar-chart text-lg"></i>
-            Reportes
-        </a>
-
-        <a href="/configuracion" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-            {{ request()->is('configuracion*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-gear text-lg"></i>
-            Configuración
         </a>
 
     </nav>

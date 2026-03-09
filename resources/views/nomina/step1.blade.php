@@ -13,22 +13,25 @@
         @include('nomina.partials.index_content', ['salarios' => $salarios ?? collect()])
     </div>
 
-    <div class="fixed inset-0 bg-black/50 z-40" aria-hidden="true"></div>
+    <div class="fixed inset-0 bg-gray-900/85 z-40" aria-hidden="true"></div>
+    <div class="fixed inset-0 z-40 pointer-events-none overflow-hidden" aria-hidden="true">
+        @include('nomina.partials.modal_figures')
+    </div>
 
-    <div class="fixed inset-0 z-50 p-4 md:p-6 flex items-center justify-center overflow-y-auto">
-        <div class="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-gray-200 p-4 md:p-5 modal-enter">
+    <div class="fixed inset-0 z-50 p-3 md:p-4 flex items-center justify-center">
+        <div class="relative w-full max-w-[1120px] max-h-[92vh] overflow-auto bg-white rounded-3xl shadow-2xl border border-gray-200 p-3 md:p-4 modal-enter">
             <a href="{{ route('nomina.index') }}"
-               class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white flex items-center justify-center shadow-sm transition"
+               class="absolute top-3 right-3 z-20 h-10 w-10 rounded-full bg-white border border-gray-300 text-gray-700 hover:text-gray-900 hover:bg-gray-50 flex items-center justify-center shadow-sm transition"
                aria-label="Cerrar">
-                <span class="text-lg">&times;</span>
+                <span class="text-xl leading-none font-bold">&times;</span>
             </a>
 
     {{-- HERO + FORMULARIO --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="lg:col-span-1">
-            <div class="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 text-white p-6 md:p-8 shadow-lg">
+            <div class="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 text-white p-5 md:p-6 shadow-lg">
                 <div class="text-xs uppercase tracking-widest text-blue-100">Nueva Nómina</div>
-                <h2 class="text-2xl md:text-3xl font-bold mt-2">Paso 1: Datos del empleado</h2>
+                <h2 class="text-2xl font-bold mt-2">Paso 1: Datos del empleado</h2>
                 <p class="text-blue-100 mt-3 text-sm">Busca el contrato activo y confirma el salario base antes de continuar.</p>
 
                 <div class="mt-6">
@@ -42,16 +45,16 @@
                 </div>
             </div>
 
-            <div class="mt-4 rounded-2xl border border-blue-100 bg-white/80 p-5 shadow-sm">
+            <div class="mt-3 rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm">
                 <div class="text-sm font-semibold text-slate-800">Consejo rápido</div>
                 <p class="text-xs text-slate-500 mt-1">Usa el documento del empleado tal como aparece en el contrato.</p>
             </div>
         </div>
 
         <div class="lg:col-span-2">
-            <div class="bg-white/90 backdrop-blur rounded-2xl shadow-md border border-gray-100 p-6 md:p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-2xl md:text-3xl font-bold text-gray-800">Buscar Empleado</h3>
+            <div class="bg-white/90 backdrop-blur rounded-2xl shadow-md border border-gray-100 p-5 md:p-6">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-2xl font-bold text-gray-800">Buscar Empleado</h3>
                     <span class="hidden md:inline-flex items-center gap-2 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
                         Verifica el contrato activo
                     </span>
@@ -61,7 +64,7 @@
             @csrf
 
             {{-- EMPLEADO --}}
-            <div class="mb-6">
+            <div class="mb-5">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                     Buscar empleado <span class="text-red-500">*</span>
                 </label>
@@ -90,7 +93,7 @@
             </div>
 
             {{-- DATOS PERSONALES - 2 COLUMNAS --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre Completo</label>
                     <input id="nombre" type="text"
@@ -108,14 +111,26 @@
                 </div>
             </div>
 
-            {{-- SALARIO Y FECHA PAGO - 2 COLUMNAS --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+            {{-- SALARIO, DIAS Y FECHA PAGO --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Salario Base</label>
                     <input id="salario_base" name="salario_base" type="text"
                            class="w-full border-2 border-gray-200 px-4 py-3 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed font-semibold text-sm"
                               value="{{ old('salario_base', isset($s1['salario_base']) ? number_format((float) $s1['salario_base'], 0, ',', '.') : '') }}"
                            readonly>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Dias Trabajados <span class="text-red-500">*</span>
+                    </label>
+                    <input id="dias_trabajados" name="dias_trabajados" type="number"
+                        min="0" max="30" step="1"
+                        value="{{ old('dias_trabajados', $s1['dias_trabajados'] ?? 30) }}"
+                        class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-sm focus:border-blue-500 focus:outline-none transition bg-white shadow-sm"
+                        required>
+                    <p id="diasError" class="hidden text-red-600 text-sm mt-2 font-medium"></p>
                 </div>
 
                 <div>
@@ -128,6 +143,24 @@
                               @readonly($isEditing)
                            required>
                     <p id="fechaError" class="hidden text-red-600 text-sm mt-2 font-medium"></p>
+                </div>
+            </div>
+
+            <div class="mb-5 rounded-xl border border-blue-100 bg-blue-50/60 p-3.5">
+                <h4 class="text-sm font-semibold text-blue-900 mb-3">Resumen de salario proporcional</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                    <div class="rounded-lg bg-white border border-blue-100 p-3">
+                        <div class="text-xs text-gray-500">Valor dia</div>
+                        <div id="resumen_valor_dia" class="font-semibold text-gray-800">$0</div>
+                    </div>
+                    <div class="rounded-lg bg-white border border-blue-100 p-3">
+                        <div class="text-xs text-gray-500">Dias trabajados</div>
+                        <div id="resumen_dias_trabajados" class="font-semibold text-gray-800">0</div>
+                    </div>
+                    <div class="rounded-lg bg-white border border-blue-100 p-3">
+                        <div class="text-xs text-gray-500">Salario proporcional</div>
+                        <div id="resumen_salario_proporcional" class="font-semibold text-blue-700">$0</div>
+                    </div>
                 </div>
             </div>
 

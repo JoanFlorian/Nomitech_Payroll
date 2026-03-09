@@ -9,7 +9,10 @@
         @include('nomina.partials.index_content', ['salarios' => $salarios ?? collect()])
     </div>
 
-    <div class="fixed inset-0 bg-black/50 z-40" aria-hidden="true"></div>
+    <div class="fixed inset-0 bg-gray-900/85 z-40" aria-hidden="true"></div>
+    <div class="fixed inset-0 z-40 pointer-events-none overflow-hidden" aria-hidden="true">
+        @include('nomina.partials.modal_figures')
+    </div>
 
     <div class="fixed inset-0 z-50 p-4 md:p-6 flex items-center justify-center overflow-y-auto">
         <div class="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-200 p-4 md:p-5 modal-enter">
@@ -26,6 +29,15 @@
                             <div class="w-full bg-blue-400/40 rounded-full h-2"><div class="bg-white h-2 rounded-full" style="width:100%"></div></div>
                         </div>
                     </div>
+
+                    <div class="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                        <h4 class="text-sm font-semibold text-blue-900 mb-3">Resumen final</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div class="rounded-lg bg-white border border-blue-100 p-3"><div class="text-xs text-gray-500">Total devengos</div><div id="resumen_devengos" class="font-semibold text-gray-800">$0</div></div>
+                            <div class="rounded-lg bg-white border border-blue-100 p-3"><div class="text-xs text-gray-500">Total deducciones</div><div id="resumen_deducciones" class="font-semibold text-gray-800">$0</div></div>
+                            <div class="rounded-lg bg-white border border-blue-100 p-3 md:col-span-2"><div class="text-xs text-gray-500">Salario neto a pagar</div><div id="resumen_neto" class="font-semibold text-blue-700">$0</div></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="lg:col-span-8">
@@ -38,30 +50,17 @@
                             <input type="hidden" id="total_devengos" value="{{ $totalDevengos ?? 0 }}">
                             <input type="hidden" id="confirm_edit" name="confirm_edit" value="">
 
-                            <div class="mb-6 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
-                                <h4 class="text-sm font-semibold text-blue-900 mb-3">Resumen final</h4>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                                    <div class="rounded-lg bg-white border border-blue-100 p-3"><div class="text-xs text-gray-500">Total devengos</div><div id="resumen_devengos" class="font-semibold text-gray-800">$0</div></div>
-                                    <div class="rounded-lg bg-white border border-blue-100 p-3"><div class="text-xs text-gray-500">Total deducciones</div><div id="resumen_deducciones" class="font-semibold text-gray-800">$0</div></div>
-                                    <div class="rounded-lg bg-white border border-blue-100 p-3"><div class="text-xs text-gray-500">Salario neto a pagar</div><div id="resumen_neto" class="font-semibold text-blue-700">$0</div></div>
-                                </div>
-                            </div>
-
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">EPS (salud)</label>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">EPS (salud) <span id="eps_rate_label" class="text-blue-700">(0%)</span></label>
                                     <input id="eps" name="eps" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">AFP (pensión)</label>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">AFP (pensión) <span id="afp_rate_label" class="text-blue-700">(0%)</span></label>
                                     <input id="afp" name="afp" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Aporte a fondo de pensión</label>
-                                    <input id="aporte_fp" name="aporte_fp" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Total seguridad social</label>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Total seguridad social <span id="seguridad_rate_label" class="text-blue-700">(0%)</span></label>
                                     <input id="seguridad_social" name="seguridad_social" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
                                 </div>
 
@@ -104,12 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalDevengos = Number(document.getElementById('total_devengos').value || 0);
     const errorBox = document.getElementById('deduccionesError');
 
-    const APPLIES_SOCIAL_SECURITY = Boolean(@json((bool)($rules['aplica_seguridad_social'] ?? true)));
-    const EPS_RATE = Number(@json((float)($rules['rates']['eps'] ?? config('nomina.rates.eps', 0.04))));
-    const AFP_RATE = Number(@json((float)($rules['rates']['afp'] ?? config('nomina.rates.afp', 0.04))));
-    const FP_RATE = Number(@json((float)($rules['rates']['aporte_fp'] ?? config('nomina.rates.aporte_fp', 0.01))));
-    const FP_SMMLV_THRESHOLD = Number(@json((float)($rules['aporte_fp_smmlv_threshold'] ?? config('nomina.aporte_fp_smmlv_threshold', 4))));
-    const SMMLV = Number(@json(config('nomina.smmlv', 1423500)));
+    const EPS_RATE = 0.04;
+    const AFP_RATE = 0.04;
+    const percentLabel = (rate) => `${(rate * 100).toFixed(0)}%`;
+
+    const epsRateLabel = document.getElementById('eps_rate_label');
+    const afpRateLabel = document.getElementById('afp_rate_label');
+    const seguridadRateLabel = document.getElementById('seguridad_rate_label');
+
+    if (epsRateLabel) epsRateLabel.textContent = `(${percentLabel(EPS_RATE)})`;
+    if (afpRateLabel) afpRateLabel.textContent = `(${percentLabel(AFP_RATE)})`;
+    if (seguridadRateLabel) seguridadRateLabel.textContent = `(${percentLabel(EPS_RATE + AFP_RATE)})`;
 
     const money = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v || 0);
     const numberFormatter = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -169,21 +173,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const calc = () => {
-        const eps = APPLIES_SOCIAL_SECURITY ? salarioBase * EPS_RATE : 0;
-        const afp = APPLIES_SOCIAL_SECURITY ? salarioBase * AFP_RATE : 0;
-        const aporteFp = APPLIES_SOCIAL_SECURITY && salarioBase >= (SMMLV * FP_SMMLV_THRESHOLD) ? salarioBase * FP_RATE : 0;
-        const seguridadSocial = APPLIES_SOCIAL_SECURITY ? (eps + afp) : 0;
+        const eps = totalDevengos * EPS_RATE;
+        const afp = totalDevengos * AFP_RATE;
+        const seguridadSocial = eps + afp;
 
         const retencion = toNumber(document.getElementById('retencion_fuente').value) || 0;
         const embargo = toNumber(document.getElementById('embargo_fiscal').value) || 0;
         const pensionVol = toNumber(document.getElementById('pension_voluntaria').value) || 0;
 
-        const totalDeducciones = seguridadSocial + aporteFp + retencion + embargo + pensionVol;
+        // Caja de compensacion: solo informativa (aporte empleador), no se deduce al empleado.
+        const totalDeducciones = seguridadSocial + retencion + embargo + pensionVol;
         const neto = totalDevengos - totalDeducciones;
 
         document.getElementById('eps').value = formatInputNumber(eps);
         document.getElementById('afp').value = formatInputNumber(afp);
-        document.getElementById('aporte_fp').value = formatInputNumber(aporteFp);
         document.getElementById('seguridad_social').value = formatInputNumber(seguridadSocial);
 
         document.getElementById('resumen_devengos').textContent = money(totalDevengos);

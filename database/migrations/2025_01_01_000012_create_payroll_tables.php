@@ -18,38 +18,55 @@ return new class extends Migration
             $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
 
-        Schema::create('salario', function (Blueprint $table) {
-            $table->unsignedBigInteger('id_salario')->autoIncrement();
-            $table->unsignedBigInteger('id_contrato');
-            $table->integer('id_periodo');
-            $table->unsignedBigInteger('id_estado')->default(1);
+      Schema::create('salario', function (Blueprint $table) {
+        $table->unsignedBigInteger('id_salario')->autoIncrement();
+        $table->unsignedBigInteger('id_contrato');
+        $table->integer('id_periodo');
+        $table->unsignedBigInteger('id_estado')->default(1);
 
-            $table->decimal('auxilio_transporte', 12, 2)->default(0);
-            $table->decimal('horas_extra', 12, 2)->default(0);
-            $table->decimal('bonificaciones', 12, 2)->default(0);
-            $table->decimal('comisiones', 12, 2)->default(0);
-            $table->decimal('otros_devengos', 12, 2)->default(0);
-            $table->decimal('arl', 12, 2)->default(0);
-            $table->decimal('eps', 12, 2)->default(0);
-            $table->decimal('afp', 12, 2)->default(0);
-            $table->decimal('seguridad_social', 12, 2)->default(0);
-            $table->decimal('aporte_fp', 12, 2)->default(0);
-            $table->decimal('retencion_fuente', 12, 2)->default(0);
-            $table->decimal('embargo_fiscal', 12, 2)->default(0);
-            $table->decimal('pension_voluntaria', 12, 2)->default(0);
+        $table->decimal('auxilio_transporte', 12, 2)->default(0);
+        $table->decimal('horas_extra', 12, 2)->default(0);
+        $table->decimal('bonificaciones', 12, 2)->default(0);
+        $table->decimal('comisiones', 12, 2)->default(0);
+        $table->decimal('otros_devengos', 12, 2)->default(0);
 
-            $table->integer('dias_a_trabajar')->default(0);
-            $table->integer('horas_mensual')->default(0);
-            $table->date('fecha_pago')->nullable();
+        $table->decimal('arl', 12, 2)->default(0);
+        $table->decimal('eps', 12, 2)->default(0);
+        $table->decimal('afp', 12, 2)->default(0);
+        $table->decimal('seguridad_social', 12, 2)->default(0);
+        $table->decimal('aporte_fp', 12, 2)->default(0);
 
-            $table->foreign('id_contrato')->references('id_contrato')->on('contrato');
-            $table->foreign('id_periodo')->references('id_periodo')->on('periodo_liquidacion');
-            $table->foreign('id_estado')->references('id_estado')->on('estado');
+        // 🔹 NUEVO: caja de compensación
+        $table->decimal('caja_compensacion', 12, 2)->default(0);
 
-            $table->dateTime('created_at')->useCurrent();
-            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
-        });
+        $table->decimal('retencion_fuente', 12, 2)->default(0);
+        $table->decimal('embargo_fiscal', 12, 2)->default(0);
+        $table->decimal('pension_voluntaria', 12, 2)->default(0);
 
+        $table->integer('dias_a_trabajar')->default(0);
+        $table->integer('horas_mensual')->default(0);
+        $table->date('fecha_pago')->nullable();
+
+        // 🔹 NUEVAS COLUMNAS IMPORTANTES
+        $table->decimal('total_devengado', 12, 2)->default(0);
+        $table->decimal('total_deducciones', 12, 2)->default(0);
+        $table->decimal('neto_pagar', 12, 2)->default(0);
+
+        $table->foreign('id_contrato')
+            ->references('id_contrato')
+            ->on('contrato');
+
+        $table->foreign('id_periodo')
+            ->references('id_periodo')
+            ->on('periodo_liquidacion');
+
+        $table->foreign('id_estado')
+            ->references('id_estado')
+            ->on('estado');
+
+        $table->dateTime('created_at')->useCurrent();
+        $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
+    });
         Schema::create('provision', function (Blueprint $table) {
             $table->integer('id_provision')->autoIncrement();
             $table->integer('id_periodo');
@@ -85,19 +102,34 @@ return new class extends Migration
         });
 
         Schema::create('hora_recargo_extra', function (Blueprint $table) {
-            $table->integer('id_hora')->autoIncrement();
-            $table->unsignedBigInteger('id_tipo_hora_recargo');
-            $table->unsignedBigInteger('id_salario');
 
-            $table->decimal('cantidad', 12, 2)->default(0);
-            $table->decimal('pago', 12, 2)->default(0);
+    $table->id('id_hora');
 
-            $table->foreign('id_tipo_hora_recargo')->references('id_tipo_hora_recargo')->on('tipo_hora_recargo');
-            $table->foreign('id_salario')->references('id_salario')->on('salario');
+   
+    $table->unsignedBigInteger('id_tipo_hora_recargo');
 
-            $table->dateTime('created_at')->useCurrent();
-            $table->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
-        });
+    
+    $table->unsignedBigInteger('id_salario');
+
+    
+    $table->decimal('cantidad', 5, 2)->default(0);
+
+   
+    $table->decimal('pago', 12, 2)->default(0);
+
+    $table->timestamps();
+
+    
+    $table->foreign('id_tipo_hora_recargo')
+        ->references('id_tipo_hora_recargo')
+        ->on('tipo_hora_recargo')
+        ->onDelete('cascade');
+
+    $table->foreign('id_salario')
+        ->references('id_salario')
+        ->on('salario')
+        ->onDelete('cascade');
+});
     }
 
     public function down(): void

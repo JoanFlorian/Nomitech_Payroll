@@ -21,12 +21,12 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('tipo_hora_recargo', function (Blueprint $table) {
-            $table->unsignedBigInteger('id_tipo_hora_recargo')->autoIncrement(); // ✅
-            $table->string('nombre', 60)->unique();
-            $table->decimal('valor', 12, 2)->default(0);
-            $table->timestamps();
-        });
+       Schema::create('tipo_hora_recargo', function (Blueprint $table) {
+       $table->id('id_tipo_hora_recargo');
+       $table->string('nombre', 60)->unique();
+       $table->decimal('valor', 5, 2)->default(0);
+       $table->timestamps();
+});
     }
 
     public function down(): void

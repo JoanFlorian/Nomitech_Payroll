@@ -137,6 +137,13 @@ class NominaController extends Controller
             ->map(fn($v) => (float) $v)
             ->toArray();
 
+        $detalleEstimado = false;
+        if (empty($detalleHoras) && ($horasExtra > 0 || $recargos > 0)) {
+            // Compatibilidad para registros historicos creados antes de guardar el detalle por tipo.
+            $detalleHoras = $this->estimateDetalleRecargosFromStoredValues($horasExtra, $recargos, $salarioBaseProporcional);
+            $detalleEstimado = !empty($detalleHoras);
+        }
+
         session(['nomina.editing_id' => (int) $registro->id_salario]);
         session(['nomina.step1' => [
             'empleado_busqueda' => trim(($registro->nombre ?? '') . ' - ' . ($registro->doc ?? '')),
@@ -158,6 +165,7 @@ class NominaController extends Controller
             'total_recargos' => $recargos,
             'total_devengos_parcial' => $salarioBaseProporcional + $horasExtra + $recargos,
             'detalle_recargos' => $detalleHoras,
+            'detalle_recargos_estimado' => $detalleEstimado,
         ]]);
         session(['nomina.step2_ingresos' => [
             'bonificaciones' => (float) ($registro->bonificaciones ?? 0),
@@ -283,6 +291,9 @@ class NominaController extends Controller
         $data = $request->validate([
             'horas_extra' => 'nullable|string|max:30',
             'recargos' => 'nullable|string|max:30',
+            'total_horas_extra' => 'nullable|string|max:30',
+            'total_recargos' => 'nullable|string|max:30',
+            'total_devengos_parcial' => 'nullable|string|max:30',
             'detalle_recargos' => 'nullable|array',
             'detalle_recargos.*' => 'nullable|numeric|min:0|max:744',
         ]);
@@ -302,9 +313,26 @@ class NominaController extends Controller
         $totalHorasExtra = $calculoDetalle['total_horas_extra'];
         $totalRecargos = $calculoDetalle['total_recargos'];
 
+        $reqTotalHorasExtra = $this->parseMoneyInput($data['total_horas_extra'] ?? 0);
+        $reqTotalRecargos = $this->parseMoneyInput($data['total_recargos'] ?? 0);
+        $reqTotalParcial = $this->parseMoneyInput($data['total_devengos_parcial'] ?? 0);
+
         // Fallback para compatibilidad si no llega detalle de horas.
         $horasExtra = $totalHorasExtra > 0 ? $totalHorasExtra : $this->parseMoneyInput($data['horas_extra'] ?? 0);
         $recargos = $totalRecargos > 0 ? $totalRecargos : $this->parseMoneyInput($data['recargos'] ?? 0);
+
+        if ($horasExtra <= 0 && $reqTotalHorasExtra > 0) {
+            $horasExtra = $reqTotalHorasExtra;
+        }
+
+        if ($recargos <= 0 && $reqTotalRecargos > 0) {
+            $recargos = $reqTotalRecargos;
+        }
+
+        $totalDevengosParcial = $salarioBasePaso1 + $horasExtra + $recargos;
+        if ($totalDevengosParcial <= 0 && $reqTotalParcial > 0) {
+            $totalDevengosParcial = $reqTotalParcial;
+        }
 
         if ($horasExtra < 0 || $recargos < 0 || $horasExtra > 999999999999 || $recargos > 999999999999) {
             return back()->withErrors([
@@ -318,7 +346,7 @@ class NominaController extends Controller
             // Claves adicionales para compatibilidad con vistas actuales.
             'total_horas_extra' => $horasExtra,
             'total_recargos' => $recargos,
-            'total_devengos_parcial' => $salarioBasePaso1 + $horasExtra + $recargos,
+            'total_devengos_parcial' => $totalDevengosParcial,
             'detalle_recargos' => $detalleRecargos,
         ]]);
 
@@ -334,6 +362,7 @@ class NominaController extends Controller
         $s1 = session('nomina.step1');
         $s2 = session('nomina.step2', []);
         $step2Ingresos = session('nomina.step2_ingresos', []);
+        $editingId = (int) session('nomina.editing_id', 0);
 
         if (!$s1 || !$s2) {
             return redirect()->route('nomina.step2')
@@ -345,6 +374,33 @@ class NominaController extends Controller
         $salarioDiario = $salarioMensual / 30;
         $salarioDevengado = $salarioDiario * $diasTrabajados;
         $salarioBase = $salarioDevengado;
+
+        // En edicion, si por alguna razon la sesion del paso 2 queda en cero,
+        // recuperar montos guardados de la nomina para evitar resumen vacio.
+        if ($editingId > 0) {
+            $horasS2 = (float) ($s2['horas_extra'] ?? $s2['total_horas_extra'] ?? 0);
+            $recargosS2 = (float) ($s2['recargos'] ?? $s2['total_recargos'] ?? 0);
+
+            if ($horasS2 <= 0 && $recargosS2 <= 0) {
+                $salarioEdit = DB::table('salario')
+                    ->where('id_salario', $editingId)
+                    ->first(['horas_extra', 'valor_horas_extras_recargos']);
+
+                if ($salarioEdit) {
+                    $horasBd = (float) ($salarioEdit->horas_extra ?? 0);
+                    $recargosBd = max(0, (float) ($salarioEdit->valor_horas_extras_recargos ?? 0) - $horasBd);
+
+                    $s2['horas_extra'] = $horasBd;
+                    $s2['recargos'] = $recargosBd;
+                    $s2['total_horas_extra'] = $horasBd;
+                    $s2['total_recargos'] = $recargosBd;
+                    $s2['total_devengos_parcial'] = $salarioBase + $horasBd + $recargosBd;
+
+                    session(['nomina.step2' => $s2]);
+                }
+            }
+        }
+
         $step2AutoRecalculated = false;
         $detalleRecargos = (array) ($s2['detalle_recargos'] ?? []);
         if (!empty($detalleRecargos)) {
@@ -372,6 +428,22 @@ class NominaController extends Controller
 
             $s2['horas_extra'] = max(0, $this->parseMoneyInput($s2['horas_extra'] ?? 0));
             $s2['recargos'] = max(0, $this->parseMoneyInput($s2['recargos'] ?? 0));
+
+            // Topes de plausibilidad basados en normativa por hora para evitar cifras absurdas heredadas.
+            $valorHora = $salarioBase > 0 ? ($salarioBase / 240) : 0;
+            $maxHorasExtraPlausible = $valorHora * 2.5 * 744; // extra mas alta
+            $maxRecargosPlausible = $valorHora * 0.75 * 744; // recargo mas alto solicitado
+
+            if ($maxHorasExtraPlausible > 0 && $s2['horas_extra'] > ($maxHorasExtraPlausible * 3)) {
+                $s2['horas_extra'] = 0;
+                $step2AutoRecalculated = true;
+            }
+
+            if ($maxRecargosPlausible > 0 && $s2['recargos'] > ($maxRecargosPlausible * 3)) {
+                $s2['recargos'] = 0;
+                $step2AutoRecalculated = true;
+            }
+
             $s2['total_horas_extra'] = $s2['horas_extra'];
             $s2['total_recargos'] = $s2['recargos'];
             $s2['total_devengos_parcial'] = $salarioBase + $s2['horas_extra'] + $s2['recargos'];
@@ -950,5 +1022,67 @@ class NominaController extends Controller
         if (!empty($rows)) {
             DB::table('hora_recargo_extra')->insert($rows);
         }
+    }
+
+    private function estimateDetalleRecargosFromStoredValues(float $valorHorasExtra, float $valorRecargos, float $salarioBaseProporcional): array
+    {
+        if ($salarioBaseProporcional <= 0) {
+            return [];
+        }
+
+        $tipos = DB::table('tipo_hora_recargo')
+            ->select('id_tipo_hora_recargo', 'nombre', 'valor')
+            ->get();
+
+        if ($tipos->isEmpty()) {
+            return [];
+        }
+
+        $valorHora = $salarioBaseProporcional / 240;
+        if ($valorHora <= 0) {
+            return [];
+        }
+
+        $extraTipo = $tipos->first(function ($tipo) {
+            $nombre = mb_strtolower((string) ($tipo->nombre ?? ''), 'UTF-8');
+            return str_contains($nombre, 'hora extra diurna');
+        }) ?? $tipos->first(function ($tipo) {
+            $nombre = mb_strtolower((string) ($tipo->nombre ?? ''), 'UTF-8');
+            return str_contains($nombre, 'extra');
+        });
+
+        $recargoTipo = $tipos->first(function ($tipo) {
+            $nombre = mb_strtolower((string) ($tipo->nombre ?? ''), 'UTF-8');
+            return str_contains($nombre, 'recargo nocturno');
+        }) ?? $tipos->first(function ($tipo) {
+            $nombre = mb_strtolower((string) ($tipo->nombre ?? ''), 'UTF-8');
+            return str_contains($nombre, 'recargo');
+        });
+
+        $detalle = [];
+
+        if ($extraTipo && $valorHorasExtra > 0) {
+            $factorExtra = $this->normalizeRecargoMultiplier((string) ($extraTipo->nombre ?? ''), (float) ($extraTipo->valor ?? 0));
+            if ($factorExtra > 0) {
+                $cantidadExtra = (int) round($valorHorasExtra / ($valorHora * $factorExtra));
+                $cantidadExtra = max(0, min(744, $cantidadExtra));
+                if ($cantidadExtra > 0) {
+                    $detalle[(int) $extraTipo->id_tipo_hora_recargo] = $cantidadExtra;
+                }
+            }
+        }
+
+        if ($recargoTipo && $valorRecargos > 0) {
+            $factorRecargo = $this->normalizeRecargoMultiplier((string) ($recargoTipo->nombre ?? ''), (float) ($recargoTipo->valor ?? 0));
+            if ($factorRecargo > 0) {
+                $cantidadRecargo = (int) round($valorRecargos / ($valorHora * $factorRecargo));
+                $cantidadRecargo = max(0, min(744, $cantidadRecargo));
+                if ($cantidadRecargo > 0) {
+                    $detalle[(int) $recargoTipo->id_tipo_hora_recargo] = $cantidadRecargo;
+                }
+            }
+        }
+
+        return $detalle;
     }
 }

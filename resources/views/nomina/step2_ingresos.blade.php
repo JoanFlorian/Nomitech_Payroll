@@ -10,6 +10,9 @@
 @php($aplicaTope = (bool) ($aplicaPorTope ?? true))
 @php($aplicaAuxilio = (int) old('aplica_auxilio_transporte', $s3['aplica_auxilio_transporte'] ?? ($auxilioDb > 0 ? 1 : 0)))
 @php($auxilioActual = (float) old('auxilio_transporte', $s3['auxilio_transporte'] ?? ($aplicaAuxilio ? $auxilioDb : 0)))
+@php($totalHorasExtraS2 = (float) ($s2['total_horas_extra'] ?? $s2['horas_extra'] ?? 0))
+@php($totalRecargosS2 = (float) ($s2['total_recargos'] ?? $s2['recargos'] ?? 0))
+@php($totalParcialS2 = (float) ($s2['total_devengos_parcial'] ?? (($salarioBase ?? 0) + $totalHorasExtraS2 + $totalRecargosS2)))
 
 <div class="relative">
 
@@ -111,9 +114,9 @@
                             @csrf
 
                             <input type="hidden" id="salario_base_mensual" value="{{ $salarioBase ?? 0 }}">
-                            <input type="hidden" id="total_horas_extra" value="{{ $s2['total_horas_extra'] ?? 0 }}">
-                            <input type="hidden" id="total_recargos" value="{{ $s2['total_recargos'] ?? 0 }}">
-                            <input type="hidden" id="total_devengos_parcial" value="{{ $s2['total_devengos_parcial'] ?? 0 }}">
+                            <input type="hidden" id="total_horas_extra" value="{{ $totalHorasExtraS2 }}">
+                            <input type="hidden" id="total_recargos" value="{{ $totalRecargosS2 }}">
+                            <input type="hidden" id="total_devengos_parcial" value="{{ $totalParcialS2 }}">
                             <input type="hidden" id="auxilio_base_db" value="{{ $auxilioDb }}">
                             <input type="hidden" id="aplica_por_tope" value="{{ $aplicaTope ? 1 : 0 }}">
 
@@ -257,10 +260,18 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const MAX_OTROS_INGRESOS = 999999999999;
+    const MAX_RESUMEN_VALOR = 999999999999;
 
     const inputs = document.querySelectorAll('.devengo-input');
 
-    const asPesos = (value) => Math.round(Number(value || 0));
+    const sanitizeCurrencyValue = (raw) => {
+        const value = Number(raw || 0);
+        if (!Number.isFinite(value) || value < 0) return 0;
+        if (value > MAX_RESUMEN_VALOR) return 0;
+        return value;
+    };
+
+    const asPesos = (value) => Math.round(sanitizeCurrencyValue(value));
     const money = v => new Intl.NumberFormat('es-CO',{
         style:'currency',
         currency:'COP',
@@ -291,7 +302,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 normalized = normalized.replace(/\./g, '');
             } else {
                 const parts = normalized.split('.');
-                if (parts.length === 2 && parts[1].length >= 3 && parts[0].length >= 1) {
+                // Solo tratar como miles cuando el bloque final es exactamente de 3 digitos (ej: 13.906).
+                if (parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1) {
                     normalized = normalized.replace('.', '');
                 }
             }
@@ -301,7 +313,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 normalized = normalized.replace(/,/g, '');
             } else {
                 const parts = normalized.split(',');
-                if (parts.length === 2 && parts[1].length >= 3 && parts[0].length >= 1) {
+                // Solo tratar como miles cuando el bloque final es exactamente de 3 digitos (ej: 13,906).
+                if (parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1) {
                     normalized = normalized.replace(',', '');
                 } else {
                     normalized = normalized.replace(',', '.');
@@ -318,9 +331,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return Number.isFinite(num) && num >= 0 ? num : 0;
     };
 
-    const salarioBase = toNumber(document.getElementById('salario_base_mensual')?.value || 0);
-    const totalHorasExtra = toNumber(document.getElementById('total_horas_extra')?.value || 0);
-    const totalRecargos = toNumber(document.getElementById('total_recargos')?.value || 0);
+    const salarioBase = sanitizeCurrencyValue(toNumber(document.getElementById('salario_base_mensual')?.value || 0));
+    const totalHorasExtra = sanitizeCurrencyValue(toNumber(document.getElementById('total_horas_extra')?.value || 0));
+    const totalRecargos = sanitizeCurrencyValue(toNumber(document.getElementById('total_recargos')?.value || 0));
     const auxilioBaseDb = toNumber(document.getElementById('auxilio_base_db')?.value || 0);
     const aplicaPorTope = Number(document.getElementById('aplica_por_tope')?.value || 0) === 1;
 
@@ -368,8 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const calcular = () => {
-        const totalHorasRecargos = totalHorasExtra + totalRecargos;
-        const parcial = salarioBase + totalHorasRecargos;
+        const totalHorasRecargosRaw = totalHorasExtra + totalRecargos;
+        const parcialRaw = salarioBase + totalHorasRecargosRaw;
 
         const otros =
             get('bonificaciones') +
@@ -377,7 +390,9 @@ document.addEventListener('DOMContentLoaded', () => {
             get('otros_devengos') +
             obtenerAuxilioActual();
 
-        const final = parcial + otros;
+        const totalHorasRecargos = sanitizeCurrencyValue(totalHorasRecargosRaw);
+        const parcial = sanitizeCurrencyValue(parcialRaw);
+        const final = sanitizeCurrencyValue(parcial + otros);
 
         document.getElementById('resumen_horas_recargos').textContent = money(totalHorasRecargos);
         document.getElementById('resumen_parcial').textContent = money(parcial);

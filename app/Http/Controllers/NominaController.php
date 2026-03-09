@@ -790,6 +790,21 @@ class NominaController extends Controller
             ->get();
     }
 
+    public function checkDuplicate(int $idContrato)
+    {
+        $periodoId = session('active_period_id');
+        if (!$periodoId) {
+            return response()->json(['duplicate' => false]);
+        }
+
+        $exists = DB::table('salario')
+            ->where('id_contrato', $idContrato)
+            ->where('id_periodo', $periodoId)
+            ->exists();
+
+        return response()->json(['duplicate' => $exists]);
+    }
+
     /* ==========================
        GUARDAR NÓMINA
     ========================== */

@@ -1,4 +1,6 @@
-@php($salarios = $salarios ?? collect())
+@php
+    $salarios = $salarios ?? collect();
+@endphp
 
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
@@ -92,7 +94,7 @@
                         Cambiar Periodo
                     </a>
 
-                    @if($periodoActivo->estado === \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO)
+                    @if($periodoActivo->estado === \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO && $periodoActivo->canBeClosed())
                         <button type="button"
                             onclick="abrirModalCierre({{ $periodoActivo->id_periodo }}, '{{ $periodoActivo->fecha_inicio->format('d/m/Y') }}', '{{ $periodoActivo->fecha_fin->format('d/m/Y') }}')"
                             class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-red-200 transition hover:bg-red-700">
@@ -202,6 +204,7 @@
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-center font-semibold tracking-wide w-14">Sel.</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-left font-semibold tracking-wide">Documento</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-left font-semibold tracking-wide">Empleado</th>
+                        <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-center font-semibold tracking-wide">Estado</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-right font-semibold tracking-wide">Salario inicial</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-right font-semibold tracking-wide">Devengos</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-right font-semibold tracking-wide">Deducciones</th>
@@ -231,6 +234,26 @@
                             <td class="px-4 py-3 font-semibold text-slate-900">
                                 {{ \Illuminate\Support\Str::title(mb_strtolower((string) ($salario->contrato->usuario->nombre_completo ?? ''))) }}
                             </td>
+                            
+                            <td class="px-4 py-3 text-center">
+                                @php
+                                    $estadoActual = $salario->estado ?? 'pendiente';
+                                    $badgeStyle = 'bg-slate-100 text-slate-800 border-slate-200';
+                                    $badgeIcon = 'bi-clock-history';
+
+                                    if ($estadoActual === 'pagado') {
+                                        $badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                                        $badgeIcon = 'bi-check-circle-fill';
+                                    } elseif ($estadoActual === 'liquidado') {
+                                        $badgeStyle = 'bg-blue-100 text-blue-800 border-blue-200';
+                                        $badgeIcon = 'bi-calculator-fill';
+                                    }
+                                @endphp
+                                <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase {{ $badgeStyle }}">
+                                    <i class="bi {{ $badgeIcon }}"></i>
+                                    {{ $estadoActual }}
+                                </span>
+                            </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right text-slate-700">
                                 ${{ number_format($salario->contrato->salario_base ?? 0, 0, ',', '.') }}
@@ -244,12 +267,14 @@
                                 -${{ number_format($salario->total_deducciones, 0, ',', '.') }}
                             </td>
 
-                            @php($totalNovedades = (float) ($salario->total_novedades ?? 0))
-                            <td class="whitespace-nowrap px-4 py-3 text-right font-semibold {{ $totalNovedades > 0 ? 'text-emerald-700' : ($totalNovedades < 0 ? 'text-red-600' : 'text-slate-400') }}">
-                                @if($totalNovedades > 0)
-                                    +${{ number_format($totalNovedades, 0, ',', '.') }}
-                                @elseif($totalNovedades < 0)
-                                    -${{ number_format(abs($totalNovedades), 0, ',', '.') }}
+                            @php
+                                $totalNovedadesVal = (float) ($salario->total_novedades ?? 0);
+                            @endphp
+                            <td class="whitespace-nowrap px-4 py-3 text-right font-semibold {{ $totalNovedadesVal > 0 ? 'text-emerald-700' : ($totalNovedadesVal < 0 ? 'text-red-600' : 'text-slate-400') }}">
+                                @if($totalNovedadesVal > 0)
+                                    +${{ number_format($totalNovedadesVal, 0, ',', '.') }}
+                                @elseif($totalNovedadesVal < 0)
+                                    -${{ number_format(abs($totalNovedadesVal), 0, ',', '.') }}
                                 @else
                                     $0
                                 @endif
@@ -261,7 +286,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="py-14 text-center">
+                            <td colspan="9" class="py-14 text-center">
                                 <div class="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                                     <i class="bi bi-table"></i>
                                 </div>

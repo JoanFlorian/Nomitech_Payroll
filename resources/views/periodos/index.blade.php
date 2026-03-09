@@ -138,11 +138,13 @@
                                 </a>
 
                                 {{-- Boton Cerrar --}}
-                                <button type="button"
-                                    onclick="abrirModalCierre({{ $periodo->id_periodo }}, '{{ $periodo->fecha_inicio->format('d/m/Y') }}', '{{ $periodo->fecha_fin->format('d/m/Y') }}')"
-                                    class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
-                                    Cerrar
-                                </button>
+                                @if($periodo->canBeClosed())
+                                    <button type="button"
+                                        onclick="abrirModalCierre({{ $periodo->id_periodo }}, '{{ $periodo->fecha_inicio->format('d/m/Y') }}', '{{ $periodo->fecha_fin->format('d/m/Y') }}')"
+                                        class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
+                                        Cerrar
+                                    </button>
+                                @endif
                             @endif
 
                             @if($periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO)

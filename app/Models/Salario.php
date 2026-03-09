@@ -9,8 +9,9 @@ class Salario extends Model
     protected $table = 'salario';
 
     // Estados de Salario (Nómina)
+    public const ESTADO_PENDIENTE = 'pendiente';
     public const ESTADO_LIQUIDADO = 'liquidado';
-    public const ESTADO_BORRADOR = 'borrador';
+    public const ESTADO_PAGADO = 'pagado';
 
     protected $appends = [
         'total_devengos',

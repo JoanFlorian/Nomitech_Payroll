@@ -104,6 +104,11 @@ class PeriodoLiquidacion extends Model
         return $this->hasMany(Provision::class, 'id_periodo', 'id_periodo');
     }
 
+    public function benefitLedgerEntries()
+    {
+        return $this->hasMany(BenefitLedger::class, 'period_id', 'id_periodo');
+    }
+
     public function open()
     {
         $this->update(['estado' => self::ESTADO_ABIERTO]);
@@ -112,5 +117,22 @@ class PeriodoLiquidacion extends Model
     public function close()
     {
         $this->update(['estado' => self::ESTADO_CERRADO]);
+    }
+
+    /**
+     * Determina si el periodo puede ser cerrado basado en la fecha actual.
+     * El cierre se permite desde el día fin hasta 10 días después.
+     */
+    public function canBeClosed(): bool
+    {
+        if ($this->estado === self::ESTADO_CERRADO) {
+            return false;
+        }
+
+        $now = now()->startOfDay();
+        $fechaFin = \Carbon\Carbon::parse($this->fecha_fin)->startOfDay();
+        $limiteCierre = $fechaFin->copy()->addDays(10);
+
+        return $now->greaterThanOrEqualTo($fechaFin) && $now->lessThanOrEqualTo($limiteCierre);
     }
 }

@@ -1,0 +1,10 @@
+﻿--- Testing: Before Day 20 (Date: 2026-03-05) ---
+Resulting Period: 2026-03-01 to 2026-03-31
+SUCCESS: Period starts on expected date.
+
+--- Testing: After Day 20 (Date: 2026-03-25) ---
+Resulting Period: 2026-04-01 to 2026-04-30
+SUCCESS: Period starts on expected date.
+
+--- Testing: Renewal with Closed Period ---
+New Period after renewal: 2026-04-01

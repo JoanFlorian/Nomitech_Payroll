@@ -423,8 +423,13 @@ class UpdateEmployeePartialRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // Mapear alto_riesgo a 0 o 1 solo si está presente
-        if ($this->has('alto_riesgo')) {
+        // Derivar alto_riesgo desde nivel_riesgo para mantener consistencia.
+        $nivelRiesgo = (string) $this->input('nivel_riesgo', '');
+        $altoRiesgoFromNivel = $this->resolveHighRiskFromNivel($nivelRiesgo);
+
+        if ($altoRiesgoFromNivel !== null && $this->has('nivel_riesgo')) {
+            $this->merge(['alto_riesgo' => $altoRiesgoFromNivel]);
+        } elseif ($this->has('alto_riesgo')) {
             if (is_null($this->input('alto_riesgo')) || $this->input('alto_riesgo') === '') {
                 $this->merge(['alto_riesgo' => 0]);
             } else {
@@ -457,6 +462,28 @@ class UpdateEmployeePartialRequest extends FormRequest
                 $this->merge(['salario' => $salarioNormalizado]);
             }
         }
+    }
+
+    private function resolveHighRiskFromNivel(string $nivelRiesgo): ?int
+    {
+        if ($nivelRiesgo === '') {
+            return null;
+        }
+
+        $normalized = Str::of($nivelRiesgo)
+            ->ascii()
+            ->upper()
+            ->toString();
+
+        if (Str::contains($normalized, ['III', 'IV', 'V', '3', '4', '5'])) {
+            return 1;
+        }
+
+        if (Str::contains($normalized, ['II', 'I', '2', '1'])) {
+            return 0;
+        }
+
+        return null;
     }
 
     private function normalizeLocalizedNumber(mixed $value): ?float

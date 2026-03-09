@@ -110,6 +110,7 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
 
     // Novedades y Reportes
     Route::get('/novedades', [NovedadController::class, 'index'])->name('novedades.index');
+    Route::get('/novedades/historial', [NovedadController::class, 'historialContrato'])->name('novedades.historial');
     Route::post('/novedades/calculo/preview', [NovedadCalculoController::class, 'preview'])->name('novedades.calculo.preview');
     Route::post('/novedades', [NovedadController::class, 'store'])->name('novedades.store');
     Route::put('/novedades/{id_novedad}', [NovedadController::class, 'update'])->name('novedades.update');

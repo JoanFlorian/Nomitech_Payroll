@@ -164,7 +164,7 @@
     </div>
 
     <div class="mt-10 flex justify-end gap-3">
-        <button type="button" @click="closeModals()"
+        <button type="button" @click="closeModals({ discardProgress: true })"
             class="bg-gray-200 text-gray-800 font-medium py-2 px-6 rounded-md hover:bg-gray-300 transition">
             Cancelar
         </button>

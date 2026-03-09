@@ -276,6 +276,12 @@ class NominaController extends Controller
                 'total_novedades' => DB::table('novedad')
                     ->selectRaw('COALESCE(SUM(pago), 0)')
                     ->whereColumn('novedad.id_salario', 'salario.id_salario'),
+                'total_novedades_devengado' => DB::table('novedad')
+                    ->selectRaw('COALESCE(SUM(CASE WHEN pago > 0 THEN pago ELSE 0 END), 0)')
+                    ->whereColumn('novedad.id_salario', 'salario.id_salario'),
+                'total_novedades_deduccion' => DB::table('novedad')
+                    ->selectRaw('COALESCE(SUM(CASE WHEN pago < 0 THEN ABS(pago) ELSE 0 END), 0)')
+                    ->whereColumn('novedad.id_salario', 'salario.id_salario'),
             ])
             ->whereHas('contrato', function ($q) use ($empresaId) {
                 $q->where('id_empresa', $empresaId);

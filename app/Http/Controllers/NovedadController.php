@@ -4,28 +4,33 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreNovedadEmpleadoRequest;
 use App\Http\Requests\UpdateNovedadEmpleadoRequest;
-use App\Models\Empleado;
 use App\Models\Novedad;
+use App\Models\Eps;
+use App\Models\Afp;
+use App\Models\Arl;
 use App\Models\Salario;
 use App\Models\TipoNovedad;
 use App\Services\CalculoNovedadService;
+use Illuminate\Support\Facades\DB;
 
 class NovedadController extends Controller
 {
     private const TIPOS_NOVEDAD_LABELS = [
-        'incapacidad_enfermedad_general' => 'Incapacidad enfermedad general',
-        'incapacidad_laboral_arl' => 'Incapacidad laboral (ARL)',
-        'licencia_maternidad' => 'Licencia de maternidad',
-        'licencia_paternidad' => 'Licencia de paternidad',
-        'licencia_luto' => 'Licencia por luto',
-        'licencia_remunerada' => 'Licencia remunerada',
-        'licencia_no_remunerada' => 'Licencia no remunerada',
-        'calamidad_domestica' => 'Calamidad doméstica',
-        'cita_medica' => 'Cita médica',
-        'permiso_remunerado' => 'Permiso remunerado',
-        'permiso_no_remunerado' => 'Permiso no remunerado',
-        'ausencia_injustificada' => 'Ausencia injustificada',
-        'suspension_contrato' => 'Suspensión del contrato',
+        'TDE' => 'TDE - Traslado desde EPS',
+        'TAE' => 'TAE - Traslado a EPS',
+        'TDP' => 'TDP - Traslado desde AFP',
+        'TAP' => 'TAP - Traslado a AFP',
+        'VSP' => 'VSP - Variación permanente de salario',
+        'VST' => 'VST - Variación transitoria de salario',
+        'SLN' => 'SLN - Suspensión o licencia no remunerada',
+        'IGE' => 'IGE - Incapacidad enfermedad general',
+        'IRL' => 'IRL - Incapacidad riesgo laboral',
+        'LMAT' => 'LMAT - Licencia de maternidad',
+        'LPAT' => 'LPAT - Licencia de paternidad',
+        'VAC' => 'VAC - Vacaciones',
+        'VCT' => 'VCT - Variación centro de trabajo',
+        'INC' => 'INC - Incapacidad',
+        'LIC' => 'LIC - Licencia',
     ];
 
     public function __construct(private readonly CalculoNovedadService $calculoNovedadService)
@@ -36,24 +41,46 @@ class NovedadController extends Controller
     {
         $empresaId = (int) session('empresa_id');
 
-        $empleados = Empleado::query()
-            ->select('doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido')
-            ->whereHas('contratos.salarios')
-            ->orderBy('primer_nombre')
-            ->orderBy('primer_apellido')
-            ->limit(800)
-            ->get();
+        if ($empresaId <= 0) {
+            return view('novedades.index', [
+                'novedades' => collect(),
+                'empleadosBusqueda' => collect(),
+                'epsList' => Eps::query()->orderBy('nombre')->get(['id_eps', 'nombre']),
+                'afpList' => Afp::query()->orderBy('nombre')->get(['id_afp', 'nombre']),
+                'arlList' => Arl::query()->orderBy('nombre')->get(['id_arl', 'nombre']),
+            ]);
+        }
 
-        $docs = $empleados->pluck('doc')->filter()->values();
+        $buildEmpleadoQuery = static function (int $empresaFilterId) {
+            return DB::table('usuario')
+                ->join('contrato', 'contrato.doc', '=', 'usuario.doc')
+                ->where('contrato.id_empresa', $empresaFilterId)
+                ->where(function ($query) {
+                    $query->where('contrato.activo', true)
+                        ->orWhere('contrato.estado_laboral', 1)
+                        ->orWhere('contrato.estado_nomina', 1);
+                })
+                ->selectRaw('usuario.doc as doc')
+                ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_nombre, usuario.otros_nombres, usuario.primer_apellido, usuario.segundo_apellido)) as nombre_completo")
+                ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_nombre, usuario.otros_nombres)) as nombres")
+                ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_apellido, usuario.segundo_apellido)) as apellidos")
+                ->selectRaw('contrato.salario_base as salario_base')
+                ->orderBy('usuario.primer_nombre')
+                ->orderBy('usuario.primer_apellido')
+                ->limit(800);
+        };
 
-        $salarios = Salario::query()
-            ->join('contrato', 'contrato.id_contrato', '=', 'salario.id_contrato')
-            ->whereIn('contrato.doc', $docs)
-            ->select('contrato.doc', 'contrato.salario_base as contrato_salario_base', 'salario.id_salario')
-            ->orderByDesc('salario.id_salario')
-            ->get()
-            ->groupBy('doc')
-            ->map(fn ($rows) => (float) ($rows->first()->contrato_salario_base ?? 0));
+        $empleadosRows = $buildEmpleadoQuery($empresaId)->get();
+
+        $empleadosBusqueda = $empleadosRows
+            ->map(fn ($row) => [
+                'doc' => (string) $row->doc,
+                'nombres' => (string) ($row->nombres ?? ''),
+                'apellidos' => (string) ($row->apellidos ?? ''),
+                'nombre_completo' => (string) ($row->nombre_completo ?? ''),
+                'salario_base' => (float) ($row->salario_base ?? 0),
+            ])
+            ->values();
 
         $novedades = Novedad::query()
             ->with(['tipoNovedad', 'salario.contrato.usuario'])
@@ -65,74 +92,87 @@ class NovedadController extends Controller
             ->orderByDesc('id_novedad')
             ->get();
 
-        $empleadosBusqueda = $empleados
-            ->map(function (Empleado $empleado) use ($salarios) {
-                $nombres = trim(implode(' ', array_filter([
-                    $empleado->primer_nombre,
-                    $empleado->otros_nombres,
-                ])));
-
-                $apellidos = trim(implode(' ', array_filter([
-                    $empleado->primer_apellido,
-                    $empleado->segundo_apellido,
-                ])));
-
-                return [
-                    'doc' => $empleado->doc,
-                    'nombres' => $nombres,
-                    'apellidos' => $apellidos,
-                    'nombre_completo' => trim($nombres . ' ' . $apellidos),
-                    'salario_base' => (float) ($salarios[$empleado->doc] ?? 0),
-                ];
-            })
-            ->values();
-
         return view('novedades.index', [
             'novedades' => $novedades,
             'empleadosBusqueda' => $empleadosBusqueda,
+            'epsList' => Eps::query()->orderBy('nombre')->get(['id_eps', 'nombre']),
+            'afpList' => Afp::query()->orderBy('nombre')->get(['id_afp', 'nombre']),
+            'arlList' => Arl::query()->orderBy('nombre')->get(['id_arl', 'nombre']),
+        ]);
+    }
+
+    public function historialContrato()
+    {
+        $empresaId = (int) session('empresa_id');
+
+        $query = DB::table('historial_contrato as h')
+            ->join('contrato as c', 'c.id_contrato', '=', 'h.id_contrato')
+            ->leftJoin('usuario as u', 'u.doc', '=', 'c.doc')
+            ->leftJoin('eps as eps_anterior', function ($join) {
+                $join->on('eps_anterior.id_eps', '=', 'h.dato_anterior')
+                    ->where('h.tipo_novedad', '=', 'EPS');
+            })
+            ->leftJoin('eps as eps_nueva', function ($join) {
+                $join->on('eps_nueva.id_eps', '=', 'h.dato_nuevo')
+                    ->where('h.tipo_novedad', '=', 'EPS');
+            })
+            ->leftJoin('afp as afp_anterior', function ($join) {
+                $join->on('afp_anterior.id_afp', '=', 'h.dato_anterior')
+                    ->where('h.tipo_novedad', '=', 'AFP');
+            })
+            ->leftJoin('afp as afp_nueva', function ($join) {
+                $join->on('afp_nueva.id_afp', '=', 'h.dato_nuevo')
+                    ->where('h.tipo_novedad', '=', 'AFP');
+            })
+            ->select(
+                'h.id_historial',
+                'h.id_contrato',
+                'h.dato_anterior',
+                'h.dato_nuevo',
+                'h.tipo_novedad',
+                'h.fecha_cambio',
+                'c.doc',
+                DB::raw("TRIM(CONCAT_WS(' ', u.primer_nombre, u.otros_nombres, u.primer_apellido, u.segundo_apellido)) as nombre_completo"),
+                DB::raw("CASE
+                    WHEN h.tipo_novedad = 'EPS' THEN COALESCE(eps_anterior.nombre, h.dato_anterior)
+                    WHEN h.tipo_novedad = 'AFP' THEN COALESCE(afp_anterior.nombre, h.dato_anterior)
+                    ELSE h.dato_anterior
+                END as dato_anterior_label"),
+                DB::raw("CASE
+                    WHEN h.tipo_novedad = 'EPS' THEN COALESCE(eps_nueva.nombre, h.dato_nuevo)
+                    WHEN h.tipo_novedad = 'AFP' THEN COALESCE(afp_nueva.nombre, h.dato_nuevo)
+                    ELSE h.dato_nuevo
+                END as dato_nuevo_label")
+            )
+            ->orderByDesc('h.fecha_cambio');
+
+        if ($empresaId > 0) {
+            $query->where('c.id_empresa', $empresaId);
+        }
+
+        $historial = $query->limit(500)->get();
+
+        return view('novedades.historial', [
+            'historial' => $historial,
+            'empresaId' => $empresaId,
         ]);
     }
 
     public function store(StoreNovedadEmpleadoRequest $request)
     {
         $data = $request->validated();
-        $salario = $this->calculoNovedadService->obtenerSalarioEmpleado((string) $data['empleado_id']);
+        $salario = $this->resolveEmpleadoSalario((string) $data['empleado_id']);
 
         if (!$salario) {
-            return back()
-                ->withErrors(['empleado_id' => 'El empleado seleccionado no tiene una nómina registrada para asociar la novedad.'])
-                ->withInput()
-                ->with('open_novedad_modal', true);
+            return $this->buildEmpleadoSalarioErrorResponse(true);
         }
 
-        $tipoNombre = $this->resolverNombreTipoNovedad((string) $data['tipo_novedad']);
-        $tipoNovedad = TipoNovedad::firstOrCreate(['nombre' => $tipoNombre]);
+        $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
+        $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre);
 
-        $salarioBase = (float) ($salario->contrato_salario_base ?? optional($salario->contrato)->salario_base ?? 0);
-        $valorCalculado = $this->calculoNovedadService->calcularValor($data, $salarioBase);
-        $dias = (float) ($data['dias'] ?? 0);
-        $horas = (float) ($data['horas'] ?? 0);
+        Novedad::create($payload);
 
-        Novedad::create([
-            'id_tipo_novedad' => $tipoNovedad->id_tipo_novedad,
-            'id_salario' => $salario->id_salario,
-            'empleado_id' => $data['empleado_id'],
-            'tipo_novedad_nombre' => $tipoNombre,
-            'fecha' => $data['fecha_inicio'],
-            'fecha_inicio' => $data['fecha_inicio'],
-            'fecha_fin' => $data['fecha_fin'],
-            'unidad_cantidad' => $data['unidad_cantidad'],
-            'dias' => $dias,
-            'horas' => $horas,
-            'cantidad' => $data['unidad_cantidad'] === 'horas' ? $horas : $dias,
-            'es_remunerado' => (bool) ($data['es_remunerado'] ?? false),
-            'salario_base' => $salarioBase,
-            'valor_calculado' => $valorCalculado,
-            'valor_novedad' => $valorCalculado,
-            'pago' => $valorCalculado,
-            'pago_manual' => $data['pago_manual'] ?? null,
-            'observaciones' => $data['observaciones'] ?? null,
-        ]);
+        $this->aplicarEfectosNovedad($data, $salario);
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se registró correctamente.');
     }
@@ -142,41 +182,17 @@ class NovedadController extends Controller
         $novedad = Novedad::query()->findOrFail($id_novedad);
         $data = $request->validated();
 
-        $salario = $this->calculoNovedadService->obtenerSalarioEmpleado((string) $data['empleado_id']);
+        $salario = $this->resolveEmpleadoSalario((string) $data['empleado_id']);
         if (!$salario) {
-            return back()
-                ->withErrors(['empleado_id' => 'El empleado seleccionado no tiene una nómina registrada para asociar la novedad.'])
-                ->withInput();
+            return $this->buildEmpleadoSalarioErrorResponse(false);
         }
 
-        $tipoNombre = $this->resolverNombreTipoNovedad((string) $data['tipo_novedad']);
-        $tipoNovedad = TipoNovedad::firstOrCreate(['nombre' => $tipoNombre]);
+        $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
+        $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre);
 
-        $salarioBase = (float) ($salario->contrato_salario_base ?? optional($salario->contrato)->salario_base ?? 0);
-        $valorCalculado = $this->calculoNovedadService->calcularValor($data, $salarioBase);
-        $dias = (float) ($data['dias'] ?? 0);
-        $horas = (float) ($data['horas'] ?? 0);
+        $novedad->update($payload);
 
-        $novedad->update([
-            'id_tipo_novedad' => $tipoNovedad->id_tipo_novedad,
-            'id_salario' => $salario->id_salario,
-            'empleado_id' => $data['empleado_id'],
-            'tipo_novedad_nombre' => $tipoNombre,
-            'fecha' => $data['fecha_inicio'],
-            'fecha_inicio' => $data['fecha_inicio'],
-            'fecha_fin' => $data['fecha_fin'],
-            'unidad_cantidad' => $data['unidad_cantidad'],
-            'dias' => $dias,
-            'horas' => $horas,
-            'cantidad' => $data['unidad_cantidad'] === 'horas' ? $horas : $dias,
-            'es_remunerado' => (bool) ($data['es_remunerado'] ?? false),
-            'salario_base' => $salarioBase,
-            'valor_calculado' => $valorCalculado,
-            'valor_novedad' => $valorCalculado,
-            'pago' => $valorCalculado,
-            'pago_manual' => $data['pago_manual'] ?? null,
-            'observaciones' => $data['observaciones'] ?? null,
-        ]);
+        $this->aplicarEfectosNovedad($data, $salario);
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se actualizó correctamente.');
     }
@@ -190,8 +206,117 @@ class NovedadController extends Controller
 
     private function resolverNombreTipoNovedad(string $tipoNovedad): string
     {
-        $key = strtolower(trim($tipoNovedad));
+        $key = strtoupper(trim($tipoNovedad));
 
         return self::TIPOS_NOVEDAD_LABELS[$key] ?? ucfirst(str_replace('_', ' ', $key));
+    }
+
+    private function resolveEmpleadoSalario(string $empleadoId): ?Salario
+    {
+        return $this->calculoNovedadService->obtenerSalarioEmpleado($empleadoId);
+    }
+
+    private function buildEmpleadoSalarioErrorResponse(bool $openModal)
+    {
+        $response = back()
+            ->withErrors(['empleado_id' => 'El empleado seleccionado no tiene una nómina registrada para asociar la novedad.'])
+            ->withInput();
+
+        return $openModal ? $response->with('open_novedad_modal', true) : $response;
+    }
+
+    private function resolveTipoNovedad(string $tipoNovedad): TipoNovedad
+    {
+        $nombre = $this->resolverNombreTipoNovedad($tipoNovedad);
+
+        return TipoNovedad::firstOrCreate(['nombre' => $nombre]);
+    }
+
+    private function buildNovedadPayload(array $data, Salario $salario, int $tipoNovedadId, string $tipoNovedadNombre): array
+    {
+        $salarioBase = $this->calculoNovedadService->resolverSalarioBase($salario);
+        $resultado = $this->calculoNovedadService->calcularNovedad(array_merge($data, ['salario_base' => $salarioBase]));
+
+        $valorCalculado = (float) ($resultado['valor_calculado'] ?? 0);
+        $tipoMovimiento = (string) ($resultado['tipo_movimiento'] ?? CalculoNovedadService::OPERACION_SIN_MOVIMIENTO);
+        $valorFirmado = $tipoMovimiento === CalculoNovedadService::OPERACION_DESCUENTO ? -$valorCalculado : $valorCalculado;
+        $dias = (float) ($data['dias'] ?? 0);
+        $horas = (float) ($data['horas'] ?? 0);
+
+        return [
+            'id_tipo_novedad' => $tipoNovedadId,
+            'id_salario' => $salario->id_salario,
+            'empleado_id' => $data['empleado_id'],
+            'tipo_novedad_nombre' => $tipoNovedadNombre,
+            'fecha' => $data['fecha_inicio'],
+            'fecha_inicio' => $data['fecha_inicio'],
+            'fecha_fin' => $data['fecha_fin'],
+            'unidad_cantidad' => $data['unidad_cantidad'],
+            'dias' => $dias,
+            'horas' => $horas,
+            'cantidad' => $data['unidad_cantidad'] === 'horas' ? $horas : $dias,
+            'es_remunerado' => (bool) ($data['es_remunerado'] ?? false),
+            'salario_base' => $salarioBase,
+            'valor_calculado' => $valorCalculado,
+            'valor_novedad' => $valorCalculado,
+            'pago' => $valorFirmado,
+            'pago_manual' => $data['pago_manual'] ?? null,
+            'tipo_movimiento' => $tipoMovimiento,
+            'afecta_ibc' => (bool) ($resultado['afecta_ibc'] ?? false),
+            'tipo_novedad_codigo' => (string) ($data['tipo_novedad'] ?? ''),
+            'tipo_licencia' => $data['tipo_licencia'] ?? null,
+            'tipo_incapacidad' => $data['tipo_incapacidad'] ?? null,
+            'certificado_medico' => (bool) ($data['certificado_medico'] ?? false),
+            'observaciones' => $data['observaciones'] ?? null,
+        ];
+    }
+
+    private function aplicarEfectosNovedad(array $data, Salario $salario): void
+    {
+        $tipo = strtoupper((string) ($data['tipo_novedad'] ?? ''));
+        $contratoId = (int) ($salario->id_contrato ?? 0);
+
+        if ($contratoId <= 0) {
+            return;
+        }
+
+        if ($tipo === 'VSP') {
+            $nuevoSalario = (float) ($data['valor_manual'] ?? $data['pago_manual'] ?? 0);
+            if ($nuevoSalario > 0) {
+                DB::table('contrato')
+                    ->where('id_contrato', $contratoId)
+                    ->update([
+                        'salario_base' => $nuevoSalario,
+                        'updated_at' => now(),
+                    ]);
+            }
+        }
+
+        if (in_array($tipo, ['TDE', 'TAE'], true) && !empty($data['id_eps'])) {
+            DB::table('contrato')
+                ->where('id_contrato', $contratoId)
+                ->update([
+                    'id_eps' => (int) $data['id_eps'],
+                    'updated_at' => now(),
+                ]);
+        }
+
+        if (in_array($tipo, ['TDP', 'TAP'], true) && !empty($data['id_afp'])) {
+            DB::table('contrato')
+                ->where('id_contrato', $contratoId)
+                ->update([
+                    'id_afp' => (int) $data['id_afp'],
+                    'updated_at' => now(),
+                ]);
+        }
+
+        if ($tipo === 'VCT' && !empty($data['id_arl'])) {
+            DB::table('contrato')
+                ->where('id_contrato', $contratoId)
+                ->update([
+                    'id_arl' => (int) $data['id_arl'],
+                    'updated_at' => now(),
+                ]);
+        }
     }
 }

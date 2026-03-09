@@ -13,6 +13,8 @@ class FormaPagoSeeder extends Seeder
 
         DB::table('forma_pago')->insert([
             ['nombre' => 'Contado'],
+            ['nombre' => 'Cheque'],
+            ['nombre' => 'Transferencia'],
         ]);
     }
 }

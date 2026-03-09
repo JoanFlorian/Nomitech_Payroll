@@ -281,8 +281,11 @@ class Step2Request extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $nivelRiesgo = (string) $this->input('nivel_riesgo', '');
+        $altoRiesgoFromNivel = $this->resolveHighRiskFromNivel($nivelRiesgo);
+
         $payload = [
-            'alto_riesgo' => $this->has('alto_riesgo') ? 1 : 0,
+            'alto_riesgo' => $altoRiesgoFromNivel ?? ($this->has('alto_riesgo') ? 1 : 0),
         ];
 
         if (!$this->has('salario') && $this->has('salario_base')) {
@@ -303,6 +306,28 @@ class Step2Request extends FormRequest
         }
 
         $this->merge($payload);
+    }
+
+    private function resolveHighRiskFromNivel(string $nivelRiesgo): ?int
+    {
+        if ($nivelRiesgo === '') {
+            return null;
+        }
+
+        $normalized = Str::of($nivelRiesgo)
+            ->ascii()
+            ->upper()
+            ->toString();
+
+        if (Str::contains($normalized, ['III', 'IV', 'V', '3', '4', '5'])) {
+            return 1;
+        }
+
+        if (Str::contains($normalized, ['II', 'I', '2', '1'])) {
+            return 0;
+        }
+
+        return null;
     }
 
     private function normalizeLocalizedNumber(mixed $value): ?float

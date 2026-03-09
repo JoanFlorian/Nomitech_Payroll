@@ -21,17 +21,34 @@
 				</p>
 			</div>
 
-			<button
-				id="add-novelty-btn"
-				type="button"
-				onclick="window.__openNoveltyModal && window.__openNoveltyModal()"
-				class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:bg-emerald-600 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-			>
-				<span class="material-icons text-[20px]">add</span>
-				Añadir Novedad
-			</button>
+			<div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+				<a
+					href="{{ route('novedades.historial') }}"
+					class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-500 px-5 py-2.5 text-xs font-semibold text-emerald-600 bg-white shadow-sm hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+				>
+					<span class="material-icons text-[18px]">history</span>
+					Historial contrato
+				</a>
+
+				<button
+					id="add-novelty-btn"
+					type="button"
+					onclick="window.__openNoveltyModal && window.__openNoveltyModal()"
+					class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:bg-emerald-600 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+				>
+					<span class="material-icons text-[20px]">add</span>
+					Añadir Novedad
+				</button>
+			</div>
 		</div>
 	</div>
+
+	@if (isset($empresaId))
+		<p class="mt-2 text-xs text-gray-400">
+			Empresa en sesión: {{ $empresaId }}
+			&nbsp;|&nbsp; Empleados cargados para novedades: {{ ($empleadosBusqueda ?? collect())->count() }}
+		</p>
+	@endif
 
 	@if (session('success'))
 		<div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -67,36 +84,23 @@
 				$nombreCompleto = $nombreCompleto ? \Illuminate\Support\Str::title($nombreCompleto) : '';
 
 				$tipoNombre = $novedad->tipoNovedad->nombre ?? 'Sin tipo';
-				$tipo = \Illuminate\Support\Str::of($tipoNombre)->ascii()->lower()->replace(' ', '_')->toString();
-				$tipo = match ($tipo) {
-					'incapacidad', 'incapacidad_enfermedad', 'incapacidad_enfermedad_general' => 'incapacidad_enfermedad_general',
-					'licencia_de_maternidad', 'licencia_maternidad' => 'licencia_maternidad',
-					'licencia_de_paternidad', 'licencia_paternidad' => 'licencia_paternidad',
-					'licencia_por_luto', 'licencia_luto' => 'licencia_luto',
-					'licencia_remunerada' => 'licencia_remunerada',
-					'licencia', 'licencia_no_remunerada' => 'licencia_no_remunerada',
-					'calamidad_domestica' => 'calamidad_domestica',
-					'cita_medica' => 'cita_medica',
-					'permiso_remunerado' => 'permiso_remunerado',
-					'permiso', 'permiso_no_remunerado' => 'permiso_no_remunerado',
-					'ausencia_injustificada' => 'ausencia_injustificada',
-					'suspension', 'suspension_del_contrato', 'suspension_contrato' => 'suspension_contrato',
-					default => $tipo,
-				};
-
+				$tipo = strtoupper((string) ($novedad->tipo_novedad_codigo ?? \Illuminate\Support\Str::before((string) $tipoNombre, ' - ')));
 				$tipoLabel = match ($tipo) {
-					'incapacidad_enfermedad_general' => 'Incapacidad enfermedad general',
-					'licencia_maternidad' => 'Licencia de maternidad',
-					'licencia_paternidad' => 'Licencia de paternidad',
-					'licencia_luto' => 'Licencia por luto',
-					'licencia_remunerada' => 'Licencia remunerada',
-					'licencia_no_remunerada' => 'Licencia no remunerada',
-					'calamidad_domestica' => 'Calamidad doméstica',
-					'cita_medica' => 'Cita médica',
-					'permiso_remunerado' => 'Permiso remunerado',
-					'permiso_no_remunerado' => 'Permiso no remunerado',
-					'ausencia_injustificada' => 'Ausencia injustificada',
-					'suspension_contrato' => 'Suspensión del contrato',
+					'TDE' => 'TDE - Traslado desde EPS',
+					'TAE' => 'TAE - Traslado a EPS',
+					'TDP' => 'TDP - Traslado desde AFP',
+					'TAP' => 'TAP - Traslado a AFP',
+					'VSP' => 'VSP - Variación permanente de salario',
+					'VST' => 'VST - Variación transitoria de salario',
+					'SLN' => 'SLN - Suspensión o licencia no remunerada',
+					'IGE' => 'IGE - Incapacidad enfermedad general',
+					'IRL' => 'IRL - Incapacidad riesgo laboral',
+					'LMAT' => 'LMAT - Licencia de maternidad',
+					'LPAT' => 'LPAT - Licencia de paternidad',
+					'VAC' => 'VAC - Vacaciones',
+					'VCT' => 'VCT - Variación centro de trabajo',
+					'INC' => 'INC - Incapacidad',
+					'LIC' => 'LIC - Licencia',
 					default => $tipoNombre,
 				};
 				$iniciales = strtoupper(mb_substr($empleado->primer_nombre ?? 'N', 0, 1) . mb_substr($empleado->primer_apellido ?? 'N', 0, 1));
@@ -105,20 +109,20 @@
 				$cantidadDisplay = rtrim(rtrim(number_format((float) $novedad->cantidad, 2, '.', ''), '0'), '.');
 
 				$badgeClass = match ($tipo) {
-					'incapacidad_enfermedad_general' => 'bg-emerald-100 text-emerald-700',
-					'licencia_maternidad', 'licencia_paternidad', 'licencia_luto', 'licencia_remunerada', 'licencia_no_remunerada' => 'bg-blue-100 text-blue-700',
-					'calamidad_domestica', 'cita_medica' => 'bg-cyan-100 text-cyan-700',
-					'permiso_remunerado', 'permiso_no_remunerado' => 'bg-indigo-100 text-indigo-700',
-					'ausencia_injustificada', 'suspension_contrato' => 'bg-amber-100 text-amber-700',
+					'IGE', 'IRL', 'INC' => 'bg-emerald-100 text-emerald-700',
+					'LMAT', 'LPAT', 'LIC', 'VAC' => 'bg-blue-100 text-blue-700',
+					'SLN' => 'bg-amber-100 text-amber-700',
+					'VSP', 'VST', 'VCT' => 'bg-cyan-100 text-cyan-700',
 					default => 'bg-gray-100 text-gray-700',
 				};
 
-				$naturaleza = in_array($tipo, ['incapacidad_enfermedad_general', 'licencia_maternidad', 'licencia_paternidad', 'licencia_luto', 'licencia_remunerada', 'calamidad_domestica', 'cita_medica', 'permiso_remunerado'], true)
-					? 'DEVENGADO'
-					: 'DEDUCCION';
+				$naturaleza = strtoupper((string) ($novedad->tipo_movimiento ?? 'sin_movimiento'));
+				$naturaleza = $naturaleza === 'DEVENGADO' ? 'DEVENGADO' : ($naturaleza === 'DEDUCCION' ? 'DEDUCCION' : 'SIN MOVIMIENTO');
 				$naturalezaBadgeClass = $naturaleza === 'DEVENGADO'
 					? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-					: 'bg-red-50 text-red-700 border border-red-200';
+					: ($naturaleza === 'DEDUCCION'
+						? 'bg-red-50 text-red-700 border border-red-200'
+						: 'bg-gray-50 text-gray-700 border border-gray-200');
 			@endphp
 
 			<article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden hover:shadow-md transition-all duration-300">
@@ -146,7 +150,13 @@
 								data-doc="{{ $empleado->doc ?? '' }}"
 								data-nombres="{{ \Illuminate\Support\Str::title(trim(($empleado->primer_nombre ?? '') . ' ' . ($empleado->otros_nombres ?? ''))) }}"
 								data-apellidos="{{ \Illuminate\Support\Str::title(trim(($empleado->primer_apellido ?? '') . ' ' . ($empleado->segundo_apellido ?? ''))) }}"
-								data-tipo="{{ $tipoNombre }}"
+								data-tipo="{{ $tipo }}"
+								data-tipo-licencia="{{ $novedad->tipo_licencia ?? '' }}"
+								data-tipo-incapacidad="{{ $novedad->tipo_incapacidad ?? '' }}"
+								data-certificado-medico="{{ (int) ($novedad->certificado_medico ?? 0) }}"
+								data-id-eps="{{ $novedad->salario?->contrato?->id_eps ?? '' }}"
+								data-id-afp="{{ $novedad->salario?->contrato?->id_afp ?? '' }}"
+								data-id-arl="{{ $novedad->salario?->contrato?->id_arl ?? '' }}"
 								data-licencia-remunerada="{{ (int) ($novedad->es_remunerado ?? $novedad->licencia_remunerada ?? 0) }}"
 								data-unidad="{{ $unidadCantidad }}"
 								data-cantidad="{{ (float) $novedad->cantidad }}"
@@ -155,6 +165,7 @@
 								data-fecha-inicio="{{ $novedad->fecha_inicio ? \Carbon\Carbon::parse($novedad->fecha_inicio)->format('Y-m-d') : '' }}"
 								data-fecha-fin="{{ $novedad->fecha_fin ? \Carbon\Carbon::parse($novedad->fecha_fin)->format('Y-m-d') : '' }}"
 								data-pago="{{ (float) $novedad->pago }}"
+								data-salario-base="{{ (float) ($novedad->salario_base ?? $novedad->salario?->contrato?->salario_base ?? 0) }}"
 								data-observaciones="{{ $novedad->observaciones ?? '' }}"
 							>
 								<span class="material-icons text-[20px]">edit</span>
@@ -222,6 +233,12 @@
 		'id' => old('edit_novedad_id'),
 		'doc' => old('empleado_id', old('doc_empleado')),
 		'tipo' => old('tipo_novedad'),
+		'tipo_licencia' => old('tipo_licencia'),
+		'tipo_incapacidad' => old('tipo_incapacidad'),
+		'certificado_medico' => old('certificado_medico'),
+		'id_eps' => old('id_eps'),
+		'id_afp' => old('id_afp'),
+		'id_arl' => old('id_arl'),
 		'licencia_remunerada' => old('es_remunerado', old('licencia_remunerada', '0')),
 		'unidad_cantidad' => old('unidad_cantidad'),
 		'cantidad_dias' => old('cantidad_dias'),
@@ -234,6 +251,7 @@
 @endphp
 <script>
 	document.addEventListener('DOMContentLoaded', () => {
+		console.log('=== Novedades JS Loaded ===');
 		const employees = @json($empleadosBusqueda ?? []);
 		const shouldOpenModal = @json($shouldOpenModalJs);
 		const shouldOpenEditModal = @json($shouldOpenEditModalJs);
@@ -241,6 +259,10 @@
 		const updateUrlTemplate = @json(route('novedades.update', ['id_novedad' => '__ID__']));
 		const deleteUrlTemplate = @json(route('novedades.destroy', ['id_novedad' => '__ID__']));
 		const previewCalculationUrl = @json(route('novedades.calculo.preview'));
+		const empleadosApiUrl = @json(url('/api/empleados'));
+
+		console.log('Update URL Template:', updateUrlTemplate);
+		console.log('Delete URL Template:', deleteUrlTemplate);
 
 		const modal = document.getElementById('novelty-modal');
 		const addNoveltyBtn = document.getElementById('add-novelty-btn');
@@ -250,10 +272,12 @@
 		const form = document.getElementById('novelty-form');
 		const employeeSearch = document.getElementById('employee-search');
 		const docEmpleadoInput = document.getElementById('doc_empleado');
+		const salarioBaseInput = document.getElementById('salario-base');
 		const employeeDetails = document.getElementById('employee-details');
 		const employeeNameInput = document.getElementById('employee-name');
 		const employeeLastnameInput = document.getElementById('employee-lastname');
 		const suggestions = document.getElementById('employee-suggestions');
+		const employeeLoadingSpinner = document.getElementById('employee-loading-spinner');
 
 		const noveltyType = document.getElementById('novelty-type');
 		const unitQuantityInputs = document.querySelectorAll('input[name="unidad_cantidad"]');
@@ -273,6 +297,18 @@
 		const observationsInput = document.getElementById('observaciones');
 		const createUnitDaysRadio = document.querySelector('input[name="unidad_cantidad"][value="dias"]');
 		const createUnitHoursRadio = document.querySelector('input[name="unidad_cantidad"][value="horas"]');
+		const tipoIncapacidadWrap = document.getElementById('tipo-incapacidad-wrap');
+		const tipoIncapacidadInput = document.getElementById('tipo-incapacidad');
+		const tipoLicenciaWrap = document.getElementById('tipo-licencia-wrap');
+		const tipoLicenciaInput = document.getElementById('tipo-licencia');
+		const certificadoMedicoWrap = document.getElementById('certificado-medico-wrap');
+		const certificadoMedicoInput = document.getElementById('certificado-medico');
+		const epsWrap = document.getElementById('eps-wrap');
+		const epsIdInput = document.getElementById('eps-id');
+		const afpWrap = document.getElementById('afp-wrap');
+		const afpIdInput = document.getElementById('afp-id');
+		const arlWrap = document.getElementById('arl-wrap');
+		const arlIdInput = document.getElementById('arl-id');
 
 		const editModal = document.getElementById('edit-novelty-modal');
 		const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
@@ -282,6 +318,12 @@
 		const deleteForm = document.getElementById('delete-novedad-form');
 		const editButtons = document.querySelectorAll('.open-edit-modal');
 		const deleteDirectButtons = document.querySelectorAll('.trigger-delete-direct');
+
+		console.log('Edit buttons found:', editButtons.length);
+		console.log('Delete buttons found:', deleteDirectButtons.length);
+		console.log('Edit modal found:', !!editModal);
+		console.log('Edit form found:', !!editForm);
+		console.log('Delete form found:', !!deleteForm);
 
 		const editNovedadIdInput = document.getElementById('edit-novedad-id');
 		const editDocEmpleadoInput = document.getElementById('edit-doc-empleado');
@@ -304,8 +346,21 @@
 		const editLicenciaRemuneradaInput = document.getElementById('edit-licencia-remunerada');
 		const editRemuneradaLabel = document.getElementById('edit-remunerada-label');
 		const editObservacionesInput = document.getElementById('edit-observaciones');
+		const editSalarioBaseInput = document.getElementById('edit-salario-base');
 		const editUnitDaysRadio = document.getElementById('edit-unit-days');
 		const editUnitHoursRadio = document.getElementById('edit-unit-hours');
+		const editTipoIncapacidadWrap = document.getElementById('edit-tipo-incapacidad-wrap');
+		const editTipoIncapacidadInput = document.getElementById('edit-tipo-incapacidad');
+		const editTipoLicenciaWrap = document.getElementById('edit-tipo-licencia-wrap');
+		const editTipoLicenciaInput = document.getElementById('edit-tipo-licencia');
+		const editCertificadoMedicoWrap = document.getElementById('edit-certificado-medico-wrap');
+		const editCertificadoMedicoInput = document.getElementById('edit-certificado-medico');
+		const editEpsWrap = document.getElementById('edit-eps-wrap');
+		const editEpsIdInput = document.getElementById('edit-eps-id');
+		const editAfpWrap = document.getElementById('edit-afp-wrap');
+		const editAfpIdInput = document.getElementById('edit-afp-id');
+		const editArlWrap = document.getElementById('edit-arl-wrap');
+		const editArlIdInput = document.getElementById('edit-arl-id');
 
 		const editErrorElements = {
 			noveltyType: document.getElementById('edit-novelty-type-error'),
@@ -409,86 +464,68 @@
 		};
 
 		const normalizeNoveltyType = (value) => {
-			const normalized = normalize(value).replace(/\s+/g, '_');
+			const normalized = normalize(value).replace(/\s+/g, '_').toUpperCase();
 			const mapped = {
-				incapacidad: 'incapacidad_enfermedad_general',
-				incapacidad_enfermedad: 'incapacidad_enfermedad_general',
-				incapacidad_enfermedad_general: 'incapacidad_enfermedad_general',
-				incapacidad_enfermedad_general_: 'incapacidad_enfermedad_general',
-				incapacidad_laboral: 'incapacidad_laboral_arl',
-				incapacidad_laboral_arl: 'incapacidad_laboral_arl',
-				licencia: 'licencia_no_remunerada',
-				licencia_de_maternidad: 'licencia_maternidad',
-				licencia_maternidad: 'licencia_maternidad',
-				licencia_de_paternidad: 'licencia_paternidad',
-				licencia_paternidad: 'licencia_paternidad',
-				licencia_por_luto: 'licencia_luto',
-				licencia_luto: 'licencia_luto',
-				licencia_remunerada: 'licencia_remunerada',
-				licencia_no_remunerada: 'licencia_no_remunerada',
-				calamidad_domestica: 'calamidad_domestica',
-				cita_medica: 'cita_medica',
-				permiso: 'permiso_no_remunerado',
-				permiso_remunerado: 'permiso_remunerado',
-				permiso_no_remunerado: 'permiso_no_remunerado',
-				ausencia_injustificada: 'ausencia_injustificada',
-				suspension: 'suspension_contrato',
-				suspension_del_contrato: 'suspension_contrato',
-				suspension_contrato: 'suspension_contrato',
+				TDE: 'TDE',
+				TAE: 'TAE',
+				TDP: 'TDP',
+				TAP: 'TAP',
+				VSP: 'VSP',
+				VST: 'VST',
+				SLN: 'SLN',
+				IGE: 'IGE',
+				IRL: 'IRL',
+				LMAT: 'LMAT',
+				LPAT: 'LPAT',
+				VAC: 'VAC',
+				VCT: 'VCT',
+				INC: 'INC',
+				LIC: 'LIC',
+				INCAPACIDAD_ENFERMEDAD_GENERAL: 'IGE',
+				INCAPACIDAD_LABORAL_ARL: 'IRL',
+				LICENCIA_MATERNIDAD: 'LMAT',
+				LICENCIA_PATERNIDAD: 'LPAT',
+				SUSPENSION_CONTRATO: 'SLN',
+				VACACIONES: 'VAC',
 			};
 
 			return mapped[normalized] || normalized;
 		};
 
-		const automaticNoveltyTypes = [
-			'incapacidad_enfermedad_general',
-			'incapacidad_laboral_arl',
-			'licencia_maternidad',
-			'licencia_paternidad',
-			'licencia_luto',
-			'licencia_remunerada',
-			'licencia_no_remunerada',
-			'calamidad_domestica',
-			'cita_medica',
-			'permiso_remunerado',
-			'permiso_no_remunerado',
-			'ausencia_injustificada',
-			'suspension_contrato',
-		];
+		const automaticNoveltyTypes = ['TDE', 'TAE', 'TDP', 'TAP', 'SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'VCT', 'INC', 'LIC'];
 
 		const isAutomaticNoveltyType = (tipo) => automaticNoveltyTypes.includes(normalizeNoveltyType(tipo));
+		const isManualNoveltyType = (tipo) => ['VSP', 'VST'].includes(normalizeNoveltyType(tipo));
 
 		const getMaxDaysByType = (tipo) => {
 			const tipoNormalizado = normalizeNoveltyType(tipo);
-			if (tipoNormalizado === 'licencia_maternidad') return 126;
-			if (tipoNormalizado === 'licencia_luto') return 5;
+			if (tipoNormalizado === 'LMAT') return 126;
+			if (tipoNormalizado === 'LPAT') return 14;
 			return 30;
 		};
 
 		const isDevengadoType = (tipo, esRemunerado = false) => {
 			const tipoNormalizado = normalizeNoveltyType(tipo);
-			if (tipoNormalizado === 'licencia_no_remunerada') {
+			if (tipoNormalizado === 'LIC') {
 				return Boolean(esRemunerado);
 			}
 
-			return [
-				'incapacidad_enfermedad_general',
-				'incapacidad_laboral_arl',
-				'licencia_maternidad',
-				'licencia_paternidad',
-				'licencia_luto',
-				'licencia_remunerada',
-				'calamidad_domestica',
-				'cita_medica',
-				'permiso_remunerado',
-			].includes(tipoNormalizado);
+			return ['VST', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'INC'].includes(tipoNormalizado);
 		};
+
+		const isNeutralType = (tipo) => ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VCT'].includes(normalizeNoveltyType(tipo));
 
 		const updateNatureBadge = (badgeElement, tipo, esRemunerado = false) => {
 			if (!badgeElement) return;
 
 			if (!tipo) {
 				badgeElement.textContent = 'Naturaleza: -';
+				badgeElement.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 border border-gray-200';
+				return;
+			}
+
+			if (isNeutralType(tipo)) {
+				badgeElement.textContent = 'Naturaleza: SIN MOVIMIENTO';
 				badgeElement.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 border border-gray-200';
 				return;
 			}
@@ -507,13 +544,21 @@
 
 		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-		const fetchCalculationPreview = async ({ doc, tipo, unidad, dias, horas, pagoManual, esRemunerado }) => {
+		const fetchCalculationPreview = async ({ doc, tipo, unidad, dias, horas, pagoManual, esRemunerado, tipoLicencia, tipoIncapacidad, certificadoMedico, idEps, idAfp, idArl, salarioBase }) => {
 			const payload = {
 				empleado_id: doc,
 				tipo_novedad: normalizeNoveltyType(tipo),
+				salario_base: Number(salarioBase || 0),
 				unidad_cantidad: unidad,
+				valor_manual: Number.isFinite(pagoManual) ? pagoManual : null,
 				pago_manual: Number.isFinite(pagoManual) ? pagoManual : null,
 				es_remunerado: Boolean(esRemunerado),
+				tipo_licencia: tipoLicencia || null,
+				tipo_incapacidad: tipoIncapacidad || null,
+				certificado_medico: Boolean(certificadoMedico),
+				id_eps: idEps || null,
+				id_afp: idAfp || null,
+				id_arl: idArl || null,
 			};
 
 			if (unidad === 'dias') {
@@ -562,10 +607,18 @@
 			const doc = docEmpleadoInput.value;
 			const unit = getSelectedCreateUnit();
 			let cantidad = getCreateCantidad();
-			const tipo = (noveltyType.value || '').toLowerCase();
+			const tipo = normalizeNoveltyType(noveltyType.value || '');
 			const tipoNormalizado = normalizeNoveltyType(tipo);
 			const esAutomatica = isAutomaticNoveltyType(tipoNormalizado);
 			const esRemunerada = Boolean(licenciaRemuneradaInput?.checked);
+			const tipoLicencia = tipoLicenciaInput?.value || '';
+			const tipoIncapacidad = tipoIncapacidadInput?.value || '';
+			const certificadoMedico = Boolean(certificadoMedicoInput?.checked);
+			const idEps = epsIdInput?.value || '';
+			const idAfp = afpIdInput?.value || '';
+			const idArl = arlIdInput?.value || '';
+			const salarioBase = Number(salarioBaseInput?.value || 0);
+			const noCantidad = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(tipoNormalizado);
 
 			updateNatureBadge(noveltyNatureBadge, tipo, esRemunerada);
 			const paymentValue = !esAutomatica && paymentInput.value ? getPaymentNumber() : NaN;
@@ -574,7 +627,14 @@
 				estimatedNoteElement.textContent = 'Se está usando el pago manual ingresado (cálculo respaldado por backend).';
 			}
 
-			if (!doc || !tipo || !unit || !Number.isFinite(cantidad) || cantidad < 0) {
+			if (!esAutomatica) {
+				estimatedValueElement.textContent = formatCurrency(Number.isFinite(paymentValue) ? paymentValue : 0);
+				estimatedNoteElement.textContent = 'Novedad manual: se usará el valor ingresado en pago manual.';
+				updateNatureBadge(noveltyNatureBadge, tipo, esRemunerada);
+				return;
+			}
+
+			if (!doc || !tipo || (!noCantidad && (!unit || !Number.isFinite(cantidad) || cantidad < 0))) {
 				estimatedValueElement.textContent = formatCurrency(0);
 				estimatedNoteElement.textContent = 'Selecciona empleado, tipo y cantidad para calcular automáticamente.';
 				return;
@@ -589,13 +649,20 @@
 					horas: unit === 'horas' ? cantidad : 0,
 					pagoManual: esAutomatica ? null : paymentValue,
 					esRemunerado: esRemunerada,
+					tipoLicencia,
+					tipoIncapacidad,
+					certificadoMedico,
+					idEps,
+					idAfp,
+					idArl,
+					salarioBase,
 				});
 
 				estimatedValueElement.textContent = formatCurrency(result.valor || 0);
 				const isDevengado = (result.operacion || '').toLowerCase() === 'devengado';
-				updateNatureBadge(noveltyNatureBadge, isDevengado ? 'permiso_remunerado' : 'permiso_no_remunerado');
+				updateNatureBadge(noveltyNatureBadge, result.tipo_movimiento === 'sin_movimiento' ? 'TDE' : (result.operacion === 'devengado' ? 'VST' : 'SLN'), esRemunerada);
 				if (esAutomatica) {
-					estimatedNoteElement.textContent = tipoNormalizado === 'licencia_maternidad'
+					estimatedNoteElement.textContent = tipoNormalizado === 'LMAT'
 						? 'Esta novedad se calcula automáticamente según el salario del empleado y los días registrados.'
 						: 'Esta novedad se calcula automáticamente según el salario del empleado y la cantidad de días u horas registradas.';
 				} else {
@@ -615,10 +682,18 @@
 			const doc = editDocEmpleadoInput.value;
 			const unit = getSelectedEditUnit();
 			let cantidad = getEditCantidad();
-			const tipo = (editNoveltyTypeInput.value || '').toLowerCase();
+			const tipo = normalizeNoveltyType(editNoveltyTypeInput.value || '');
 			const tipoNormalizado = normalizeNoveltyType(tipo);
 			const esAutomatica = isAutomaticNoveltyType(tipoNormalizado);
 			const esRemunerada = Boolean(editLicenciaRemuneradaInput?.checked);
+			const tipoLicencia = editTipoLicenciaInput?.value || '';
+			const tipoIncapacidad = editTipoIncapacidadInput?.value || '';
+			const certificadoMedico = Boolean(editCertificadoMedicoInput?.checked);
+			const idEps = editEpsIdInput?.value || '';
+			const idAfp = editAfpIdInput?.value || '';
+			const idArl = editArlIdInput?.value || '';
+			const salarioBase = Number(salarioBaseInput?.value || 0);
+			const noCantidad = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(tipoNormalizado);
 
 			updateNatureBadge(editNoveltyNatureBadge, tipo, esRemunerada);
 			const paymentValue = !esAutomatica && editPaymentInput.value ? getEditPaymentNumber() : NaN;
@@ -627,7 +702,14 @@
 				editEstimatedNoteElement.textContent = 'Se está usando el pago manual ingresado (cálculo respaldado por backend).';
 			}
 
-			if (!doc || !tipo || !unit || !Number.isFinite(cantidad) || cantidad < 0) {
+			if (!esAutomatica) {
+				editEstimatedValueElement.textContent = formatCurrency(Number.isFinite(paymentValue) ? paymentValue : 0);
+				editEstimatedNoteElement.textContent = 'Novedad manual: se usará el valor ingresado en pago manual.';
+				updateNatureBadge(editNoveltyNatureBadge, tipo, esRemunerada);
+				return;
+			}
+
+			if (!doc || !tipo || (!noCantidad && (!unit || !Number.isFinite(cantidad) || cantidad < 0))) {
 				editEstimatedValueElement.textContent = formatCurrency(0);
 				editEstimatedNoteElement.textContent = 'Selecciona empleado, tipo y cantidad para calcular automáticamente.';
 				return;
@@ -642,13 +724,20 @@
 					horas: unit === 'horas' ? cantidad : 0,
 					pagoManual: esAutomatica ? null : paymentValue,
 					esRemunerado: esRemunerada,
+					tipoLicencia,
+					tipoIncapacidad,
+					certificadoMedico,
+					idEps,
+					idAfp,
+					idArl,
+					salarioBase,
 				});
 
 				editEstimatedValueElement.textContent = formatCurrency(result.valor || 0);
 				const isDevengado = (result.operacion || '').toLowerCase() === 'devengado';
-				updateNatureBadge(editNoveltyNatureBadge, isDevengado ? 'permiso_remunerado' : 'permiso_no_remunerado');
+				updateNatureBadge(editNoveltyNatureBadge, result.tipo_movimiento === 'sin_movimiento' ? 'TDE' : (result.operacion === 'devengado' ? 'VST' : 'SLN'), esRemunerada);
 				if (esAutomatica) {
-					editEstimatedNoteElement.textContent = tipoNormalizado === 'licencia_maternidad'
+					editEstimatedNoteElement.textContent = tipoNormalizado === 'LMAT'
 						? 'Esta novedad se calcula automáticamente según el salario del empleado y los días registrados.'
 						: 'Esta novedad se calcula automáticamente según el salario del empleado y la cantidad de días u horas registradas.';
 				} else {
@@ -662,15 +751,28 @@
 			}
 		};
 
+		const escapeHtml = (value) => String(value ?? '')
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+
 		const clearEmployeeSelection = () => {
 			docEmpleadoInput.value = '';
+			salarioBaseInput.value = '';
 			employeeNameInput.value = '';
 			employeeLastnameInput.value = '';
 			employeeDetails.classList.add('hidden');
+			selectedEmployee = null;
 			updateCreateEstimatedValue();
 		};
 
 		let highlightedSuggestionIndex = -1;
+		let lastEmployeeResults = [];
+		let selectedEmployee = null;
+		let employeeSearchTimer = null;
+		let employeeFetchSeq = 0;
 
 		const getSuggestionOptions = () => Array.from(suggestions.querySelectorAll('.employee-option'));
 
@@ -679,7 +781,6 @@
 			options.forEach((option, optionIndex) => {
 				const isActive = optionIndex === index;
 				option.classList.toggle('bg-blue-50', isActive);
-				option.classList.toggle('text-blue-800', isActive);
 			});
 
 			highlightedSuggestionIndex = index;
@@ -689,54 +790,104 @@
 		};
 
 		const selectEmployeeByDoc = (doc) => {
-			const employee = employees.find((item) => String(item.doc || '') === String(doc || ''));
+			const employee = lastEmployeeResults.find((item) => String(item.doc || '') === String(doc || ''))
+				|| employees.find((item) => String(item.doc || '') === String(doc || ''));
 			if (employee) {
 				setEmployeeSelection(employee);
 			}
 		};
 
 		const setEmployeeSelection = (employee) => {
-			docEmpleadoInput.value = employee.doc || '';
+			const doc = String(employee.doc || '').trim();
+			docEmpleadoInput.value = doc;
+			salarioBaseInput.value = Number(employee.salario_base || 0) > 0 ? String(employee.salario_base) : '';
 			const fullName = toTitleCase(employee.nombre_completo || '');
-			employeeSearch.value = `${fullName} - ${employee.doc || ''}`.trim();
-			employeeNameInput.value = toTitleCase(employee.nombres || '');
+			employeeSearch.value = `${fullName} - ${doc}`.trim();
+			employeeNameInput.value = toTitleCase(employee.nombres || fullName || '');
 			employeeLastnameInput.value = toTitleCase(employee.apellidos || '');
 			employeeDetails.classList.remove('hidden');
 			suggestions.classList.add('hidden');
 			suggestions.innerHTML = '';
 			highlightedSuggestionIndex = -1;
+			selectedEmployee = { doc };
 			updateCreateEstimatedValue();
 		};
 
-		const renderSuggestions = (query, options = {}) => {
+		const fetchEmployeesSuggestions = async (query = '') => {
+			const sequence = ++employeeFetchSeq;
+			employeeLoadingSpinner?.classList.remove('hidden');
+
+			try {
+				const url = new URL(empleadosApiUrl, window.location.origin);
+				url.searchParams.set('search', query);
+				url.searchParams.set('limit', '12');
+
+				const response = await fetch(url.toString(), {
+					headers: {
+						'Accept': 'application/json',
+					},
+				});
+
+				if (!response.ok) {
+					throw new Error('No se pudieron cargar empleados.');
+				}
+
+				const json = await response.json().catch(() => ({ data: [] }));
+				const rows = Array.isArray(json?.data) ? json.data : [];
+
+				if (sequence !== employeeFetchSeq) {
+					return null;
+				}
+
+				return rows.map((row) => ({
+					doc: String(row.documento || row.doc || row.id || ''),
+					nombre_completo: String(row.nombre || ''),
+					nombres: String(row.nombre || ''),
+					apellidos: '',
+					salario_base: Number(row.salario_base || 0),
+				}));
+			} finally {
+				if (sequence === employeeFetchSeq) {
+					employeeLoadingSpinner?.classList.add('hidden');
+				}
+			}
+		};
+
+		const renderSuggestions = async (query, options = {}) => {
 			const { showAllOnEmpty = false } = options;
-
 			const normalizedQuery = normalize(query);
-			const matches = employees
-				.filter((employee) => {
-					if (!normalizedQuery && showAllOnEmpty) {
-						return true;
-					}
-
-					if (!normalizedQuery) {
-						return false;
-					}
-
-					const fullName = normalize(employee.nombre_completo);
-					const documentNumber = normalize(employee.doc);
-					return fullName.includes(normalizedQuery) || documentNumber.includes(normalizedQuery);
-				})
-				.slice(0, 12);
 
 			if (!normalizedQuery && !showAllOnEmpty) {
 				suggestions.innerHTML = '';
 				suggestions.classList.add('hidden');
 				highlightedSuggestionIndex = -1;
+				lastEmployeeResults = [];
 				return;
 			}
 
+			// Base local: respuesta inmediata en UI sin depender de la red.
+			let matches = employees
+				.filter((employee) => {
+					const fullName = normalize(employee.nombre_completo);
+					const documentNumber = normalize(employee.doc);
+					return !normalizedQuery || fullName.includes(normalizedQuery) || documentNumber.includes(normalizedQuery);
+				})
+				.slice(0, 12);
+
+			// Intento remoto opcional para refrescar datos (sin bloquear visualización local).
+			try {
+				const remoteMatches = await fetchEmployeesSuggestions(query);
+				if (remoteMatches !== null && remoteMatches.length > 0) {
+					matches = remoteMatches;
+				}
+			} catch (error) {
+				// Mantener el resultado local cuando la API no esté disponible.
+			}
+
+			lastEmployeeResults = matches;
+
 			if (matches.length === 0) {
-				suggestions.innerHTML = '<li class="px-3 py-2 text-sm text-gray-500">No se encontraron empleados.</li>';
+				suggestions.innerHTML = '<li class="px-4 py-3 text-sm text-gray-500">No hay empleados activos para la empresa de la sesion.</li>';
 				suggestions.classList.remove('hidden');
 				highlightedSuggestionIndex = -1;
 				return;
@@ -744,11 +895,12 @@
 
 			suggestions.innerHTML = matches
 				.map((employee) => {
-					const fullName = toTitleCase(employee.nombre_completo || '');
+					const fullName = escapeHtml(toTitleCase(employee.nombre_completo || ''));
+					const doc = escapeHtml(employee.doc);
 					return `<li>
-						<button type="button" class="employee-option w-full text-left px-3 py-2 hover:bg-gray-50 text-sm" data-doc="${employee.doc}">
-							<span class="font-medium text-gray-800">${fullName}</span>
-							<span class="text-gray-500"> - ${employee.doc}</span>
+						<button type="button" class="employee-option w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-b-0" data-doc="${doc}">
+							<div class="text-sm font-medium text-gray-800">${fullName || 'Sin nombre'}</div>
+							<div class="text-xs text-gray-500">Doc: ${doc}</div>
 						</button>
 					</li>`;
 				})
@@ -760,11 +912,13 @@
 			suggestions.querySelectorAll('.employee-option').forEach((option) => {
 				option.addEventListener('click', () => {
 					selectEmployeeByDoc(option.dataset.doc);
+					clearFieldError('employee');
+					clearInvalid(employeeSearch);
 				});
 
 				option.addEventListener('mouseenter', () => {
-					const options = getSuggestionOptions();
-					const index = options.indexOf(option);
+					const optionsList = getSuggestionOptions();
+					const index = optionsList.indexOf(option);
 					if (index >= 0) {
 						updateSuggestionHighlight(index);
 					}
@@ -774,8 +928,12 @@
 
 		employeeSearch?.addEventListener('input', () => {
 			clearEmployeeSelection();
-			renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
 			clearFieldError('employee');
+			clearInvalid(employeeSearch);
+			clearTimeout(employeeSearchTimer);
+			employeeSearchTimer = setTimeout(() => {
+				renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
+			}, 220);
 		});
 
 		employeeSearch?.addEventListener('focus', () => {
@@ -801,28 +959,30 @@
 				renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
 			}
 
-			const options = getSuggestionOptions();
-			if (!options.length) {
+			const optionsList = getSuggestionOptions();
+			if (!optionsList.length) {
 				return;
 			}
 
 			if (event.key === 'ArrowDown') {
 				event.preventDefault();
-				const nextIndex = highlightedSuggestionIndex < options.length - 1 ? highlightedSuggestionIndex + 1 : 0;
+				const nextIndex = highlightedSuggestionIndex < optionsList.length - 1 ? highlightedSuggestionIndex + 1 : 0;
 				updateSuggestionHighlight(nextIndex);
 				return;
 			}
 
 			if (event.key === 'ArrowUp') {
 				event.preventDefault();
-				const prevIndex = highlightedSuggestionIndex > 0 ? highlightedSuggestionIndex - 1 : options.length - 1;
+				const prevIndex = highlightedSuggestionIndex > 0 ? highlightedSuggestionIndex - 1 : optionsList.length - 1;
 				updateSuggestionHighlight(prevIndex);
 				return;
 			}
 
 			if (event.key === 'Enter' && highlightedSuggestionIndex >= 0) {
 				event.preventDefault();
-				selectEmployeeByDoc(options[highlightedSuggestionIndex]?.dataset?.doc);
+				selectEmployeeByDoc(optionsList[highlightedSuggestionIndex]?.dataset?.doc);
+				clearFieldError('employee');
+				clearInvalid(employeeSearch);
 			}
 		});
 
@@ -889,7 +1049,8 @@
 
 		const toggleCreateManualPayment = () => {
 			const tipo = normalizeNoveltyType(noveltyType?.value || '');
-			const esAutomatica = isAutomaticNoveltyType(tipo);
+			const esManual = isManualNoveltyType(tipo);
+			const esAutomatica = !esManual;
 
 			if (paymentDisplayInput) {
 				paymentDisplayInput.readOnly = esAutomatica;
@@ -909,12 +1070,17 @@
 				paymentDisplayInput.value = '';
 			}
 
-			paymentAutoMessage?.classList.toggle('hidden', !esAutomatica);
+			if (paymentAutoMessage) {
+				paymentAutoMessage.classList.toggle('hidden', false);
+				paymentAutoMessage.textContent = esManual
+					? 'Esta novedad permite valor manual (VST).'
+					: 'Esta novedad se calcula automáticamente segun salario y cantidad.';
+			}
 		};
 
 		const updateLicenciaRemuneradaVisibility = () => {
 			const tipo = normalizeNoveltyType(noveltyType?.value || '');
-			const supportsRemunerada = tipo === 'licencia_no_remunerada';
+			const supportsRemunerada = tipo === 'LIC';
 			if (licenciaRemuneradaWrap) {
 				licenciaRemuneradaWrap.classList.toggle('hidden', !supportsRemunerada);
 			}
@@ -924,40 +1090,62 @@
 			if (!supportsRemunerada && licenciaRemuneradaInput) {
 				licenciaRemuneradaInput.checked = false;
 			}
+
+			if (tipoLicenciaWrap) {
+				tipoLicenciaWrap.classList.toggle('hidden', tipo !== 'LIC');
+			}
+			if (tipoIncapacidadWrap) {
+				tipoIncapacidadWrap.classList.toggle('hidden', !(tipo === 'INC'));
+			}
+			if (certificadoMedicoWrap) {
+				certificadoMedicoWrap.classList.toggle('hidden', !['IGE', 'IRL', 'INC'].includes(tipo));
+			}
+			if (epsWrap) {
+				epsWrap.classList.toggle('hidden', !['TDE', 'TAE'].includes(tipo));
+			}
+			if (afpWrap) {
+				afpWrap.classList.toggle('hidden', !['TDP', 'TAP'].includes(tipo));
+			}
+			if (arlWrap) {
+				arlWrap.classList.toggle('hidden', tipo !== 'VCT');
+			}
 		};
 
 		const updateCreateQuantityMode = () => {
 			const type = normalizeNoveltyType(noveltyType.value || '');
-			const allowsHours = type === 'permiso_remunerado' || type === 'permiso_no_remunerado' || type === 'cita_medica';
-			const forceHoursOnly = type === 'cita_medica';
-			const forceMaternityDays = type === 'licencia_maternidad';
+			const noCantidad = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(type);
+			const allowsHours = ['IGE', 'IRL', 'INC'].includes(type);
+			const fixedDays = type === 'LMAT' ? 126 : (type === 'LPAT' ? 14 : null);
+			const forceDaysOnly = ['LMAT', 'LPAT', 'VAC', 'SLN', 'LIC'].includes(type) || noCantidad;
 			const maxDays = getMaxDaysByType(type);
 
-			if (forceHoursOnly && createUnitHoursRadio) {
-				createUnitHoursRadio.checked = true;
-			}
-			if (!allowsHours && createUnitDaysRadio) {
+			if (forceDaysOnly && createUnitDaysRadio) {
 				createUnitDaysRadio.checked = true;
 			}
 			if (createUnitDaysRadio) {
-				createUnitDaysRadio.disabled = forceHoursOnly;
+				createUnitDaysRadio.disabled = noCantidad;
 			}
 			if (createUnitHoursRadio) {
-				createUnitHoursRadio.disabled = !allowsHours;
+				createUnitHoursRadio.disabled = !allowsHours || noCantidad;
 			}
 
 			const unit = getSelectedCreateUnit();
-			const isDias = unit === 'dias';
+			const isDias = unit === 'dias' && !noCantidad;
 			const isHoras = unit === 'horas' && allowsHours;
 
 			quantityDaysInput.disabled = !isDias;
 			quantityHoursInput.disabled = !isHoras;
-			quantityDaysInput.readOnly = forceMaternityDays;
+			quantityDaysInput.readOnly = fixedDays !== null;
 			quantityDaysInput.max = String(maxDays);
-			quantityDaysInput.min = type === 'licencia_maternidad' ? '1' : '0.01';
+			quantityDaysInput.min = '0.01';
 
-			if (forceMaternityDays && isDias) {
-				quantityDaysInput.value = '126';
+			if (fixedDays !== null && isDias) {
+				quantityDaysInput.value = String(fixedDays);
+			}
+
+			if (noCantidad) {
+				quantityDaysInput.value = '';
+				quantityHoursInput.value = '';
 			}
 
 			if (!isDias) quantityDaysInput.value = '';
@@ -971,7 +1159,8 @@
 
 		const toggleEditManualPayment = () => {
 			const tipo = normalizeNoveltyType(editNoveltyTypeInput?.value || '');
-			const esAutomatica = isAutomaticNoveltyType(tipo);
+			const esManual = isManualNoveltyType(tipo);
+			const esAutomatica = !esManual;
 
 			if (editPaymentDisplayInput) {
 				editPaymentDisplayInput.readOnly = esAutomatica;
@@ -991,12 +1180,17 @@
 				editPaymentDisplayInput.value = '';
 			}
 
-			editPaymentAutoMessage?.classList.toggle('hidden', !esAutomatica);
+			if (editPaymentAutoMessage) {
+				editPaymentAutoMessage.classList.toggle('hidden', false);
+				editPaymentAutoMessage.textContent = esManual
+					? 'Esta novedad permite valor manual (VST).'
+					: 'Esta novedad se calcula automáticamente segun salario y cantidad.';
+			}
 		};
 
 		const updateEditLicenciaRemuneradaVisibility = () => {
 			const tipo = normalizeNoveltyType(editNoveltyTypeInput?.value || '');
-			const supportsRemunerada = tipo === 'licencia_no_remunerada';
+			const supportsRemunerada = tipo === 'LIC';
 			if (editLicenciaRemuneradaWrap) {
 				editLicenciaRemuneradaWrap.classList.toggle('hidden', !supportsRemunerada);
 			}
@@ -1006,40 +1200,62 @@
 			if (!supportsRemunerada && editLicenciaRemuneradaInput) {
 				editLicenciaRemuneradaInput.checked = false;
 			}
+
+			if (editTipoLicenciaWrap) {
+				editTipoLicenciaWrap.classList.toggle('hidden', tipo !== 'LIC');
+			}
+			if (editTipoIncapacidadWrap) {
+				editTipoIncapacidadWrap.classList.toggle('hidden', !(tipo === 'INC'));
+			}
+			if (editCertificadoMedicoWrap) {
+				editCertificadoMedicoWrap.classList.toggle('hidden', !['IGE', 'IRL', 'INC'].includes(tipo));
+			}
+			if (editEpsWrap) {
+				editEpsWrap.classList.toggle('hidden', !['TDE', 'TAE'].includes(tipo));
+			}
+			if (editAfpWrap) {
+				editAfpWrap.classList.toggle('hidden', !['TDP', 'TAP'].includes(tipo));
+			}
+			if (editArlWrap) {
+				editArlWrap.classList.toggle('hidden', tipo !== 'VCT');
+			}
 		};
 
 		const updateEditQuantityMode = () => {
 			const type = normalizeNoveltyType(editNoveltyTypeInput.value || '');
-			const allowsHours = type === 'permiso_remunerado' || type === 'permiso_no_remunerado' || type === 'cita_medica';
-			const forceHoursOnly = type === 'cita_medica';
-			const forceMaternityDays = type === 'licencia_maternidad';
+			const noCantidad = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(type);
+			const allowsHours = ['IGE', 'IRL', 'INC'].includes(type);
+			const fixedDays = type === 'LMAT' ? 126 : (type === 'LPAT' ? 14 : null);
+			const forceDaysOnly = ['LMAT', 'LPAT', 'VAC', 'SLN', 'LIC'].includes(type) || noCantidad;
 			const maxDays = getMaxDaysByType(type);
 
-			if (forceHoursOnly && editUnitHoursRadio) {
-				editUnitHoursRadio.checked = true;
-			}
-			if (!allowsHours && editUnitDaysRadio) {
+			if (forceDaysOnly && editUnitDaysRadio) {
 				editUnitDaysRadio.checked = true;
 			}
 			if (editUnitDaysRadio) {
-				editUnitDaysRadio.disabled = forceHoursOnly;
+				editUnitDaysRadio.disabled = noCantidad;
 			}
 			if (editUnitHoursRadio) {
-				editUnitHoursRadio.disabled = !allowsHours;
+				editUnitHoursRadio.disabled = !allowsHours || noCantidad;
 			}
 
 			const unit = getSelectedEditUnit();
-			const isDias = unit === 'dias';
+			const isDias = unit === 'dias' && !noCantidad;
 			const isHoras = unit === 'horas' && allowsHours;
 
 			editQuantityDaysInput.disabled = !isDias;
 			editQuantityHoursInput.disabled = !isHoras;
-			editQuantityDaysInput.readOnly = forceMaternityDays;
+			editQuantityDaysInput.readOnly = fixedDays !== null;
 			editQuantityDaysInput.max = String(maxDays);
-			editQuantityDaysInput.min = type === 'licencia_maternidad' ? '1' : '0.01';
+			editQuantityDaysInput.min = '0.01';
 
-			if (forceMaternityDays && isDias) {
-				editQuantityDaysInput.value = '126';
+			if (fixedDays !== null && isDias) {
+				editQuantityDaysInput.value = String(fixedDays);
+			}
+
+			if (noCantidad) {
+				editQuantityDaysInput.value = '';
+				editQuantityHoursInput.value = '';
 			}
 
 			if (!isDias) editQuantityDaysInput.value = '';
@@ -1079,13 +1295,13 @@
 		};
 
 		const getPaymentNumber = () => {
-			const value = (paymentInput.value || '').replace(',', '.');
+			const value = (paymentDisplayInput.value || '').toString().replace(',', '.');
 			const parsed = Number(value);
 			return Number.isFinite(parsed) ? parsed : NaN;
 		};
 
 		const getEditPaymentNumber = () => {
-			const value = (editPaymentInput.value || '').replace(',', '.');
+			const value = (editPaymentDisplayInput.value || '').toString().replace(',', '.');
 			const parsed = Number(value);
 			return Number.isFinite(parsed) ? parsed : NaN;
 		};
@@ -1095,17 +1311,15 @@
 				return;
 			}
 
-			const rawDigits = paymentDisplayInput.value.replace(/\D/g, '');
-			if (!rawDigits) {
+			if (!paymentDisplayInput.value) {
 				paymentDisplayInput.value = '';
 				paymentInput.value = '';
 				updateCreateEstimatedValue();
 				return;
 			}
 
-			const numericValue = Number(rawDigits);
-			paymentInput.value = String(numericValue);
-			paymentDisplayInput.value = formatter.format(numericValue);
+			const numericValue = Number(paymentDisplayInput.value);
+			paymentInput.value = Number.isFinite(numericValue) ? String(numericValue) : '';
 			clearFieldError('payment');
 			clearInvalid(paymentDisplayInput);
 			updateCreateEstimatedValue();
@@ -1116,17 +1330,15 @@
 				return;
 			}
 
-			const rawDigits = editPaymentDisplayInput.value.replace(/\D/g, '');
-			if (!rawDigits) {
+			if (!editPaymentDisplayInput.value) {
 				editPaymentDisplayInput.value = '';
 				editPaymentInput.value = '';
 				updateEditEstimatedValue();
 				return;
 			}
 
-			const numericValue = Number(rawDigits);
-			editPaymentInput.value = String(numericValue);
-			editPaymentDisplayInput.value = formatter.format(numericValue);
+			const numericValue = Number(editPaymentDisplayInput.value);
+			editPaymentInput.value = Number.isFinite(numericValue) ? String(numericValue) : '';
 			clearEditFieldError('payment');
 			clearInvalid(editPaymentDisplayInput);
 			updateEditEstimatedValue();
@@ -1160,8 +1372,20 @@
 
 		quantityDaysInput?.addEventListener('input', updateCreateEstimatedValue);
 		quantityHoursInput?.addEventListener('input', updateCreateEstimatedValue);
+		tipoIncapacidadInput?.addEventListener('change', updateCreateEstimatedValue);
+		tipoLicenciaInput?.addEventListener('change', updateCreateEstimatedValue);
+		certificadoMedicoInput?.addEventListener('change', updateCreateEstimatedValue);
+		epsIdInput?.addEventListener('change', updateCreateEstimatedValue);
+		afpIdInput?.addEventListener('change', updateCreateEstimatedValue);
+		arlIdInput?.addEventListener('change', updateCreateEstimatedValue);
 		editQuantityDaysInput?.addEventListener('input', updateEditEstimatedValue);
 		editQuantityHoursInput?.addEventListener('input', updateEditEstimatedValue);
+		editTipoIncapacidadInput?.addEventListener('change', updateEditEstimatedValue);
+		editTipoLicenciaInput?.addEventListener('change', updateEditEstimatedValue);
+		editCertificadoMedicoInput?.addEventListener('change', updateEditEstimatedValue);
+		editEpsIdInput?.addEventListener('change', updateEditEstimatedValue);
+		editAfpIdInput?.addEventListener('change', updateEditEstimatedValue);
+		editArlIdInput?.addEventListener('change', updateEditEstimatedValue);
 		licenciaRemuneradaInput?.addEventListener('change', updateCreateEstimatedValue);
 		editLicenciaRemuneradaInput?.addEventListener('change', updateEditEstimatedValue);
 
@@ -1196,7 +1420,7 @@
 		if (paymentInput.value) {
 			const initialPayment = Number(paymentInput.value);
 			if (Number.isFinite(initialPayment)) {
-				paymentDisplayInput.value = formatter.format(initialPayment);
+				paymentDisplayInput.value = String(initialPayment);
 			}
 		}
 
@@ -1250,6 +1474,9 @@
 			editEmployeeNameInput.value = toTitleCase(data.nombres || '');
 			editEmployeeLastnameInput.value = toTitleCase(data.apellidos || '');
 			editNoveltyTypeInput.value = normalizeNoveltyType(data.tipo || '');
+			if (editSalarioBaseInput) {
+				editSalarioBaseInput.value = data.salarioBase || '0';
+			}
 			if (editLicenciaRemuneradaInput) {
 				editLicenciaRemuneradaInput.checked = String(data.licenciaRemunerada ?? '1') !== '0';
 			}
@@ -1262,6 +1489,24 @@
 			editEndDateInput.value = data.fechaFin || '';
 			if (editObservacionesInput) {
 				editObservacionesInput.value = data.observaciones || '';
+			}
+			if (editTipoLicenciaInput) {
+				editTipoLicenciaInput.value = data.tipoLicencia || '';
+			}
+			if (editTipoIncapacidadInput) {
+				editTipoIncapacidadInput.value = data.tipoIncapacidad || '';
+			}
+			if (editCertificadoMedicoInput) {
+				editCertificadoMedicoInput.checked = String(data.certificadoMedico || '0') === '1';
+			}
+			if (editEpsIdInput) {
+				editEpsIdInput.value = data.idEps || '';
+			}
+			if (editAfpIdInput) {
+				editAfpIdInput.value = data.idAfp || '';
+			}
+			if (editArlIdInput) {
+				editArlIdInput.value = data.idArl || '';
 			}
 
 			const parsedPago = Number(data.pago || 0);
@@ -1283,25 +1528,40 @@
 		};
 
 		editButtons.forEach((button) => {
-			button.addEventListener('click', () => {
-				clearAllEditErrors();
-				setEditModalData({
-					id: button.dataset.novedadId,
-					doc: button.dataset.doc,
-					nombres: button.dataset.nombres,
-					apellidos: button.dataset.apellidos,
-					tipo: button.dataset.tipo,
-					licenciaRemunerada: button.dataset.licenciaRemunerada,
-					unidad: button.dataset.unidad,
-					cantidad: button.dataset.cantidad,
-					dias: button.dataset.dias,
-					horas: button.dataset.horas,
-					fechaInicio: button.dataset.fechaInicio,
-					fechaFin: button.dataset.fechaFin,
-					pago: button.dataset.pago,
-					observaciones: button.dataset.observaciones,
-				});
-				openEditModal();
+			button.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				console.log('Edit button clicked', button.dataset);
+				try {
+					clearAllEditErrors();
+					setEditModalData({
+						id: button.dataset.novedadId,
+						doc: button.dataset.doc,
+						nombres: button.dataset.nombres,
+						apellidos: button.dataset.apellidos,
+						tipo: button.dataset.tipo,
+						licenciaRemunerada: button.dataset.licenciaRemunerada,
+						unidad: button.dataset.unidad,
+						cantidad: button.dataset.cantidad,
+						dias: button.dataset.dias,
+						horas: button.dataset.horas,
+						fechaInicio: button.dataset.fechaInicio,
+						fechaFin: button.dataset.fechaFin,
+						pago: button.dataset.pago,
+						salarioBase: button.dataset.salarioBase,
+						tipoLicencia: button.dataset.tipoLicencia,
+						tipoIncapacidad: button.dataset.tipoIncapacidad,
+						certificadoMedico: button.dataset.certificadoMedico,
+						idEps: button.dataset.idEps,
+						idAfp: button.dataset.idAfp,
+						idArl: button.dataset.idArl,
+						observaciones: button.dataset.observaciones,
+					});
+					openEditModal();
+				} catch (error) {
+					console.error('Error al abrir modal de edición:', error);
+					alert('Error al abrir el modal: ' + error.message);
+				}
 			});
 		});
 
@@ -1334,13 +1594,25 @@
 		});
 
 		deleteDirectButtons.forEach((button) => {
-			button.addEventListener('click', async () => {
+			button.addEventListener('click', async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				console.log('Delete button clicked', button.dataset);
 				const id = button.dataset.novedadId;
-				if (!id) return;
-				const confirmed = await confirmDeleteNovedad();
-				if (confirmed) {
-					deleteForm.action = deleteUrlTemplate.replace('__ID__', id);
-					deleteForm.submit();
+				if (!id) {
+					console.error('No se encontró ID de novedad');
+					return;
+				}
+				try {
+					const confirmed = await confirmDeleteNovedad();
+					if (confirmed) {
+						deleteForm.action = deleteUrlTemplate.replace('__ID__', id);
+						console.log('Submitting delete form to:', deleteForm.action);
+						deleteForm.submit();
+					}
+				} catch (error) {
+					console.error('Error al eliminar:', error);
+					alert('Error al eliminar: ' + error.message);
 				}
 			});
 		});
@@ -1348,8 +1620,14 @@
 		form?.addEventListener('submit', (event) => {
 			clearAllErrors();
 			let isValid = true;
+			const hasSelectedEmployee = Boolean(
+				selectedEmployee
+				&& selectedEmployee.doc
+				&& docEmpleadoInput.value
+				&& String(selectedEmployee.doc) === String(docEmpleadoInput.value)
+			);
 
-			if (!docEmpleadoInput.value) {
+			if (!hasSelectedEmployee) {
 				isValid = false;
 				showFieldError('employee', 'Debe buscar y seleccionar un empleado válido.');
 				markInvalid(employeeSearch);
@@ -1361,21 +1639,48 @@
 				markInvalid(noveltyType);
 			}
 
+			const selectedType = normalizeNoveltyType(noveltyType.value || '');
+			if (selectedType === 'LIC' && !tipoLicenciaInput?.value) {
+				isValid = false;
+				showFieldError('noveltyType', 'Debe seleccionar el tipo de licencia.');
+			}
+			if (['IGE', 'IRL', 'INC'].includes(selectedType) && !certificadoMedicoInput?.checked) {
+				isValid = false;
+				showFieldError('noveltyType', 'La incapacidad requiere certificado médico.');
+			}
+			if (['TDE', 'TAE'].includes(selectedType) && !epsIdInput?.value) {
+				isValid = false;
+				showFieldError('noveltyType', 'Debe seleccionar la EPS para el traslado.');
+			}
+			if (['TDP', 'TAP'].includes(selectedType) && !afpIdInput?.value) {
+				isValid = false;
+				showFieldError('noveltyType', 'Debe seleccionar la AFP para el traslado.');
+			}
+			if (selectedType === 'VCT' && !arlIdInput?.value) {
+				isValid = false;
+				showFieldError('noveltyType', 'Debe seleccionar la ARL para la variación de centro de trabajo.');
+			}
+
 			const selectedUnit = getSelectedCreateUnit();
+			const typeWithoutQuantity = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(selectedType);
 			if (!selectedUnit) {
 				isValid = false;
 				showFieldError('quantityUnit', 'Debe seleccionar si la cantidad corresponde a días u horas.');
 			}
 
-			if (selectedUnit === 'dias') {
+			if (!typeWithoutQuantity && selectedUnit === 'dias') {
 				const tipo = normalizeNoveltyType(noveltyType.value || '');
 				const maxDays = getMaxDaysByType(tipo);
-				const minDays = (tipo === 'licencia_maternidad' || tipo === 'licencia_luto') ? 1 : 0;
+				const minDays = 0.01;
 				let currentDays = Number(quantityDaysInput.value || 0);
 
-				if (tipo === 'licencia_maternidad') {
+				if (tipo === 'LMAT') {
 					currentDays = 126;
 					quantityDaysInput.value = '126';
+				}
+				if (tipo === 'LPAT') {
+					currentDays = 14;
+					quantityDaysInput.value = '14';
 				}
 
 				if (!quantityDaysInput.value) {
@@ -1384,30 +1689,34 @@
 					markInvalid(quantityDaysInput);
 				}
 
-				if (tipo === 'licencia_maternidad' && currentDays !== 126) {
+				if (tipo === 'LMAT' && currentDays !== 126) {
 					isValid = false;
 					showFieldError('quantityDays', 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.');
 					markInvalid(quantityDaysInput);
+				} else if (tipo === 'LPAT' && currentDays !== 14) {
+					isValid = false;
+					showFieldError('quantityDays', 'Para licencia de paternidad la cantidad debe ser exactamente 14 días.');
+					markInvalid(quantityDaysInput);
 				} else if (currentDays < minDays) {
 					isValid = false;
-					showFieldError('quantityDays', tipo === 'licencia_maternidad'
+					showFieldError('quantityDays', tipo === 'LMAT'
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
-						: (tipo === 'licencia_luto'
-							? 'Para licencia por luto debe ingresar entre 1 y 5 días.'
+						: (tipo === 'LPAT'
+							? 'Para licencia de paternidad debe ingresar máximo 14 días.'
 						: 'La cantidad de días no puede ser negativa.');
 					markInvalid(quantityDaysInput);
 				} else if (currentDays > maxDays) {
 					isValid = false;
-					showFieldError('quantityDays', tipo === 'licencia_maternidad'
+					showFieldError('quantityDays', tipo === 'LMAT'
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
-						: (tipo === 'licencia_luto'
-							? 'Para licencia por luto la cantidad máxima es 5 días.'
+						: (tipo === 'LPAT'
+							? 'Para licencia de paternidad la cantidad máxima es 14 días.'
 						: 'La cantidad de días no puede superar 30.');
 					markInvalid(quantityDaysInput);
 				}
 			}
 
-			if (selectedUnit === 'horas') {
+			if (!typeWithoutQuantity && selectedUnit === 'horas') {
 				if (!quantityHoursInput.value) {
 					isValid = false;
 					showFieldError('quantityHours', 'Debe ingresar la cantidad en horas.');
@@ -1461,21 +1770,48 @@
 				markInvalid(editNoveltyTypeInput);
 			}
 
+			const selectedEditType = normalizeNoveltyType(editNoveltyTypeInput.value || '');
+			if (selectedEditType === 'LIC' && !editTipoLicenciaInput?.value) {
+				isValid = false;
+				showEditFieldError('noveltyType', 'Debe seleccionar el tipo de licencia.');
+			}
+			if (['IGE', 'IRL', 'INC'].includes(selectedEditType) && !editCertificadoMedicoInput?.checked) {
+				isValid = false;
+				showEditFieldError('noveltyType', 'La incapacidad requiere certificado médico.');
+			}
+			if (['TDE', 'TAE'].includes(selectedEditType) && !editEpsIdInput?.value) {
+				isValid = false;
+				showEditFieldError('noveltyType', 'Debe seleccionar la EPS para el traslado.');
+			}
+			if (['TDP', 'TAP'].includes(selectedEditType) && !editAfpIdInput?.value) {
+				isValid = false;
+				showEditFieldError('noveltyType', 'Debe seleccionar la AFP para el traslado.');
+			}
+			if (selectedEditType === 'VCT' && !editArlIdInput?.value) {
+				isValid = false;
+				showEditFieldError('noveltyType', 'Debe seleccionar la ARL para la variación de centro de trabajo.');
+			}
+
 			const selectedEditUnit = getSelectedEditUnit();
+			const editTypeWithoutQuantity = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(selectedEditType);
 			if (!selectedEditUnit) {
 				isValid = false;
 				showEditFieldError('quantityUnit', 'Debe seleccionar si la cantidad corresponde a días u horas.');
 			}
 
-			if (selectedEditUnit === 'dias') {
+			if (!editTypeWithoutQuantity && selectedEditUnit === 'dias') {
 				const tipo = normalizeNoveltyType(editNoveltyTypeInput.value || '');
 				const maxDays = getMaxDaysByType(tipo);
-				const minDays = (tipo === 'licencia_maternidad' || tipo === 'licencia_luto') ? 1 : 0;
+				const minDays = 0.01;
 				let currentDays = Number(editQuantityDaysInput.value || 0);
 
-				if (tipo === 'licencia_maternidad') {
+				if (tipo === 'LMAT') {
 					currentDays = 126;
 					editQuantityDaysInput.value = '126';
+				}
+				if (tipo === 'LPAT') {
+					currentDays = 14;
+					editQuantityDaysInput.value = '14';
 				}
 
 				if (!editQuantityDaysInput.value) {
@@ -1484,30 +1820,34 @@
 					markInvalid(editQuantityDaysInput);
 				}
 
-				if (tipo === 'licencia_maternidad' && currentDays !== 126) {
+				if (tipo === 'LMAT' && currentDays !== 126) {
 					isValid = false;
 					showEditFieldError('quantityDays', 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.');
 					markInvalid(editQuantityDaysInput);
+				} else if (tipo === 'LPAT' && currentDays !== 14) {
+					isValid = false;
+					showEditFieldError('quantityDays', 'Para licencia de paternidad la cantidad debe ser exactamente 14 días.');
+					markInvalid(editQuantityDaysInput);
 				} else if (currentDays < minDays) {
 					isValid = false;
-					showEditFieldError('quantityDays', tipo === 'licencia_maternidad'
+					showEditFieldError('quantityDays', tipo === 'LMAT'
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
-						: (tipo === 'licencia_luto'
-							? 'Para licencia por luto debe ingresar entre 1 y 5 días.'
+						: (tipo === 'LPAT'
+							? 'Para licencia de paternidad debe ingresar máximo 14 días.'
 						: 'La cantidad de días no puede ser negativa.');
 					markInvalid(editQuantityDaysInput);
 				} else if (currentDays > maxDays) {
 					isValid = false;
-					showEditFieldError('quantityDays', tipo === 'licencia_maternidad'
+					showEditFieldError('quantityDays', tipo === 'LMAT'
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
-						: (tipo === 'licencia_luto'
-							? 'Para licencia por luto la cantidad máxima es 5 días.'
+						: (tipo === 'LPAT'
+							? 'Para licencia de paternidad la cantidad máxima es 14 días.'
 						: 'La cantidad de días no puede superar 30.');
 					markInvalid(editQuantityDaysInput);
 				}
 			}
 
-			if (selectedEditUnit === 'horas') {
+			if (!editTypeWithoutQuantity && selectedEditUnit === 'horas') {
 				if (!editQuantityHoursInput.value) {
 					isValid = false;
 					showEditFieldError('quantityHours', 'Debe ingresar la cantidad en horas.');
@@ -1570,6 +1910,13 @@
 					fechaInicio: oldEditData.fecha_inicio || sourceButton.dataset.fechaInicio,
 					fechaFin: oldEditData.fecha_fin || sourceButton.dataset.fechaFin,
 					pago: oldEditData.pago_manual || sourceButton.dataset.pago,
+					salarioBase: oldEditData.salario_base || sourceButton.dataset.salarioBase,
+					tipoLicencia: oldEditData.tipo_licencia || sourceButton.dataset.tipoLicencia,
+					tipoIncapacidad: oldEditData.tipo_incapacidad || sourceButton.dataset.tipoIncapacidad,
+					certificadoMedico: oldEditData.certificado_medico || sourceButton.dataset.certificadoMedico,
+					idEps: oldEditData.id_eps || sourceButton.dataset.idEps,
+					idAfp: oldEditData.id_afp || sourceButton.dataset.idAfp,
+					idArl: oldEditData.id_arl || sourceButton.dataset.idArl,
 					observaciones: oldEditData.observaciones || sourceButton.dataset.observaciones,
 				});
 				openEditModal();

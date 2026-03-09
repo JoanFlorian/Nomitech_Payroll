@@ -10,13 +10,11 @@ class MetodoPagoSeeder extends Seeder
     public function run(): void
     {
         $metodoPagos = [
-            ['nombre' => 'Tarjeta Crédito'],
             ['nombre' => 'Tarjeta Débito'],
             ['nombre' => 'Transferencia Bancaria'],
             ['nombre' => 'Efectivo'],
-            ['nombre' => 'Cheque'],
-            ['nombre' => 'Billetera Digital'],
         ];
+        
 
         foreach ($metodoPagos as $metodo) {
             DB::table('metodo_pago')->insert([

@@ -161,13 +161,136 @@
         return optionText.includes('indefinid');
     }
 
+    function getRiskLevelNumber(rawValue) {
+        const value = (rawValue || '').toString().trim().toUpperCase();
+        if (value === '') {
+            return null;
+        }
+
+        const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        const digitMatch = normalized.match(/\b([1-5])\b/);
+        if (digitMatch) {
+            return Number(digitMatch[1]);
+        }
+
+        const romanMatch = normalized.match(/\b(III|IV|II|V|I)\b/);
+        if (!romanMatch) {
+            return null;
+        }
+
+        const token = romanMatch[1];
+        const romanMap = {
+            I: 1,
+            II: 2,
+            III: 3,
+            IV: 4,
+            V: 5,
+        };
+
+        return romanMap[token] ?? Number(token);
+    }
+
+    function syncRiskClassification(form) {
+        const nivelRiesgoInput = getField(form, 'nivel_riesgo');
+        const altoRiesgoInput = getField(form, 'alto_riesgo');
+        const bajoRiesgoInput = getField(form, 'bajo_riesgo');
+
+        if (!nivelRiesgoInput || !altoRiesgoInput || !bajoRiesgoInput) {
+            return;
+        }
+
+        const riskLevel = getRiskLevelNumber(nivelRiesgoInput.value);
+
+        if (riskLevel === null) {
+            altoRiesgoInput.checked = false;
+            bajoRiesgoInput.checked = false;
+            return;
+        }
+
+        if (riskLevel >= 3) {
+            altoRiesgoInput.checked = true;
+            bajoRiesgoInput.checked = false;
+            return;
+        }
+
+        altoRiesgoInput.checked = false;
+        bajoRiesgoInput.checked = true;
+    }
+
+    function isCashPaymentMethodSelected(methodInput) {
+        if (!methodInput) {
+            return false;
+        }
+
+        const selectedOption = methodInput.selectedOptions && methodInput.selectedOptions[0]
+            ? methodInput.selectedOptions[0]
+            : null;
+
+        if (!selectedOption) {
+            return false;
+        }
+
+        const optionText = (selectedOption.textContent || '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+
+        return optionText.includes('efectiv');
+    }
+
+    function syncBankFieldsByPaymentMethod(form) {
+        const metodoPagoInput = getField(form, 'id_metodo_pago');
+        const bankFields = [
+            getField(form, 'banco'),
+            getField(form, 'id_banco'),
+            getField(form, 'tipo_cuenta'),
+            getField(form, 'numero_cuenta'),
+        ].filter(Boolean);
+
+        if (!metodoPagoInput || bankFields.length === 0) {
+            return;
+        }
+
+        const isCash = isCashPaymentMethodSelected(metodoPagoInput);
+
+        bankFields.forEach((field) => {
+            if (isCash) {
+                field.value = '';
+                field.setAttribute('disabled', 'disabled');
+                field.classList.add('bg-gray-100', 'cursor-not-allowed');
+                clearFieldError(field);
+                return;
+            }
+
+            field.removeAttribute('disabled');
+            field.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        });
+    }
+
     function validateStep1Field(form, fieldName, showError = true) {
         const input = getField(form, fieldName);
         const value = input ? (input.value || '').trim() : '';
 
         switch (fieldName) {
             case 'id_tipo_doc':
-                return validarInput(input, value !== '', 'El tipo de documento es obligatorio.', showError);
+                if (!input) {
+                    return false;
+                }
+
+                if (value !== '') {
+                    if (showError) {
+                        clearFieldError(input);
+                    }
+                    return true;
+                }
+
+                if (showError) {
+                    setFieldError(input, 'El tipo de documento es obligatorio.');
+                }
+
+                return false;
             case 'doc':
                 return validarInput(input, NUMBERS_REGEX.test(value) && value.length >= 5 && value.length <= 15, 'El documento debe tener entre 5 y 15 dígitos numéricos.', showError);
             case 'primer_nombre':
@@ -292,6 +415,13 @@
             case 'horas_diarias':
                 return validarInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
             case 'codigo_interno':
+                if (value === '') {
+                    if (showError) {
+                        clearFieldError(input);
+                    }
+                    return true;
+                }
+
                 return validarInput(input, INTERNAL_CODE_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 dígitos numéricos.', showError);
             default:
                 return true;
@@ -301,6 +431,8 @@
     function validateStep3Field(form, fieldName, showError = true) {
         const input = getField(form, fieldName);
         const value = input ? (input.value || '').trim() : '';
+        const metodoPagoInput = getField(form, 'id_metodo_pago');
+        const isCash = isCashPaymentMethodSelected(metodoPagoInput);
 
         switch (fieldName) {
             case 'id_forma_pago':
@@ -308,8 +440,20 @@
             case 'id_metodo_pago':
                 return validarInput(input, value !== '', 'El método de pago es obligatorio.', showError);
             case 'tipo_cuenta':
+                if (isCash) {
+                    if (showError) {
+                        clearFieldError(input);
+                    }
+                    return true;
+                }
                 return validarInput(input, value !== '', 'El tipo de cuenta es obligatorio.', showError);
             case 'numero_cuenta':
+                if (isCash) {
+                    if (showError) {
+                        clearFieldError(input);
+                    }
+                    return true;
+                }
                 return validarInput(input, ACCOUNT_REGEX.test(value), 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.', showError);
             case 'id_eps':
                 return validarInput(input, value !== '', 'La EPS es obligatoria.', showError);
@@ -490,6 +634,18 @@
             });
         }
 
+        ['primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido'].forEach(function (fieldName) {
+            const fieldInput = getField(form, fieldName);
+            if (!fieldInput) {
+                return;
+            }
+
+            fieldInput.addEventListener('input', function () {
+                // Keep only letters (including accents) and spaces.
+                fieldInput.value = (fieldInput.value || '').replace(/[^a-zA-ZÁÉÍÓÚáéíóúñÑ\s]/g, '');
+            });
+        });
+
         initCommonRealtimeValidation(form);
 
         document.addEventListener('selected', function (event) {
@@ -618,6 +774,16 @@
 
         const tipoTrabajadorInput = getField(form, 'id_tipo_trabajador');
         const salarioInput = getField(form, 'salario');
+        const codigoInternoInput = getField(form, 'codigo_interno');
+        const nivelRiesgoInput = getField(form, 'nivel_riesgo');
+        const altoRiesgoInput = getField(form, 'alto_riesgo');
+        const bajoRiesgoInput = getField(form, 'bajo_riesgo');
+
+        if (codigoInternoInput) {
+            codigoInternoInput.addEventListener('input', function () {
+                codigoInternoInput.value = (codigoInternoInput.value || '').replace(/\D/g, '').slice(0, 20);
+            });
+        }
 
         if (salarioInput) {
             salarioInput.addEventListener('input', function () {
@@ -652,7 +818,20 @@
             });
         }
 
+        if (nivelRiesgoInput) {
+            nivelRiesgoInput.addEventListener('change', function () {
+                syncRiskClassification(form);
+            });
+        }
+
+        [altoRiesgoInput, bajoRiesgoInput].filter(Boolean).forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                syncRiskClassification(form);
+            });
+        });
+
         syncFechaFinByContractType();
+        syncRiskClassification(form);
         initCommonRealtimeValidation(form);
 
         form.addEventListener('submit', function (event) {
@@ -670,7 +849,25 @@
         }
 
         const submitButton = form.querySelector('button[type="submit"]');
+        const numeroCuentaInput = getField(form, 'numero_cuenta');
+        const metodoPagoInput = getField(form, 'id_metodo_pago');
+
+        if (numeroCuentaInput) {
+            numeroCuentaInput.addEventListener('input', function () {
+                numeroCuentaInput.value = (numeroCuentaInput.value || '').replace(/\D/g, '').slice(0, 20);
+            });
+        }
+
+        if (metodoPagoInput) {
+            metodoPagoInput.addEventListener('change', function () {
+                syncBankFieldsByPaymentMethod(form);
+                validateStep3Field(form, 'tipo_cuenta', true);
+                validateStep3Field(form, 'numero_cuenta', true);
+            });
+        }
+
         initCommonRealtimeValidation(form);
+        syncBankFieldsByPaymentMethod(form);
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();

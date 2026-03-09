@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\MetodoPago;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Str;
 
 class Step3Request extends FormRequest
 {
@@ -17,11 +19,14 @@ class Step3Request extends FormRequest
 
     public function rules(): array
     {
+        $metodoPagoId = (int) $this->input('id_metodo_pago');
+        $isCashPaymentMethod = $this->isCashPaymentMethod($metodoPagoId);
+
         return [
             'id_forma_pago' => 'required|integer|exists:forma_pago,id_forma_pago',
             'id_metodo_pago' => 'required|integer|exists:metodo_pago,id_metodo_pago',
-            'tipo_cuenta' => 'required|integer|exists:tipo_cuenta,id_tipo_cuenta',
-            'numero_cuenta' => 'required|string|max:20|regex:/^[0-9]{6,20}$/',
+            'tipo_cuenta' => ($isCashPaymentMethod ? 'nullable' : 'required') . '|integer|exists:tipo_cuenta,id_tipo_cuenta',
+            'numero_cuenta' => ($isCashPaymentMethod ? 'nullable' : 'required') . '|string|max:20|regex:/^[0-9]{6,20}$/',
             'id_eps' => 'required|integer|exists:eps,id_eps',
             'id_afp' => 'required|integer|exists:afp,id_afp',
 
@@ -31,6 +36,28 @@ class Step3Request extends FormRequest
             'intereses_inicial' => 'nullable|numeric|min:0',
             'vacaciones_inicial' => 'nullable|numeric|min:0',
         ];
+    }
+
+    private function isCashPaymentMethod(int $metodoPagoId): bool
+    {
+        if ($metodoPagoId <= 0) {
+            return false;
+        }
+
+        $methodName = MetodoPago::query()
+            ->where('id_metodo_pago', $metodoPagoId)
+            ->value('nombre');
+
+        if (!$methodName) {
+            return false;
+        }
+
+        $normalized = Str::of($methodName)
+            ->ascii()
+            ->lower()
+            ->toString();
+
+        return Str::contains($normalized, 'efectiv');
     }
 
     public function messages(): array

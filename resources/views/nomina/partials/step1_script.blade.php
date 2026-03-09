@@ -18,6 +18,10 @@
     const isEditingNomina = @json((bool) ($isEditing ?? false));
     const formatCOP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 
+    const buscarEmpleadosUrl = @json(url('/nomina/buscar-empleados'));
+    const buscarEmpleadoBaseUrl = @json(url('/nomina/buscar-empleado'));
+    const validarDuplicadoBaseUrl = @json(url('/nomina/validar-duplicado'));
+
     let timer = null;
     let lastResults = [];
     let selectedEmployee = null;
@@ -161,7 +165,7 @@
 
         if (spinner) spinner.classList.remove('hidden');
         try {
-            const resp = await fetch(`/nomina/validar-duplicado/${emp.id_contrato}`);
+            const resp = await fetch(`${validarDuplicadoBaseUrl}/${emp.id_contrato}`);
             const data = await resp.json();
 
             if (data.duplicate) {
@@ -204,7 +208,7 @@
     async function fetchEmployees(term = '') {
         if (spinner) spinner.classList.remove('hidden');
         try {
-            const resp = await fetch(`/nomina/buscar-empleados?q=${encodeURIComponent(term)}`);
+            const resp = await fetch(`${buscarEmpleadosUrl}?q=${encodeURIComponent(term)}`);
             if (!resp.ok) throw new Error('request failed');
             const data = await resp.json();
             renderSuggestions(Array.isArray(data) ? data : []);
@@ -236,7 +240,7 @@
         }
 
         try {
-            const resp = await fetch(`/nomina/buscar-empleado/${encodeURIComponent(docInput.value)}`);
+            const resp = await fetch(`${buscarEmpleadoBaseUrl}/${encodeURIComponent(docInput.value)}`);
             if (!resp.ok) return;
             const emp = await resp.json();
             if (!emp) return;

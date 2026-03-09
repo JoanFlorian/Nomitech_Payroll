@@ -40,7 +40,7 @@ class Step2Request extends FormRequest
             'nivel_riesgo' => 'bail|required|in:Nivel I,Nivel II,Nivel III,Nivel IV,Nivel V',
 
             // CODIGO INTERNO
-            'codigo_interno' => 'bail|required|string|min:3|max:20|regex:/^[0-9]+$/',
+            'codigo_interno' => 'bail|nullable|string|min:3|max:20|regex:/^[0-9]+$/',
 
             // BOOLEAN CHECK - alto_riesgo (checkbox)
             'alto_riesgo' => 'nullable|boolean',
@@ -135,7 +135,6 @@ class Step2Request extends FormRequest
             | CÓDIGO INTERNO
             |--------------------------------------------------------------------------
             */
-            'codigo_interno.required' => 'El código interno es obligatorio.',
             'codigo_interno.min'      => 'El código interno debe tener mínimo 3 caracteres.',
             'codigo_interno.max'      => 'El código interno no puede superar 20 caracteres.',
             'codigo_interno.regex'    => 'El código interno solo puede contener números.',
@@ -282,8 +281,11 @@ class Step2Request extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $nivelRiesgo = (string) $this->input('nivel_riesgo', '');
+        $altoRiesgoFromNivel = $this->resolveHighRiskFromNivel($nivelRiesgo);
+
         $payload = [
-            'alto_riesgo' => $this->has('alto_riesgo') ? 1 : 0,
+            'alto_riesgo' => $altoRiesgoFromNivel ?? ($this->has('alto_riesgo') ? 1 : 0),
         ];
 
         if (!$this->has('salario') && $this->has('salario_base')) {
@@ -298,7 +300,34 @@ class Step2Request extends FormRequest
             }
         }
 
+        if ($this->has('codigo_interno')) {
+            $codigoInterno = trim((string) $this->input('codigo_interno'));
+            $payload['codigo_interno'] = $codigoInterno === '' ? null : $codigoInterno;
+        }
+
         $this->merge($payload);
+    }
+
+    private function resolveHighRiskFromNivel(string $nivelRiesgo): ?int
+    {
+        if ($nivelRiesgo === '') {
+            return null;
+        }
+
+        $normalized = Str::of($nivelRiesgo)
+            ->ascii()
+            ->upper()
+            ->toString();
+
+        if (Str::contains($normalized, ['III', 'IV', 'V', '3', '4', '5'])) {
+            return 1;
+        }
+
+        if (Str::contains($normalized, ['II', 'I', '2', '1'])) {
+            return 0;
+        }
+
+        return null;
     }
 
     private function normalizeLocalizedNumber(mixed $value): ?float

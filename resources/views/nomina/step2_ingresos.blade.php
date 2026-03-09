@@ -6,6 +6,10 @@
 @section('content')
 @php($s3 = $step2Ingresos ?? [])
 @php($s2 = $s2 ?? [])
+@php($auxilioDb = (float) ($auxilioTransporteDb ?? 0))
+@php($aplicaTope = (bool) ($aplicaPorTope ?? true))
+@php($aplicaAuxilio = (int) old('aplica_auxilio_transporte', $s3['aplica_auxilio_transporte'] ?? ($auxilioDb > 0 ? 1 : 0)))
+@php($auxilioActual = (float) old('auxilio_transporte', $s3['auxilio_transporte'] ?? ($aplicaAuxilio ? $auxilioDb : 0)))
 
 <div class="relative">
 
@@ -13,7 +17,10 @@
         @include('nomina.partials.index_content', ['salarios' => $salarios ?? collect()])
     </div>
 
-    <div class="fixed inset-0 bg-black/50 z-40"></div>
+    <div class="fixed inset-0 bg-gray-900/85 z-40" aria-hidden="true"></div>
+    <div class="fixed inset-0 z-40 pointer-events-none overflow-hidden" aria-hidden="true">
+        @include('nomina.partials.modal_figures')
+    </div>
 
     <div class="fixed inset-0 z-50 p-3 md:p-6 flex items-start md:items-center justify-center overflow-y-auto">
 
@@ -55,6 +62,34 @@
 
                     </div>
 
+                    <div class="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                        <h4 class="text-sm font-semibold text-blue-900 mb-3">
+                            Resumen
+                        </h4>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div class="rounded-lg bg-white border border-blue-100 p-3">
+                                <div class="text-xs text-gray-500">Horas + recargos</div>
+                                <div id="resumen_horas_recargos" class="font-semibold text-gray-800">$0</div>
+                            </div>
+
+                            <div class="rounded-lg bg-white border border-blue-100 p-3">
+                                <div class="text-xs text-gray-500">Devengos parcial</div>
+                                <div id="resumen_parcial" class="font-semibold">$0</div>
+                            </div>
+
+                            <div class="rounded-lg bg-white border border-blue-100 p-3">
+                                <div class="text-xs text-gray-500">Otros ingresos</div>
+                                <div id="resumen_otros" class="font-semibold">$0</div>
+                            </div>
+
+                            <div class="rounded-lg bg-white border border-blue-100 p-3">
+                                <div class="text-xs text-gray-500">Devengos final</div>
+                                <div id="resumen_final" class="font-semibold text-blue-700">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
 
@@ -66,6 +101,12 @@
                             Otros ingresos
                         </h3>
 
+                        @if(($step2AutoRecalculated ?? false) === true)
+                            <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                Se recalcularon automaticamente las horas y recargos para corregir valores inconsistentes del paso anterior.
+                            </div>
+                        @endif
+
                         <form method="POST" action="{{ route('nomina.step2.ingresos.post') }}" id="formStep2Ingresos">
                             @csrf
 
@@ -73,39 +114,8 @@
                             <input type="hidden" id="total_horas_extra" value="{{ $s2['total_horas_extra'] ?? 0 }}">
                             <input type="hidden" id="total_recargos" value="{{ $s2['total_recargos'] ?? 0 }}">
                             <input type="hidden" id="total_devengos_parcial" value="{{ $s2['total_devengos_parcial'] ?? 0 }}">
-
-                            <div class="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
-
-                                <h4 class="text-sm font-semibold text-blue-900 mb-3">
-                                    Resumen
-                                </h4>
-
-                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-
-                                    <div class="rounded-lg bg-white border border-blue-100 p-3">
-                                        <div class="text-xs text-gray-500">Horas + recargos</div>
-                                        <div id="resumen_horas_recargos" class="font-semibold text-gray-800">$0</div>
-                                    </div>
-
-                                    <div class="rounded-lg bg-white border border-blue-100 p-3">
-                                        <div class="text-xs text-gray-500">Devengos parcial</div>
-                                        <div id="resumen_parcial" class="font-semibold">$0</div>
-                                    </div>
-
-                                    <div class="rounded-lg bg-white border border-blue-100 p-3">
-                                        <div class="text-xs text-gray-500">Otros ingresos</div>
-                                        <div id="resumen_otros" class="font-semibold">$0</div>
-                                    </div>
-
-                                    <div class="rounded-lg bg-white border border-blue-100 p-3">
-                                        <div class="text-xs text-gray-500">Devengos final</div>
-                                        <div id="resumen_final" class="font-semibold text-blue-700">$0</div>
-                                    </div>
-
-                                </div>
-
-                            </div>
-
+                            <input type="hidden" id="auxilio_base_db" value="{{ $auxilioDb }}">
+                            <input type="hidden" id="aplica_por_tope" value="{{ $aplicaTope ? 1 : 0 }}">
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -119,11 +129,12 @@
                                         value="{{ old('bonificaciones', $s3['bonificaciones'] ?? 0) }}"
                                         type="text"
                                         inputmode="decimal"
+                                        autocomplete="off"
                                         maxlength="15"
                                         class="devengo-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs"
                                     >
 
-                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.</p>
+                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.999.</p>
 
                                     @error('bonificaciones')
                                         <p class="text-xs text-red-600 mt-1 font-medium">{{ $message }}</p>
@@ -140,11 +151,12 @@
                                         value="{{ old('comisiones', $s3['comisiones'] ?? 0) }}"
                                         type="text"
                                         inputmode="decimal"
+                                        autocomplete="off"
                                         maxlength="15"
                                         class="devengo-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs"
                                     >
 
-                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.</p>
+                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.999.</p>
 
                                     @error('comisiones')
                                         <p class="text-xs text-red-600 mt-1 font-medium">{{ $message }}</p>
@@ -162,11 +174,12 @@
                                         value="{{ old('otros_devengos', $s3['otros_devengos'] ?? 0) }}"
                                         type="text"
                                         inputmode="decimal"
+                                        autocomplete="off"
                                         maxlength="15"
                                         class="devengo-input w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs"
                                     >
 
-                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.</p>
+                                    <p class="text-[11px] text-gray-500 mt-1">Valor entre 0 y 999.999.999.999.</p>
 
                                     @error('otros_devengos')
                                         <p class="text-xs text-red-600 mt-1 font-medium">{{ $message }}</p>
@@ -174,7 +187,40 @@
 
                                 </div>
 
+                                <div class="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                        Auxilio de transporte
+                                    </label>
+
+                                    <div class="flex flex-wrap gap-2 mb-3">
+                                        <button type="button" id="btn_auxilio_si"
+                                            class="px-4 py-2 text-xs font-bold rounded-lg border transition">Si aplica</button>
+                                        <button type="button" id="btn_auxilio_no"
+                                            class="px-4 py-2 text-xs font-bold rounded-lg border transition">No aplica</button>
+                                    </div>
+
+                                    <input type="hidden" name="aplica_auxilio_transporte" id="aplica_auxilio_transporte" value="{{ $aplicaAuxilio ? 1 : 0 }}">
+
+                                    <input
+                                        id="auxilio_transporte"
+                                        name="auxilio_transporte"
+                                        value="{{ $auxilioActual }}"
+                                        type="text"
+                                        inputmode="decimal"
+                                        readonly
+                                        class="w-full border-2 border-gray-300 px-3 py-2 rounded-lg text-xs bg-white"
+                                    >
+
+                                    @if(!$aplicaTope)
+                                        <p class="text-[11px] text-amber-700 mt-2">No aplica por tope salarial configurado.</p>
+                                    @else
+                                        <p class="text-[11px] text-gray-500 mt-2">Se calcula automaticamente desde parametros de nomina.</p>
+                                    @endif
+                                </div>
+
                             </div>
+
+                            <p id="otrosIngresosError" class="hidden mt-4 text-sm text-red-600 font-medium"></p>
 
 
                             <div class="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-6 mt-6 border-t border-gray-200">
@@ -210,17 +256,18 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    const MAX_OTROS_INGRESOS = 999999999;
+    const MAX_OTROS_INGRESOS = 999999999999;
 
     const inputs = document.querySelectorAll('.devengo-input');
 
+    const asPesos = (value) => Math.round(Number(value || 0));
     const money = v => new Intl.NumberFormat('es-CO',{
         style:'currency',
         currency:'COP',
         maximumFractionDigits:0
-    }).format(v || 0);
+    }).format(asPesos(v));
 
-    const numberFormatter = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const numberFormatter = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     const formatInputNumber = (v) => numberFormatter.format(Number(v || 0));
 
     const normalizeNumberString = (raw) => {
@@ -244,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 normalized = normalized.replace(/\./g, '');
             } else {
                 const parts = normalized.split('.');
-                if (parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1) {
+                if (parts.length === 2 && parts[1].length >= 3 && parts[0].length >= 1) {
                     normalized = normalized.replace('.', '');
                 }
             }
@@ -254,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 normalized = normalized.replace(/,/g, '');
             } else {
                 const parts = normalized.split(',');
-                if (parts.length === 2 && parts[1].length === 3 && parts[0].length >= 1) {
+                if (parts.length === 2 && parts[1].length >= 3 && parts[0].length >= 1) {
                     normalized = normalized.replace(',', '');
                 } else {
                     normalized = normalized.replace(',', '.');
@@ -274,18 +321,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const salarioBase = toNumber(document.getElementById('salario_base_mensual')?.value || 0);
     const totalHorasExtra = toNumber(document.getElementById('total_horas_extra')?.value || 0);
     const totalRecargos = toNumber(document.getElementById('total_recargos')?.value || 0);
-    const parcialFromStep2 = toNumber(document.getElementById('total_devengos_parcial')?.value || 0);
+    const auxilioBaseDb = toNumber(document.getElementById('auxilio_base_db')?.value || 0);
+    const aplicaPorTope = Number(document.getElementById('aplica_por_tope')?.value || 0) === 1;
+
+    const btnAuxilioSi = document.getElementById('btn_auxilio_si');
+    const btnAuxilioNo = document.getElementById('btn_auxilio_no');
+    const inputAplicaAuxilio = document.getElementById('aplica_auxilio_transporte');
+    const inputAuxilio = document.getElementById('auxilio_transporte');
 
     const get = name => toNumber(document.querySelector(`[name="${name}"]`)?.value || 0);
 
+    const obtenerAuxilioActual = () => {
+        if (!inputAplicaAuxilio || !inputAuxilio) return 0;
+        if (Number(inputAplicaAuxilio.value || 0) !== 1) return 0;
+        return toNumber(inputAuxilio.value || 0);
+    };
+
+    const pintarBotonesAuxilio = () => {
+        const aplica = Number(inputAplicaAuxilio?.value || 0) === 1;
+
+        if (btnAuxilioSi) {
+            btnAuxilioSi.className = aplica
+                ? 'px-4 py-2 text-xs font-bold rounded-lg border border-blue-600 bg-blue-600 text-white transition'
+                : 'px-4 py-2 text-xs font-bold rounded-lg border border-gray-300 bg-white text-gray-600 transition';
+            btnAuxilioSi.disabled = !aplicaPorTope;
+        }
+
+        if (btnAuxilioNo) {
+            btnAuxilioNo.className = !aplica
+                ? 'px-4 py-2 text-xs font-bold rounded-lg border border-slate-700 bg-slate-700 text-white transition'
+                : 'px-4 py-2 text-xs font-bold rounded-lg border border-gray-300 bg-white text-gray-600 transition';
+        }
+    };
+
+    const setEstadoAuxilio = (aplica) => {
+        if (!inputAplicaAuxilio || !inputAuxilio) return;
+
+        const valorAplica = aplica && aplicaPorTope;
+        inputAplicaAuxilio.value = valorAplica ? '1' : '0';
+        inputAuxilio.value = formatInputNumber(valorAplica ? auxilioBaseDb : 0);
+        inputAuxilio.readOnly = true;
+        inputAuxilio.classList.toggle('opacity-60', !valorAplica);
+
+        pintarBotonesAuxilio();
+        calcular();
+    };
+
     const calcular = () => {
         const totalHorasRecargos = totalHorasExtra + totalRecargos;
-        const parcial = parcialFromStep2 > 0 ? parcialFromStep2 : (salarioBase + totalHorasRecargos);
+        const parcial = salarioBase + totalHorasRecargos;
 
         const otros =
             get('bonificaciones') +
             get('comisiones') +
-            get('otros_devengos');
+            get('otros_devengos') +
+            obtenerAuxilioActual();
 
         const final = parcial + otros;
 
@@ -298,7 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     inputs.forEach(input=>{
         input.addEventListener('input', ()=>{
+            input.value = sanitizeMoneyText(input.value);
             if (input.value.includes('-')) input.value = input.value.replace('-', '');
+            input.classList.remove('border-red-500');
             calcular();
         });
 
@@ -313,11 +405,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const form = document.getElementById('formStep2Ingresos');
+    const errorBox = document.getElementById('otrosIngresosError');
+
+    const isValidMoneyText = (value) => {
+        const raw = String(value ?? '').trim();
+        if (raw === '') return true;
+        return /^\d[\d.,]*$/.test(raw);
+    };
+
+    const sanitizeMoneyText = (value) => String(value ?? '').replace(/[^\d.,]/g, '');
+
+    inputs.forEach((input) => {
+        input.value = sanitizeMoneyText(input.value);
+    });
+
     if (form) {
         form.addEventListener('submit', (event) => {
             let hasErrors = false;
+            if (errorBox) {
+                errorBox.classList.add('hidden');
+                errorBox.textContent = '';
+            }
 
             inputs.forEach((input) => {
+                input.value = sanitizeMoneyText(input.value);
+                if (!isValidMoneyText(input.value)) {
+                    hasErrors = true;
+                    input.classList.add('border-red-500');
+                    return;
+                }
+
                 const value = Math.min(get(input.name), MAX_OTROS_INGRESOS);
                 input.value = formatInputNumber(value);
 
@@ -331,9 +448,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (hasErrors) {
                 event.preventDefault();
+                if (errorBox) {
+                    errorBox.textContent = 'Ingresa solo números no negativos. Puedes usar punto como separador de miles.';
+                    errorBox.classList.remove('hidden');
+                }
             }
         });
     }
+
+    if (btnAuxilioSi) {
+        btnAuxilioSi.addEventListener('click', () => setEstadoAuxilio(true));
+    }
+
+    if (btnAuxilioNo) {
+        btnAuxilioNo.addEventListener('click', () => setEstadoAuxilio(false));
+    }
+
+    setEstadoAuxilio(Number(inputAplicaAuxilio?.value || 0) === 1);
 
     calcular();
 

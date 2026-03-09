@@ -63,8 +63,8 @@
 <body>
     <div class="header">
         <div class="title">Reporte de Nómina</div>
-        <div class="meta">Generado: {{ $fechaGeneracion }}</div>
-        <div class="meta">Búsqueda: {{ $busqueda }} | Periodo: {{ $periodo }}</div>
+        <div class="meta">Generado: {{ $fechaGeneracion ?? now()->format('d/m/Y H:i') }}</div>
+        <div class="meta">Búsqueda: {{ $busqueda ?? 'Sin filtro' }} | Periodo: {{ $periodo ?? 'Sin filtro' }}</div>
     </div>
 
     <table>
@@ -90,9 +90,9 @@
                     <td>{{ $usuario?->nombre_completo ?? '' }}</td>
                     <td>{{ $salario->fecha_pago ? \Carbon\Carbon::parse($salario->fecha_pago)->format('Y-m-d') : '' }}</td>
                     <td class="text-right">${{ number_format((float) ($contrato?->salario_base ?? 0), 0, ',', '.') }}</td>
-                    <td class="text-right">${{ number_format((float) $salario->total_devengos, 0, ',', '.') }}</td>
-                    <td class="text-right">${{ number_format((float) $salario->total_deducciones, 0, ',', '.') }}</td>
-                    <td class="text-right">${{ number_format((float) $salario->salario_neto, 0, ',', '.') }}</td>
+                    <td class="text-right">${{ number_format((float) $salario->total_devengado, 0, ',', '.') }}</td>
+                    <td class="text-right">${{ number_format((float) $salario->getRawOriginal('total_deducciones'), 0, ',', '.') }}</td>
+                    <td class="text-right">${{ number_format((float) $salario->neto_pagar, 0, ',', '.') }}</td>
                 </tr>
             @empty
                 <tr>

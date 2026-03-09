@@ -3,26 +3,56 @@ const $ = (id) => document.getElementById(id);
 const empleadoInput = $('empleado_busqueda');
 const docInput = $('doc');
 const fechaInput = $('fecha_pago');
+const diasInput = $('dias_trabajados');
 const idContratoInput = $('id_contrato');
 const form = $('formNomina');
 const spinner = $('loadingSpinner');
 const errorMsg = $('errorMsg');
 const fechaError = $('fechaError');
+const diasError = $('diasError');
 const box = $('sugerenciasEmpleados');
 const list = $('listaSugerencias');
+const resumenValorDia = $('resumen_valor_dia');
+const resumenDiasTrabajados = $('resumen_dias_trabajados');
+const resumenSalarioProporcional = $('resumen_salario_proporcional');
 const isEditingNomina = @json((bool)($isEditing ?? false));
-const formatCOP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(n);
+const formatCOP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n || 0);
 
 let timer = null;
 let lastResults = [];
 let selectedEmployee = null;
 
-const hideErrors = () => [errorMsg, fechaError].forEach(el => el.classList.add('hidden'));
+const hideErrors = () => [errorMsg, fechaError, diasError].forEach(el => el.classList.add('hidden'));
 const showError = (text) => { errorMsg.textContent = text; errorMsg.classList.remove('hidden'); };
 const showFechaError = (text) => { fechaError.textContent = text; fechaError.classList.remove('hidden'); };
+const showDiasError = (text) => { diasError.textContent = text; diasError.classList.remove('hidden'); };
 const markNeutral = (el) => { el.classList.remove('border-red-500','border-green-500','focus:border-red-500','focus:border-green-500'); el.classList.add('border-gray-300','focus:border-blue-500'); };
 const markError = (el) => { el.classList.remove('border-gray-300','border-green-500','focus:border-blue-500','focus:border-green-500'); el.classList.add('border-red-500','focus:border-red-500'); };
 const markOk = (el) => { el.classList.remove('border-gray-300','border-red-500','focus:border-blue-500','focus:border-red-500'); el.classList.add('border-green-500','focus:border-green-500'); };
+
+function parseCOP(value) {
+    if (!value) return 0;
+    const cleaned = String(value).replace(/[^\d,.-]/g, '').trim();
+    if (!cleaned) return 0;
+    const normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : 0;
+}
+
+function actualizarResumenProporcional() {
+    const salarioBase = parseCOP($('salario_base')?.value || 0);
+    let dias = Number(diasInput?.value || 0);
+    if (!Number.isFinite(dias)) dias = 0;
+    dias = Math.max(0, Math.min(30, Math.trunc(dias)));
+    if (diasInput) diasInput.value = String(dias);
+
+    const valorDia = salarioBase / 30;
+    const salarioProporcional = valorDia * dias;
+
+    if (resumenValorDia) resumenValorDia.textContent = formatCOP(valorDia);
+    if (resumenDiasTrabajados) resumenDiasTrabajados.textContent = String(dias);
+    if (resumenSalarioProporcional) resumenSalarioProporcional.textContent = formatCOP(salarioProporcional);
+}
 
 function showAlert(text) {
     const existing = document.getElementById('nominaCustomAlert');
@@ -103,6 +133,7 @@ function clearEmployeeData() {
     $('telefono').value = '';
     $('salario_base').value = '';
     idContratoInput.value = '';
+    actualizarResumenProporcional();
 }
 
 function renderSuggestions(items) {
@@ -136,6 +167,7 @@ function selectEmployee(emp) {
     box.classList.add('hidden');
     hideErrors();
     markOk(empleadoInput);
+    actualizarResumenProporcional();
 }
 
 async function fetchEmployees(term = '') {
@@ -155,6 +187,11 @@ async function fetchEmployees(term = '') {
 
 async function hydrateSavedEmployee() {
     if (!docInput.value) return;
+
+    if (!empleadoInput.value.trim() && $('nombre').value) {
+        empleadoInput.value = `${$('nombre').value} - ${docInput.value}`.trim();
+    }
+
     if (docInput.value && idContratoInput.value) {
         selectedEmployee = {
             doc: docInput.value,
@@ -208,6 +245,27 @@ function validateFecha() {
     return true;
 }
 
+function validateDiasTrabajados() {
+    let dias = Number(diasInput?.value || 0);
+    if (!Number.isFinite(dias)) {
+        markError(diasInput);
+        showDiasError('Los dias trabajados deben ser un numero valido entre 0 y 30.');
+        return false;
+    }
+
+    dias = Math.trunc(dias);
+    if (dias < 0 || dias > 30) {
+        markError(diasInput);
+        showDiasError('Los dias trabajados deben estar entre 0 y 30.');
+        return false;
+    }
+
+    diasInput.value = String(dias);
+    markOk(diasInput);
+    diasError.classList.add('hidden');
+    return true;
+}
+
 if (!isEditingNomina) {
     empleadoInput.addEventListener('focus', () => fetchEmployees(empleadoInput.value.trim()));
     empleadoInput.addEventListener('input', () => {
@@ -233,17 +291,33 @@ document.addEventListener('click', (e) => {
 });
 
 fechaInput.addEventListener('change', validateFecha);
+if (diasInput) {
+    diasInput.addEventListener('input', () => {
+        hideErrors();
+        markNeutral(diasInput);
+        actualizarResumenProporcional();
+    });
+    diasInput.addEventListener('blur', () => {
+        validateDiasTrabajados();
+        actualizarResumenProporcional();
+    });
+}
+
 form.addEventListener('submit', (e) => {
     hideErrors();
     const employeeValid = validateEmployee();
     const fechaValid = validateFecha();
-    if (!(employeeValid && fechaValid)) {
+    const diasValid = validateDiasTrabajados();
+    if (!(employeeValid && fechaValid && diasValid)) {
         e.preventDefault();
         if (!employeeValid) {
             showAlert('Debes seleccionar un empleado válido de la lista.');
+        } else if (!diasValid) {
+            showAlert('Ingresa los dias trabajados entre 0 y 30.');
         }
     }
 });
 
 hydrateSavedEmployee();
+actualizarResumenProporcional();
 </script>

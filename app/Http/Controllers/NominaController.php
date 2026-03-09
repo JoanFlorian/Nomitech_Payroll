@@ -2,420 +2,90 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PeriodoLiquidacion;
 use App\Models\Salario;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Carbon\Carbon;
+use App\Models\PeriodoLiquidacion;
+use App\Services\NominaCalculatorService;
+use App\Services\NominaEmployeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class NominaController extends Controller
 {
-    private const VALIDATION_MESSAGES = [
-        '*.numeric' => 'Este campo debe ser numérico.',
-        '*.integer' => 'Este campo debe ser un número entero.',
-        '*.min' => 'Este campo no puede ser negativo.',
-        '*.max' => 'El valor excede el máximo permitido.',
-    ];
+    private NominaCalculatorService $calculator;
+    private NominaEmployeeService $employeeService;
 
-    private const STEP2_MAX_HOURS = 744;
-    private const STEP2_INGRESOS_MAX = 999999999;
-
-    private const STEP2_RATES = [
-        'horas_extra_diurnas' => 1.25,
-        'horas_extra_nocturnas' => 1.75,
-        'horas_extra_dominicales_diurnas' => 2.0,
-        'horas_extra_dominicales_nocturnas' => 2.5,
-        'recargo_nocturno' => 0.35,
-        'recargo_dominical_diurno' => 0.75,
-        'recargo_dominical_nocturno' => 1.10,
-        'recargo_festivo_diurno' => 0.75,
-        'recargo_festivo_nocturno' => 1.10,
-    ];
-
-    private const STEP2_EXTRA_KEYS = [
-        'horas_extra_diurnas',
-        'horas_extra_nocturnas',
-        'horas_extra_dominicales_diurnas',
-        'horas_extra_dominicales_nocturnas',
-    ];
-
-    private const STEP2_RECARGO_KEYS = [
-        'recargo_nocturno',
-        'recargo_dominical_diurno',
-        'recargo_dominical_nocturno',
-        'recargo_festivo_diurno',
-        'recargo_festivo_nocturno',
-    ];
-
-    private function getContractContributionRules($idContrato): array
-    {
-        $defaultRates = [
-            'eps' => (float) config('nomina.rates.eps', 0.04),
-            'afp' => (float) config('nomina.rates.afp', 0.04),
-            'arl' => (float) config('nomina.rates.arl', 0.00522),
-            'aporte_fp' => (float) config('nomina.rates.aporte_fp', 0.01),
-        ];
-
-        $rules = [
-            'slug' => 'default',
-            'nombre' => 'default',
-            'aplica_seguridad_social' => true,
-            'rates' => $defaultRates,
-            'aporte_fp_smmlv_threshold' => (float) config('nomina.aporte_fp_smmlv_threshold', 4),
-        ];
-
-        $contrato = DB::table('contrato as c')
-            ->leftJoin('tipo_contrato as tc', 'tc.id_tipo_contrato', '=', 'c.id_tipo_contrato')
-            ->where('c.id_contrato', $idContrato)
-            ->select('tc.nombre as tipo_nombre', 'tc.seguridad_social as tipo_seguridad_social')
-            ->first();
-
-        if (!$contrato) {
-            return $rules;
-        }
-
-        $tipoNombre = (string) ($contrato->tipo_nombre ?? 'default');
-        $tipoSlug = Str::slug(Str::ascii($tipoNombre), '_') ?: 'default';
-        $tipoConfig = (array) config("nomina.contract_types.$tipoSlug", []);
-
-        $aplicaCatalogo = is_null($contrato->tipo_seguridad_social) ? true : (bool) $contrato->tipo_seguridad_social;
-        $aplicaConfig = (bool) ($tipoConfig['aplica_seguridad_social'] ?? true);
-
-        $rules['slug'] = $tipoSlug;
-        $rules['nombre'] = $tipoNombre;
-        $rules['aplica_seguridad_social'] = $aplicaCatalogo && $aplicaConfig;
-        $rules['rates'] = array_merge($defaultRates, (array) ($tipoConfig['rates'] ?? []));
-        $rules['aporte_fp_smmlv_threshold'] = (float) ($tipoConfig['aporte_fp_smmlv_threshold'] ?? $rules['aporte_fp_smmlv_threshold']);
-
-        return $rules;
+    public function __construct(
+        NominaCalculatorService $calculator,
+        NominaEmployeeService $employeeService
+    ) {
+        $this->calculator = $calculator;
+        $this->employeeService = $employeeService;
     }
 
-    private function calculateContributions(float $salarioBase, array $rules): array
-    {
-        if (!($rules['aplica_seguridad_social'] ?? true)) {
-            return [
-                'eps' => 0.0,
-                'afp' => 0.0,
-                'arl' => 0.0,
-                'seguridad_social' => 0.0,
-                'aporte_fp' => 0.0,
-            ];
-        }
-
-        $smmlv = (float) config('nomina.smmlv', 1423500);
-        $eps = $salarioBase * (float) ($rules['rates']['eps'] ?? 0);
-        $afp = $salarioBase * (float) ($rules['rates']['afp'] ?? 0);
-        $arl = $salarioBase * (float) ($rules['rates']['arl'] ?? 0);
-        $seguridadSocial = $eps + $afp;
-        $fpThreshold = (float) ($rules['aporte_fp_smmlv_threshold'] ?? 4);
-        $fpRate = (float) ($rules['rates']['aporte_fp'] ?? 0);
-        $aporteFp = $salarioBase >= ($smmlv * $fpThreshold) ? ($salarioBase * $fpRate) : 0;
-
-        return [
-            'eps' => $eps,
-            'afp' => $afp,
-            'arl' => $arl,
-            'seguridad_social' => $seguridadSocial,
-            'aporte_fp' => $aporteFp,
-        ];
-    }
+    /* ==========================
+       PERIODO ACTIVO
+    ========================== */
 
     private function getActivePeriod(): ?PeriodoLiquidacion
     {
-        $activePeriodId = session('active_period_id');
+        $periodoId = session('active_period_id');
         $empresaId = session('empresa_id');
 
-        if ($activePeriodId) {
-            $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
-                ->where('id_periodo', $activePeriodId)
+        if ($periodoId) {
+            return PeriodoLiquidacion::where('id_empresa', $empresaId)
+                ->where('id_periodo', $periodoId)
                 ->first();
-            if ($periodo)
-                return $periodo;
         }
 
-        // Fallback: Último abierto
-        $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
+        return PeriodoLiquidacion::where('id_empresa', $empresaId)
             ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
             ->orderByDesc('fecha_inicio')
             ->first();
-
-        if ($periodo) {
-            session(['active_period_id' => $periodo->id_periodo]);
-        }
-
-        return $periodo;
-    }
-
-
-    private function parseNumber($value): float
-    {
-        if ($value === null || $value === '') {
-            return 0.0;
-        }
-
-        // Keep native numeric types fast; strings are normalized below to support locale formats.
-        if (is_int($value) || is_float($value)) {
-            return (float) $value;
-        }
-
-        $normalized = preg_replace('/[^\d,.-]/', '', (string) $value);
-
-        $hasComma = str_contains($normalized, ',');
-        $hasDot = str_contains($normalized, '.');
-
-        if ($hasComma && $hasDot) {
-            $lastComma = strrpos($normalized, ',');
-            $lastDot = strrpos($normalized, '.');
-
-            if ($lastComma !== false && $lastDot !== false && $lastComma > $lastDot) {
-                $normalized = str_replace('.', '', $normalized);
-                $normalized = str_replace(',', '.', $normalized);
-            } else {
-                $normalized = str_replace(',', '', $normalized);
-            }
-        } elseif ($hasDot && !$hasComma) {
-            $dotCount = substr_count($normalized, '.');
-
-            if ($dotCount > 1) {
-                $normalized = str_replace('.', '', $normalized);
-            } else {
-                $parts = explode('.', $normalized);
-                if (
-                    count($parts) === 2 &&
-                    strlen($parts[1]) === 3 &&
-                    strlen($parts[0]) >= 1
-                ) {
-                    $normalized = str_replace('.', '', $normalized);
-                }
-            }
-        } elseif ($hasComma && !$hasDot) {
-            $commaCount = substr_count($normalized, ',');
-
-            if ($commaCount > 1) {
-                $normalized = str_replace(',', '', $normalized);
-            } else {
-                $parts = explode(',', $normalized);
-                if (
-                    count($parts) === 2 &&
-                    strlen($parts[1]) === 3 &&
-                    strlen($parts[0]) >= 1
-                ) {
-                    $normalized = str_replace(',', '', $normalized);
-                } else {
-                    $normalized = str_replace(',', '.', $normalized);
-                }
-            }
-        }
-
-        return is_numeric($normalized) ? (float) $normalized : 0.0;
-    }
-
-    private function parsePeriodoRango(string $periodo): array
-    {
-        $periodo = trim($periodo);
-        if ($periodo === '') {
-            return [null, null];
-        }
-
-        $partes = preg_split('/\s+(?:to|a)\s+/i', $periodo) ?: [];
-
-        if (count($partes) === 2) {
-            $inicio = $this->parseFechaFlexible($partes[0]);
-            $fin = $this->parseFechaFlexible($partes[1]);
-
-            return [$inicio, $fin];
-        }
-
-        $fechaUnica = $this->parseFechaFlexible($periodo);
-
-        return [$fechaUnica, $fechaUnica];
-    }
-
-    private function parseFechaFlexible(?string $fecha): ?string
-    {
-        $fecha = trim((string) $fecha);
-        if ($fecha === '') {
-            return null;
-        }
-
-        foreach (['d/m/Y', 'Y-m-d', 'Y-m'] as $formato) {
-            try {
-                $parsed = Carbon::createFromFormat($formato, $fecha);
-
-                if ($formato === 'Y-m') {
-                    return $parsed->startOfMonth()->toDateString();
-                }
-
-                return $parsed->toDateString();
-            } catch (\Throwable $e) {
-            }
-        }
-
-        try {
-            return Carbon::parse($fecha)->toDateString();
-        } catch (\Throwable $e) {
-            return null;
-        }
-    }
-
-    private function construirConsultaNomina(Request $request)
-    {
-        $busqueda = trim((string) $request->input('documento', ''));
-        $periodo = trim((string) $request->input('periodo', ''));
-        $empresaId = session('empresa_id');
-
-        $periodoActivo = $this->getActivePeriod();
-
-        $query = Salario::with('contrato.usuario')
-            ->select('salario.*')
-            ->addSelect([
-                'total_novedades' => DB::table('novedad')
-                    ->selectRaw('COALESCE(SUM(pago), 0)')
-                    ->whereColumn('novedad.id_salario', 'salario.id_salario'),
-            ])
-            ->whereHas('contrato', function ($q) use ($empresaId) {
-                $q->where('id_empresa', $empresaId);
-            })
-            ->when($periodoActivo, function ($q) use ($periodoActivo) {
-                $q->where('id_periodo', $periodoActivo->id_periodo);
-            })
-            ->when($busqueda !== '', function ($q) use ($busqueda) {
-                $term = mb_strtolower($busqueda);
-                $q->whereHas('contrato.usuario', function ($u) use ($busqueda, $term) {
-                    $u->where('doc', 'like', "%{$busqueda}%")
-                        ->orWhereRaw(
-                            "LOWER(CONCAT_WS(' ', primer_nombre, otros_nombres, primer_apellido, segundo_apellido)) LIKE ?",
-                            ["%{$term}%"]
-                        );
-                });
-            });
-
-        if ($periodo !== '') {
-            [$fechaInicio, $fechaFin] = $this->parsePeriodoRango($periodo);
-
-            if ($fechaInicio && $fechaFin) {
-                if ($fechaInicio > $fechaFin) {
-                    [$fechaInicio, $fechaFin] = [$fechaFin, $fechaInicio];
-                }
-                $query->whereBetween('fecha_pago', [$fechaInicio, $fechaFin]);
-            } elseif ($fechaInicio) {
-                $query->whereDate('fecha_pago', $fechaInicio);
-            }
-        }
-
-        return $query;
     }
 
     /* ==========================
        INDEX
     ========================== */
-    public function index(Request $request)
+
+    public function index()
     {
+        $empresaId = session('empresa_id');
         $periodoActivo = $this->getActivePeriod();
-        $salarios = $this->construirConsultaNomina($request)
+
+        $salarios = Salario::with('contrato.usuario')
+            ->whereHas('contrato', function ($q) use ($empresaId) {
+                $q->where('id_empresa', $empresaId);
+            })
+            ->when($periodoActivo, function ($q) use ($periodoActivo) {
+                $q->where('id_periodo', $periodoActivo->id_periodo);
+            })
             ->orderByDesc('fecha_pago')
-            ->paginate(10)
-            ->withQueryString();
+            ->paginate(10);
 
         return view('nomina.index', compact('salarios', 'periodoActivo'));
-    }
-
-    public function exportarNominaExcel(Request $request)
-    {
-        $salarios = $this->construirConsultaNomina($request)
-            ->orderByDesc('fecha_pago')
-            ->get();
-
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Nómina');
-
-        $encabezados = [
-            'Documento',
-            'Empleado',
-            'Fecha Pago',
-            'Salario Inicial',
-            'Devengos',
-            'Deducciones',
-            'Salario Neto',
-        ];
-
-        $sheet->fromArray($encabezados, null, 'A1');
-        $sheet->getStyle('A1:G1')->getFont()->setBold(true);
-
-        $fila = 2;
-        foreach ($salarios as $salario) {
-            $fechaPago = $salario->fecha_pago ? Carbon::parse($salario->fecha_pago)->format('Y-m-d') : '';
-            $contrato = $salario->contrato;
-            $usuario = $contrato?->usuario;
-
-            $sheet->setCellValue('A' . $fila, $usuario?->doc ?? '');
-            $sheet->setCellValue('B' . $fila, $usuario?->nombre_completo ?? '');
-            $sheet->setCellValue('C' . $fila, $fechaPago);
-            $sheet->setCellValue('D' . $fila, (float) ($contrato?->salario_base ?? 0));
-            $sheet->setCellValue('E' . $fila, (float) $salario->total_devengos);
-            $sheet->setCellValue('F' . $fila, (float) $salario->total_deducciones);
-            $sheet->setCellValue('G' . $fila, (float) $salario->salario_neto);
-            $fila++;
-        }
-
-        foreach (range('A', 'G') as $columna) {
-            $sheet->getColumnDimension($columna)->setAutoSize(true);
-        }
-
-        if ($fila > 2) {
-            $sheet->getStyle('D2:G' . ($fila - 1))->getNumberFormat()->setFormatCode('#,##0.00');
-        }
-
-        $writer = new Xlsx($spreadsheet);
-        $filename = 'nomina-' . now()->format('Ymd_His') . '.xlsx';
-
-        return response()->streamDownload(function () use ($writer) {
-            $writer->save('php://output');
-        }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
-    }
-
-    public function exportarNominaPdf(Request $request)
-    {
-        $salarios = $this->construirConsultaNomina($request)
-            ->orderByDesc('fecha_pago')
-            ->get();
-
-        $pdf = Pdf::loadView('nomina.reporte-pdf', [
-            'salarios' => $salarios,
-            'fechaGeneracion' => now()->format('d/m/Y H:i'),
-            'busqueda' => $request->query('documento', 'Sin filtro'),
-            'periodo' => $request->query('periodo', 'Sin filtro'),
-        ])->setPaper('a4', 'landscape');
-
-        return $pdf->download('reporte-nomina-' . now()->format('Ymd_His') . '.pdf');
     }
 
     /* ==========================
        STEP 1
     ========================== */
+
     public function step1(Request $request)
     {
         if ($request->boolean('fresh')) {
             session()->forget('nomina');
-            session(['nomina.step' => 1]);
-            $step1 = [];
-        } else {
-            session(['nomina.step' => 1]);
-            $step1 = session('nomina.step1', []);
         }
 
-        $isEditing = (bool) (session('nomina.editing_id') || $request->boolean('editing'));
+        session(['nomina.step' => 1]);
+
+        $step1 = session('nomina.step1', []);
+        $periodoActivo = $this->getActivePeriod();
+        $isEditing = (bool) session('nomina.editing_id');
 
         $empresaId = session('empresa_id');
-        $periodoActivo = $this->getActivePeriod();
-
         $salarios = Salario::with('contrato.usuario')
             ->whereHas('contrato', function ($q) use ($empresaId) {
                 $q->where('id_empresa', $empresaId);
@@ -427,190 +97,306 @@ class NominaController extends Controller
             ->limit(10)
             ->get();
 
-        return view('nomina.step1', compact('step1', 'isEditing', 'salarios', 'periodoActivo'));
-    }
-
-    public function postStep1(Request $request)
-    {
-        $isEditing = (bool) session('nomina.editing_id');
-
-        $validated = $request->validate([
-            'empleado_busqueda' => 'required|string|max:120',
-            'doc' => 'required|string|max:50',
-            'id_contrato' => 'required|integer|min:1',
-            'fecha_pago' => 'required|date',
-        ], [
-            'empleado_busqueda.required' => 'Debes seleccionar un empleado válido de la lista.',
-            'doc.required' => 'Debes seleccionar un empleado válido de la lista.',
-            'id_contrato.required' => 'Debes seleccionar un empleado válido de la lista.',
-            'id_contrato.integer' => 'Debes seleccionar un empleado válido de la lista.',
-        ]);
-
-        $empleado = $this->resolveNominaEmployeeContract(
-            (string) $validated['doc'],
-            (int) $validated['id_contrato'],
-            !$isEditing
-        );
-
-        if (!$empleado) {
-            return back()
-                ->withInput()
-                ->with('error', 'Debes seleccionar un empleado válido de la lista.');
-        }
-
-        $data = $request->all();
-        $data['doc'] = (string) $empleado->doc;
-        $data['id_contrato'] = (int) $empleado->id_contrato;
-        $data['nombre'] = (string) ($empleado->nombre ?? '');
-        $data['telefono'] = (string) ($empleado->telefono ?? '');
-        $data['salario_base'] = $this->parseNumber($empleado->salario_base ?? 0);
-        $data['empleado_busqueda'] = trim($data['nombre'] . ' - ' . $data['doc']);
-        $data['fecha_pago'] = (string) $validated['fecha_pago'];
-
-        // Phase 2: Use explicit period from session
-        $periodoId = session('active_period_id');
-
-        if (!$periodoId) {
-            return redirect()->route('periodos.index')->with('error', 'Debe seleccionar un periodo antes de liquidar.');
-        }
-
-        $periodo = DB::table('periodo_liquidacion')
-            ->where('id_periodo', $periodoId)
-            ->select('estado')
-            ->first();
-
-        if ($periodo && $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO) {
-            abort(403, 'El periodo seleccionado se encuentra cerrado y no permite nuevas liquidaciones o novedades.');
-        }
-
-        session(['nomina.step1' => $data]);
-        return redirect()->route('nomina.step2');
+        return view('nomina.step1', compact('step1', 'periodoActivo', 'isEditing', 'salarios'));
     }
 
     public function edit(int $idSalario)
     {
+        $empresaId = session('empresa_id');
+
         $registro = DB::table('salario as s')
             ->join('contrato as c', 'c.id_contrato', '=', 's.id_contrato')
             ->join('usuario as u', 'u.doc', '=', 'c.doc')
-            ->join('periodo_liquidacion as p', 'p.id_periodo', '=', 's.id_periodo')
             ->where('s.id_salario', $idSalario)
+            ->where('c.id_empresa', $empresaId)
             ->select(
-                's.id_salario',
-                's.id_contrato',
-                's.fecha_pago',
-                'p.estado as periodo_estado',
-                's.valor_horas_extras_recargos',
-                's.bonificaciones',
-                's.comisiones',
-                's.otros_devengos',
-                's.retencion_fuente',
-                's.embargo_fiscal',
-                's.pension_voluntaria',
-                'u.doc',
+                's.*',
+                'c.doc',
+                'c.salario_base',
                 DB::raw("TRIM(CONCAT(u.primer_nombre,' ',IFNULL(u.otros_nombres,''),' ',u.primer_apellido,' ',IFNULL(u.segundo_apellido,''))) as nombre"),
-                'u.telefono',
-                'c.salario_base'
+                'u.telefono'
             )
             ->first();
 
         if (!$registro) {
-            return redirect()->route('nomina.index')->with('error', 'No se encontró el registro de nómina a editar.');
+            return redirect()->route('nomina.index')
+                ->with('error', 'No se encontró la nómina seleccionada para edición.');
         }
 
-        if ($registro->periodo_estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO) {
-            abort(403, 'No se puede editar una nómina de un periodo cerrado.');
+        $diasTrabajados = max(0, min(30, (int) ($registro->dias_a_trabajar ?? 30)));
+        $salarioBaseMensual = (float) ($registro->salario_base ?? 0);
+        $valorDia = $salarioBaseMensual / 30;
+        $salarioBaseProporcional = $valorDia * $diasTrabajados;
+
+        $horasExtra = (float) ($registro->horas_extra ?? 0);
+        $totalHorasRecargos = (float) ($registro->valor_horas_extras_recargos ?? 0);
+        $recargos = max(0, $totalHorasRecargos - $horasExtra);
+        $detalleHoras = DB::table('hora_recargo_extra')
+            ->where('id_salario', $idSalario)
+            ->pluck('cantidad', 'id_tipo_hora_recargo')
+            ->map(fn($v) => (float) $v)
+            ->toArray();
+
+        session(['nomina.editing_id' => (int) $registro->id_salario]);
+        session(['nomina.step1' => [
+            'empleado_busqueda' => trim(($registro->nombre ?? '') . ' - ' . ($registro->doc ?? '')),
+            'doc' => $registro->doc,
+            'nombre' => $registro->nombre,
+            'telefono' => $registro->telefono,
+            'id_contrato' => (int) $registro->id_contrato,
+            'id_periodo' => (int) $registro->id_periodo,
+            'salario_base' => $salarioBaseMensual,
+            'valor_dia' => $valorDia,
+            'salario_base_proporcional' => $salarioBaseProporcional,
+            'fecha_pago' => $registro->fecha_pago,
+            'dias_trabajados' => $diasTrabajados,
+        ]]);
+        session(['nomina.step2' => [
+            'horas_extra' => $horasExtra,
+            'recargos' => $recargos,
+            'total_horas_extra' => $horasExtra,
+            'total_recargos' => $recargos,
+            'total_devengos_parcial' => $salarioBaseProporcional + $horasExtra + $recargos,
+            'detalle_recargos' => $detalleHoras,
+        ]]);
+        session(['nomina.step2_ingresos' => [
+            'bonificaciones' => (float) ($registro->bonificaciones ?? 0),
+            'comisiones' => (float) ($registro->comisiones ?? 0),
+            'otros_devengos' => (float) ($registro->otros_devengos ?? 0),
+            'aplica_auxilio_transporte' => ((float) ($registro->auxilio_transporte ?? 0)) > 0 ? 1 : 0,
+            'auxilio_transporte' => (float) ($registro->auxilio_transporte ?? 0),
+        ]]);
+        session(['nomina.step3' => [
+            'retencion_fuente' => (float) ($registro->retencion_fuente ?? 0),
+            'embargo_fiscal' => (float) ($registro->embargo_fiscal ?? 0),
+            'pension_voluntaria' => (float) ($registro->pension_voluntaria ?? 0),
+        ]]);
+
+        return redirect()->route('nomina.step1');
+    }
+
+    public function postStep1(Request $request)
+    {
+        $data = $request->validate([
+            'doc' => 'required|string',
+            'id_contrato' => 'required|integer',
+            'fecha_pago' => 'required|date',
+            'dias_trabajados' => 'required|integer|min:0|max:30',
+        ]);
+
+        $empresaId = session('empresa_id');
+
+        $empleado = $this->employeeService->buscarEmpleado(
+            $data['doc'],
+            $empresaId
+        );
+
+        if (!$empleado) {
+            return back()->with('error', 'Empleado no encontrado.');
         }
 
-        session()->forget('nomina');
+        $diasTrabajados = max(0, min(30, (int) $data['dias_trabajados']));
+        $salarioBaseMensual = (float) ($empleado->salario_base ?? 0);
+        $valorDia = $salarioBaseMensual / 30;
+        $salarioBaseProporcional = $valorDia * $diasTrabajados;
 
-        session($this->buildEditingSessionPayload($registro));
+        $step1 = [
+            'empleado_busqueda' => trim(($empleado->nombre ?? '') . ' - ' . ($empleado->doc ?? '')),
+            'doc' => $empleado->doc,
+            'nombre' => $empleado->nombre,
+            'telefono' => $empleado->telefono,
+            'id_contrato' => $empleado->id_contrato,
+            'salario_base' => $salarioBaseMensual,
+            'valor_dia' => $valorDia,
+            'salario_base_proporcional' => $salarioBaseProporcional,
+            'fecha_pago' => $data['fecha_pago'],
+            'dias_trabajados' => $diasTrabajados,
+        ];
 
-        return redirect()->route('nomina.step1', ['editing' => 1])->with('success', 'Modo edición activado.');
+        session(['nomina.step1' => $step1]);
+
+        return redirect()->route('nomina.step2');
     }
 
     /* ==========================
        STEP 2
     ========================== */
+
     public function step2()
-    {
-        session(['nomina.step' => 2]);
+{
+    session(['nomina.step' => 2]);
 
-        $s1 = session('nomina.step1');
-        if (!$s1) {
-            return redirect()->route('nomina.step1')->with('error', 'Completa el paso 1 para continuar.');
-        }
+    $s1 = session('nomina.step1');
 
-        $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
-        $step2 = session('nomina.step2', []);
-
-        $empresaId = session('empresa_id');
-        $periodoActivo = $this->getActivePeriod();
-
-        $salarios = Salario::with('contrato.usuario')
-            ->whereHas('contrato', function ($q) use ($empresaId) {
-                $q->where('id_empresa', $empresaId);
-            })
-            ->when($periodoActivo, function ($q) use ($periodoActivo) {
-                $q->where('id_periodo', $periodoActivo->id_periodo);
-            })
-            ->orderByDesc('fecha_pago')
-            ->limit(10)
-            ->get();
-
-        $step2Rates = self::STEP2_RATES;
-
-        return view('nomina.step2', compact('salarioBase', 'step2', 'salarios', 'periodoActivo', 'step2Rates'));
+    if (!$s1) {
+        return redirect()->route('nomina.step1')
+            ->with('error', 'Completa el paso 1 primero.');
     }
+
+    $salarioBase = (float) ($s1['salario_base_proporcional'] ?? $s1['salario_base'] ?? 0);
+    $step2 = session('nomina.step2', []);
+
+    $empresaId = session('empresa_id');
+    $periodoActivo = $this->getActivePeriod();
+
+    $salarios = Salario::with('contrato.usuario')
+        ->whereHas('contrato', function ($q) use ($empresaId) {
+            $q->where('id_empresa', $empresaId);
+        })
+        ->when($periodoActivo, function ($q) use ($periodoActivo) {
+            $q->where('id_periodo', $periodoActivo->id_periodo);
+        })
+        ->orderByDesc('fecha_pago')
+        ->limit(10)
+        ->get();
+
+    // Cargar tipos y normalizar a multiplicadores legales (factor por hora).
+    $tiposRecargo = DB::table('tipo_hora_recargo')
+        ->orderBy('nombre')
+        ->get()
+        ->map(function ($item) {
+            $item->valor = $this->normalizeRecargoMultiplier((string) ($item->nombre ?? ''), (float) ($item->valor ?? 0));
+            return $item;
+        });
+
+    // 🔹 Obtener horas mes desde parámetros
+    $params = app(\App\Services\NominaParameterService::class)->get();
+    $horasMes = $params->horas_mes;
+
+    return view('nomina.step2', compact(
+        'salarioBase',
+        'step2',
+        'salarios',
+        'periodoActivo',
+        'tiposRecargo',
+        'horasMes'
+    ));
+}
 
     public function postStep2(Request $request)
     {
-        $request->merge(
-            collect(array_keys(self::STEP2_RATES))
-                ->mapWithKeys(fn(string $key) => [$key => $this->parseNumber($request->input($key))])
-                ->all()
-        );
+        $tiposRecargo = DB::table('tipo_hora_recargo')
+            ->select('id_tipo_hora_recargo', 'nombre', 'valor')
+            ->orderBy('nombre')
+            ->get();
 
-        $step2Rules = collect(array_keys(self::STEP2_RATES))
-            ->mapWithKeys(fn(string $key) => [$key => 'nullable|integer|min:0|max:' . self::STEP2_MAX_HOURS])
-            ->all();
+        $data = $request->validate([
+            'horas_extra' => 'nullable|string|max:30',
+            'recargos' => 'nullable|string|max:30',
+            'detalle_recargos' => 'nullable|array',
+            'detalle_recargos.*' => 'nullable|numeric|min:0|max:744',
+        ]);
 
-        $validated = $request->validate($step2Rules, self::VALIDATION_MESSAGES);
+        $detalleRecargos = [];
+        $detalleInput = (array) ($data['detalle_recargos'] ?? []);
+        $salarioBasePaso1 = (float) (session('nomina.step1.salario_base_proporcional') ?? session('nomina.step1.salario_base') ?? 0);
 
-        $totalHorasMes = collect(array_keys(self::STEP2_RATES))
-            ->sum(fn(string $key) => (int) ($validated[$key] ?? 0));
-
-        if ($totalHorasMes > self::STEP2_MAX_HOURS) {
-            return back()
-                ->withErrors([
-                    'total_horas_mes' => 'La suma total de horas no puede superar 744 horas en un mes.',
-                ])
-                ->withInput();
+        foreach ($tiposRecargo as $tipo) {
+            $tipoId = (string) $tipo->id_tipo_hora_recargo;
+            $cantidad = (float) ($detalleInput[$tipoId] ?? 0);
+            $cantidad = max(0, min(744, $cantidad));
+            $detalleRecargos[(int) $tipo->id_tipo_hora_recargo] = $cantidad;
         }
 
-        $s1 = session('nomina.step1');
-        if (!$s1) {
-            return redirect()->route('nomina.step1')->with('error', 'Completa el paso 1 para continuar.');
+        $calculoDetalle = $this->calculateStep2TotalsFromDetail($detalleRecargos, $salarioBasePaso1);
+        $totalHorasExtra = $calculoDetalle['total_horas_extra'];
+        $totalRecargos = $calculoDetalle['total_recargos'];
+
+        // Fallback para compatibilidad si no llega detalle de horas.
+        $horasExtra = $totalHorasExtra > 0 ? $totalHorasExtra : $this->parseMoneyInput($data['horas_extra'] ?? 0);
+        $recargos = $totalRecargos > 0 ? $totalRecargos : $this->parseMoneyInput($data['recargos'] ?? 0);
+
+        if ($horasExtra < 0 || $recargos < 0 || $horasExtra > 999999999999 || $recargos > 999999999999) {
+            return back()->withErrors([
+                'horas_extra' => 'Los valores de horas extra y recargos no son válidos.',
+            ])->withInput();
         }
 
-        $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
-        session(['nomina.step2' => $this->buildStep2SessionData($salarioBase, $validated)]);
+        session(['nomina.step2' => [
+            'horas_extra' => $horasExtra,
+            'recargos' => $recargos,
+            // Claves adicionales para compatibilidad con vistas actuales.
+            'total_horas_extra' => $horasExtra,
+            'total_recargos' => $recargos,
+            'total_devengos_parcial' => $salarioBasePaso1 + $horasExtra + $recargos,
+            'detalle_recargos' => $detalleRecargos,
+        ]]);
 
         return redirect()->route('nomina.step2.ingresos');
     }
 
+    /* ==========================
+       INGRESOS
+    ========================== */
+
     public function step2Ingresos()
     {
-        session(['nomina.step' => 2]);
-
         $s1 = session('nomina.step1');
-        $s2 = session('nomina.step2');
+        $s2 = session('nomina.step2', []);
+        $step2Ingresos = session('nomina.step2_ingresos', []);
+
         if (!$s1 || !$s2) {
-            return redirect()->route('nomina.step2')->with('error', 'Completa primero las horas y recargos.');
+            return redirect()->route('nomina.step2')
+                ->with('error', 'Completa primero el paso 2 de horas y recargos.');
         }
 
-        $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
-        $s2 = session('nomina.step2');
-        $step2Ingresos = session('nomina.step2_ingresos', []);
+        $salarioMensual = (float) ($s1['salario_base'] ?? 0);
+        $diasTrabajados = max(0, min(30, (int) ($s1['dias_trabajados'] ?? 30)));
+        $salarioDiario = $salarioMensual / 30;
+        $salarioDevengado = $salarioDiario * $diasTrabajados;
+        $salarioBase = $salarioDevengado;
+        $step2AutoRecalculated = false;
+        $detalleRecargos = (array) ($s2['detalle_recargos'] ?? []);
+        if (!empty($detalleRecargos)) {
+            $prevHorasExtra = (float) ($s2['total_horas_extra'] ?? $s2['horas_extra'] ?? 0);
+            $prevRecargos = (float) ($s2['total_recargos'] ?? $s2['recargos'] ?? 0);
+            $prevParcial = (float) ($s2['total_devengos_parcial'] ?? 0);
+
+            $calculoDetalle = $this->calculateStep2TotalsFromDetail($detalleRecargos, $salarioBase);
+            $s2['horas_extra'] = $calculoDetalle['total_horas_extra'];
+            $s2['recargos'] = $calculoDetalle['total_recargos'];
+            $s2['total_horas_extra'] = $calculoDetalle['total_horas_extra'];
+            $s2['total_recargos'] = $calculoDetalle['total_recargos'];
+            $s2['total_devengos_parcial'] = $salarioBase + $calculoDetalle['total_horas_extra'] + $calculoDetalle['total_recargos'];
+
+            $step2AutoRecalculated =
+                abs($prevHorasExtra - $s2['total_horas_extra']) > 0.5 ||
+                abs($prevRecargos - $s2['total_recargos']) > 0.5 ||
+                abs($prevParcial - $s2['total_devengos_parcial']) > 0.5;
+
+            session(['nomina.step2' => $s2]);
+        } else {
+            // Saneamiento defensivo cuando no hay detalle por tipo (registros antiguos o sesión dañada).
+            $prevHorasExtra = (float) ($s2['total_horas_extra'] ?? $s2['horas_extra'] ?? 0);
+            $prevRecargos = (float) ($s2['total_recargos'] ?? $s2['recargos'] ?? 0);
+
+            $s2['horas_extra'] = max(0, $this->parseMoneyInput($s2['horas_extra'] ?? 0));
+            $s2['recargos'] = max(0, $this->parseMoneyInput($s2['recargos'] ?? 0));
+            $s2['total_horas_extra'] = $s2['horas_extra'];
+            $s2['total_recargos'] = $s2['recargos'];
+            $s2['total_devengos_parcial'] = $salarioBase + $s2['horas_extra'] + $s2['recargos'];
+
+            $step2AutoRecalculated =
+                abs($prevHorasExtra - $s2['total_horas_extra']) > 0.5 ||
+                abs($prevRecargos - $s2['total_recargos']) > 0.5;
+
+            session(['nomina.step2' => $s2]);
+        }
+
+        $salarioBaseMensual = (float) ($s1['salario_base'] ?? 0);
+
+        $params = app(\App\Services\NominaParameterService::class)->get();
+        $smmlv = (float) ($params->smmlv ?? 0);
+        $topeAuxilio = (float) ($params->auxilio_transporte_tope ?? 0);
+        $auxilioTransporteDb = (float) ($params->auxilio_transporte ?? 0);
+
+        $aplicaPorTope = $smmlv > 0 && $topeAuxilio > 0
+            ? ($salarioBaseMensual <= ($smmlv * $topeAuxilio))
+            : true;
+
+        if (!$aplicaPorTope) {
+            $auxilioTransporteDb = 0;
+        }
 
         $empresaId = session('empresa_id');
         $periodoActivo = $this->getActivePeriod();
@@ -626,52 +412,69 @@ class NominaController extends Controller
             ->limit(10)
             ->get();
 
-        return view('nomina.step2_ingresos', compact('salarioBase', 's2', 'step2Ingresos', 'salarios', 'periodoActivo'));
+        return view('nomina.step2_ingresos', compact(
+            'salarioBase',
+            's2',
+            'step2Ingresos',
+            'salarios',
+            'periodoActivo',
+            'auxilioTransporteDb',
+            'aplicaPorTope',
+            'step2AutoRecalculated'
+        ));
     }
 
     public function postStep2Ingresos(Request $request)
     {
-        $request->merge([
-            'bonificaciones' => $this->parseNumber($request->input('bonificaciones')),
-            'comisiones' => $this->parseNumber($request->input('comisiones')),
-            'otros_devengos' => $this->parseNumber($request->input('otros_devengos')),
+        $data = $request->validate([
+            'bonificaciones' => 'nullable|string|max:30',
+            'comisiones' => 'nullable|string|max:30',
+            'otros_devengos' => 'nullable|string|max:30',
+            'aplica_auxilio_transporte' => 'required|in:0,1',
+            'auxilio_transporte' => 'nullable|string|max:30',
         ]);
 
-        $validated = $request->validate([
-            'bonificaciones' => 'nullable|numeric|min:0|max:' . self::STEP2_INGRESOS_MAX,
-            'comisiones' => 'nullable|numeric|min:0|max:' . self::STEP2_INGRESOS_MAX,
-            'otros_devengos' => 'nullable|numeric|min:0|max:' . self::STEP2_INGRESOS_MAX,
-        ], self::VALIDATION_MESSAGES);
+        $bonificaciones = $this->parseMoneyInput($data['bonificaciones'] ?? 0);
+        $comisiones = $this->parseMoneyInput($data['comisiones'] ?? 0);
+        $otrosDevengos = $this->parseMoneyInput($data['otros_devengos'] ?? 0);
 
-        $s1 = session('nomina.step1');
-        $s2 = session('nomina.step2');
-        if (!$s1 || !$s2) {
-            return redirect()->route('nomina.step2')->with('error', 'Completa primero las horas y recargos.');
+        $maxMoney = 999999999999;
+        if (
+            $bonificaciones < 0 || $bonificaciones > $maxMoney ||
+            $comisiones < 0 || $comisiones > $maxMoney ||
+            $otrosDevengos < 0 || $otrosDevengos > $maxMoney
+        ) {
+            return back()->withErrors([
+                'bonificaciones' => 'Los valores monetarios deben ser no negativos y menores o iguales a 999.999.999.999.',
+            ])->withInput();
         }
 
-        $bonificaciones = $this->parseNumber($validated['bonificaciones'] ?? 0);
-        $comisiones = $this->parseNumber($validated['comisiones'] ?? 0);
-        $otrosDevengos = $this->parseNumber($validated['otros_devengos'] ?? 0);
+        $s1 = session('nomina.step1', []);
+        $salarioBaseMensual = (float) ($s1['salario_base'] ?? 0);
+        $params = app(\App\Services\NominaParameterService::class)->get();
 
-        $devengosParcial = $this->parseNumber(
-            $s2['total_devengos_parcial']
-            ?? (
-                $this->parseNumber($s1['salario_base'] ?? 0) +
-                $this->parseNumber($s2['total_horas_extra'] ?? 0) +
-                $this->parseNumber($s2['total_recargos'] ?? 0)
-            )
-        );
+        $smmlv = (float) ($params->smmlv ?? 0);
+        $topeAuxilio = (float) ($params->auxilio_transporte_tope ?? 0);
+        $auxilioTransporteDb = (float) ($params->auxilio_transporte ?? 0);
 
-        $totalDevengosFinal = $devengosParcial + $bonificaciones + $comisiones + $otrosDevengos;
+        $aplicaPorTope = $smmlv > 0 && $topeAuxilio > 0
+            ? ($salarioBaseMensual <= ($smmlv * $topeAuxilio))
+            : true;
 
-        session([
-            'nomina.step2_ingresos' => [
-                'bonificaciones' => $bonificaciones,
-                'comisiones' => $comisiones,
-                'otros_devengos' => $otrosDevengos,
-                'total_devengos_final' => $totalDevengosFinal,
-            ]
-        ]);
+        if (!$aplicaPorTope) {
+            $auxilioTransporteDb = 0;
+        }
+
+        $aplicaAuxilio = (int) ($data['aplica_auxilio_transporte'] ?? 0) === 1;
+        $auxilioTransporte = $aplicaAuxilio ? $auxilioTransporteDb : 0;
+
+        session(['nomina.step2_ingresos' => [
+            'bonificaciones' => $bonificaciones,
+            'comisiones' => $comisiones,
+            'otros_devengos' => $otrosDevengos,
+            'aplica_auxilio_transporte' => $aplicaAuxilio ? 1 : 0,
+            'auxilio_transporte' => $auxilioTransporte,
+        ]]);
 
         return redirect()->route('nomina.step3');
     }
@@ -679,108 +482,341 @@ class NominaController extends Controller
     /* ==========================
        STEP 3
     ========================== */
+
     public function step3()
     {
-        session(['nomina.step' => 3]);
+        $step1 = session('nomina.step1');
+        $step2 = session('nomina.step2');
+        $ingresos = session('nomina.step2_ingresos');
 
-        $s1 = session('nomina.step1');
-        $s2 = session('nomina.step2');
-        $s2Ingresos = session('nomina.step2_ingresos');
-        if (!$s1 || !$s2 || !$s2Ingresos) {
-            return redirect()->route('nomina.step1')->with('error', 'Completa los pasos anteriores para continuar.');
+        if (!$step1 || !$step2) {
+            return redirect()->route('nomina.step1');
         }
 
-        $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
-        $totalDevengos = $this->parseNumber($s2Ingresos['total_devengos_final'] ?? 0);
-        $rules = $this->getContractContributionRules($s1['id_contrato'] ?? null);
+        $salarioBase = (float) ($step1['salario_base_proporcional'] ?? $step1['salario_base'] ?? 0);
+
+        $contribuciones = $this->calculator
+            ->calcularContribuciones($salarioBase);
+
+        $totalDevengos =
+            $salarioBase +
+            (float) ($step2['horas_extra'] ?? 0) +
+            (float) ($step2['recargos'] ?? 0) +
+            (float) ($ingresos['bonificaciones'] ?? 0) +
+            (float) ($ingresos['comisiones'] ?? 0) +
+            (float) ($ingresos['otros_devengos'] ?? 0) +
+            (float) ($ingresos['auxilio_transporte'] ?? 0);
+
         $step3 = session('nomina.step3', []);
         $isEditing = (bool) session('nomina.editing_id');
 
-        $empresaId = session('empresa_id');
-        $periodoActivo = $this->getActivePeriod();
-
-        $salarios = Salario::with('contrato.usuario')
-            ->whereHas('contrato', function ($q) use ($empresaId) {
-                $q->where('id_empresa', $empresaId);
-            })
-            ->when($periodoActivo, function ($q) use ($periodoActivo) {
-                $q->where('id_periodo', $periodoActivo->id_periodo);
-            })
-            ->orderByDesc('fecha_pago')
-            ->limit(10)
-            ->get();
-
-        return view('nomina.step3', compact('salarioBase', 'totalDevengos', 'rules', 'step3', 'isEditing', 'salarios', 'periodoActivo'));
+        return view('nomina.step3', compact(
+            'salarioBase',
+            'step2',
+            'ingresos',
+            'contribuciones',
+            'totalDevengos',
+            'step3',
+            'isEditing'
+        ));
     }
 
     /* ==========================
-       BUSCAR EMPLEADO
+       GUARDAR NOMINA
     ========================== */
+
+    public function store(Request $request)
+    {
+        $s1 = session('nomina.step1');
+        $s2 = session('nomina.step2');
+        $s3 = session('nomina.step2_ingresos');
+
+        if (!$s1 || !$s2 || !$s3) {
+            return redirect()->route('nomina.step1');
+        }
+
+        $request->validate([
+            'retencion_fuente' => 'nullable|string|max:30',
+            'embargo_fiscal' => 'nullable|string|max:30',
+            'pension_voluntaria' => 'nullable|string|max:30',
+            'confirm_edit' => 'nullable|string|in:editar',
+        ]);
+
+        $editingId = session('nomina.editing_id');
+
+        if ($editingId && strtolower(trim((string) $request->input('confirm_edit', ''))) !== 'editar') {
+            return back()->with('error', 'Debes confirmar la edición escribiendo "editar".');
+        }
+
+        $salarioMensual = (float) ($s1['salario_base'] ?? 0);
+        $diasTrabajados = max(0, min(30, (int) ($s1['dias_trabajados'] ?? 30)));
+        $salarioDiario = $salarioMensual / 30;
+        $salarioDevengado = $salarioDiario * $diasTrabajados;
+        $horasExtra = $this->parseMoneyInput($s2['horas_extra'] ?? 0);
+        $recargos = $this->parseMoneyInput($s2['recargos'] ?? 0);
+        $bonificaciones = $this->parseMoneyInput($s3['bonificaciones'] ?? 0);
+        $comisiones = $this->parseMoneyInput($s3['comisiones'] ?? 0);
+        $otrosDevengos = $this->parseMoneyInput($s3['otros_devengos'] ?? 0);
+        $auxilioTransporte = $this->parseMoneyInput($s3['auxilio_transporte'] ?? 0);
+
+        $devengos = $this->calculator->calcularDevengos(
+            $salarioDevengado,
+            $horasExtra,
+            $bonificaciones,
+            $comisiones
+        );
+
+        $totalDevengos = $devengos
+            + $recargos
+            + $otrosDevengos
+            + $auxilioTransporte;
+
+        $retencionFuente = $this->parseMoneyInput($request->input('retencion_fuente'));
+        $embargoFiscal = $this->parseMoneyInput($request->input('embargo_fiscal'));
+        $pensionVoluntaria = $this->parseMoneyInput($request->input('pension_voluntaria'));
+
+        // Normativa COL: deducciones del empleado sobre devengado.
+        $eps = $totalDevengos * 0.04;
+        $afp = $totalDevengos * 0.04;
+        $seguridadSocial = $eps + $afp;
+
+        // Aportes del empleador (no deducen salario).
+        $params = app(\App\Services\NominaParameterService::class)->get();
+        $arlRate = (float) ($params->arl_riesgo_1 ?? 0);
+        $arl = $totalDevengos * $arlRate;
+
+        $deducciones =
+            $seguridadSocial
+            + $retencionFuente
+            + $embargoFiscal
+            + $pensionVoluntaria;
+
+        $neto = $this->calculator->calcularNeto($totalDevengos, $deducciones);
+
+        $periodoId = isset($s1['id_periodo'])
+            ? (int) $s1['id_periodo']
+            : (int) optional($this->getActivePeriod())->id_periodo;
+
+        if (!$periodoId) {
+            return redirect()->route('nomina.index')
+                ->with('error', 'No hay período activo para guardar la nómina.');
+        }
+
+        $payload = [
+            'id_contrato' => $s1['id_contrato'],
+            'id_periodo' => $periodoId,
+            'fecha_pago' => $s1['fecha_pago'],
+            'horas_extra' => $horasExtra,
+            'valor_horas_extras_recargos' => $horasExtra + $recargos,
+            'auxilio_transporte' => $auxilioTransporte,
+            'bonificaciones' => $bonificaciones,
+            'comisiones' => $comisiones,
+            'otros_devengos' => $otrosDevengos,
+            'eps' => $eps,
+            'afp' => $afp,
+            'arl' => $arl,
+            'seguridad_social' => $seguridadSocial,
+            'aporte_fp' => 0,
+            'retencion_fuente' => $retencionFuente,
+            'embargo_fiscal' => $embargoFiscal,
+            'pension_voluntaria' => $pensionVoluntaria,
+            'caja_compensacion' => 0,
+            'dias_a_trabajar' => $diasTrabajados,
+            'total_devengado' => $totalDevengos,
+            'total_deducciones' => $deducciones,
+            'neto_pagar' => $neto,
+            'updated_at' => now(),
+        ];
+
+        if ($editingId) {
+            DB::table('salario')
+                ->where('id_salario', (int) $editingId)
+                ->update($payload);
+
+            $idSalarioPersistido = (int) $editingId;
+        } else {
+            $payload['created_at'] = now();
+            $idSalarioPersistido = (int) DB::table('salario')->insertGetId($payload, 'id_salario');
+        }
+
+        $this->persistirDetalleHorasRecargos($idSalarioPersistido, (array) ($s2['detalle_recargos'] ?? []));
+
+        session()->forget('nomina');
+
+        return redirect()->route('nomina.index')
+            ->with('success', $editingId ? 'Nómina actualizada correctamente' : 'Nómina guardada correctamente');
+    }
+
+    private function parseMoneyInput($value): float
+    {
+        if ($value === null || $value === '') {
+            return 0.0;
+        }
+
+        $normalized = trim((string) $value);
+        $normalized = preg_replace('/[^\d,.-]/', '', $normalized);
+
+        if ($normalized === '' || $normalized === null) {
+            return 0.0;
+        }
+
+        $hasComma = str_contains($normalized, ',');
+        $hasDot = str_contains($normalized, '.');
+
+        if ($hasComma && $hasDot) {
+            if (strrpos($normalized, ',') > strrpos($normalized, '.')) {
+                $normalized = str_replace('.', '', $normalized);
+                $normalized = str_replace(',', '.', $normalized);
+            } else {
+                $normalized = str_replace(',', '', $normalized);
+            }
+        } elseif ($hasDot && !$hasComma) {
+            $dotCount = substr_count($normalized, '.');
+            if ($dotCount > 1) {
+                $normalized = str_replace('.', '', $normalized);
+            } else {
+                $parts = explode('.', $normalized);
+                if (count($parts) === 2 && strlen($parts[1]) === 3 && strlen($parts[0]) >= 1) {
+                    $normalized = str_replace('.', '', $normalized);
+                }
+            }
+        } elseif ($hasComma && !$hasDot) {
+            $commaCount = substr_count($normalized, ',');
+            if ($commaCount > 1) {
+                $normalized = str_replace(',', '', $normalized);
+            } else {
+                $parts = explode(',', $normalized);
+                if (count($parts) === 2 && strlen($parts[1]) === 3 && strlen($parts[0]) >= 1) {
+                    $normalized = str_replace(',', '', $normalized);
+                } else {
+                    $normalized = str_replace(',', '.', $normalized);
+                }
+            }
+        }
+
+        $number = (float) $normalized;
+        return is_finite($number) && $number >= 0 ? $number : 0.0;
+    }
+
+    private function normalizeRecargoMultiplier(string $nombre, float $valorCrudo): float
+    {
+        $nombreNormalizado = mb_strtolower(trim($nombre), 'UTF-8');
+
+        // Reglas legales solicitadas para nómina Colombia.
+        if (str_contains($nombreNormalizado, 'hora extra diurna dominical') || str_contains($nombreNormalizado, 'hora extra diurna festiva')) {
+            return 2.00;
+        }
+
+        if (str_contains($nombreNormalizado, 'hora extra nocturna dominical') || str_contains($nombreNormalizado, 'hora extra nocturna festiva')) {
+            return 2.50;
+        }
+
+        if (str_contains($nombreNormalizado, 'hora extra nocturna')) {
+            return 1.75;
+        }
+
+        if (str_contains($nombreNormalizado, 'hora extra diurna')) {
+            return 1.25;
+        }
+
+        if (str_contains($nombreNormalizado, 'recargo nocturno')) {
+            return 0.35;
+        }
+
+        if (str_contains($nombreNormalizado, 'recargo dominical') || str_contains($nombreNormalizado, 'recargo festivo')) {
+            return 0.75;
+        }
+
+        // Fallback seguro por si hay tipos nuevos en BD.
+        if ($valorCrudo <= 0) {
+            return 0.0;
+        }
+
+        if (str_contains($nombreNormalizado, 'recargo')) {
+            return $valorCrudo > 1 ? ($valorCrudo / 100) : $valorCrudo;
+        }
+
+        if (str_contains($nombreNormalizado, 'extra')) {
+            return $valorCrudo > 1 ? (1 + ($valorCrudo / 100)) : $valorCrudo;
+        }
+
+        return $valorCrudo;
+    }
+
+    private function calculateStep2TotalsFromDetail(array $detalleRecargos, float $salarioBase): array
+    {
+        $tipos = DB::table('tipo_hora_recargo')
+            ->select('id_tipo_hora_recargo', 'nombre', 'valor')
+            ->get()
+            ->keyBy('id_tipo_hora_recargo');
+
+        $valorHora = $salarioBase > 0 ? ($salarioBase / 240) : 0;
+        $totalHorasExtra = 0.0;
+        $totalRecargos = 0.0;
+
+        foreach ($detalleRecargos as $tipoId => $cantidadRaw) {
+            $cantidad = (float) $cantidadRaw;
+            if ($cantidad <= 0) {
+                continue;
+            }
+
+            $tipo = $tipos->get((int) $tipoId);
+            if (!$tipo) {
+                continue;
+            }
+
+            $factor = $this->normalizeRecargoMultiplier((string) ($tipo->nombre ?? ''), (float) ($tipo->valor ?? 0));
+            $valorTotal = $cantidad * ($valorHora * $factor);
+            $nombre = mb_strtolower((string) ($tipo->nombre ?? ''), 'UTF-8');
+
+            if (str_contains($nombre, 'extra')) {
+                $totalHorasExtra += $valorTotal;
+            } else {
+                $totalRecargos += $valorTotal;
+            }
+        }
+
+        return [
+            'total_horas_extra' => $totalHorasExtra,
+            'total_recargos' => $totalRecargos,
+        ];
+    }
+
+    /* ==========================
+       BUSCAR EMPLEADOS
+    ========================== */
+
     public function buscarEmpleado($doc)
     {
         $empresaId = session('empresa_id');
-        return DB::table('usuario')
-            ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
-            ->where('usuario.doc', $doc)
-            ->where('contrato.id_empresa', $empresaId)
-            ->where(function ($q) {
-                $q->where('contrato.estado_laboral', \App\Models\Contrato::ESTADO_LABORAL_ACTIVO)
-                    ->orWhere('contrato.estado_nomina', \App\Models\Contrato::ESTADO_NOMINA_PENDIENTE);
-            })
-            ->select(
-                'usuario.doc',
-                DB::raw("CONCAT(
-                    usuario.primer_nombre,' ',
-                    IFNULL(usuario.otros_nombres,''),' ',
-                    usuario.primer_apellido,' ',
-                    IFNULL(usuario.segundo_apellido,'')
-                ) as nombre"),
-                'usuario.telefono',
-                'contrato.salario_base',
-                'contrato.id_contrato'
-            )
-            ->first();
+
+        return $this->employeeService
+            ->buscarEmpleado($doc, $empresaId);
     }
 
     public function buscarEmpleados(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
-        $qDoc = preg_replace('/\D+/', '', $q);
         $empresaId = session('empresa_id');
-
-        $nombreExpr = "TRIM(CONCAT(
-            usuario.primer_nombre,' ',
-            IFNULL(usuario.otros_nombres,''),' ',
-            usuario.primer_apellido,' ',
-            IFNULL(usuario.segundo_apellido,'')
-        ))";
 
         $query = DB::table('usuario')
             ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
             ->where('contrato.id_empresa', $empresaId)
-            ->where(function ($q) {
-                $q->where('contrato.estado_laboral', \App\Models\Contrato::ESTADO_LABORAL_ACTIVO)
-                    ->orWhere('contrato.estado_nomina', \App\Models\Contrato::ESTADO_NOMINA_PENDIENTE);
-            })
             ->select(
                 'usuario.doc',
-                DB::raw("{$nombreExpr} as nombre"),
+                DB::raw("TRIM(CONCAT(usuario.primer_nombre,' ',IFNULL(usuario.otros_nombres,''),' ',usuario.primer_apellido,' ',IFNULL(usuario.segundo_apellido,''))) as nombre"),
                 'usuario.telefono',
                 'contrato.salario_base',
                 'contrato.id_contrato'
             );
 
         if ($q !== '') {
-            $query->where(function ($sub) use ($q, $qDoc, $nombreExpr) {
+            $query->where(function ($sub) use ($q) {
                 $sub->where('usuario.doc', 'like', "%{$q}%")
-                    ->orWhereRaw("{$nombreExpr} LIKE ?", ["%{$q}%"]);
-
-                if ($qDoc !== '') {
-                    $sub->orWhereRaw(
-                        "REPLACE(REPLACE(REPLACE(usuario.doc, '.', ''), '-', ''), ' ', '') LIKE ?",
-                        ["%{$qDoc}%"]
+                    ->orWhereRaw(
+                        "LOWER(TRIM(CONCAT(usuario.primer_nombre,' ',IFNULL(usuario.otros_nombres,''),' ',usuario.primer_apellido,' ',IFNULL(usuario.segundo_apellido,'')))) LIKE ?",
+                        ['%' . mb_strtolower($q, 'UTF-8') . '%']
                     );
-                }
             });
         }
 
@@ -791,309 +827,128 @@ class NominaController extends Controller
     }
 
     /* ==========================
-       GUARDAR NÓMINA
+       EXPORTAR EXCEL
     ========================== */
-    public function store(Request $request)
+
+    public function exportarExcel()
     {
-        try {
-            $s1 = session('nomina.step1');
-            $s2 = session('nomina.step2');
-            $s2Ingresos = session('nomina.step2_ingresos');
+        $salarios = Salario::with('contrato.usuario')->get();
 
-            if (!$s1 || !$s2 || !$s2Ingresos) {
-                return redirect()->route('nomina.step1')->with('error', 'Sesión expirada o datos incompletos.');
-            }
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-            $isEditing = (bool) session('nomina.editing_id');
+        $sheet->fromArray([
+            'Documento',
+            'Empleado',
+            'Devengado',
+            'Deducciones',
+            'Neto'
+        ], null, 'A1');
 
-            $empleado = $this->resolveNominaEmployeeContract(
-                (string) ($s1['doc'] ?? ''),
-                (int) ($s1['id_contrato'] ?? 0),
-                !$isEditing
-            );
+        $row = 2;
 
-            if (!$empleado) {
-                return redirect()->route('nomina.step1')
-                    ->with('error', 'Debes seleccionar un empleado válido de la lista.');
-            }
+        foreach ($salarios as $salario) {
 
-            $request->merge([
-                'retencion_fuente' => $this->parseNumber($request->input('retencion_fuente')),
-                'embargo_fiscal' => $this->parseNumber($request->input('embargo_fiscal')),
-                'pension_voluntaria' => $this->parseNumber($request->input('pension_voluntaria')),
-            ]);
+            $sheet->setCellValue('A'.$row,
+                $salario->contrato->usuario->doc);
 
-            $validated = $request->validate([
-                'retencion_fuente' => 'nullable|numeric|min:0',
-                'embargo_fiscal' => 'nullable|numeric|min:0',
-                'pension_voluntaria' => 'nullable|numeric|min:0',
-                'confirm_edit' => $isEditing ? 'required|string|in:editar' : 'nullable|string',
-            ], [
-                ...self::VALIDATION_MESSAGES,
-                'confirm_edit.required' => 'Debes confirmar la edición escribiendo "editar".',
-                'confirm_edit.in' => 'Para editar debes escribir exactamente "editar".',
-            ]);
+            $sheet->setCellValue('B'.$row,
+                $salario->contrato->usuario->nombre_completo);
 
-            $salarioBase = $this->parseNumber($s1['salario_base'] ?? 0);
-            $rules = $this->getContractContributionRules($s1['id_contrato'] ?? null);
-            $contributions = $this->calculateContributions($salarioBase, $rules);
+            $sheet->setCellValue('C'.$row,
+                $salario->total_devengado);
 
-            $fechaPago = $s1['fecha_pago'] ?? now()->toDateString();
-            $periodoId = session('active_period_id');
+            $sheet->setCellValue('D'.$row,
+                $salario->total_deducciones);
 
-            if (!$periodoId) {
-                throw new \Exception('Debe seleccionar un periodo antes de liquidar.');
-            }
+            $sheet->setCellValue('E'.$row,
+                $salario->neto_pagar);
 
-            $estado = \App\Models\Salario::ESTADO_LIQUIDADO;
-
-            if (!$isEditing) {
-                // 1. Validar pago duplicado PRIMERO
-                $existe = DB::table('salario')
-                    ->where('id_contrato', $s1['id_contrato'])
-                    ->where('id_periodo', $periodoId)
-                    ->exists();
-
-                if ($existe) {
-                    return back()->with('error', 'Ya existe un registro de nómina para este empleado en el periodo seleccionado (Mes ' . date('m/Y', strtotime($fechaPago)) . ').');
-                }
-
-                // 2. Verificar estado del periodo
-                $periodo = DB::table('periodo_liquidacion')
-                    ->where('id_periodo', $periodoId)
-                    ->select('estado')
-                    ->first();
-
-                if ($periodo && $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO) {
-                    abort(403, 'El periodo seleccionado se encuentra cerrado y no permite liquidaciones o novedades.');
-                }
-            }
-
-            $retencionFuente = $this->parseNumber($validated['retencion_fuente'] ?? 0);
-            $embargoFiscal = $this->parseNumber($validated['embargo_fiscal'] ?? 0);
-            $pensionVoluntaria = $this->parseNumber($validated['pension_voluntaria'] ?? 0);
-
-            $payload = $this->buildSalarioPayload(
-                $s1,
-                $s2,
-                $s2Ingresos,
-                $periodoId,
-                $estado,
-                $contributions,
-                $fechaPago,
-                $retencionFuente,
-                $embargoFiscal,
-                $pensionVoluntaria
-            );
-
-            // 3. Persistencia Transaccional
-            DB::transaction(function () use ($isEditing, $payload, $periodoId) {
-                if (!$isEditing) {
-                    $periodo = DB::table('periodo_liquidacion')
-                        ->where('id_periodo', $periodoId)
-                        ->select('estado')
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($periodo && $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_PENDIENTE) {
-                        // La primera liquidación abre el periodo automáticamente
-                        DB::table('periodo_liquidacion')
-                            ->where('id_periodo', $periodoId)
-                            ->update([
-                                'estado' => \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO,
-                                'updated_at' => now()
-                            ]);
-                    }
-
-                    DB::table('salario')->insert(array_merge($payload, [
-                        'created_at' => now(),
-                    ]));
-                } else {
-                    $periodo = DB::table('periodo_liquidacion')
-                        ->where('id_periodo', $periodoId)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($periodo && $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO) {
-                        abort(403, 'No se puede modificar una nómina de un periodo que ha sido cerrado recientemente.');
-                    }
-
-                    DB::table('salario')
-                        ->where('id_salario', (int) session('nomina.editing_id'))
-                        ->update($payload);
-                }
-            });
-
-            session()->forget('nomina');
-
-            return redirect()->route('nomina.index')
-                ->with('success', $isEditing ? 'Nómina actualizada correctamente' : 'Nómina guardada correctamente');
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error al guardar nómina: " . $e->getMessage());
-            return back()->with('error', 'Hubo un error al procesar la nómina. Por favor, intente nuevamente.');
+            $row++;
         }
+
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, 'nomina.xlsx');
     }
 
-    private function resolveNominaEmployeeContract(string $doc, int $idContrato, bool $requireActive = true): ?object
+    /* ==========================
+       EXPORTAR PDF
+    ========================== */
+
+    public function exportarPdf()
     {
-        $empresaId = session('empresa_id');
+        $salarios = Salario::with('contrato.usuario')->get();
 
-        $query = DB::table('usuario')
-            ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
-            ->where('contrato.id_empresa', $empresaId)
-            ->where('usuario.doc', $doc)
-            ->where('contrato.id_contrato', $idContrato)
-            ->select(
-                'usuario.doc',
-                DB::raw("TRIM(CONCAT(usuario.primer_nombre,' ',IFNULL(usuario.otros_nombres,''),' ',usuario.primer_apellido,' ',IFNULL(usuario.segundo_apellido,''))) as nombre"),
-                'usuario.telefono',
-                'contrato.salario_base',
-                'contrato.id_contrato'
-            );
-
-        if ($requireActive) {
-            $query->where(function ($q) {
-                $q->where('contrato.estado_laboral', \App\Models\Contrato::ESTADO_LABORAL_ACTIVO)
-                    ->orWhere('contrato.estado_nomina', \App\Models\Contrato::ESTADO_NOMINA_PENDIENTE);
-            });
-        }
-
-        return $query->first();
-    }
-
-    private function buildStep2SessionData(float $salarioBase, array $validated): array
-    {
-        $horasMes = (float) config('nomina.horas_mes', 240);
-        $valorHoraNormal = $horasMes > 0 ? ($salarioBase / $horasMes) : 0;
-        $cantidades = [];
-        $valores = [];
-
-        foreach (self::STEP2_RATES as $key => $multiplier) {
-            $cantidad = (int) round($this->parseNumber($validated[$key] ?? 0));
-            $cantidades[$key] = $cantidad;
-            $valores["valor_{$key}"] = $cantidad * ($valorHoraNormal * $multiplier);
-        }
-
-        $totalHorasExtra = 0;
-        foreach (self::STEP2_EXTRA_KEYS as $key) {
-            $totalHorasExtra += $valores["valor_{$key}"];
-        }
-
-        $totalRecargos = 0;
-        foreach (self::STEP2_RECARGO_KEYS as $key) {
-            $totalRecargos += $valores["valor_{$key}"];
-        }
-
-        $valorHorasExtrasRecargos = $totalHorasExtra + $totalRecargos;
-
-        return array_merge($cantidades, $valores, [
-            'valor_hora_normal' => $valorHoraNormal,
-            'total_horas_extra' => $totalHorasExtra,
-            'total_recargos' => $totalRecargos,
-            'valor_horas_extras_recargos' => $valorHorasExtrasRecargos,
-            'total_devengos_parcial' => $salarioBase + $valorHorasExtrasRecargos,
+        $pdf = Pdf::loadView('nomina.reporte-pdf', [
+            'salarios' => $salarios
         ]);
+
+        return $pdf->download('nomina.pdf');
     }
 
-    private function buildEditingSessionPayload(object $registro): array
+    public function exportarNominaExcel()
     {
-        $salarioBase = $this->parseNumber($registro->salario_base ?? 0);
-        $horasMes = (float) config('nomina.horas_mes', 240);
-        $valorHoraNormal = ($salarioBase > 0 && $horasMes > 0) ? ($salarioBase / $horasMes) : 0;
-        $valorHorasExtrasRecargos = $this->parseNumber($registro->valor_horas_extras_recargos ?? 0);
-        $horasExtraDiurnas = ($valorHoraNormal > 0)
-            ? (int) round($valorHorasExtrasRecargos / ($valorHoraNormal * self::STEP2_RATES['horas_extra_diurnas']))
-            : 0;
-
-        $totalDevengosFinal =
-            $salarioBase +
-            $valorHorasExtrasRecargos +
-            $this->parseNumber($registro->bonificaciones ?? 0) +
-            $this->parseNumber($registro->comisiones ?? 0) +
-            $this->parseNumber($registro->otros_devengos ?? 0);
-
-        return [
-            'nomina.editing_id' => (int) $registro->id_salario,
-            'nomina.step' => 1,
-            'nomina.step1' => [
-                'empleado_busqueda' => trim(($registro->doc ?? '') . ' - ' . ($registro->nombre ?? '')),
-                'nombre' => $registro->nombre,
-                'telefono' => $registro->telefono,
-                'salario_base' => $salarioBase,
-                'fecha_pago' => $registro->fecha_pago,
-                'doc' => $registro->doc,
-                'id_contrato' => $registro->id_contrato,
-            ],
-            'nomina.step2' => [
-                'horas_extra_diurnas' => $horasExtraDiurnas,
-                'horas_extra_nocturnas' => 0,
-                'horas_extra_dominicales_diurnas' => 0,
-                'horas_extra_dominicales_nocturnas' => 0,
-                'recargo_nocturno' => 0,
-                'recargo_dominical_diurno' => 0,
-                'recargo_dominical_nocturno' => 0,
-                'recargo_festivo_diurno' => 0,
-                'recargo_festivo_nocturno' => 0,
-                'valor_horas_extra_diurnas' => $valorHorasExtrasRecargos,
-                'valor_horas_extra_nocturnas' => 0,
-                'valor_horas_extra_dominicales_diurnas' => 0,
-                'valor_horas_extra_dominicales_nocturnas' => 0,
-                'valor_recargo_nocturno' => 0,
-                'valor_recargo_dominical_diurno' => 0,
-                'valor_recargo_dominical_nocturno' => 0,
-                'valor_recargo_festivo_diurno' => 0,
-                'valor_recargo_festivo_nocturno' => 0,
-                'valor_hora_normal' => $valorHoraNormal,
-                'total_horas_extra' => $valorHorasExtrasRecargos,
-                'total_recargos' => 0,
-                'valor_horas_extras_recargos' => $valorHorasExtrasRecargos,
-                'total_devengos_parcial' => $salarioBase + $valorHorasExtrasRecargos,
-            ],
-            'nomina.step2_ingresos' => [
-                'bonificaciones' => $this->parseNumber($registro->bonificaciones ?? 0),
-                'comisiones' => $this->parseNumber($registro->comisiones ?? 0),
-                'otros_devengos' => $this->parseNumber($registro->otros_devengos ?? 0),
-                'total_devengos_final' => $totalDevengosFinal,
-            ],
-            'nomina.step3' => [
-                'retencion_fuente' => $this->parseNumber($registro->retencion_fuente ?? 0),
-                'embargo_fiscal' => $this->parseNumber($registro->embargo_fiscal ?? 0),
-                'pension_voluntaria' => $this->parseNumber($registro->pension_voluntaria ?? 0),
-            ],
-        ];
+        return $this->exportarExcel();
     }
 
-    private function buildSalarioPayload(
-        array $s1,
-        array $s2,
-        array $s2Ingresos,
-        int $periodoId,
-        string $estado,
-        array $contributions,
-        string $fechaPago,
-        float $retencionFuente,
-        float $embargoFiscal,
-        float $pensionVoluntaria
-    ): array {
-        return [
-            'id_contrato' => $s1['id_contrato'],
-            'id_periodo' => $periodoId,
-            'estado' => $estado,
-            'auxilio_transporte' => 162000,
-            'valor_horas_extras_recargos' => $this->parseNumber($s2['valor_horas_extras_recargos'] ?? 0),
-            'bonificaciones' => $this->parseNumber($s2Ingresos['bonificaciones'] ?? 0),
-            'comisiones' => $this->parseNumber($s2Ingresos['comisiones'] ?? 0),
-            'otros_devengos' => $this->parseNumber($s2Ingresos['otros_devengos'] ?? 0),
-            'arl' => $contributions['arl'],
-            'eps' => $contributions['eps'],
-            'afp' => $contributions['afp'],
-            'seguridad_social' => $contributions['seguridad_social'],
-            'aporte_fp' => $contributions['aporte_fp'],
-            'retencion_fuente' => $retencionFuente,
-            'embargo_fiscal' => $embargoFiscal,
-            'pension_voluntaria' => $pensionVoluntaria,
-            'fecha_pago' => $fechaPago,
-            'updated_at' => now(),
-        ];
+    public function exportarNominaPdf()
+    {
+        return $this->exportarPdf();
+    }
+
+    private function persistirDetalleHorasRecargos(int $idSalario, array $detalle): void
+    {
+        DB::table('hora_recargo_extra')->where('id_salario', $idSalario)->delete();
+
+        if (empty($detalle)) {
+            return;
+        }
+
+        $tipos = DB::table('tipo_hora_recargo')
+            ->select('id_tipo_hora_recargo', 'nombre', 'valor')
+            ->get()
+            ->keyBy('id_tipo_hora_recargo');
+
+        $registro = DB::table('salario as s')
+            ->join('contrato as c', 'c.id_contrato', '=', 's.id_contrato')
+            ->where('s.id_salario', $idSalario)
+            ->first(['s.dias_a_trabajar', 'c.salario_base']);
+
+        $salarioMensual = (float) ($registro->salario_base ?? 0);
+        $dias = max(0, min(30, (int) ($registro->dias_a_trabajar ?? 30)));
+        $salarioBaseProporcional = ($salarioMensual / 30) * $dias;
+        $valorHora = $salarioBaseProporcional > 0 ? ($salarioBaseProporcional / 240) : 0;
+
+        $rows = [];
+        foreach ($detalle as $tipoId => $cantidadRaw) {
+            $cantidad = (float) $cantidadRaw;
+            if ($cantidad <= 0) {
+                continue;
+            }
+
+            $tipo = $tipos->get((int) $tipoId);
+            if (!$tipo) {
+                continue;
+            }
+
+            $factor = $this->normalizeRecargoMultiplier((string) ($tipo->nombre ?? ''), (float) ($tipo->valor ?? 0));
+            $pago = $cantidad * ($valorHora * $factor);
+
+            $rows[] = [
+                'id_tipo_hora_recargo' => (int) $tipoId,
+                'id_salario' => $idSalario,
+                'cantidad' => $cantidad,
+                'pago' => $pago,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (!empty($rows)) {
+            DB::table('hora_recargo_extra')->insert($rows);
+        }
     }
 }

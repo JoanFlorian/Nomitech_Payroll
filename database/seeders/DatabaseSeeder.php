@@ -37,6 +37,7 @@ class DatabaseSeeder extends Seeder
             SuperAdminSeeder::class,
             TipoHoraRecargoSeeder::class,
             SubTipoTrabajadorSeeder::class,
+            PayrollParametersSeeder::class,
         ]);
     }
 }

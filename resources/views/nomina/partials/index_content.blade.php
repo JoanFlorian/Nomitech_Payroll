@@ -1,4 +1,5 @@
 @php($salarios = $salarios ?? collect())
+@php($periodoActivo = $periodoActivo ?? $periodo ?? null)
 
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
@@ -237,11 +238,11 @@
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right font-semibold text-emerald-700">
-                                ${{ number_format($salario->total_devengos, 0, ',', '.') }}
+                                ${{ number_format((float) $salario->total_devengado, 0, ',', '.') }}
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right font-semibold text-red-600">
-                                -${{ number_format($salario->total_deducciones, 0, ',', '.') }}
+                                -${{ number_format((float) $salario->getRawOriginal('total_deducciones'), 0, ',', '.') }}
                             </td>
 
                             @php($totalNovedades = (float) ($salario->total_novedades ?? 0))
@@ -256,7 +257,7 @@
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right font-extrabold text-slate-900">
-                                ${{ number_format($salario->salario_neto, 0, ',', '.') }}
+                                ${{ number_format((float) $salario->neto_pagar, 0, ',', '.') }}
                             </td>
                         </tr>
                     @empty

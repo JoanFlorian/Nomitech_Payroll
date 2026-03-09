@@ -4,17 +4,46 @@
     <meta charset="UTF-8">
     <title>Reporte de Nómina</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #1f2937; }
-        .header { margin-bottom: 16px; }
-        .title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-        .meta { font-size: 11px; color: #4b5563; }
-        .section-title { font-size: 14px; font-weight: 700; margin: 18px 0 8px; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #172b43; }
+        .header {
+            border: 1px solid #dbeafe;
+            background: #f4f8ff;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .brand-table { width: 100%; border-collapse: collapse; }
+        .brand-table td { border: none; vertical-align: top; }
+        .logo-wrap { width: 38%; }
+        .logo { height: 64px; }
+        .title-wrap { width: 62%; text-align: right; }
+        .title { font-size: 20px; font-weight: 700; color: #0f3d7a; margin-bottom: 5px; }
+        .meta { font-size: 10px; color: #425466; line-height: 1.45; }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin: 14px 0 7px;
+            color: #0f3d7a;
+            border-left: 4px solid #1d6fd8;
+            padding-left: 8px;
+        }
         table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
-        th { background: #f3f4f6; font-weight: 700; }
+        th, td { border: 1px solid #d5e4fb; padding: 7px; text-align: left; }
+        th { background: #eef5ff; color: #173f73; font-weight: 700; }
         .text-right { text-align: right; }
         .grid { width: 100%; }
         .grid td { vertical-align: top; width: 50%; border: none; padding: 0 8px 0 0; }
+        .kpi-table td { border-color: #d5e4fb; }
+        .kpi-title { color: #3b5778; font-weight: 700; width: 28%; }
+        .kpi-value { font-weight: 700; color: #102a43; }
+        .footer {
+            margin-top: 12px;
+            font-size: 9px;
+            color: #6b7f98;
+            text-align: center;
+            border-top: 1px solid #dbe7fb;
+            padding-top: 6px;
+        }
     </style>
 </head>
 <body>
@@ -24,37 +53,51 @@
         $salarioNetoPromedio = (float) ($resumen->salario_neto_promedio ?? 0);
         $aportesSeguridadSocial = (float) ($resumen->aportes_seguridad_social ?? 0);
         $totalDeducciones = (float) ($resumen->total_deducciones ?? 0);
+        $logoPath = public_path('images/nomitech-logo.svg');
+        $logoSrc = file_exists($logoPath) ? 'file:///' . str_replace('\\', '/', $logoPath) : null;
     @endphp
 
     <div class="header">
-        <div class="title">Reporte de Nómina</div>
-        <div class="meta">Generado: {{ $fechaGeneracion }}</div>
-        <div class="meta">
-            Periodo:
-            {{ $periodoSeleccionado === 'all' ? 'Todos' : \Carbon\Carbon::createFromFormat('Y-m', $periodoSeleccionado)->locale('es')->translatedFormat('F Y') }}
-        </div>
-        <div class="meta">Tipo de contrato: {{ $tipoContratoNombre }}</div>
+        <table class="brand-table">
+            <tr>
+                <td class="logo-wrap">
+                    @if($logoSrc)
+                        <img class="logo" src="{{ $logoSrc }}" alt="Nomitech">
+                    @else
+                        <div style="font-size: 22px; font-weight: 800; color: #1565c0;">NOMITECH</div>
+                    @endif
+                </td>
+                <td class="title-wrap">
+                    <div class="title">Reporte de Nomina</div>
+                    <div class="meta">Generado: {{ $fechaGeneracion }}</div>
+                    <div class="meta">
+                        Periodo: {{ $periodoSeleccionado === 'all' ? 'Todos' : \Carbon\Carbon::createFromFormat('Y-m', $periodoSeleccionado)->locale('es')->translatedFormat('F Y') }}
+                    </div>
+                    <div class="meta">Tipo de contrato: {{ $tipoContratoNombre }}</div>
+                </td>
+            </tr>
+        </table>
     </div>
 
-    <div class="section-title">Resumen de Nómina</div>
-    <table>
+    <div class="section-title">Resumen de Nomina</div>
+    <table class="kpi-table">
         <tbody>
             <tr>
-                <th>Costo total de nómina</th>
-                <td class="text-right">${{ number_format($costoTotalNomina, 0, ',', '.') }}</td>
-                <th>Empleados activos</th>
-                <td class="text-right">{{ $empleadosActivos }}</td>
+                <td class="kpi-title">Costo total de nomina</td>
+                <td class="text-right kpi-value">${{ number_format($costoTotalNomina, 0, ',', '.') }}</td>
+                <td class="kpi-title">Empleados activos</td>
+                <td class="text-right kpi-value">{{ $empleadosActivos }}</td>
             </tr>
             <tr>
-                <th>Salario neto promedio</th>
-                <td class="text-right">${{ number_format($salarioNetoPromedio, 0, ',', '.') }}</td>
-                <th>Aportes seguridad social</th>
-                <td class="text-right">${{ number_format($aportesSeguridadSocial, 0, ',', '.') }}</td>
+                <td class="kpi-title">Salario neto promedio</td>
+                <td class="text-right kpi-value">${{ number_format($salarioNetoPromedio, 0, ',', '.') }}</td>
+                <td class="kpi-title">Aportes seguridad social</td>
+                <td class="text-right kpi-value">${{ number_format($aportesSeguridadSocial, 0, ',', '.') }}</td>
             </tr>
             <tr>
-                <th>Total deducciones</th>
-                <td class="text-right">${{ number_format($totalDeducciones, 0, ',', '.') }}</td>
-                <th></th>
+                <td class="kpi-title">Total deducciones</td>
+                <td class="text-right kpi-value">${{ number_format($totalDeducciones, 0, ',', '.') }}</td>
+                <td class="kpi-title"></td>
                 <td></td>
             </tr>
         </tbody>
@@ -63,7 +106,7 @@
     <table class="grid" style="margin-top: 14px;">
         <tr>
             <td>
-                <div class="section-title" style="margin-top: 0;">Desglose de Nómina</div>
+                <div class="section-title" style="margin-top: 0;">Desglose de Nomina</div>
                 <table>
                     <thead>
                         <tr>
@@ -92,7 +135,7 @@
                 </table>
             </td>
             <td>
-                <div class="section-title" style="margin-top: 0;">Evolución de Nómina</div>
+                <div class="section-title" style="margin-top: 0;">Evolucion de Nomina</div>
                 <table>
                     <thead>
                         <tr>
@@ -116,5 +159,9 @@
             </td>
         </tr>
     </table>
+
+    <div class="footer">
+        Documento generado por Nomitech. Este reporte consolida los valores segun los filtros aplicados.
+    </div>
 </body>
 </html>

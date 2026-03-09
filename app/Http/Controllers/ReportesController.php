@@ -131,14 +131,14 @@ class ReportesController extends Controller
             ->orderBy('nombre')
             ->get(['id_tipo_contrato', 'nombre']);
 
-        $devengosExpr = '(
+        $devengosExpr = 'COALESCE(s.total_devengado, (
             c.salario_base
             + s.auxilio_transporte
             + COALESCE(s.valor_horas_extras_recargos, s.horas_extra, 0)
             + s.bonificaciones
             + s.comisiones
             + s.otros_devengos
-        )';
+        ))';
 
         $deduccionesExpr = '(
             s.eps + s.afp + s.aporte_fp
@@ -158,13 +158,26 @@ class ReportesController extends Controller
                 fn($q) => $q->where('c.id_tipo_contrato', (int) $tipoContratoSeleccionado)
             );
 
+        // Debe contar todos los contratos activos vinculados a la empresa,
+        // incluso si no tienen liquidaciones en salario para el periodo.
+        $empleadosActivos = DB::table('contrato as c')
+            ->when($empresaId, fn($q) => $q->where('c.id_empresa', $empresaId))
+            ->when(
+                $tipoContratoSeleccionado !== 'all',
+                fn($q) => $q->where('c.id_tipo_contrato', (int) $tipoContratoSeleccionado)
+            )
+            ->where('c.activo', 1)
+            ->distinct('c.doc')
+            ->count('c.doc');
+
         $resumen = (clone $baseQuery)
             ->selectRaw("COALESCE(SUM({$devengosExpr}), 0) as costo_total_nomina")
-            ->selectRaw('COALESCE(COUNT(DISTINCT CASE WHEN c.activo = 1 THEN c.doc END), 0) as empleados_activos')
             ->selectRaw("COALESCE(AVG({$devengosExpr} - {$deduccionesExpr}), 0) as salario_neto_promedio")
             ->selectRaw('COALESCE(SUM(s.seguridad_social + s.aporte_fp), 0) as aportes_seguridad_social')
             ->selectRaw("COALESCE(SUM({$deduccionesExpr}), 0) as total_deducciones")
             ->first();
+
+        $resumen->empleados_activos = (int) $empleadosActivos;
 
         $desgloseNomina = (clone $baseQuery)
             ->selectRaw('COALESCE(SUM(c.salario_base), 0) as salarios')
@@ -202,6 +215,21 @@ class ReportesController extends Controller
                 ];
             });
 
+        $evolucionAnual = (clone $baseQuery)
+            ->whereNotNull('s.fecha_pago')
+            ->selectRaw("DATE_FORMAT(s.fecha_pago, '%Y') as anio")
+            ->selectRaw("COALESCE(SUM({$devengosExpr}), 0) as total")
+            ->groupBy('anio')
+            ->orderBy('anio')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'anio' => $item->anio,
+                    'label' => (string) $item->anio,
+                    'total' => (float) $item->total,
+                ];
+            });
+
         return [
             'periodosDisponibles' => $periodosDisponibles,
             'tiposContrato' => $tiposContrato,
@@ -215,6 +243,7 @@ class ReportesController extends Controller
                 'provisiones' => (float) ($provisiones ?? 0),
             ],
             'evolucion' => $evolucion,
+            'evolucionAnual' => $evolucionAnual,
         ];
     }
 

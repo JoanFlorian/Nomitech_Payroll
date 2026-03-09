@@ -92,6 +92,8 @@
     }
     </style>
 
+    @stack('styles')
+
 </head>
 <body class="bg-[#1565C0]">
     

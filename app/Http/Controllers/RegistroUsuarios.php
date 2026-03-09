@@ -74,7 +74,7 @@ class RegistroUsuarios extends Controller
 
         return array_filter(
             $data,
-            fn ($key) => in_array($key, self::$contratoColumnsCache, true),
+            fn($key) => in_array($key, self::$contratoColumnsCache, true),
             ARRAY_FILTER_USE_KEY
         );
     }
@@ -235,6 +235,24 @@ class RegistroUsuarios extends Controller
                         'activo' => true,
                     ]
                 );
+
+                // Create initial benefit balances if provided
+                $initialBalances = [
+                    'prima_inicial' => (float) ($allData['prima_inicial'] ?? 0),
+                    'cesantias_inicial' => (float) ($allData['cesantias_inicial'] ?? 0),
+                    'intereses_inicial' => (float) ($allData['intereses_inicial'] ?? 0),
+                    'vacaciones_inicial' => (float) ($allData['vacaciones_inicial'] ?? 0),
+                ];
+
+                $hasInitialBalances = array_sum($initialBalances) > 0;
+                if ($hasInitialBalances) {
+                    $benefitService = app(\App\Services\Benefits\BenefitPaymentService::class);
+                    $benefitService->createInitialBalances(
+                        $allData['doc'],
+                        $companyId,
+                        $initialBalances
+                    );
+                }
             });
 
             session()->forget(['employee.step1', 'employee.step2']);

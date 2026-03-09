@@ -53,17 +53,17 @@ class PeriodoLiquidacionController extends Controller
             $fechaLicStart = \Carbon\Carbon::parse($licencia->fecha_inicio);
             $minDate = $fechaLicStart->copy()->startOfMonth()->toDateString();
 
-            // Regla del día 25
-            if ($fechaLicStart->day > 25) {
+            // Regla del día 20
+            if ($fechaLicStart->day > 20) {
                 // Mes actual + Mes siguiente
                 $maxDate = $fechaLicStart->copy()->addMonth()->endOfMonth()->toDateString();
                 $isRestrictedByLicense = false;
-                $licenceMessage = 'Su licencia (post-25) le permite crear periodos en el mes actual y el siguiente.';
+                $licenceMessage = 'Su licencia (post-20) le permite crear periodos en el mes actual y el siguiente.';
             } else {
                 // Solo mes actual
                 $maxDate = $fechaLicStart->copy()->endOfMonth()->toDateString();
                 $isRestrictedByLicense = true;
-                $licenceMessage = 'Su licencia (pre-25) limita la creación de periodos al mes actual de compra/renovación.';
+                $licenceMessage = 'Su licencia (pre-20) limita la creación de periodos al mes actual de compra/renovación.';
             }
         }
         // -----------------------------------------------------
@@ -104,13 +104,13 @@ class PeriodoLiquidacionController extends Controller
                 ? \Carbon\Carbon::parse($request->input('fecha_fin'))
                 : PeriodoLiquidacion::calculateEndDate($fechaInicio, $frecuencia);
 
-            // --- REFUERZO DE TOPE DE MES EN BACKEND (Licencia pre-25) ---
+            // --- REFUERZO DE TOPE DE MES EN BACKEND (Licencia pre-20) ---
             $empresa = \App\Models\Empresa::find($empresaId);
             $licencia = $empresa->licencia;
 
             if ($licencia && $licencia->fecha_inicio) {
                 $fechaLicStart = \Carbon\Carbon::parse($licencia->fecha_inicio);
-                if ($fechaLicStart->day <= 25) {
+                if ($fechaLicStart->day <= 20) {
                     $ultimoDiaMes = $fechaInicio->copy()->endOfMonth();
                     if ($fechaFin->greaterThan($ultimoDiaMes)) {
                         $fechaFin = $ultimoDiaMes;
@@ -145,7 +145,7 @@ class PeriodoLiquidacionController extends Controller
                 throw new \Exception('Ya existe un periodo con esta fecha de inicio.');
             }
 
-            // --- RESTRICCIÓN POR FECHA DE LICENCIA (Regla del Día 25) ---
+            // --- RESTRICCIÓN POR FECHA DE LICENCIA (Regla del Día 20) ---
             $empresa = \App\Models\Empresa::find($empresaId);
             $licencia = $empresa->licencia;
 
@@ -162,17 +162,17 @@ class PeriodoLiquidacionController extends Controller
                 // Siempre se permite el mes de compra/renovación
                 $permitidoActual = ($mesSolicitado == $mesLicencia && $anioSolicitado == $anioLicencia);
 
-                // Si es mayor a 25, se permite también el mes siguiente
+                // Si es mayor a 20, se permite también el mes siguiente
                 $permitidoSiguiente = false;
-                if ($diaLicencia > 25) {
+                if ($diaLicencia > 20) {
                     $siguienteMes = $fechaLicStart->copy()->addMonth();
                     $permitidoSiguiente = ($mesSolicitado == $siguienteMes->month && $anioSolicitado == $siguienteMes->year);
                 }
 
                 if (!$permitidoActual && !$permitidoSiguiente) {
-                    $errorMsg = ($diaLicencia > 25)
-                        ? 'Debido a que su licencia fue adquirida después del día 25, solo puede crear periodos para el mes actual o el siguiente.'
-                        : 'Su licencia fue adquirida antes del día 25, por lo tanto solo puede crear periodos dentro del mes de la compra/renovación.';
+                    $errorMsg = ($diaLicencia > 20)
+                        ? 'Debido a que su licencia fue adquirida después del día 20, solo puede crear periodos para el mes actual o el siguiente.'
+                        : 'Su licencia fue adquirida antes del día 20, por lo tanto solo puede crear periodos dentro del mes de la compra/renovación.';
                     throw new \Exception($errorMsg);
                 }
             }
@@ -238,7 +238,7 @@ class PeriodoLiquidacionController extends Controller
      * @param int $id
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function close(Request $request, $id, \App\Services\Payroll\NextPeriodoGeneratorService $generator)
+    public function close(Request $request, $id, \App\Services\Payroll\NextPeriodoGeneratorService $generator, \App\Services\Benefits\BenefitAccrualService $accrualService)
     {
         try {
             $periodo = PeriodoLiquidacion::where('id_periodo', $id)
@@ -247,6 +247,14 @@ class PeriodoLiquidacionController extends Controller
 
             if ($periodo->estado === PeriodoLiquidacion::ESTADO_CERRADO) {
                 throw new \Exception('El periodo ya se encuentra cerrado.');
+            }
+
+            // Validar ventana de cierre (Fin + 10 días)
+            if (!$periodo->canBeClosed()) {
+                $fFin = \Carbon\Carbon::parse($periodo->fecha_fin);
+                $fechaFinStr = $fFin->format('d/m/Y');
+                $fechaLimiteStr = $fFin->copy()->addDays(10)->format('d/m/Y');
+                throw new \Exception("El cierre de este periodo solo está permitido desde el {$fechaFinStr} hasta el {$fechaLimiteStr}.");
             }
 
             // Validar que tenga al menos un salario liquidado
@@ -260,11 +268,20 @@ class PeriodoLiquidacionController extends Controller
                 ->where('estado', '!=', \App\Models\Salario::ESTADO_LIQUIDADO)
                 ->exists();
             if ($noLiquidados) {
-                throw new \Exception('Existen liquidaciones pendientes o en borrador. Debe liquidarlas todas antes de cerrar el periodo.');
+                throw new \Exception('Existen liquidaciones pendientes. Debe liquidarlas todas antes de cerrar el periodo.');
             }
 
-            DB::transaction(function () use ($periodo, $request, $generator) {
+            DB::transaction(function () use ($periodo, $request, $generator, $accrualService) {
+                // Actualizar todos los salarios del periodo a estado 'pagado'
+                $periodo->salarios()->update([
+                    'estado' => \App\Models\Salario::ESTADO_PAGADO,
+                    'updated_at' => now()
+                ]);
+
                 $periodo->close();
+
+                // Generate benefit accruals (provisions) for this period
+                $accrualService->generateAccrualsForPeriod($periodo);
 
                 // Auto-generación del siguiente periodo
                 if ($request->boolean('generar_siguiente')) {

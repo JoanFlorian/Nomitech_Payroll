@@ -2,16 +2,17 @@
     <div class="w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden relative">
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <h3 class="text-xl md:text-2xl font-bold text-gray-800">Editar Novedad</h3>
-            <button type="button" id="close-edit-modal-btn" class="w-9 h-9 inline-flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 transition">
+            <button type="button" id="close-edit-modal-btn" onclick="window.__closeEditModal && window.__closeEditModal()" class="w-9 h-9 inline-flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 transition">
                 <span class="material-icons text-[20px]">close</span>
             </button>
         </div>
 
-        <form id="edit-novelty-form" method="POST" class="relative z-10">
+        <form id="edit-novelty-form" action="{{ route('novedades.update', ['id_novedad' => 0]) }}" method="POST" class="relative z-10">
             @csrf
             @method('PUT')
             <input type="hidden" id="edit-novedad-id" name="edit_novedad_id" value="{{ old('edit_novedad_id') }}">
             <input type="hidden" id="edit-doc-empleado" name="empleado_id" value="{{ old('empleado_id', old('doc_empleado')) }}">
+            <input type="hidden" id="edit-salario-base" name="salario_base" value="{{ old('salario_base', 0) }}">
 
             <div class="p-6 md:p-8 space-y-5 max-h-[70vh] overflow-y-auto">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -36,15 +37,21 @@
                         <select id="edit-novelty-type" name="tipo_novedad" class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] transition">
                             <option value="">Seleccione un tipo</option>
                             @foreach ([
-                                ['value' => 'incapacidad_enfermedad_general', 'label' => 'Incapacidad enfermedad general'],
-                                ['value' => 'incapacidad_laboral_arl', 'label' => 'Incapacidad laboral (ARL)'],
-                                ['value' => 'licencia_maternidad', 'label' => 'Licencia de maternidad'],
-                                ['value' => 'licencia_paternidad', 'label' => 'Licencia de paternidad'],
-                                ['value' => 'licencia_remunerada', 'label' => 'Licencia remunerada'],
-                                ['value' => 'licencia_no_remunerada', 'label' => 'Licencia no remunerada'],
-                                ['value' => 'permiso_remunerado', 'label' => 'Permiso remunerado'],
-                                ['value' => 'permiso_no_remunerado', 'label' => 'Permiso no remunerado'],
-                                ['value' => 'suspension_contrato', 'label' => 'Suspensión del contrato'],
+                                ['value' => 'TDE', 'label' => 'TDE - Traslado desde EPS'],
+                                ['value' => 'TAE', 'label' => 'TAE - Traslado a EPS'],
+                                ['value' => 'TDP', 'label' => 'TDP - Traslado desde AFP'],
+                                ['value' => 'TAP', 'label' => 'TAP - Traslado a AFP'],
+                                ['value' => 'VSP', 'label' => 'VSP - Variación permanente de salario'],
+                                ['value' => 'VST', 'label' => 'VST - Variación transitoria de salario'],
+                                ['value' => 'SLN', 'label' => 'SLN - Suspensión o licencia no remunerada'],
+                                ['value' => 'IGE', 'label' => 'IGE - Incapacidad enfermedad general'],
+                                ['value' => 'IRL', 'label' => 'IRL - Incapacidad riesgo laboral'],
+                                ['value' => 'LMAT', 'label' => 'LMAT - Licencia de maternidad'],
+                                ['value' => 'LPAT', 'label' => 'LPAT - Licencia de paternidad'],
+                                ['value' => 'VAC', 'label' => 'VAC - Vacaciones'],
+                                ['value' => 'VCT', 'label' => 'VCT - Variación centro de trabajo'],
+                                ['value' => 'INC', 'label' => 'INC - Incapacidad'],
+                                ['value' => 'LIC', 'label' => 'LIC - Licencia'],
                             ] as $tipoNovedad)
                                 <option value="{{ $tipoNovedad['value'] }}" {{ old('tipo_novedad') === $tipoNovedad['value'] ? 'selected' : '' }}>{{ $tipoNovedad['label'] }}</option>
                             @endforeach
@@ -81,7 +88,7 @@
 
                     <div>
                         <label for="edit-quantity-days" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en días</label>
-                        <input id="edit-quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="30" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
+                        <input id="edit-quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="126" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
                         <p id="edit-quantity-days-error" class="mt-1 text-xs text-red-600 hidden"></p>
                         @error('cantidad_dias')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -95,6 +102,57 @@
                         @error('cantidad_horas')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
+                    </div>
+
+                    {{-- Select de tipo de incapacidad eliminado en edición --}}
+
+                    <div id="edit-tipo-licencia-wrap" class="hidden">
+                        <label for="edit-tipo-licencia" class="block text-sm font-medium text-gray-700 mb-1">Tipo de licencia</label>
+                        <select id="edit-tipo-licencia" name="tipo_licencia" class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                            <option value="">Seleccione</option>
+                            <option value="luto" {{ old('tipo_licencia') === 'luto' ? 'selected' : '' }}>Luto</option>
+                            <option value="calamidad_domestica" {{ old('tipo_licencia') === 'calamidad_domestica' ? 'selected' : '' }}>Calamidad doméstica</option>
+                            <option value="permiso_especial" {{ old('tipo_licencia') === 'permiso_especial' ? 'selected' : '' }}>Permiso especial</option>
+                            <option value="remunerada" {{ old('tipo_licencia') === 'remunerada' ? 'selected' : '' }}>Remunerada</option>
+                            <option value="no_remunerada" {{ old('tipo_licencia') === 'no_remunerada' ? 'selected' : '' }}>No remunerada</option>
+                        </select>
+                    </div>
+
+                    <div id="edit-certificado-medico-wrap" class="hidden md:col-span-2">
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                            <input type="checkbox" id="edit-certificado-medico" name="certificado_medico" value="1" {{ old('certificado_medico') ? 'checked' : '' }}>
+                            <span>Certificado médico adjunto/verificado</span>
+                        </label>
+                    </div>
+
+                    <div id="edit-eps-wrap" class="hidden">
+                        <label for="edit-eps-id" class="block text-sm font-medium text-gray-700 mb-1">EPS</label>
+                        <select id="edit-eps-id" name="id_eps" class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                            <option value="">Seleccione EPS</option>
+                            @foreach (($epsList ?? collect()) as $eps)
+                                <option value="{{ $eps->id_eps }}" {{ (string) old('id_eps') === (string) $eps->id_eps ? 'selected' : '' }}>{{ $eps->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div id="edit-afp-wrap" class="hidden">
+                        <label for="edit-afp-id" class="block text-sm font-medium text-gray-700 mb-1">AFP</label>
+                        <select id="edit-afp-id" name="id_afp" class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                            <option value="">Seleccione AFP</option>
+                            @foreach (($afpList ?? collect()) as $afp)
+                                <option value="{{ $afp->id_afp }}" {{ (string) old('id_afp') === (string) $afp->id_afp ? 'selected' : '' }}>{{ $afp->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div id="edit-arl-wrap" class="hidden">
+                        <label for="edit-arl-id" class="block text-sm font-medium text-gray-700 mb-1">ARL / Nivel de riesgo</label>
+                        <select id="edit-arl-id" name="id_arl" class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                            <option value="">Seleccione ARL</option>
+                            @foreach (($arlList ?? collect()) as $arl)
+                                <option value="{{ $arl->id_arl }}" {{ (string) old('id_arl') === (string) $arl->id_arl ? 'selected' : '' }}>{{ $arl->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div>
@@ -122,6 +180,7 @@
                             <input id="edit-payment-display" type="text" class="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Valor a pagar o descontar por esta novedad" autocomplete="off">
                         </div>
                         <input type="hidden" id="edit-payment" name="pago_manual" value="{{ old('pago_manual', old('pago')) }}">
+                        <p id="edit-payment-auto-message" class="mt-1 text-xs text-blue-700 hidden">Esta novedad se calcula automáticamente según el salario del empleado y la cantidad de días u horas registradas.</p>
                         <p id="edit-payment-error" class="mt-1 text-xs text-red-600 hidden"></p>
                         @error('pago_manual')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -151,15 +210,31 @@
                 </button>
 
                 <div class="flex items-center gap-2">
-                    <button id="cancel-edit-btn" type="button" class="bg-gray-200 text-gray-700 font-medium py-2 px-6 rounded-md hover:bg-gray-300 transition-colors duration-300">Cancelar</button>
+                    <button id="cancel-edit-btn" type="button" onclick="window.__closeEditModal && window.__closeEditModal()" class="bg-gray-200 text-gray-700 font-medium py-2 px-6 rounded-md hover:bg-gray-300 transition-colors duration-300">Cancelar</button>
                     <button id="update-btn" type="submit" class="bg-blue-600 text-white font-medium py-2 px-6 rounded-md shadow-sm hover:bg-blue-700 transition-colors duration-300">Guardar cambios</button>
                 </div>
             </div>
         </form>
 
-        <form id="delete-novedad-form" method="POST" class="hidden">
+        <form id="delete-novedad-form" action="{{ route('novedades.destroy', ['id_novedad' => 0]) }}" method="POST" class="hidden">
             @csrf
             @method('DELETE')
         </form>
     </div>
 </div>
+
+<script>
+    window.__openEditModal = function () {
+        const modal = document.getElementById('edit-novelty-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+
+    window.__closeEditModal = function () {
+        const modal = document.getElementById('edit-novelty-modal');
+        if (!modal) return;
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    };
+</script>

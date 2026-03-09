@@ -105,4 +105,14 @@ class Contrato extends Model
         return $this->hasOne(Cuenta::class, 'id_contrato', 'id_contrato')
             ->where('activo', true);
     }
+
+    public function benefitLedgerEntries()
+    {
+        return $this->hasMany(BenefitLedger::class, 'contract_id', 'id_contrato');
+    }
+
+    public function benefitBalance()
+    {
+        return $this->hasOne(BenefitBalance::class, 'employee_id', 'doc');
+    }
 }

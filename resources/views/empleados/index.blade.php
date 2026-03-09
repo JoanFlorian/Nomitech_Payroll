@@ -365,6 +365,120 @@
         }
     }
 
+    function collectFormState(form) {
+        if (!form) {
+            return {};
+        }
+
+        const state = {};
+        form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (field) {
+            const name = field.getAttribute('name');
+            if (!name || name === '_token') {
+                return;
+            }
+
+            if (field.type === 'checkbox') {
+                state[name] = field.checked;
+                return;
+            }
+
+            state[name] = field.value;
+        });
+
+        return state;
+    }
+
+    function applyFormState(form, state) {
+        if (!form || !state || typeof state !== 'object') {
+            return;
+        }
+
+        Object.entries(state).forEach(function ([name, value]) {
+            const field = form.querySelector(`[name="${name}"]`);
+            if (!field) {
+                return;
+            }
+
+            if (field.type === 'checkbox') {
+                field.checked = Boolean(value);
+                field.dispatchEvent(new Event('change', { bubbles: true }));
+                return;
+            }
+
+            field.value = value ?? '';
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    function captureRegistroDraft(moduleData) {
+        if (!moduleData) {
+            return;
+        }
+
+        moduleData.registroDraft = {
+            wizardStep: Number(moduleData.wizardStep || 1),
+            step1: collectFormState(document.getElementById('step1')),
+            step2: collectFormState(document.getElementById('step2')),
+            step3: collectFormState(document.getElementById('step3')),
+        };
+    }
+
+    function clearRegistroDraft(moduleData) {
+        if (!moduleData) {
+            return;
+        }
+
+        moduleData.registroDraft = null;
+    }
+
+    function restoreRegistroDraft(moduleData) {
+        if (!moduleData || !moduleData.registroDraft) {
+            return false;
+        }
+
+        applyFormState(document.getElementById('step1'), moduleData.registroDraft.step1);
+        applyFormState(document.getElementById('step2'), moduleData.registroDraft.step2);
+        applyFormState(document.getElementById('step3'), moduleData.registroDraft.step3);
+
+        moduleData.wizardStep = Math.min(3, Math.max(1, Number(moduleData.registroDraft.wizardStep || 1)));
+
+        if (window.employeeValidation && typeof window.employeeValidation.refreshAll === 'function') {
+            window.employeeValidation.refreshAll();
+        }
+
+        return true;
+    }
+
+    function captureEditDraft(moduleData) {
+        if (!moduleData || !moduleData.currentDoc) {
+            return;
+        }
+
+        const form = document.getElementById('editEmployeeForm');
+        if (!form) {
+            return;
+        }
+
+        moduleData.editDrafts[moduleData.currentDoc] = {
+            editWizardStep: Number(moduleData.editWizardStep || 1),
+            fields: collectFormState(form),
+        };
+    }
+
+    function clearEditDraft(moduleData, doc = null) {
+        if (!moduleData || !moduleData.editDrafts) {
+            return;
+        }
+
+        const targetDoc = doc || moduleData.currentDoc;
+        if (!targetDoc) {
+            return;
+        }
+
+        delete moduleData.editDrafts[targetDoc];
+    }
+
     window.goToWizardStep = function (step) {
         const moduleData = getEmpleadosModuleData();
         if (moduleData) {
@@ -398,36 +512,60 @@
             wizardStep: 1,
             editWizardStep: 1,
             currentDoc: null,
+            registroDraft: null,
+            editDrafts: {},
             
             openRegistroModal() {
-                this.wizardStep = 1;
                 this.showRegistroModal = true;
-                resetEmployeeWizardForms();
+
+                if (!restoreRegistroDraft(this)) {
+                    this.wizardStep = 1;
+                    resetEmployeeWizardForms();
+                }
             },
             
             openEditModal(doc) {
                 this.currentDoc = doc;
                 this.showEditModal = true;
-                this.editWizardStep = 1;
+
+                const draft = this.editDrafts[doc] || null;
+                this.editWizardStep = draft ? Number(draft.editWizardStep || 1) : 1;
 
                 if (typeof window.loadEmployee === 'function') {
                     window.loadEmployee(doc);
                 }
             },
             
-            closeModals() {
+            closeModals(options = {}) {
                 if (typeof Swal !== 'undefined' && Swal.isVisible()) {
                     return;
                 }
 
+                const discardProgress = Boolean(options && options.discardProgress);
+
+                if (this.showRegistroModal) {
+                    if (discardProgress) {
+                        clearRegistroDraft(this);
+                        this.wizardStep = 1;
+                        resetEmployeeWizardForms();
+                        clearEmployeeWizardSession();
+                    } else {
+                        captureRegistroDraft(this);
+                    }
+                }
+
+                if (this.showEditModal) {
+                    if (discardProgress) {
+                        clearEditDraft(this);
+                    } else {
+                        captureEditDraft(this);
+                    }
+                }
+
                 this.showRegistroModal = false;
                 this.showEditModal = false;
-                this.wizardStep = 1;
                 this.editWizardStep = 1;
                 this.currentDoc = null;
-
-                resetEmployeeWizardForms();
-                clearEmployeeWizardSession();
             },
             
             nextStep() {
@@ -461,7 +599,7 @@
             },
             
             completedWizard() {
-                this.closeModals();
+                this.closeModals({ discardProgress: true });
                 // Recargar la página para ver el nuevo empleado
                 window.location.reload();
             }

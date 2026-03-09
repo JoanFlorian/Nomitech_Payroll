@@ -193,16 +193,6 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">ARL</label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="id_arl" id="editIdArl">
-                                @foreach ($Arl as $arl)
-                                    <option value="{{ $arl->id_arl }}">{{ $arl->nombre }}</option>
-                                @endforeach
-                            </select>
-                            <p class="error-message text-red-500 text-sm hidden" data-error="id_arl"></p>
-                        </div>
-
-                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
                             <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="fecha_inicio" id="editFechaInicio">
                             <p class="error-message text-red-500 text-sm hidden" data-error="fecha_inicio"></p>
@@ -216,6 +206,16 @@
                         </div>
 
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ARL</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="id_arl" id="editIdArl">
+                                @foreach ($Arl as $arl)
+                                    <option value="{{ $arl->id_arl }}">{{ $arl->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <p class="error-message text-red-500 text-sm hidden" data-error="id_arl"></p>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Horas Diarias</label>
                             <input type="number" min="1" max="12" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="horas_diarias" id="editHorasDiarias">
                             <p class="error-message text-red-500 text-sm hidden" data-error="horas_diarias"></p>
@@ -223,7 +223,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salario Base</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="salario" id="editSalario" inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
+                            <input type="number" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="salario" id="editSalario" inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
                             <p class="error-message text-red-500 text-sm hidden" data-error="salario"></p>
                         </div>
 
@@ -250,6 +250,13 @@
                             <input type="checkbox" class="h-4 w-4 text-[#1565C0] border-gray-300 rounded focus:ring-[#1565C0]" name="alto_riesgo" id="editAltoRiesgo">
                             <label for="editAltoRiesgo" class="ml-2 block text-sm text-gray-700">
                                 Trabajador de alto riesgo
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" class="h-4 w-4 text-[#1565C0] border-gray-300 rounded focus:ring-[#1565C0]" name="bajo_riesgo" id="editBajoRiesgo">
+                            <label for="editBajoRiesgo" class="ml-2 block text-sm text-gray-700">
+                                Trabajador de bajo riesgo
                             </label>
                         </div>
                     </div>
@@ -297,7 +304,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">EPS</label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="id_eps" id="editIdEps">
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="id_eps" id="editIdEps" disabled>
                                 @foreach ($Eps as $eps)
                                     <option value="{{ $eps->id_eps }}">{{ $eps->nombre }}</option>
                                 @endforeach
@@ -307,7 +314,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">AFP</label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="id_afp" id="editIdAfp">
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="id_afp" id="editIdAfp" disabled>
                                 @foreach ($Afp as $afp)
                                     <option value="{{ $afp->id_afp }}">{{ $afp->nombre }}</option>
                                 @endforeach
@@ -327,7 +334,7 @@
                 <div class="mt-10 flex justify-between gap-4">
                     <button
                         type="button"
-                        @click="closeModals()"
+                        @click="closeModals({ discardProgress: true })"
                         class="bg-gray-200 text-gray-700 py-2 px-6 rounded-md hover:bg-gray-300 transition"
                     >
                         Cancelar
@@ -525,6 +532,114 @@ function syncEditFechaFinByContractType() {
     updateEditFechaFinMin();
 }
 
+function getEditRiskLevelNumber(rawValue) {
+    const value = (rawValue ?? '').toString().trim().toUpperCase();
+    if (value === '') {
+        return null;
+    }
+
+    const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    const digitMatch = normalized.match(/\b([1-5])\b/);
+    if (digitMatch) {
+        return Number(digitMatch[1]);
+    }
+
+    const romanMatch = normalized.match(/\b(III|IV|II|V|I)\b/);
+    if (!romanMatch) {
+        return null;
+    }
+
+    const token = romanMatch[1];
+    const romanMap = {
+        I: 1,
+        II: 2,
+        III: 3,
+        IV: 4,
+        V: 5,
+    };
+
+    return romanMap[token] ?? Number(token);
+}
+
+function syncEditRiskClassification() {
+    const nivelRiesgo = document.getElementById('editNivelRiesgo');
+    const altoRiesgo = document.getElementById('editAltoRiesgo');
+    const bajoRiesgo = document.getElementById('editBajoRiesgo');
+
+    if (!nivelRiesgo || !altoRiesgo || !bajoRiesgo) {
+        return;
+    }
+
+    const riskLevel = getEditRiskLevelNumber(nivelRiesgo.value);
+
+    if (riskLevel === null) {
+        altoRiesgo.checked = false;
+        bajoRiesgo.checked = false;
+        return;
+    }
+
+    if (riskLevel >= 3) {
+        altoRiesgo.checked = true;
+        bajoRiesgo.checked = false;
+        return;
+    }
+
+    altoRiesgo.checked = false;
+    bajoRiesgo.checked = true;
+}
+
+function isEditCashPaymentMethodSelected() {
+    const metodoPagoInput = document.getElementById('editIdMetodoPago');
+    if (!metodoPagoInput) {
+        return false;
+    }
+
+    const selectedOption = metodoPagoInput.selectedOptions && metodoPagoInput.selectedOptions[0]
+        ? metodoPagoInput.selectedOptions[0]
+        : null;
+
+    if (!selectedOption) {
+        return false;
+    }
+
+    const optionText = (selectedOption.textContent ?? '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+    return optionText.includes('efectiv');
+}
+
+function syncEditBankFieldsByPaymentMethod() {
+    const fields = [
+        document.getElementById('editBanco'),
+        document.getElementById('editIdBanco'),
+        document.getElementById('editTipoCuenta'),
+        document.getElementById('editNumeroCuenta'),
+    ].filter(Boolean);
+
+    if (fields.length === 0) {
+        return;
+    }
+
+    const isCash = isEditCashPaymentMethodSelected();
+
+    fields.forEach((field) => {
+        if (isCash) {
+            field.value = '';
+            field.setAttribute('disabled', 'disabled');
+            field.classList.add('bg-gray-100', 'cursor-not-allowed');
+            clearEditFieldError(field);
+            return;
+        }
+
+        field.removeAttribute('disabled');
+        field.classList.remove('bg-gray-100', 'cursor-not-allowed');
+    });
+}
+
 function normalizeEditFieldValue(field) {
     if (field.type === 'checkbox') {
         return field.checked ? '1' : '0';
@@ -566,6 +681,10 @@ function buildChangedFieldsFormData(form) {
     form.querySelectorAll('input, select, textarea').forEach(field => {
         const name = field.getAttribute('name');
         if (!name || name === 'doc' || name === '_token') {
+            return;
+        }
+
+        if (field.disabled) {
             return;
         }
 
@@ -773,6 +892,11 @@ function validateEditField(stepNumber, fieldName, showError = true) {
 
                 return validateEditInput(input, true, '', showError);
             case 'codigo_interno':
+                if (value === '') {
+                    if (showError) clearEditFieldError(input);
+                    return true;
+                }
+
                 return validateEditInput(input, EDIT_NUMBERS_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 dígitos numéricos.', showError);
             case 'nivel_riesgo':
                 return validateEditInput(input, ['Nivel I', 'Nivel II', 'Nivel III', 'Nivel IV', 'Nivel V'].includes(value), 'Debe seleccionar un nivel de riesgo válido.', showError);
@@ -782,14 +906,28 @@ function validateEditField(stepNumber, fieldName, showError = true) {
     }
 
     if (stepNumber === 3) {
+        const isCashPayment = isEditCashPaymentMethodSelected();
+
         switch (fieldName) {
             case 'id_forma_pago':
                 return validateEditInput(input, value !== '', 'Debe seleccionar la forma de pago.', showError);
             case 'id_metodo_pago':
                 return validateEditInput(input, value !== '', 'Debe seleccionar el método de pago.', showError);
             case 'tipo_cuenta':
+                if (isCashPayment) {
+                    if (showError) {
+                        clearEditFieldError(input);
+                    }
+                    return true;
+                }
                 return validateEditInput(input, value !== '', 'Debe seleccionar el tipo de cuenta.', showError);
             case 'numero_cuenta':
+                if (isCashPayment) {
+                    if (showError) {
+                        clearEditFieldError(input);
+                    }
+                    return true;
+                }
                 return validateEditInput(input, EDIT_ACCOUNT_REGEX.test(value), 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.', showError);
             case 'id_eps':
                 return validateEditInput(input, value !== '', 'Debe seleccionar la EPS.', showError);
@@ -820,13 +958,18 @@ function validateEditStepByNumber(stepNumber, showError = true) {
 
     const tipoContratoField = form.querySelector('[name="id_tipo_contrato"]');
     const tipoTrabajadorField = form.querySelector('[name="id_tipo_trabajador"]');
+    const metodoPagoField = form.querySelector('[name="id_metodo_pago"]');
     const tipoContratoChanged = tipoContratoField
         ? normalizeEditFieldValue(tipoContratoField) !== (tipoContratoField.dataset.initialValue ?? '').toString()
         : false;
     const tipoTrabajadorChanged = tipoTrabajadorField
         ? normalizeEditFieldValue(tipoTrabajadorField) !== (tipoTrabajadorField.dataset.initialValue ?? '').toString()
         : false;
+    const metodoPagoChanged = metodoPagoField
+        ? normalizeEditFieldValue(metodoPagoField) !== (metodoPagoField.dataset.initialValue ?? '').toString()
+        : false;
     const forceValidateSalary = stepNumber === 2 && (tipoContratoChanged || tipoTrabajadorChanged);
+    const forceValidateBankFields = stepNumber === 3 && metodoPagoChanged && !isEditCashPaymentMethodSelected();
 
     fields.forEach((fieldName) => {
         const field = form.querySelector(`[name="${fieldName}"]`);
@@ -838,7 +981,11 @@ function validateEditStepByNumber(stepNumber, showError = true) {
         const currentValue = normalizeEditFieldValue(field);
         const hasChanged = currentValue !== initialValue;
 
-        if (!hasChanged && !(forceValidateSalary && fieldName === 'salario')) {
+        if (
+            !hasChanged
+            && !(forceValidateSalary && fieldName === 'salario')
+            && !(forceValidateBankFields && (fieldName === 'tipo_cuenta' || fieldName === 'numero_cuenta'))
+        ) {
             if (showError) {
                 clearEditFieldError(field);
             }
@@ -887,6 +1034,7 @@ function loadEmployee(doc) {
                 document.getElementById('editCodigoInterno').value = contrato.codigo_interno || '';
                 document.getElementById('editNivelRiesgo').value = contrato.nivel_riesgo || '';
                 document.getElementById('editAltoRiesgo').checked = contrato.alto_riesgo == 1;
+                document.getElementById('editBajoRiesgo').checked = contrato.alto_riesgo != 1;
 
                 document.getElementById('editIdFormaPago').value = contrato.id_forma_pago || '';
                 document.getElementById('editIdMetodoPago').value = contrato.id_metodo_pago || '';
@@ -908,6 +1056,7 @@ function loadEmployee(doc) {
                 document.getElementById('editCodigoInterno').value = '';
                 document.getElementById('editNivelRiesgo').value = '';
                 document.getElementById('editAltoRiesgo').checked = false;
+                document.getElementById('editBajoRiesgo').checked = false;
 
                 document.getElementById('editIdFormaPago').value = '';
                 document.getElementById('editIdMetodoPago').value = '';
@@ -918,7 +1067,39 @@ function loadEmployee(doc) {
                 document.getElementById('editActivo').checked = false;
             }
 
+            syncEditRiskClassification();
+            syncEditBankFieldsByPaymentMethod();
+
             snapshotEditFormValues();
+
+            const moduleData = typeof getEmpleadosModuleData === 'function' ? getEmpleadosModuleData() : null;
+            const draft = moduleData && moduleData.editDrafts ? moduleData.editDrafts[doc] : null;
+            if (draft && draft.fields && typeof draft.fields === 'object') {
+                Object.entries(draft.fields).forEach(([name, rawValue]) => {
+                    const field = document.querySelector(`#editEmployeeForm [name="${name}"]`);
+                    if (!field) {
+                        return;
+                    }
+
+                    if (field.type === 'checkbox') {
+                        field.checked = Boolean(rawValue);
+                    } else {
+                        field.value = rawValue ?? '';
+                    }
+
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+                    field.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+
+                if (moduleData) {
+                    moduleData.editWizardStep = Math.min(3, Math.max(1, Number(draft.editWizardStep || 1)));
+                }
+
+                syncEditFechaFinByContractType();
+                syncEditRiskClassification();
+                syncEditBankFieldsByPaymentMethod();
+            }
+
             [1, 2, 3].forEach((step) => validateEditStepByNumber(step, false));
         })
         .catch(error => {
@@ -1024,6 +1205,11 @@ document.getElementById('editEmployeeForm').addEventListener('submit', function(
         return response.json();
     })
     .then(() => {
+        const moduleData = typeof getEmpleadosModuleData === 'function' ? getEmpleadosModuleData() : null;
+        if (moduleData && moduleData.editDrafts && doc) {
+            delete moduleData.editDrafts[doc];
+        }
+
         Swal.fire('Éxito', 'Empleado actualizado correctamente', 'success').then(() => {
             window.location.reload();
         });
@@ -1040,7 +1226,36 @@ document.addEventListener('DOMContentLoaded', function () {
     const editFechaInicio = document.getElementById('editFechaInicio');
     const editTipoContrato = document.getElementById('editIdTipoContrato');
     const editTipoTrabajador = document.getElementById('editIdTipoTrabajador');
+    const editNivelRiesgo = document.getElementById('editNivelRiesgo');
+    const editAltoRiesgo = document.getElementById('editAltoRiesgo');
+    const editBajoRiesgo = document.getElementById('editBajoRiesgo');
+    const editIdMetodoPago = document.getElementById('editIdMetodoPago');
     const editSalario = document.getElementById('editSalario');
+    const editCodigoInterno = document.getElementById('editCodigoInterno');
+    const editNumeroCuenta = document.getElementById('editNumeroCuenta');
+
+    ['editPrimerNombre', 'editOtrosNombres', 'editPrimerApellido', 'editSegundoApellido'].forEach(function (id) {
+        const input = document.getElementById(id);
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener('input', function () {
+            input.value = (input.value ?? '').toString().replace(/[^a-zA-ZÁÉÍÓÚáéíóúñÑ\s]/g, '');
+        });
+    });
+
+    if (editCodigoInterno) {
+        editCodigoInterno.addEventListener('input', function () {
+            editCodigoInterno.value = (editCodigoInterno.value ?? '').toString().replace(/\D/g, '').slice(0, 20);
+        });
+    }
+
+    if (editNumeroCuenta) {
+        editNumeroCuenta.addEventListener('input', function () {
+            editNumeroCuenta.value = (editNumeroCuenta.value ?? '').toString().replace(/\D/g, '').slice(0, 20);
+        });
+    }
 
     if (editFechaInicio) {
         editFechaInicio.addEventListener('change', updateEditFechaFinMin);
@@ -1073,6 +1288,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    if (editNivelRiesgo) {
+        editNivelRiesgo.addEventListener('change', function () {
+            syncEditRiskClassification();
+        });
+    }
+
+    [editAltoRiesgo, editBajoRiesgo].filter(Boolean).forEach(function (checkbox) {
+        checkbox.addEventListener('change', function () {
+            syncEditRiskClassification();
+        });
+    });
+
+    if (editIdMetodoPago) {
+        editIdMetodoPago.addEventListener('change', function () {
+            syncEditBankFieldsByPaymentMethod();
+            validateEditField(3, 'tipo_cuenta', true);
+            validateEditField(3, 'numero_cuenta', true);
+        });
+    }
+
     if (editSalario) {
         editSalario.addEventListener('input', function () {
             editSalario.value = formatEditLocalizedNumber(editSalario.value);
@@ -1086,5 +1321,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     syncEditFechaFinByContractType();
+    syncEditRiskClassification();
+    syncEditBankFieldsByPaymentMethod();
 });
 </script>

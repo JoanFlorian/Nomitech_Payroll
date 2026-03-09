@@ -29,7 +29,13 @@ class Novedad extends Model
         'observaciones',
         'pago_manual',
         'valor_novedad',
-        'pago'
+        'pago',
+        'tipo_movimiento',
+        'afecta_ibc',
+        'tipo_novedad_codigo',
+        'tipo_licencia',
+        'tipo_incapacidad',
+        'certificado_medico',
     ];
 
     protected $casts = [
@@ -37,6 +43,8 @@ class Novedad extends Model
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
         'es_remunerado' => 'boolean',
+        'afecta_ibc' => 'boolean',
+        'certificado_medico' => 'boolean',
     ];
 
     public function tipoNovedad()

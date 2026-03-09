@@ -8,10 +8,17 @@ use App\Enums\PaymentStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
+use App\Services\Payroll\PeriodoAutomationService;
 
 class PaymentService
 {
+    protected $periodoAutomationService;
+
+    public function __construct(PeriodoAutomationService $periodoAutomationService)
+    {
+        $this->periodoAutomationService = $periodoAutomationService;
+    }
+
     /**
      * Completa el proceso de pago y activa la licencia de forma segura.
      * Centraliza la lógica para ser usada por Webhooks y Polling.
@@ -57,6 +64,9 @@ class PaymentService
                         'fecha_inicio' => $startDate,
                         'fecha_fin' => $endDate,
                     ]);
+
+                    // 2b. Auto-generar periodo de liquidación inicial/siguiente
+                    $this->periodoAutomationService->handleLicenseActivation($pago->empresa);
 
                     Log::info("PaymentService: License activated proactively/webhook.", [
                         'pago_id' => $pago->id,

@@ -38,37 +38,20 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1" for="fecha-inicio">
-                Fecha de inicio
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="id_tipo_contrato">
+                Tipo de contrato
             </label>
-            <input type="date" id="fecha_inicio" name="fecha_inicio"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
-                        focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                required/>
-            <div class="error-message invalid-feedback" data-error="fecha_inicio"></div>
-        </div>
-
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1" for="fecha-fin">
-                Fecha de fin
-            </label>
-            <input type="date" id="fecha_fin" name="fecha_fin"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
-                        focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"/>
-            <p id="fecha_fin_hint" class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de inicio.</p>
-            <div class="error-message invalid-feedback" data-error="fecha_fin"></div>
-        </div>
-
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1" for="horas-diarias">
-                Horas diarias a trabajar
-            </label>
-            <input type="number" id="horas_diarias" name="horas_diarias" placeholder="Ej: 8"
-                min="1" max="12"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
-                        focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                required/>
-            <div class="error-message invalid-feedback" data-error="horas_diarias"></div>
+            <select id="id_tipo_contrato"
+                    class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
+                        focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
+                    name="id_tipo_contrato"
+                    required>
+                <option value="">Seleccionar...</option>
+                @foreach ( $contratos as $contrato )
+                    <option value="{{ $contrato->id_tipo_contrato }}">{{ $contrato->nombre }}</option>
+                @endforeach
+            </select>
+            <div class="error-message invalid-feedback" data-error="id_tipo_contrato"></div>
         </div>
 
         <div>
@@ -106,20 +89,37 @@
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1" for="id_tipo_contrato">
-                Tipo de contrato
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="horas-diarias">
+                Horas diarias a trabajar
             </label>
-            <select id="id_tipo_contrato"
-                    class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
-                        focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
-                    name="id_tipo_contrato"
-                    required>
-                <option value="">Seleccionar...</option>
-                @foreach ( $contratos as $contrato )
-                    <option value="{{ $contrato->id_tipo_contrato }}">{{ $contrato->nombre }}</option>
-                @endforeach
-            </select>
-            <div class="error-message invalid-feedback" data-error="id_tipo_contrato"></div>
+            <input type="number" id="horas_diarias" name="horas_diarias" placeholder="Ej: 8"
+                min="1" max="12"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                        focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                required/>
+            <div class="error-message invalid-feedback" data-error="horas_diarias"></div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="fecha-inicio">
+                Fecha de inicio
+            </label>
+            <input type="date" id="fecha_inicio" name="fecha_inicio"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                        focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                required/>
+            <div class="error-message invalid-feedback" data-error="fecha_inicio"></div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="fecha-fin">
+                Fecha de fin
+            </label>
+            <input type="date" id="fecha_fin" name="fecha_fin"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                        focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"/>
+            <p id="fecha_fin_hint" class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de inicio.</p>
+            <div class="error-message invalid-feedback" data-error="fecha_fin"></div>
         </div>
 
         <div>
@@ -147,8 +147,7 @@
                 inputmode="numeric"
                 minlength="3"
                 maxlength="20"
-                pattern="[0-9]+"
-                required/>
+                pattern="[0-9]+"/>
             <div class="error-message invalid-feedback" data-error="codigo_interno"></div>
         </div>
 
@@ -192,6 +191,15 @@
                 Trabajador de alto riesgo
             </label>
             <div class="error-message invalid-feedback" data-error="alto_riesgo"></div>
+        </div>
+
+        <div class="flex items-center">
+            <input id="bajo_riesgo" type="checkbox"
+                class="h-4 w-4 text-[#1565C0] border-gray-300 rounded focus:ring-[#1565C0]"
+                name="bajo_riesgo" />
+            <label for="bajo_riesgo" class="ml-2 block text-sm text-gray-700">
+                Trabajador de bajo riesgo
+            </label>
         </div>
     </div>
 

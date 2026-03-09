@@ -107,9 +107,11 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.store');
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
     Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);
+    Route::get('/nomina/validar-duplicado/{idContrato}', [NominaController::class, 'checkDuplicate']);
 
     // Novedades y Reportes
     Route::get('/novedades', [NovedadController::class, 'index'])->name('novedades.index');
+    Route::get('/novedades/historial', [NovedadController::class, 'historialContrato'])->name('novedades.historial');
     Route::post('/novedades/calculo/preview', [NovedadCalculoController::class, 'preview'])->name('novedades.calculo.preview');
     Route::post('/novedades', [NovedadController::class, 'store'])->name('novedades.store');
     Route::put('/novedades/{id_novedad}', [NovedadController::class, 'update'])->name('novedades.update');
@@ -121,6 +123,9 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
 
     // Provisiones
     Route::get('/provisiones', [\App\Http\Controllers\ProvisionesController::class, 'index'])->name('provisiones.index');
+    Route::get('/provisiones/{doc}/historial', [\App\Http\Controllers\ProvisionesController::class, 'historial'])->name('provisiones.historial');
+    Route::post('/provisiones/liquidar-individual', [\App\Http\Controllers\ProvisionesController::class, 'liquidarIndividual'])->name('provisiones.liquidar.individual');
+    Route::post('/provisiones/liquidar-masivo', [\App\Http\Controllers\ProvisionesController::class, 'liquidarMasivo'])->name('provisiones.liquidar.masivo');
 
     // Nómina Electrónica
     Route::get('/nomina-electronica', [\App\Http\Controllers\NominaElectronicaController::class, 'index'])->name('nomina-electronica.index');

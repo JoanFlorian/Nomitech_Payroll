@@ -144,6 +144,7 @@
 						<div class="flex items-center gap-1.5">
 							<button
 								type="button"
+								onclick="window.__openEditByButton && window.__openEditByButton(this)"
 								class="open-edit-modal text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50"
 								title="Editar"
 								data-novedad-id="{{ $novedad->id_novedad }}"
@@ -172,6 +173,7 @@
 							</button>
 							<button
 								type="button"
+								onclick="window.__deleteNovedadByButton && window.__deleteNovedadByButton(this)"
 								class="trigger-delete-direct text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
 								title="Eliminar"
 								data-novedad-id="{{ $novedad->id_novedad }}"
@@ -384,24 +386,33 @@
 		};
 
 		const openModal = () => {
+			if (!modal) return;
 			modal.classList.remove('hidden');
 			modal.classList.add('flex');
 		};
 
 		const closeModal = () => {
+			if (!modal) return;
 			modal.classList.remove('flex');
 			modal.classList.add('hidden');
 		};
 
 		const openEditModal = () => {
+			if (!editModal) return;
 			editModal.classList.remove('hidden');
 			editModal.classList.add('flex');
 		};
 
 		const closeEditModal = () => {
+			if (!editModal) return;
 			editModal.classList.remove('flex');
 			editModal.classList.add('hidden');
 		};
+
+		window.__openNoveltyModal = openModal;
+		window.__closeNoveltyModal = closeModal;
+		window.__openEditModal = openEditModal;
+		window.__closeEditModal = closeEditModal;
 
 		addNoveltyBtn?.addEventListener('click', openModal);
 		cancelBtn?.addEventListener('click', closeModal);
@@ -451,6 +462,8 @@
 				.toLowerCase()
 				.replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
 		};
+
+		const TitleCase = toTitleCase;
 
 		const formatter = new Intl.NumberFormat('es-CO', {
 			style: 'currency',
@@ -1518,8 +1531,12 @@
 				editPaymentDisplayInput.value = '';
 			}
 
-			editForm.action = updateUrlTemplate.replace('__ID__', String(data.id));
-			deleteForm.action = deleteUrlTemplate.replace('__ID__', String(data.id));
+			if (editForm && data?.id) {
+				editForm.action = updateUrlTemplate.replace('__ID__', String(data.id));
+			}
+			if (deleteForm && data?.id) {
+				deleteForm.action = deleteUrlTemplate.replace('__ID__', String(data.id));
+			}
 			updateEditQuantityMode();
 			updateEditLicenciaRemuneradaVisibility();
 			toggleEditManualPayment();
@@ -1527,42 +1544,44 @@
 			updateEditEstimatedValue();
 		};
 
-		editButtons.forEach((button) => {
-			button.addEventListener('click', (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				console.log('Edit button clicked', button.dataset);
-				try {
-					clearAllEditErrors();
-					setEditModalData({
-						id: button.dataset.novedadId,
-						doc: button.dataset.doc,
-						nombres: button.dataset.nombres,
-						apellidos: button.dataset.apellidos,
-						tipo: button.dataset.tipo,
-						licenciaRemunerada: button.dataset.licenciaRemunerada,
-						unidad: button.dataset.unidad,
-						cantidad: button.dataset.cantidad,
-						dias: button.dataset.dias,
-						horas: button.dataset.horas,
-						fechaInicio: button.dataset.fechaInicio,
-						fechaFin: button.dataset.fechaFin,
-						pago: button.dataset.pago,
-						salarioBase: button.dataset.salarioBase,
-						tipoLicencia: button.dataset.tipoLicencia,
-						tipoIncapacidad: button.dataset.tipoIncapacidad,
-						certificadoMedico: button.dataset.certificadoMedico,
-						idEps: button.dataset.idEps,
-						idAfp: button.dataset.idAfp,
-						idArl: button.dataset.idArl,
-						observaciones: button.dataset.observaciones,
-					});
-					openEditModal();
-				} catch (error) {
-					console.error('Error al abrir modal de edición:', error);
-					alert('Error al abrir el modal: ' + error.message);
-				}
-			});
+		document.addEventListener('click', (e) => {
+			const editButton = e.target.closest('.open-edit-modal');
+			if (!editButton) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+			console.log('Edit button clicked', editButton.dataset);
+
+			try {
+				clearAllEditErrors();
+				setEditModalData({
+					id: editButton.dataset.novedadId,
+					doc: editButton.dataset.doc,
+					nombres: editButton.dataset.nombres,
+					apellidos: editButton.dataset.apellidos,
+					tipo: editButton.dataset.tipo,
+					licenciaRemunerada: editButton.dataset.licenciaRemunerada,
+					unidad: editButton.dataset.unidad,
+					cantidad: editButton.dataset.cantidad,
+					dias: editButton.dataset.dias,
+					horas: editButton.dataset.horas,
+					fechaInicio: editButton.dataset.fechaInicio,
+					fechaFin: editButton.dataset.fechaFin,
+					pago: editButton.dataset.pago,
+					salarioBase: editButton.dataset.salarioBase,
+					tipoLicencia: editButton.dataset.tipoLicencia,
+					tipoIncapacidad: editButton.dataset.tipoIncapacidad,
+					certificadoMedico: editButton.dataset.certificadoMedico,
+					idEps: editButton.dataset.idEps,
+					idAfp: editButton.dataset.idAfp,
+					idArl: editButton.dataset.idArl,
+					observaciones: editButton.dataset.observaciones,
+				});
+				openEditModal();
+			} catch (error) {
+				console.error('Error al abrir modal de edición:', error);
+				alert('Error al abrir el modal: ' + error.message);
+			}
 		});
 
 		const confirmDeleteNovedad = async () => {
@@ -1586,35 +1605,100 @@
 			return confirm('¿Seguro que deseas eliminar esta novedad? Esta accion no se puede deshacer.');
 		};
 
+		window.__openEditByButton = (button) => {
+			if (!button) return;
+			try {
+				clearAllEditErrors();
+				setEditModalData({
+					id: button.dataset.novedadId,
+					doc: button.dataset.doc,
+					nombres: button.dataset.nombres,
+					apellidos: button.dataset.apellidos,
+					tipo: button.dataset.tipo,
+					licenciaRemunerada: button.dataset.licenciaRemunerada,
+					unidad: button.dataset.unidad,
+					cantidad: button.dataset.cantidad,
+					dias: button.dataset.dias,
+					horas: button.dataset.horas,
+					fechaInicio: button.dataset.fechaInicio,
+					fechaFin: button.dataset.fechaFin,
+					pago: button.dataset.pago,
+					salarioBase: button.dataset.salarioBase,
+					tipoLicencia: button.dataset.tipoLicencia,
+					tipoIncapacidad: button.dataset.tipoIncapacidad,
+					certificadoMedico: button.dataset.certificadoMedico,
+					idEps: button.dataset.idEps,
+					idAfp: button.dataset.idAfp,
+					idArl: button.dataset.idArl,
+					observaciones: button.dataset.observaciones,
+				});
+				openEditModal();
+			} catch (error) {
+				console.error('Error al abrir modal de edición:', error);
+				alert('Error al abrir el modal: ' + error.message);
+			}
+		};
+
+		window.__deleteNovedadByButton = async (button) => {
+			if (!button) return;
+			const id = button.dataset.novedadId;
+			if (!id || !deleteForm) {
+				console.error('No se encontró ID o formulario para eliminar la novedad.');
+				return;
+			}
+
+			try {
+				const confirmed = await confirmDeleteNovedad();
+				if (confirmed) {
+					deleteForm.action = deleteUrlTemplate.replace('__ID__', id);
+					deleteForm.submit();
+				}
+			} catch (error) {
+				console.error('Error al eliminar:', error);
+				alert('Error al eliminar: ' + error.message);
+			}
+		};
+
 		deleteNovedadBtn?.addEventListener('click', async () => {
 			const confirmed = await confirmDeleteNovedad();
 			if (confirmed) {
+				if (!deleteForm?.action) {
+					console.error('No se encontró la acción del formulario de eliminación.');
+					return;
+				}
 				deleteForm.submit();
 			}
 		});
 
-		deleteDirectButtons.forEach((button) => {
-			button.addEventListener('click', async (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				console.log('Delete button clicked', button.dataset);
-				const id = button.dataset.novedadId;
-				if (!id) {
-					console.error('No se encontró ID de novedad');
-					return;
-				}
-				try {
-					const confirmed = await confirmDeleteNovedad();
-					if (confirmed) {
-						deleteForm.action = deleteUrlTemplate.replace('__ID__', id);
-						console.log('Submitting delete form to:', deleteForm.action);
-						deleteForm.submit();
+		document.addEventListener('click', async (e) => {
+			const deleteButton = e.target.closest('.trigger-delete-direct');
+			if (!deleteButton) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+			console.log('Delete button clicked', deleteButton.dataset);
+
+			const id = deleteButton.dataset.novedadId;
+			if (!id) {
+				console.error('No se encontró ID de novedad');
+				return;
+			}
+
+			try {
+				const confirmed = await confirmDeleteNovedad();
+				if (confirmed) {
+					if (!deleteForm) {
+						console.error('No se encontró el formulario de eliminación.');
+						return;
 					}
-				} catch (error) {
-					console.error('Error al eliminar:', error);
-					alert('Error al eliminar: ' + error.message);
+					deleteForm.action = deleteUrlTemplate.replace('__ID__', id);
+					console.log('Submitting delete form to:', deleteForm.action);
+					deleteForm.submit();
 				}
-			});
+			} catch (error) {
+				console.error('Error al eliminar:', error);
+				alert('Error al eliminar: ' + error.message);
+			}
 		});
 
 		form?.addEventListener('submit', (event) => {

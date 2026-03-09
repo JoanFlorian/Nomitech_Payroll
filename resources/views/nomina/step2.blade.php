@@ -77,9 +77,18 @@
                         <form method="POST" action="{{ route('nomina.step2.post') }}" id="formStep2Horas">
                             @csrf
 
+                            @if(($s2['detalle_recargos_estimado'] ?? false) === true)
+                                <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                                    Este registro no tenia horas por tipo guardadas. Se precargaron valores estimados para que puedas ajustarlos y guardarlos correctamente.
+                                </div>
+                            @endif
+
                             <input type="hidden" id="salario_base_mensual" value="{{ (float) $salarioBase }}">
                             <input type="hidden" id="horas_extra" name="horas_extra" value="{{ old('horas_extra', $s2['horas_extra'] ?? 0) }}">
                             <input type="hidden" id="recargos_total" name="recargos" value="{{ old('recargos', $s2['recargos'] ?? 0) }}">
+                            <input type="hidden" id="total_horas_extra_hidden" name="total_horas_extra" value="{{ old('total_horas_extra', $s2['total_horas_extra'] ?? 0) }}">
+                            <input type="hidden" id="total_recargos_hidden" name="total_recargos" value="{{ old('total_recargos', $s2['total_recargos'] ?? 0) }}">
+                            <input type="hidden" id="total_devengos_parcial_hidden" name="total_devengos_parcial" value="{{ old('total_devengos_parcial', $s2['total_devengos_parcial'] ?? 0) }}">
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 @foreach($tiposRecargo as $recargo)
@@ -188,6 +197,9 @@
         const horasMes = 240;
         const inputHorasExtra = document.getElementById('horas_extra');
         const inputRecargosTotal = document.getElementById('recargos_total');
+        const inputTotalHorasExtraHidden = document.getElementById('total_horas_extra_hidden');
+        const inputTotalRecargosHidden = document.getElementById('total_recargos_hidden');
+        const inputTotalDevengosParcialHidden = document.getElementById('total_devengos_parcial_hidden');
         const initialHorasExtra = parseLocalizedNumber(inputHorasExtra?.value || 0);
         const initialRecargos = parseLocalizedNumber(inputRecargosTotal?.value || 0);
         let userEditedDetalle = false;
@@ -257,6 +269,15 @@
             }
             if (inputRecargosTotal) {
                 inputRecargosTotal.value = totalRecargos.toFixed(2);
+            }
+            if (inputTotalHorasExtraHidden) {
+                inputTotalHorasExtraHidden.value = totalHorasExtra.toFixed(2);
+            }
+            if (inputTotalRecargosHidden) {
+                inputTotalRecargosHidden.value = totalRecargos.toFixed(2);
+            }
+            if (inputTotalDevengosParcialHidden) {
+                inputTotalDevengosParcialHidden.value = totalDevengos.toFixed(2);
             }
 
             if (resumenSalarioBase) resumenSalarioBase.textContent = money(baseMensual);

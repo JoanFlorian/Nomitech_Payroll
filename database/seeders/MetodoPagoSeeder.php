@@ -15,13 +15,14 @@ class MetodoPagoSeeder extends Seeder
             ['nombre' => 'Efectivo'],
         ];
         
-
         foreach ($metodoPagos as $metodo) {
-            DB::table('metodo_pago')->insert([
-                'nombre' => $metodo['nombre'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            DB::table('metodo_pago')->updateOrInsert(
+                ['nombre' => $metodo['nombre']],
+                [
+                    'nombre' => $metodo['nombre'],
+                    'updated_at' => now(),
+                ]
+            );
         }
     }
 }

@@ -14,6 +14,7 @@ class Novedad extends Model
     protected $fillable = [
         'id_tipo_novedad',
         'id_salario',
+        'id_periodo',
         'empleado_id',
         'tipo_novedad_nombre',
         'fecha',
@@ -55,5 +56,10 @@ class Novedad extends Model
     public function salario()
     {
         return $this->belongsTo(Salario::class, 'id_salario', 'id_salario');
+    }
+
+    public function periodoLiquidacion()
+    {
+        return $this->belongsTo(PeriodoLiquidacion::class, 'id_periodo', 'id_periodo');
     }
 }

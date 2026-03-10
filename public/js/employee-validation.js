@@ -218,13 +218,13 @@
         bajoRiesgoInput.checked = true;
     }
 
-    function isCashPaymentMethodSelected(methodInput) {
-        if (!methodInput) {
+    function isCashFormaPagoSelected(formaInput) {
+        if (!formaInput) {
             return false;
         }
 
-        const selectedOption = methodInput.selectedOptions && methodInput.selectedOptions[0]
-            ? methodInput.selectedOptions[0]
+        const selectedOption = formaInput.selectedOptions && formaInput.selectedOptions[0]
+            ? formaInput.selectedOptions[0]
             : null;
 
         if (!selectedOption) {
@@ -237,25 +237,24 @@
             .replace(/[\u0300-\u036f]/g, '')
             .toLowerCase();
 
-        return optionText.includes('efectiv');
+        // Considera 'efectivo' o 'contado' como pago en efectivo
+        return optionText.includes('efectivo') || optionText.includes('contado');
     }
 
-    function syncBankFieldsByPaymentMethod(form) {
-        const metodoPagoInput = getField(form, 'id_metodo_pago');
-        const bankFields = [
-            getField(form, 'banco'),
-            getField(form, 'id_banco'),
-            getField(form, 'tipo_cuenta'),
-            getField(form, 'numero_cuenta'),
-        ].filter(Boolean);
+    function syncFieldsByFormaPago(form) {
+        const formaPagoInput = getField(form, 'id_forma_pago');
+        const tipoCuentaInput = getField(form, 'tipo_cuenta');
+        const numeroCuentaInput = getField(form, 'numero_cuenta');
 
-        if (!metodoPagoInput || bankFields.length === 0) {
+        const paymentFields = [tipoCuentaInput, numeroCuentaInput].filter(Boolean);
+
+        if (!formaPagoInput || paymentFields.length === 0) {
             return;
         }
 
-        const isCash = isCashPaymentMethodSelected(metodoPagoInput);
+        const isCash = isCashFormaPagoSelected(formaPagoInput);
 
-        bankFields.forEach((field) => {
+        paymentFields.forEach((field) => {
             if (isCash) {
                 field.value = '';
                 field.setAttribute('disabled', 'disabled');
@@ -381,15 +380,17 @@
                 const contractInput = getField(form, 'id_tipo_contrato');
                 const contractId = Number(contractInput ? contractInput.value : 0);
 
-                if (contractId === 1 || contractId === 2 || contractId === 3) {
-                    return validarInput(
-                        input,
-                        EMPLOYEE_SMMLV > 0 ? salario >= EMPLOYEE_SMMLV : true,
-                        'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.',
-                        showError
-                    );
+                // Tipos de contrato exentos de salario mínimo:
+                // 3: Obra o labor, 6: Prestación de servicios
+                // Estos pueden tener salario menor al mínimo
+                const exentosSmmlv = [3, 6];
+                
+                if (exentosSmmlv.includes(contractId)) {
+                    // Obra o labor y Prestación de servicios pueden tener cualquier salario
+                    return validarInput(input, true, '', showError);
                 }
 
+                // Contrato de aprendizaje tiene reglas especiales
                 if (contractId === 4) {
                     const etapaAprendiz = resolveAprendizStage(form);
 
@@ -405,7 +406,14 @@
                     return validarInput(input, EMPLOYEE_SMMLV > 0 ? salario >= EMPLOYEE_SMMLV : true, 'Para etapa productiva, el salario base no puede ser inferior al salario mínimo legal vigente.', showError);
                 }
 
-                return validarInput(input, true, '', showError);
+                // Todos los demás tipos de contrato requieren salario >= SMMLV
+                // 1: Término indefinido, 2: Término fijo, 5: Prácticas, etc.
+                return validarInput(
+                    input,
+                    EMPLOYEE_SMMLV > 0 ? salario >= EMPLOYEE_SMMLV : true,
+                    'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.',
+                    showError
+                );
             case 'id_tipo_trabajador':
                 return validarInput(input, value !== '', 'El tipo de trabajador es obligatorio.', showError);
             case 'id_sub_tipo_trabajador':
@@ -431,16 +439,15 @@
     function validateStep3Field(form, fieldName, showError = true) {
         const input = getField(form, fieldName);
         const value = input ? (input.value || '').trim() : '';
-        const metodoPagoInput = getField(form, 'id_metodo_pago');
-        const isCash = isCashPaymentMethodSelected(metodoPagoInput);
+        const formaPagoInput = getField(form, 'id_forma_pago');
+        const isCashFormaPago = isCashFormaPagoSelected(formaPagoInput);
 
         switch (fieldName) {
             case 'id_forma_pago':
                 return validarInput(input, value !== '', 'La forma de pago es obligatoria.', showError);
-            case 'id_metodo_pago':
-                return validarInput(input, value !== '', 'El método de pago es obligatorio.', showError);
             case 'tipo_cuenta':
-                if (isCash) {
+                // Si forma de pago es efectivo, tipo de cuenta no es requerido
+                if (isCashFormaPago) {
                     if (showError) {
                         clearFieldError(input);
                     }
@@ -448,13 +455,14 @@
                 }
                 return validarInput(input, value !== '', 'El tipo de cuenta es obligatorio.', showError);
             case 'numero_cuenta':
-                if (isCash) {
+                // Si forma de pago es efectivo, número de cuenta no es requerido
+                if (isCashFormaPago) {
                     if (showError) {
                         clearFieldError(input);
                     }
                     return true;
                 }
-                return validarInput(input, ACCOUNT_REGEX.test(value), 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.', showError);
+                return validarInput(input, value !== '' && ACCOUNT_REGEX.test(value), 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.', showError);
             case 'id_eps':
                 return validarInput(input, value !== '', 'La EPS es obligatoria.', showError);
             case 'id_afp':
@@ -498,7 +506,7 @@
         }
 
         if (form.id === 'step3') {
-            return ['id_forma_pago', 'id_metodo_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp'];
+            return ['id_forma_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp'];
         }
 
         return [];
@@ -850,7 +858,7 @@
 
         const submitButton = form.querySelector('button[type="submit"]');
         const numeroCuentaInput = getField(form, 'numero_cuenta');
-        const metodoPagoInput = getField(form, 'id_metodo_pago');
+        const formaPagoInput = getField(form, 'id_forma_pago');
 
         if (numeroCuentaInput) {
             numeroCuentaInput.addEventListener('input', function () {
@@ -858,16 +866,17 @@
             });
         }
 
-        if (metodoPagoInput) {
-            metodoPagoInput.addEventListener('change', function () {
-                syncBankFieldsByPaymentMethod(form);
+        // Listener para forma de pago - bloquea campos cuando es efectivo
+        if (formaPagoInput) {
+            formaPagoInput.addEventListener('change', function () {
+                syncFieldsByFormaPago(form);
                 validateStep3Field(form, 'tipo_cuenta', true);
                 validateStep3Field(form, 'numero_cuenta', true);
             });
         }
 
         initCommonRealtimeValidation(form);
-        syncBankFieldsByPaymentMethod(form);
+        syncFieldsByFormaPago(form);
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();

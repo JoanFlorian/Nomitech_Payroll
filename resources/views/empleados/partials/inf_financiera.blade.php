@@ -38,10 +38,10 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="id_forma_pago">
                 Forma de pago
             </label>
-            <select class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
+            <select id="id_forma_pago" class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
                     focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="id_forma_pago"
                 required>
                 <option value="">Seleccionar...</option>
@@ -53,27 +53,11 @@
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-                Método de pago
-            </label>
-            <select class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
-                    focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="id_metodo_pago"
-                required>
-                <option value="">Seleccionar...</option>
-                @foreach ($metodopago as $metopago)
-                    <option value="{{ $metopago->id_metodo_pago }}">{{ $metopago->nombre }}</option>
-                @endforeach
-            </select>
-            <div class="error-message invalid-feedback" data-error="id_metodo_pago"></div>
-        </div>
-
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="tipo_cuenta">
                 Tipo de cuenta
             </label>
-            <select class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
-                    focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="tipo_cuenta"
-                required>
+            <select id="tipo_cuenta" class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
+                    focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="tipo_cuenta">
                 <option value="">Seleccionar...</option>
                 @foreach ($tipocuenta as $tipcuenta)
                     <option value="{{ $tipcuenta->id_tipo_cuenta }}">{{ $tipcuenta->nombre }}</option>
@@ -83,12 +67,12 @@
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="numero_cuenta">
                 Número de cuenta
             </label>
-            <input type="text" placeholder="Ej: 1234567890" class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+            <input type="text" id="numero_cuenta" placeholder="Ej: 1234567890" class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
                     focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="numero_cuenta"
-                inputmode="numeric" pattern="[0-9]{6,20}" minlength="6" maxlength="20" required>
+                inputmode="numeric" pattern="[0-9]{6,20}" minlength="6" maxlength="20">
             <div class="error-message invalid-feedback" data-error="numero_cuenta"></div>
         </div>
 

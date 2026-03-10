@@ -9,12 +9,17 @@ class FormaPagoSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('forma_pago')->delete();
+        $formasPago = [
+            ['id_forma_pago' => 1, 'nombre' => 'Efectivo'],
+            ['id_forma_pago' => 2, 'nombre' => 'Cheque'],
+            ['id_forma_pago' => 3, 'nombre' => 'Transferencia'],
+        ];
 
-        DB::table('forma_pago')->insert([
-            ['nombre' => 'Contado'],
-            ['nombre' => 'Cheque'],
-            ['nombre' => 'Transferencia'],
-        ]);
+        foreach ($formasPago as $forma) {
+            DB::table('forma_pago')->updateOrInsert(
+                ['nombre' => $forma['nombre']],
+                ['nombre' => $forma['nombre']]
+            );
+        }
     }
 }

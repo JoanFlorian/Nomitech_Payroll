@@ -223,18 +223,123 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
-    window.__openEditModal = function () {
+(function() {
+    console.log('=== Edit Modal Script Loading ===');
+    
+    const updateUrl = @json(route('novedades.update', ['id_novedad' => '__ID__']));
+    const deleteUrl = @json(route('novedades.destroy', ['id_novedad' => '__ID__']));
+
+    function openEditModal() {
+        console.log('openEditModal called');
         const modal = document.getElementById('edit-novelty-modal');
-        if (!modal) return;
+        if (!modal) {
+            console.error('Modal not found: edit-novelty-modal');
+            return;
+        }
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-    };
+        console.log('Modal opened');
+    }
 
-    window.__closeEditModal = function () {
+    function closeEditModal() {
         const modal = document.getElementById('edit-novelty-modal');
         if (!modal) return;
         modal.classList.remove('flex');
         modal.classList.add('hidden');
-    };
+    }
+
+    function openEditByButton(button) {
+        console.log('openEditByButton called', button);
+        if (!button) {
+            console.error('No button provided');
+            return;
+        }
+
+        const id = button.dataset.novedadId || '';
+        console.log('Novedad ID:', id);
+        
+        const editForm = document.getElementById('edit-novelty-form');
+        const deleteForm = document.getElementById('delete-novedad-form');
+        const editNovedadId = document.getElementById('edit-novedad-id');
+
+        const setValue = (elementId, value) => {
+            const el = document.getElementById(elementId);
+            if (el) el.value = value || '';
+        };
+
+        setValue('edit-doc-empleado', button.dataset.doc);
+        setValue('edit-employee-name', button.dataset.nombres);
+        setValue('edit-employee-lastname', button.dataset.apellidos);
+        setValue('edit-employee-doc', button.dataset.doc);
+        setValue('edit-novelty-type', button.dataset.tipo);
+        setValue('edit-quantity-days', button.dataset.dias);
+        setValue('edit-quantity-hours', button.dataset.horas);
+        setValue('edit-start-date', button.dataset.fechaInicio);
+        setValue('edit-end-date', button.dataset.fechaFin);
+        setValue('edit-observaciones', button.dataset.observaciones);
+        setValue('edit-salario-base', button.dataset.salarioBase);
+        setValue('edit-tipo-licencia', button.dataset.tipoLicencia);
+        setValue('edit-tipo-incapacidad', button.dataset.tipoIncapacidad);
+        setValue('edit-eps-id', button.dataset.idEps);
+        setValue('edit-afp-id', button.dataset.idAfp);
+        setValue('edit-arl-id', button.dataset.idArl);
+
+        const editPago = document.getElementById('edit-payment');
+        const editPagoDisplay = document.getElementById('edit-payment-display');
+        if (editPago) editPago.value = button.dataset.pago || '';
+        if (editPagoDisplay) editPagoDisplay.value = button.dataset.pago || '';
+
+        const unidad = button.dataset.unidad || 'dias';
+        const unidadRadio = document.querySelector('#edit-novelty-form input[name="unidad_cantidad"][value="' + unidad + '"]');
+        if (unidadRadio) unidadRadio.checked = true;
+
+        const licenciaRemunerada = document.getElementById('edit-licencia-remunerada');
+        if (licenciaRemunerada) {
+            licenciaRemunerada.checked = String(button.dataset.licenciaRemunerada || '0') === '1';
+        }
+
+        const certificado = document.getElementById('edit-certificado-medico');
+        if (certificado) {
+            certificado.checked = String(button.dataset.certificadoMedico || '0') === '1';
+        }
+
+        if (editNovedadId) editNovedadId.value = id;
+        if (editForm && id) editForm.action = updateUrl.replace('__ID__', String(id));
+        if (deleteForm && id) deleteForm.action = deleteUrl.replace('__ID__', String(id));
+
+        openEditModal();
+    }
+
+    function deleteNovedadByButton(button) {
+        console.log('deleteNovedadByButton called', button);
+        if (!button) return;
+        
+        const id = button.dataset.novedadId || '';
+        const deleteForm = document.getElementById('delete-novedad-form');
+        
+        if (!id || !deleteForm) {
+            console.error('Missing id or deleteForm', { id, deleteForm });
+            return;
+        }
+
+        const confirmed = window.confirm('¿Seguro que deseas eliminar esta novedad? Esta accion no se puede deshacer.');
+        if (!confirmed) return;
+
+        deleteForm.action = deleteUrl.replace('__ID__', String(id));
+        console.log('Submitting delete form to:', deleteForm.action);
+        deleteForm.submit();
+    }
+
+    // Registrar en window
+    window.__openEditModal = openEditModal;
+    window.__closeEditModal = closeEditModal;
+    window.__openEditByButton = openEditByButton;
+    window.__deleteNovedadByButton = deleteNovedadByButton;
+
+    console.log('=== Edit Modal Functions Registered ===');
+    console.log('__openEditByButton:', typeof window.__openEditByButton);
+})();
 </script>
+@endpush

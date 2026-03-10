@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\MetodoPago;
+use App\Models\FormaPago;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -19,14 +19,13 @@ class Step3Request extends FormRequest
 
     public function rules(): array
     {
-        $metodoPagoId = (int) $this->input('id_metodo_pago');
-        $isCashPaymentMethod = $this->isCashPaymentMethod($metodoPagoId);
+        $formaPagoId = (int) $this->input('id_forma_pago');
+        $isCashFormaPago = $this->isCashFormaPago($formaPagoId);
 
         return [
             'id_forma_pago' => 'required|integer|exists:forma_pago,id_forma_pago',
-            'id_metodo_pago' => 'required|integer|exists:metodo_pago,id_metodo_pago',
-            'tipo_cuenta' => ($isCashPaymentMethod ? 'nullable' : 'required') . '|integer|exists:tipo_cuenta,id_tipo_cuenta',
-            'numero_cuenta' => ($isCashPaymentMethod ? 'nullable' : 'required') . '|string|max:20|regex:/^[0-9]{6,20}$/',
+            'tipo_cuenta' => ($isCashFormaPago ? 'nullable' : 'required') . '|integer|exists:tipo_cuenta,id_tipo_cuenta',
+            'numero_cuenta' => ($isCashFormaPago ? 'nullable' : 'required') . '|string|max:20|regex:/^[0-9]{6,20}$/',
             'id_eps' => 'required|integer|exists:eps,id_eps',
             'id_afp' => 'required|integer|exists:afp,id_afp',
 
@@ -38,26 +37,26 @@ class Step3Request extends FormRequest
         ];
     }
 
-    private function isCashPaymentMethod(int $metodoPagoId): bool
+    private function isCashFormaPago(int $formaPagoId): bool
     {
-        if ($metodoPagoId <= 0) {
+        if ($formaPagoId <= 0) {
             return false;
         }
 
-        $methodName = MetodoPago::query()
-            ->where('id_metodo_pago', $metodoPagoId)
+        $formaPagoName = FormaPago::query()
+            ->where('id_forma_pago', $formaPagoId)
             ->value('nombre');
 
-        if (!$methodName) {
+        if (!$formaPagoName) {
             return false;
         }
 
-        $normalized = Str::of($methodName)
+        $normalized = Str::of($formaPagoName)
             ->ascii()
             ->lower()
             ->toString();
 
-        return Str::contains($normalized, 'efectiv');
+        return Str::contains($normalized, ['efectivo', 'contado']);
     }
 
     public function messages(): array
@@ -66,10 +65,6 @@ class Step3Request extends FormRequest
             'id_forma_pago.required' => 'Debe seleccionar la forma de pago.',
             'id_forma_pago.integer' => 'La forma de pago no es válida.',
             'id_forma_pago.exists' => 'La forma de pago seleccionada no existe.',
-
-            'id_metodo_pago.required' => 'Debe seleccionar el método de pago.',
-            'id_metodo_pago.integer' => 'El método de pago no es válido.',
-            'id_metodo_pago.exists' => 'El método de pago seleccionado no existe.',
 
             'tipo_cuenta.required' => 'Debe seleccionar el tipo de cuenta.',
             'tipo_cuenta.integer' => 'El tipo de cuenta no es válido.',

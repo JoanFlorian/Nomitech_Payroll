@@ -625,13 +625,69 @@
 		}
 
 		// Recalcular ante cambios relevantes
-		[noveltyType, quantityDays, quantityHours, startDate, endDate, tipoIncapacidad, tipoLicencia, certificadoInput, epsId, afpId, arlId, licenciaRemunerada].forEach((el) => {
+		[noveltyType, quantityDays, quantityHours, tipoIncapacidad, tipoLicencia, certificadoInput, epsId, afpId, arlId, licenciaRemunerada].forEach((el) => {
 			if (!el) return;
 			el.addEventListener('change', () => {
 				applyNoveltyConfig();
 				recalcEstimated();
 			});
 		});
+
+		// Validación de fechas: fecha fin no puede ser anterior a fecha inicio
+		const startDateError = document.getElementById('start-date-error');
+		const endDateError = document.getElementById('end-date-error');
+
+		const validateFechas = () => {
+			const fechaInicio = startDate?.value ? new Date(startDate.value) : null;
+			const fechaFin = endDate?.value ? new Date(endDate.value) : null;
+
+			// Limpiar errores previos
+			if (startDateError) startDateError.classList.add('hidden');
+			if (endDateError) endDateError.classList.add('hidden');
+
+			if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+				if (endDateError) {
+					endDateError.textContent = 'La fecha fin no puede ser anterior a la fecha de inicio.';
+					endDateError.classList.remove('hidden');
+				}
+				return false;
+			}
+			return true;
+		};
+
+		// Establecer min de fecha fin cuando cambia fecha inicio
+		if (startDate) {
+			startDate.addEventListener('change', () => {
+				if (startDate.value && endDate) {
+					endDate.min = startDate.value;
+					// Si la fecha fin actual es menor, limpiarla
+					if (endDate.value && endDate.value < startDate.value) {
+						endDate.value = '';
+					}
+				}
+				validateFechas();
+				recalcEstimated();
+			});
+		}
+
+		if (endDate) {
+			endDate.addEventListener('change', () => {
+				validateFechas();
+				recalcEstimated();
+			});
+		}
+
+		// Validar fechas al enviar el formulario
+		const noveltyForm = document.getElementById('novelty-form');
+		if (noveltyForm) {
+			noveltyForm.addEventListener('submit', (e) => {
+				if (!validateFechas()) {
+					e.preventDefault();
+					if (endDate) endDate.focus();
+					return false;
+				}
+			});
+		}
 
 		unitRadios.forEach((r) => {
 			if (!r) return;

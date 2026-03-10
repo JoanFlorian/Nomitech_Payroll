@@ -9,10 +9,7 @@ class TipoContratoSeeder extends Seeder
 {
     public function run(): void
     {
-        // Limpia sin truncate (por si hay llaves foráneas)
-        DB::table('tipo_contrato')->delete();
-
-        DB::table('tipo_contrato')->insert([
+        $tiposContrato = [
             [
                 'id_tipo_contrato' => 1,
                 'nombre' => 'Término indefinido',
@@ -43,6 +40,13 @@ class TipoContratoSeeder extends Seeder
                 'nombre' => 'Prestación de servicios',
                 'seguridad_social' => 0,
             ],
-        ]);
+        ];
+
+        foreach ($tiposContrato as $tipo) {
+            DB::table('tipo_contrato')->updateOrInsert(
+                ['id_tipo_contrato' => $tipo['id_tipo_contrato']],
+                $tipo
+            );
+        }
     }
 }

@@ -104,6 +104,7 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/nomina/step-3', [NominaController::class, 'step3'])->name('nomina.step3');
     Route::get('/nomina/export/excel', [NominaController::class, 'exportarNominaExcel'])->name('nomina.export.excel');
     Route::get('/nomina/export/pdf', [NominaController::class, 'exportarNominaPdf'])->name('nomina.export.pdf');
+    Route::post('/nomina/realizar', [NominaController::class, 'realizarNominaMasiva'])->name('nomina.realizar');
     Route::post('/nomina/store', [NominaController::class, 'store'])->name('nomina.store');
     Route::get('/nomina/buscar-empleado/{doc}', [NominaController::class, 'buscarEmpleado']);
     Route::get('/nomina/buscar-empleados', [NominaController::class, 'buscarEmpleados']);

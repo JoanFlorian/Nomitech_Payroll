@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Contrato;
+use App\Models\PeriodoLiquidacion;
 use App\Models\Salario;
 
 class CalculoNovedadService
@@ -32,6 +33,17 @@ class CalculoNovedadService
     public function obtenerSalarioEmpleado(string $empleadoId): ?Salario
     {
         $empresaId = (int) session('empresa_id');
+        $activePeriodId = (int) session('active_period_id');
+
+        if ($activePeriodId <= 0 && $empresaId > 0) {
+            $activePeriodId = (int) optional(
+                PeriodoLiquidacion::query()
+                    ->where('id_empresa', $empresaId)
+                    ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
+                    ->orderByDesc('fecha_inicio')
+                    ->first()
+            )->id_periodo;
+        }
 
         return Salario::query()
             ->join('contrato', 'contrato.id_contrato', '=', 'salario.id_contrato')
@@ -43,6 +55,9 @@ class CalculoNovedadService
             })
             ->when($empresaId > 0, function ($query) use ($empresaId) {
                 $query->where('contrato.id_empresa', $empresaId);
+            })
+            ->when($activePeriodId > 0, function ($query) use ($activePeriodId) {
+                $query->where('salario.id_periodo', $activePeriodId);
             })
             ->orderByDesc('salario.id_salario')
             ->select('salario.*', 'contrato.salario_base as contrato_salario_base')

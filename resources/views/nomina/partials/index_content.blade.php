@@ -191,6 +191,18 @@
             <i class="bi bi-plus-lg"></i>
             Nueva nomina
         </a>
+
+        @if($periodoActivo && $periodoActivo->estado !== \App\Models\PeriodoLiquidacion::ESTADO_CERRADO)
+            <form id="realizar-nomina-form" method="POST" action="{{ route('nomina.realizar') }}">
+                @csrf
+                <button type="submit"
+                    title="Nómina masiva"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700">
+                    <i class="bi bi-calculator-fill"></i>
+                    Nómina Masiva
+                </button>
+            </form>
+        @endif
     </div>
 
     <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">

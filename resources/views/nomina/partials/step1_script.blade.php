@@ -58,7 +58,7 @@
         if (resumenSalarioProporcional) resumenSalarioProporcional.textContent = formatCOP(salarioProporcional);
     }
 
-    function showAlert(text) {
+    function showAlert(text, title = 'Validacion requerida') {
         const existing = document.getElementById('nominaCustomAlert');
         if (existing) existing.remove();
 
@@ -81,9 +81,9 @@
         card.style.borderRadius = '16px';
         card.style.boxShadow = '0 20px 45px rgba(15, 23, 42, 0.28)';
         card.style.overflow = 'hidden';
-        card.style.transform = 'translateY(6px) scale(0.98)';
+        card.style.transform = 'translateY(10px) scale(0.97)';
         card.style.opacity = '0';
-        card.style.transition = 'all 150ms ease-out';
+        card.style.transition = 'all 180ms ease-out';
 
         card.innerHTML = `
     <div style="height: 6px; background: linear-gradient(90deg, #fbbf24 0%, #fb923c 55%, #ef4444 100%);"></div>
@@ -91,7 +91,7 @@
         <div style="display: flex; gap: 12px; align-items: flex-start;">
             <div style="height: 32px; width: 32px; min-width: 32px; border-radius: 999px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-weight: 700;">!</div>
             <div style="flex: 1; min-width: 0;">
-                <h4 style="margin: 0; font-size: 14px; line-height: 20px; color: #0f172a; font-weight: 700;">Validacion requerida</h4>
+                <h4 id="nominaCustomAlertTitle" style="margin: 0; font-size: 14px; line-height: 20px; color: #0f172a; font-weight: 700;">Validacion requerida</h4>
                 <p id="nominaCustomAlertMessage" style="margin: 6px 0 0; font-size: 14px; line-height: 20px; color: #475569;"></p>
             </div>
         </div>
@@ -112,7 +112,9 @@
         });
 
         const message = overlay.querySelector('#nominaCustomAlertMessage');
+            const titleEl = overlay.querySelector('#nominaCustomAlertTitle');
         const closeButton = overlay.querySelector('[data-alert-close]');
+            if (titleEl) titleEl.textContent = title;
         if (message) message.textContent = text;
 
         const closeAlert = () => {
@@ -128,6 +130,48 @@
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) closeAlert();
         });
+    }
+
+    function normalizeEmployeeSearchInput(value) {
+        const raw = String(value || '');
+        const firstChar = (raw.match(/[^\s]/) || [''])[0];
+
+        // Si inicia con numero, interpretamos busqueda por documento.
+        if (/\d/.test(firstChar)) {
+            return raw.replace(/\D/g, '');
+        }
+
+        // Si inicia con letra, interpretamos busqueda por nombre.
+        if (/[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(firstChar)) {
+            return raw
+                .replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '')
+                .replace(/\s{2,}/g, ' ')
+                .trimStart();
+        }
+
+        // Fallback: quitar simbolos, mantener letras/numeros/espacios.
+        return raw
+            .replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trimStart();
+    }
+
+    function enforceNumericInput(el, max = null) {
+        if (!el) return;
+        const onlyDigits = String(el.value || '').replace(/\D/g, '');
+        if (onlyDigits === '') {
+            el.value = '';
+            return;
+        }
+        let n = Number(onlyDigits);
+        if (!Number.isFinite(n)) {
+            el.value = '';
+            return;
+        }
+        if (max !== null) {
+            n = Math.min(max, n);
+        }
+        el.value = String(n);
     }
 
     function clearEmployeeData() {
@@ -208,10 +252,41 @@
     async function fetchEmployees(term = '') {
         if (spinner) spinner.classList.remove('hidden');
         try {
-            const resp = await fetch(`${buscarEmpleadosUrl}?q=${encodeURIComponent(term)}`);
+            const resp = await fetch(`${buscarEmpleadosUrl}?q=${encodeURIComponent(term)}&exclude_liquidados=1`);
             if (!resp.ok) throw new Error('request failed');
             const data = await resp.json();
-            renderSuggestions(Array.isArray(data) ? data : []);
+            const items = Array.isArray(data) ? data : [];
+            renderSuggestions(items);
+
+            // Si no hay sugerencias y parece documento exacto, avisar si ya esta registrado en el periodo activo.
+            const termTrimmed = String(term || '').trim();
+            const looksLikeDoc = /^[0-9]{5,}$/.test(termTrimmed);
+
+            if (items.length === 0 && looksLikeDoc) {
+                try {
+                    const empleadoResp = await fetch(`${buscarEmpleadoBaseUrl}/${encodeURIComponent(termTrimmed)}`);
+                    if (!empleadoResp.ok) {
+                        return;
+                    }
+
+                    const empleado = await empleadoResp.json();
+                    if (!empleado || !empleado.id_contrato) {
+                        return;
+                    }
+
+                    const dupResp = await fetch(`${validarDuplicadoBaseUrl}/${empleado.id_contrato}`);
+                    if (!dupResp.ok) {
+                        return;
+                    }
+
+                    const dupData = await dupResp.json();
+                    if (dupData?.duplicate) {
+                        showError('Este empleado ya tiene nómina registrada en el periodo activo y por eso no aparece en la lista.');
+                    }
+                } catch (innerError) {
+                    // Si falla la verificacion adicional mantenemos el flujo normal del buscador.
+                }
+            }
         } catch (e) {
             if (box) box.classList.add('hidden');
             showError('No se pudieron cargar los empleados.');
@@ -260,6 +335,11 @@
     }
 
     function validateEmployee() {
+        const normalized = normalizeEmployeeSearchInput(empleadoInput?.value || '');
+        if (empleadoInput && empleadoInput.value !== normalized) {
+            empleadoInput.value = normalized;
+        }
+
         const hasValidSelection = Boolean(
             selectedEmployee &&
             selectedEmployee.doc &&
@@ -274,6 +354,13 @@
             if (empleadoInput) markOk(empleadoInput);
             return true;
         }
+
+        if (!normalized) {
+            if (empleadoInput) markError(empleadoInput);
+            showError('Debes escribir un nombre o documento y seleccionar una opcion valida.');
+            return false;
+        }
+
         if (empleadoInput) markError(empleadoInput);
         showError('Debes seleccionar un empleado válido de la lista.');
         return false;
@@ -327,12 +414,24 @@
     if (!isEditingNomina && empleadoInput) {
         empleadoInput.addEventListener('focus', () => fetchEmployees(empleadoInput.value.trim()));
         empleadoInput.addEventListener('input', () => {
+            const normalized = normalizeEmployeeSearchInput(empleadoInput.value);
+            if (empleadoInput.value !== normalized) {
+                empleadoInput.value = normalized;
+            }
             selectedEmployee = null;
             clearEmployeeData();
             hideErrors();
             markNeutral(empleadoInput);
             clearTimeout(timer);
             timer = setTimeout(() => fetchEmployees(empleadoInput.value.trim()), 220);
+        });
+
+        empleadoInput.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const normalized = normalizeEmployeeSearchInput(text);
+            empleadoInput.value = normalized;
+            empleadoInput.dispatchEvent(new Event('input', { bubbles: true }));
         });
     }
 
@@ -356,10 +455,22 @@
 
     if (diasInput) {
         diasInput.addEventListener('input', () => {
+            enforceNumericInput(diasInput, 30);
             hideErrors();
             markNeutral(diasInput);
             actualizarResumenProporcional();
         });
+
+        diasInput.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            diasInput.value = String(text || '');
+            enforceNumericInput(diasInput, 30);
+            hideErrors();
+            markNeutral(diasInput);
+            actualizarResumenProporcional();
+        });
+
         diasInput.addEventListener('blur', () => {
             validateDiasTrabajados();
             actualizarResumenProporcional();
@@ -375,9 +486,11 @@
             if (!(employeeValid && fechaValid && diasValid)) {
                 e.preventDefault();
                 if (!employeeValid) {
-                    showAlert('Debes seleccionar un empleado válido de la lista.');
+                    showAlert('Debes seleccionar un empleado válido de la lista.', 'Empleado invalido');
                 } else if (!diasValid) {
-                    showAlert('Ingresa los días trabajados entre 0 y 30.');
+                    showAlert('Ingresa los dias trabajados entre 0 y 30.', 'Dias invalidos');
+                } else if (!fechaValid) {
+                    showAlert('La fecha de pago es obligatoria y no puede ser menor a hoy.', 'Fecha invalida');
                 }
             }
         });

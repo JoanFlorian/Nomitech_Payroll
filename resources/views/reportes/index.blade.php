@@ -19,9 +19,9 @@
     $maxEvolucionAnual = max(1, (float) $evolucionAnual->max('total'));
 @endphp
 
+<div class="reportes-shell soft-grid-bg rounded-3xl p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
 
-
-    <form id="form-filtros-reportes" method="GET" action="{{ route('reportes.index') }}" class="filters-panel glass-card rounded-2xl p-4 md:p-5 rise-in flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <form id="form-filtros-reportes" method="GET" action="{{ route('reportes.index') }}" class="filters-panel glass-card rounded-2xl p-3 sm:p-4 md:p-5 rise-in flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full lg:max-w-3xl">
             <div class="filter-field">
                 <label for="periodo" class="filter-label">Periodo</label>
@@ -54,12 +54,12 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-            <button type="submit" formaction="{{ route('reportes.export.pdf') }}" class="inline-flex items-center justify-center gap-2 bg-[#f59e0b] hover:bg-[#d97706] text-white font-semibold px-5 py-3 rounded-xl shadow-lg shadow-amber-900/10">
+        <div class="flex w-full sm:w-auto flex-wrap items-center gap-2">
+            <button type="submit" formaction="{{ route('reportes.export.pdf') }}" class="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 bg-[#f59e0b] hover:bg-[#d97706] text-white font-semibold px-5 py-3 rounded-xl shadow-lg shadow-amber-900/10">
                 <i class="bi bi-file-earmark-pdf"></i>
                 PDF
             </button>
-            <button type="submit" formaction="{{ route('reportes.export.excel') }}" class="inline-flex items-center justify-center gap-2 bg-[#1f415d] hover:bg-[#173147] text-white font-semibold px-5 py-3 rounded-xl shadow-lg shadow-slate-900/10">
+            <button type="submit" formaction="{{ route('reportes.export.excel') }}" class="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 bg-[#1f415d] hover:bg-[#173147] text-white font-semibold px-5 py-3 rounded-xl shadow-lg shadow-slate-900/10">
                 <i class="bi bi-file-earmark-excel"></i>
                 Excel
             </button>
@@ -74,7 +74,7 @@
                     <span class="w-11 h-11 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center"><i class="bi bi-currency-dollar"></i></span>
                     <p class="text-[#3a5a77] text-sm">Costo total de n&oacute;mina</p>
                 </div>
-                <p class="text-2xl font-bold text-[#12263a]">${{ number_format($costoTotalNomina, 0, ',', '.') }}</p>
+                <p class="text-xl md:text-2xl font-bold text-[#12263a] break-words">${{ number_format($costoTotalNomina, 0, ',', '.') }}</p>
             </div>
 
             <div class="metric-card glass-card rounded-2xl p-4">
@@ -82,7 +82,7 @@
                     <span class="w-11 h-11 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center"><i class="bi bi-people"></i></span>
                     <p class="text-[#3a5a77] text-sm">Empleados activos</p>
                 </div>
-                <p class="text-2xl font-bold text-[#12263a]">{{ $empleadosActivos }}</p>
+                <p class="text-xl md:text-2xl font-bold text-[#12263a] break-words">{{ $empleadosActivos }}</p>
             </div>
 
             <div class="metric-card glass-card rounded-2xl p-4">
@@ -90,7 +90,7 @@
                     <span class="w-11 h-11 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center"><i class="bi bi-wallet2"></i></span>
                     <p class="text-[#3a5a77] text-sm">Salario neto promedio</p>
                 </div>
-                <p class="text-2xl font-bold text-[#12263a]">${{ number_format($salarioNetoPromedio, 0, ',', '.') }}</p>
+                <p class="text-xl md:text-2xl font-bold text-[#12263a] break-words">${{ number_format($salarioNetoPromedio, 0, ',', '.') }}</p>
             </div>
 
             <div class="metric-card glass-card rounded-2xl p-4">
@@ -98,7 +98,7 @@
                     <span class="w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center"><i class="bi bi-shield-check"></i></span>
                     <p class="text-[#3a5a77] text-sm">Aportes seguridad social</p>
                 </div>
-                <p class="text-2xl font-bold text-[#12263a]">${{ number_format($aportesSeguridadSocial, 0, ',', '.') }}</p>
+                <p class="text-xl md:text-2xl font-bold text-[#12263a] break-words">${{ number_format($aportesSeguridadSocial, 0, ',', '.') }}</p>
             </div>
 
             <div class="metric-card glass-card rounded-2xl p-4">
@@ -106,16 +106,16 @@
                     <span class="w-11 h-11 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center"><i class="bi bi-arrow-down"></i></span>
                     <p class="text-[#3a5a77] text-sm">Total deducciones</p>
                 </div>
-                <p class="text-2xl font-bold text-[#12263a]">${{ number_format($totalDeducciones, 0, ',', '.') }}</p>
+                <p class="text-xl md:text-2xl font-bold text-[#12263a] break-words">${{ number_format($totalDeducciones, 0, ',', '.') }}</p>
             </div>
         </div>
     </section>
 
     <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 rise-in">
         <article class="xl:col-span-2 glass-card rounded-2xl p-5 md:p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-2xl font-bold text-[#12263a]">Evoluci&oacute;n de N&oacute;mina</h3>
-                <div class="flex items-center gap-2 text-sm text-gray-600">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h3 class="text-xl md:text-2xl font-bold text-[#12263a]">Evoluci&oacute;n de N&oacute;mina</h3>
+                <div class="flex items-center gap-2 text-sm text-gray-600 self-start sm:self-auto">
                     <span id="label-anual" class="font-medium text-gray-600">Anual</span>
                     <button type="button" id="toggle-evolucion" role="switch" aria-checked="true" aria-label="Cambiar entre vista anual y mensual"
                         class="inline-flex items-center w-14 h-8 p-1 rounded-full bg-teal-700 transition">
@@ -177,9 +177,9 @@
         </article>
 
         <article class="glass-card rounded-2xl p-5 md:p-6">
-            <h3 class="text-2xl font-bold text-[#12263a] mb-4">Desglose de N&oacute;mina</h3>
+            <h3 class="text-xl md:text-2xl font-bold text-[#12263a] mb-4">Desglose de N&oacute;mina</h3>
             <div class="space-y-3">
-                <div class="metric-card flex items-center justify-between bg-[#f3faf9] border border-teal-100 rounded-xl p-3">
+                <div class="metric-card flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#f3faf9] border border-teal-100 rounded-xl p-3">
                     <div class="flex items-center gap-3">
                         <span class="w-10 h-10 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center"><i class="bi bi-wallet2"></i></span>
                         <span class="text-[#2b4b67] font-medium">Salarios</span>
@@ -187,7 +187,7 @@
                     <span class="font-bold text-[#12263a]">${{ number_format($desglose['salarios'], 0, ',', '.') }}</span>
                 </div>
 
-                <div class="metric-card flex items-center justify-between bg-[#fff8ec] border border-amber-100 rounded-xl p-3">
+                <div class="metric-card flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#fff8ec] border border-amber-100 rounded-xl p-3">
                     <div class="flex items-center gap-3">
                         <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center"><i class="bi bi-gift"></i></span>
                         <span class="text-[#2b4b67] font-medium">Bonificaciones</span>
@@ -195,7 +195,7 @@
                     <span class="font-bold text-[#12263a]">${{ number_format($desglose['bonificaciones'], 0, ',', '.') }}</span>
                 </div>
 
-                <div class="metric-card flex items-center justify-between bg-[#f0f7ff] border border-sky-100 rounded-xl p-3">
+                <div class="metric-card flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#f0f7ff] border border-sky-100 rounded-xl p-3">
                     <div class="flex items-center gap-3">
                         <span class="w-10 h-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center"><i class="bi bi-cash"></i></span>
                         <span class="text-[#2b4b67] font-medium">Prestaciones Sociales</span>
@@ -203,7 +203,7 @@
                     <span class="font-bold text-[#12263a]">${{ number_format($desglose['prestaciones_sociales'], 0, ',', '.') }}</span>
                 </div>
 
-                <div class="metric-card flex items-center justify-between bg-[#f7f8fb] border border-slate-200 rounded-xl p-3">
+                <div class="metric-card flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#f7f8fb] border border-slate-200 rounded-xl p-3">
                     <div class="flex items-center gap-3">
                         <span class="w-10 h-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center"><i class="bi bi-file-earmark-text"></i></span>
                         <span class="text-[#2b4b67] font-medium">Provisiones</span>

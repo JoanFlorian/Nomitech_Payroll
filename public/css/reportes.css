@@ -106,3 +106,44 @@
     pointer-events: none;
     font-size: 0.78rem;
 }
+
+@media (max-width: 1024px) {
+    .reportes-shell {
+        border-radius: 1.15rem;
+    }
+
+    .metric-card {
+        min-height: 128px;
+    }
+}
+
+@media (max-width: 768px) {
+    .filters-panel {
+        border-radius: 1rem;
+    }
+
+    .report-select {
+        font-size: 0.95rem;
+        padding: 0.75rem 2.2rem 0.75rem 0.85rem;
+    }
+
+    #chart-mensual,
+    #chart-anual {
+        height: 17.5rem;
+        padding: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .reportes-shell {
+        border-radius: 0.95rem;
+    }
+
+    .filter-label {
+        font-size: 0.7rem;
+    }
+
+    .metric-card {
+        min-height: auto;
+    }
+}

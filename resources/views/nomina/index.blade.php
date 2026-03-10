@@ -6,14 +6,77 @@
 @section('content')
 	@include('nomina.partials.index_content')
 
+	<div id="modal-realizar-nomina" class="fixed inset-0 z-[90] hidden" aria-hidden="true">
+		<div class="absolute inset-0 bg-slate-900/55"></div>
+		<div class="relative flex min-h-full items-center justify-center p-4">
+			<div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+				<div class="border-b border-slate-100 px-5 py-4">
+					<h3 class="text-lg font-extrabold text-slate-900">Nómina Masiva</h3>
+					<p class="mt-1 text-sm text-slate-500">Se calculará la nómina de todos los empleados activos del periodo seleccionado.</p>
+				</div>
+				<div class="px-5 py-4">
+					<p class="text-sm text-slate-700">¿Deseas continuar con este proceso?</p>
+				</div>
+				<div class="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
+					<button type="button" id="btn-cancelar-realizar" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+						Cancelar
+					</button>
+					<button type="button" id="btn-confirmar-realizar" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-700">
+						Aceptar
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<script>
 		document.addEventListener('DOMContentLoaded', function () {
 			const rows = Array.from(document.querySelectorAll('.nomina-row'));
 			const radios = Array.from(document.querySelectorAll('.nomina-select-radio'));
 			const editButton = document.getElementById('btn-editar-empleado');
+			const massPayrollForm = document.getElementById('realizar-nomina-form');
+			const massPayrollModal = document.getElementById('modal-realizar-nomina');
+			const massPayrollCancelBtn = document.getElementById('btn-cancelar-realizar');
+			const massPayrollConfirmBtn = document.getElementById('btn-confirmar-realizar');
 			const editUrlTemplate = @json(route('nomina.edit', ['idSalario' => '__ID__']));
 			const searchInput = document.getElementById('buscar-empleado');
 			const employeesDataList = document.getElementById('empleados-sugeridos');
+
+			if (massPayrollForm && massPayrollModal && massPayrollCancelBtn && massPayrollConfirmBtn) {
+				const openMassPayrollModal = function () {
+					massPayrollModal.classList.remove('hidden');
+					massPayrollModal.setAttribute('aria-hidden', 'false');
+				};
+
+				const closeMassPayrollModal = function () {
+					massPayrollModal.classList.add('hidden');
+					massPayrollModal.setAttribute('aria-hidden', 'true');
+				};
+
+				massPayrollForm.addEventListener('submit', function (event) {
+					if (massPayrollForm.dataset.confirmed === '1') {
+						massPayrollForm.dataset.confirmed = '0';
+						return;
+					}
+
+					event.preventDefault();
+					openMassPayrollModal();
+				});
+
+				massPayrollCancelBtn.addEventListener('click', closeMassPayrollModal);
+
+				massPayrollConfirmBtn.addEventListener('click', function () {
+					massPayrollForm.dataset.confirmed = '1';
+					closeMassPayrollModal();
+					massPayrollForm.requestSubmit();
+				});
+
+				massPayrollModal.addEventListener('click', function (event) {
+					if (event.target === massPayrollModal || event.target.classList.contains('bg-slate-900/55')) {
+						closeMassPayrollModal();
+					}
+				});
+			}
 
 			if (searchInput && employeesDataList) {
 				let debounceTimer = null;

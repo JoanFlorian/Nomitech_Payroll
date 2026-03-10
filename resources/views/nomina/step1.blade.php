@@ -73,6 +73,7 @@
                                     class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-base focus:border-blue-500 focus:outline-none transition bg-white shadow-sm {{ $isEditing ? 'bg-gray-50 cursor-not-allowed' : '' }}"
                               value="{{ old('empleado_busqueda', $s1['empleado_busqueda'] ?? '') }}"
                            placeholder="Escribe nombre o documento"
+                           pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\- ]+"
                            maxlength="120"
                            autocomplete="off"
                                     @readonly($isEditing)
@@ -127,6 +128,8 @@
                     </label>
                     <input id="dias_trabajados" name="dias_trabajados" type="number"
                         min="0" max="30" step="1"
+                        inputmode="numeric"
+                        pattern="[0-9]+"
                         value="{{ old('dias_trabajados', $s1['dias_trabajados'] ?? 30) }}"
                         class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-sm focus:border-blue-500 focus:outline-none transition bg-white shadow-sm"
                         required>

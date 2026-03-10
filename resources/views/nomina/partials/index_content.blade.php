@@ -186,10 +186,10 @@
         </button>
 
         <a href="{{ route('nomina.step1', ['fresh' => 1]) }}"
-            title="Crear nueva nomina"
+            title="Agregar empleado"
             class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
             <i class="bi bi-plus-lg"></i>
-            Nueva nomina
+            Agregar empleado
         </a>
 
         @if($periodoActivo && $periodoActivo->estado !== \App\Models\PeriodoLiquidacion::ESTADO_CERRADO)

@@ -230,6 +230,13 @@ class NominaController extends Controller
         $periodoActivo = $this->getActivePeriod();
 
         $salarios = $this->construirConsultaNomina($request)
+            ->orderBy(
+                DB::table('usuario as u')
+                    ->selectRaw("LOWER(TRIM(CONCAT_WS(' ', u.primer_nombre, IFNULL(u.otros_nombres, ''), u.primer_apellido, IFNULL(u.segundo_apellido, ''))))")
+                    ->join('contrato as c', 'c.doc', '=', 'u.doc')
+                    ->whereColumn('c.id_contrato', 'salario.id_contrato')
+                    ->limit(1)
+            )
             ->orderByDesc('fecha_pago')
             ->paginate(5)
             ->withQueryString();
@@ -1311,9 +1318,22 @@ class NominaController extends Controller
        EXPORTAR EXCEL
     ========================== */
 
-    public function exportarExcel()
+    public function exportarExcel(Request $request)
     {
-        $salarios = Salario::with('contrato.usuario')->get();
+        $exportRequest = $request->duplicate(
+            array_merge($request->query(), [
+                'documento' => '',
+                'periodo' => '',
+            ]),
+            array_merge($request->request->all(), [
+                'documento' => '',
+                'periodo' => '',
+            ])
+        );
+
+        $salarios = $this->construirConsultaNomina($exportRequest)
+            ->orderByDesc('fecha_pago')
+            ->get();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -1321,37 +1341,74 @@ class NominaController extends Controller
         $sheet->fromArray([
             'Documento',
             'Empleado',
+            'Fecha pago',
+            'Dias',
+            'Pago por dias',
+            'Salario inicial',
+            'Novedades',
             'Devengado',
             'Deducciones',
-            'Neto'
+            'Salario neto'
         ], null, 'A1');
 
         $row = 2;
 
         foreach ($salarios as $salario) {
+            $contrato = $salario->contrato;
+            $usuario = $contrato?->usuario;
+            $diasTrabajados = max(0, min(30, (int) ($salario->dias_a_trabajar ?? 0)));
+            $salarioBase = (float) ($contrato?->salario_base ?? 0);
+            $valorDia = $salarioBase / 30;
+            $pagoPorDias = $valorDia * $diasTrabajados;
+            $novedades = (float) ($salario->total_novedades ?? 0);
 
             $sheet->setCellValue(
                 'A' . $row,
-                $salario->contrato->usuario->doc
+                $usuario?->doc ?? ''
             );
 
             $sheet->setCellValue(
                 'B' . $row,
-                $salario->contrato->usuario->nombre_completo
+                $usuario?->nombre_completo ?? ''
             );
 
             $sheet->setCellValue(
                 'C' . $row,
-                $salario->total_devengado
+                $salario->fecha_pago ? Carbon::parse($salario->fecha_pago)->format('Y-m-d') : ''
             );
 
             $sheet->setCellValue(
                 'D' . $row,
-                $salario->total_deducciones
+                $diasTrabajados
             );
 
             $sheet->setCellValue(
                 'E' . $row,
+                $pagoPorDias
+            );
+
+            $sheet->setCellValue(
+                'F' . $row,
+                $salarioBase
+            );
+
+            $sheet->setCellValue(
+                'G' . $row,
+                $novedades
+            );
+
+            $sheet->setCellValue(
+                'H' . $row,
+                $salario->total_devengado
+            );
+
+            $sheet->setCellValue(
+                'I' . $row,
+                $salario->getRawOriginal('total_deducciones')
+            );
+
+            $sheet->setCellValue(
+                'J' . $row,
                 $salario->neto_pagar
             );
 
@@ -1371,17 +1428,30 @@ class NominaController extends Controller
 
     public function exportarPdf(Request $request)
     {
-        $salarios = $this->construirConsultaNomina($request)
+        $periodoActivo = $this->getActivePeriod();
+
+        // El PDF siempre se exporta completo para el periodo activo, sin filtros de búsqueda/fecha.
+        $exportRequest = $request->duplicate(
+            array_merge($request->query(), [
+                'documento' => '',
+                'periodo' => '',
+            ]),
+            array_merge($request->request->all(), [
+                'documento' => '',
+                'periodo' => '',
+            ])
+        );
+
+        $salarios = $this->construirConsultaNomina($exportRequest)
             ->orderByDesc('fecha_pago')
             ->get();
 
         $salarios = $this->adjuntarResumenNovedades($salarios);
 
-        $periodoFiltro = trim((string) $request->input('periodo', ''));
-        $busquedaFiltro = trim((string) $request->input('documento', ''));
-
-        $periodoLabel = $periodoFiltro !== '' ? $periodoFiltro : 'Sin filtro';
-        $busquedaLabel = $busquedaFiltro !== '' ? $busquedaFiltro : 'Sin filtro';
+        $busquedaLabel = 'Todos los empleados';
+        $periodoLabel = $periodoActivo
+            ? $periodoActivo->fecha_inicio->format('d/m/Y') . ' - ' . $periodoActivo->fecha_fin->format('d/m/Y')
+            : 'Sin periodo activo';
 
         $pdf = Pdf::loadView('nomina.reporte-pdf', [
             'salarios' => $salarios,
@@ -1393,9 +1463,9 @@ class NominaController extends Controller
         return $pdf->download('nomina.pdf');
     }
 
-    public function exportarNominaExcel()
+    public function exportarNominaExcel(Request $request)
     {
-        return $this->exportarExcel();
+        return $this->exportarExcel($request);
     }
 
     public function exportarNominaPdf(Request $request)

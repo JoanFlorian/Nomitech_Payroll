@@ -57,11 +57,13 @@
             Periodos de Liquidación
         </a>
 
-         <a href="" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
-            {{ request()->routeIs('superadmin.actualizaciones.principal') ? 'bg-blue-800 text-white font-semibold' : '' }}">
-            <i class="bi bi-arrow-repeat text-lg"></i>
-            Agregar Actualizaciones
-        </a>
+        @if(in_array((int) (Auth::user()->id_rol ?? 0), [1, 4], true))
+            <a href="{{ route('admin.catalogos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                {{ request()->routeIs('admin.catalogos.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-collection text-lg"></i>
+                Catalogos de Empresa
+            </a>
+        @endif
 
     </nav>
 

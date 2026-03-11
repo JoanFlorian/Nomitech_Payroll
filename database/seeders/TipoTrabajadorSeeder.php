@@ -9,10 +9,15 @@ class TipoTrabajadorSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('tipo_trabajador')->delete();
+        $tiposTrabajador = [
+            ['id_tipo_trabajador' => 1, 'nombre' => 'Dependiente'],
+        ];
 
-        DB::table('tipo_trabajador')->insert([
-            ['id_tipo_trabajador' => '1', 'nombre' => 'Dependiente'],
-        ]);
+        foreach ($tiposTrabajador as $tipo) {
+            DB::table('tipo_trabajador')->updateOrInsert(
+                ['id_tipo_trabajador' => $tipo['id_tipo_trabajador']],
+                $tipo
+            );
+        }
     }
 }

@@ -140,11 +140,11 @@ class StoreNovedadEmpleadoRequest extends FormRequest
 
             $requiereCantidad = !in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'], true);
 
-            if ($requiereCantidad && $unidad === 'dias' && $dias < 0) {
+            if ($requiereCantidad && $unidad === 'dias' && $dias <= 0) {
                 $validator->errors()->add('dias', 'Debe ingresar la cantidad en días.');
             }
 
-            if ($requiereCantidad && $unidad === 'horas' && $horas < 0) {
+            if ($requiereCantidad && $unidad === 'horas' && $horas <= 0) {
                 $validator->errors()->add('horas', 'Debe ingresar la cantidad en horas.');
             }
 
@@ -184,7 +184,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
                 $validator->errors()->add('certificado_medico', 'La incapacidad debe contar con certificado médico.');
             }
 
-            if ($tipo === 'VSP' && ($pagoManual === null || $pagoManual === '' || (float) $pagoManual < 0)) {
+            if ($tipo === 'VSP' && ($pagoManual === null || $pagoManual === '' || (float) $pagoManual <= 0)) {
                 $validator->errors()->add('valor_manual', 'Debe ingresar el nuevo salario para la variación permanente de salario.');
             }
 
@@ -204,9 +204,6 @@ class StoreNovedadEmpleadoRequest extends FormRequest
                 $validator->errors()->add('id_arl', 'Debe seleccionar la ARL para la variación de centro de trabajo.');
             }
 
-            if ($unidad === 'horas' && $horas > 240) {
-                $validator->errors()->add('horas', 'Las horas no pueden superar 240 por periodo.');
-            }
         });
     }
 

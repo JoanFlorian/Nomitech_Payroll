@@ -9,9 +9,7 @@ class EPSSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('eps')->delete();
-
-        DB::table('eps')->insert([
+        $eps = [
            ['id_eps' => 9001562642, 'nombre' => 'Nueva EPS', 'telefono' => '018000954400', 'direccion' => 'Av. Calle 26 # 69-76, Bogotá D.C. (Sede principal)'],
             ['id_eps' => 9002267153, 'nombre' => 'Coosalud', 'telefono' => '018000515611', 'direccion' => 'Carrera 2A # 11-18, Bocagrande, Cartagena (Sede principal)'],
             ['id_eps' => 8060083947, 'nombre' => 'Mutual Ser', 'telefono' => '018000116882', 'direccion' => 'Calle 29 # 50-44, Cartagena (Sede principal)'],
@@ -40,8 +38,10 @@ class EPSSeeder extends Seeder
             ['id_eps' => 800100023, 'nombre' => 'Dusakawi EPSI', 'telefono' => '018000000023', 'direccion' => 'Calle 2 # 6-30, Valledupar (Sede principal)'],
             ['id_eps' => 800100024, 'nombre' => 'Mallamas EPSI', 'telefono' => '018000000024', 'direccion' => 'Calle 18 # 21-45, Pasto (Sede principal)'],
             ['id_eps' => 800100025, 'nombre' => 'Pijaos Salud EPSI', 'telefono' => '018000000025', 'direccion' => 'Carrera 5 # 15-60, Ibagué (Sede principal)'],
-        ]);
+        ];
 
-       
+        DB::table('eps')->upsert($eps, ['id_eps'], ['nombre', 'telefono', 'direccion']);
+
+        echo "✅ EPS cargadas: " . count($eps) . " registros\n";
     }
 }

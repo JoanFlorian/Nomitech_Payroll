@@ -9,9 +9,7 @@ class TipoHoraRecargoSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('tipo_hora_recargo')->delete();
-
-        DB::table('tipo_hora_recargo')->insert([
+        $tiposHoraRecargo = [
             [
                 'nombre' => 'Hora extra diurna',
                 'valor' => 25.00,
@@ -36,6 +34,13 @@ class TipoHoraRecargoSeeder extends Seeder
                 'nombre' => 'Recargo dominical o festivo',
                 'valor' => 75.00,
             ],
-        ]);
+        ];
+
+        foreach ($tiposHoraRecargo as $tipo) {
+            DB::table('tipo_hora_recargo')->updateOrInsert(
+                ['nombre' => $tipo['nombre']],
+                $tipo
+            );
+        }
     }
 }

@@ -6,6 +6,8 @@
 @section('content')
 @php
     $historial = $historial ?? collect();
+    $periodos = $periodos ?? collect();
+    $filtroPeriodo = $filtroPeriodo ?? 'todos';
 @endphp
 
 <div class="max-w-6xl mx-auto space-y-6">
@@ -23,6 +25,43 @@
             <span class="material-icons text-[18px]">arrow_back</span>
             Volver a novedades
         </a>
+    </div>
+
+    <!-- Filtro por período -->
+    <div class="bg-white border border-gray-100 rounded-xl p-6">
+        <form method="GET" class="flex flex-col md:flex-row gap-4 items-end">
+            <div class="flex-1">
+                <label for="periodo" class="block text-sm font-semibold text-gray-700 mb-2">Filtrar por período de liquidación:</label>
+                <select
+                    name="periodo"
+                    id="periodo"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                >
+                    <option value="todos" @selected($filtroPeriodo === 'todos')>Todos los períodos</option>
+                    @foreach($periodos as $periodo)
+                        <option value="{{ $periodo->id_periodo }}" @selected($filtroPeriodo == $periodo->id_periodo)>
+                            {{ \Carbon\Carbon::parse($periodo->fecha_inicio)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($periodo->fecha_fin)->format('d/m/Y') }} ({{ ucfirst($periodo->estado) }})
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <button
+                type="submit"
+                class="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-semibold text-sm"
+            >
+                Filtrar
+            </button>
+            @if($filtroPeriodo !== 'todos')
+                <a href="{{ route('novedades.historial') }}" class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm font-medium">
+                    Limpiar
+                </a>
+            @endif
+        </form>
+        @if($filtroPeriodo !== 'todos')
+            <p class="mt-2 text-xs text-gray-500">Mostrando {{ $historial->count() }} registro(s) para el período seleccionado.</p>
+        @else
+            <p class="mt-2 text-xs text-gray-500">Mostrando {{ $historial->count() }} registro(s) en total.</p>
+        @endif
     </div>
 
     <div class="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">

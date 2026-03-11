@@ -280,6 +280,11 @@ class PeriodoLiquidacionController extends Controller
 
                 $periodo->close();
 
+                // Cerrar novedades activas del periodo
+                \App\Models\Novedad::where('id_periodo', $periodo->id_periodo)
+                    ->where('estado', \App\Models\Novedad::ESTADO_ACTIVA)
+                    ->update(['estado' => \App\Models\Novedad::ESTADO_CERRADA, 'updated_at' => now()]);
+
                 // Generate benefit accruals (provisions) for this period
                 $accrualService->generateAccrualsForPeriod($periodo);
 

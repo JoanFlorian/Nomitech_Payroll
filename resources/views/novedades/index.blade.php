@@ -4,10 +4,6 @@
 @section('page-title', 'NOVEDADES')
 
 @section('content')
-@php
-	$novedades = $novedades ?? collect();
-@endphp
-
 <div class="max-w-6xl mx-auto space-y-6">
 	<div class="relative overflow-hidden rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
 		<div class="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-blue-100/50"></div>
@@ -30,6 +26,14 @@
 					Historial contrato
 				</a>
 
+				<a
+					href="{{ route('novedades.historial_novedades') }}"
+					class="inline-flex items-center justify-center gap-2 rounded-full border border-blue-500 px-5 py-2.5 text-xs font-semibold text-blue-600 bg-white shadow-sm hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+				>
+					<span class="material-icons text-[18px]">list_alt</span>
+					Historial novedades
+				</a>
+
 				<button
 					id="add-novelty-btn"
 					type="button"
@@ -43,11 +47,23 @@
 		</div>
 	</div>
 
-	@if (isset($empresaId))
-		<p class="mt-2 text-xs text-gray-400">
-			Empresa en sesión: {{ $empresaId }}
-			&nbsp;|&nbsp; Empleados cargados para novedades: {{ ($empleadosBusqueda ?? collect())->count() }}
-		</p>
+	@if (isset($periodoActivo) && $periodoActivo)
+		<div class="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+			<span class="material-icons text-blue-400 text-[20px]">event</span>
+			<div class="text-sm">
+				<span class="font-semibold text-blue-700">Período activo:</span>
+				<span class="text-blue-800 ml-1">{{ \Carbon\Carbon::parse($periodoActivo->fecha_inicio)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($periodoActivo->fecha_fin)->format('d/m/Y') }}</span>
+				<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700">{{ strtoupper($periodoActivo->estado) }}</span>
+				<span class="ml-3 text-gray-500">· Empleados: {{ ($empleadosBusqueda ?? collect())->count() }}</span>
+			</div>
+		</div>
+	@else
+		<div class="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
+			<span class="material-icons text-amber-400 text-[20px]">warning</span>
+			<p class="text-sm text-amber-700">
+				<span class="font-semibold">Sin período activo.</span> Se muestran todas las novedades sin filtro de período.
+			</p>
+		</div>
 	@endif
 
 	@if (session('success'))
@@ -59,7 +75,7 @@
 	<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 		<div class="bg-white border border-gray-100 rounded-xl p-4">
 			<p class="text-xs uppercase tracking-wide text-gray-500">Total novedades</p>
-			<p class="mt-1 text-2xl font-bold text-gray-900">{{ $novedades->count() }}</p>
+			<p class="mt-1 text-2xl font-bold text-gray-900">{{ $novedades->total() }}</p>
 		</div>
 		<div class="bg-white border border-gray-100 rounded-xl p-4">
 			<p class="text-xs uppercase tracking-wide text-gray-500">Última actualización</p>
@@ -219,6 +235,12 @@
 				<p class="text-sm text-gray-500 mt-1">Usa el botón <span class="font-semibold">Añadir Novedad</span> para crear la primera.</p>
 			</div>
 		@endforelse
+
+		@if ($novedades->hasPages())
+			<div class="mt-4">
+				{{ $novedades->links() }}
+			</div>
+		@endif
 	</section>
 </div>
 
@@ -867,7 +889,7 @@
 		};
 
 		const renderSuggestions = async (query, options = {}) => {
-			const { showAllOnEmpty = false } = options;
+			const { showAllOnEmpty = false, skipRemote = false, maxResults = 12 } = options;
 			const normalizedQuery = normalize(query);
 
 			if (!normalizedQuery && !showAllOnEmpty) {
@@ -885,16 +907,18 @@
 					const documentNumber = normalize(employee.doc);
 					return !normalizedQuery || fullName.includes(normalizedQuery) || documentNumber.includes(normalizedQuery);
 				})
-				.slice(0, 12);
+				.slice(0, maxResults);
 
 			// Intento remoto opcional para refrescar datos (sin bloquear visualización local).
-			try {
-				const remoteMatches = await fetchEmployeesSuggestions(query);
-				if (remoteMatches !== null && remoteMatches.length > 0) {
-					matches = remoteMatches;
+			if (!skipRemote) {
+				try {
+					const remoteMatches = await fetchEmployeesSuggestions(query);
+					if (remoteMatches !== null && remoteMatches.length > 0) {
+						matches = remoteMatches.slice(0, maxResults);
+					}
+				} catch (error) {
+					// Mantener el resultado local cuando la API no esté disponible.
 				}
-			} catch (error) {
-				// Mantener el resultado local cuando la API no esté disponible.
 			}
 
 			lastEmployeeResults = matches;
@@ -939,6 +963,10 @@
 			});
 		};
 
+		const showAllEmployeeSuggestions = () => {
+			renderSuggestions('', { showAllOnEmpty: true, skipRemote: true, maxResults: 50 });
+		};
+
 		employeeSearch?.addEventListener('input', () => {
 			clearEmployeeSelection();
 			clearFieldError('employee');
@@ -950,11 +978,11 @@
 		});
 
 		employeeSearch?.addEventListener('focus', () => {
-			renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
+			showAllEmployeeSuggestions();
 		});
 
 		employeeSearch?.addEventListener('click', () => {
-			renderSuggestions(employeeSearch.value, { showAllOnEmpty: true });
+			showAllEmployeeSuggestions();
 		});
 
 		employeeSearch?.addEventListener('keydown', (event) => {
@@ -1430,6 +1458,14 @@
 			}
 		}
 
+		if (modal && !docEmpleadoInput.value && !employeeSearch.value) {
+			modal.addEventListener('transitionend', () => {
+				if (!modal.classList.contains('hidden') && document.activeElement === employeeSearch) {
+					showAllEmployeeSuggestions();
+				}
+			});
+		}
+
 		if (paymentInput.value) {
 			const initialPayment = Number(paymentInput.value);
 			if (Number.isFinite(initialPayment)) {
@@ -1445,6 +1481,59 @@
 		startDateInput?.addEventListener('change', validateDateRange);
 		endDateInput?.addEventListener('change', validateDateRange);
 		validateDateRange();
+
+		// ── Auto-fill fecha_fin based on tipo novedad duration ─────────────────
+		const DURACIONES_FIJAS = { LMAT: 126, LPAT: 14, VAC: 15, LIC: 30 };
+
+		const autoFillFechaFin = (tipoInput, fechaInicioInput, fechaFinInput) => {
+			const tipo = normalizeNoveltyType(tipoInput?.value || '');
+			const duracion = DURACIONES_FIJAS[tipo];
+			const fechaInicio = fechaInicioInput?.value;
+			
+			// Solo ejecutar si hay duración fija Y hay fecha inicio
+			if (!duracion || !fechaInicio) return;
+			
+			try {
+				const fin = new Date(fechaInicio);
+				fin.setDate(fin.getDate() + duracion - 1);
+				const yyyy = fin.getFullYear();
+				const mm = String(fin.getMonth() + 1).padStart(2, '0');
+				const dd = String(fin.getDate()).padStart(2, '0');
+				fechaFinInput.value = `${yyyy}-${mm}-${dd}`;
+				console.log(`Auto-fill fecha_fin: ${tipo} (${duracion} días) → ${yyyy}-${mm}-${dd}`);
+			} catch (error) {
+				console.warn('Error al calcular fecha_fin:', error);
+			}
+		};
+
+		// Listeners para auto-cálculo de fecha_fin
+		if (startDateInput) {
+			startDateInput.addEventListener('change', () => {
+				autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+				validateDateRange();
+			});
+			startDateInput.addEventListener('input', () => {
+				autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+			});
+		}
+
+		if (noveltyType) {
+			noveltyType.addEventListener('change', () => {
+				// Si hay fecha_inicio, recalcular fecha_fin
+				if (startDateInput?.value) {
+					autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+				}
+				// Mostrar mensaje si esta novedad tiene duración fija
+				const tipo = normalizeNoveltyType(noveltyType.value || '');
+				const duracion = DURACIONES_FIJAS[tipo];
+				if (paymentAutoMessage) {
+					if (duracion) {
+						paymentAutoMessage.classList.toggle('hidden', false);
+						paymentAutoMessage.textContent = `Esta novedad tiene duración fija de ${duracion} días. La fecha fin se calculará automáticamente.`;
+					}
+				}
+			});
+		}
 
 		const validateEditDateRange = () => {
 			const startDate = editStartDateInput.value;
@@ -1477,8 +1566,26 @@
 			return true;
 		};
 
-		editStartDateInput?.addEventListener('change', validateEditDateRange);
+		editStartDateInput?.addEventListener('change', () => {
+			autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput);
+			validateEditDateRange();
+		});
+		editStartDateInput?.addEventListener('input', () => {
+			autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput);
+		});
 		editEndDateInput?.addEventListener('change', validateEditDateRange);
+		editNoveltyTypeInput?.addEventListener('change', () => {
+			if (editStartDateInput?.value) autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput);
+			// Mostrar mensaje si esta novedad tiene duración fija
+			const tipo = normalizeNoveltyType(editNoveltyTypeInput.value || '');
+			const duracion = DURACIONES_FIJAS[tipo];
+			if (editPaymentAutoMessage) {
+				if (duracion) {
+					editPaymentAutoMessage.classList.toggle('hidden', false);
+					editPaymentAutoMessage.textContent = `Esta novedad tiene duración fija de ${duracion} días. La fecha fin se calculará automáticamente.`;
+				}
+			}
+		});
 
 		const setEditModalData = (data) => {
 			editNovedadIdInput.value = data.id || '';
@@ -1587,25 +1694,38 @@
 		const confirmDeleteNovedad = async () => {
 			if (window.Swal) {
 				const result = await Swal.fire({
-					title: 'Eliminar novedad',
-					text: 'Esta accion no se puede deshacer. ¿Deseas continuar?',
-					icon: 'warning',
-					showCancelButton: true,
-					confirmButtonText: 'Si, eliminar',
-					cancelButtonText: 'Cancelar',
-					confirmButtonColor: '#dc2626',
-					cancelButtonColor: '#6b7280',
-					reverseButtons: true,
-					focusCancel: true,
-				});
+				title: '¿Eliminar esta novedad?',
+				html: '<p class="text-gray-600 text-sm mt-2">Esta acción no se puede deshacer. La novedad será eliminada permanentemente del sistema.</p>',
+				icon: 'warning',
+				showCancelButton: true,
+				confirmButtonText: '<i class="bi bi-trash3 mr-2"></i>Sí, eliminar',
+				cancelButtonText: '<i class="bi bi-x-circle mr-2"></i>Cancelar',
+				confirmButtonColor: '#dc2626',
+				cancelButtonColor: '#6b7280',
+				reverseButtons: true,
+				focusCancel: true,
+				customClass: {
+					popup: 'rounded-2xl shadow-2xl border border-gray-100',
+					title: 'text-xl font-bold text-gray-800',
+					htmlContainer: 'text-gray-600',
+					confirmButton: 'px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300',
+					cancelButton: 'px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-300',
+				},
+				buttonsStyling: true,
+				allowOutsideClick: false,
+				allowEscapeKey: true,
+				showClass: {
+					popup: 'animate__animated animate__fadeInDown animate__faster'
+				},
+				hideClass: {
+					popup: 'animate__animated animate__fadeOutUp animate__faster'
+				}
+			});
 
-				return Boolean(result.isConfirmed);
-			}
+			return Boolean(result.isConfirmed);
+		}
 
-			return confirm('¿Seguro que deseas eliminar esta novedad? Esta accion no se puede deshacer.');
-		};
-
-		window.__openEditByButton = (button) => {
+		return confirm('¿Seguro que deseas eliminar esta novedad? Esta acción no se puede deshacer.');
 			if (!button) return;
 			try {
 				clearAllEditErrors();

@@ -9,7 +9,7 @@ class TipoDocSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('tipo_doc')->insert([
+        $tipos = [
             ['nombre' => 'Cedula de ciudadanía'],
             ['nombre' => 'Cédula de extranjería'],
             ['nombre' => 'NIT'],
@@ -17,8 +17,12 @@ class TipoDocSeeder extends Seeder
             ['nombre' => 'Pasaporte'],
             ['nombre' => 'Registro civil'],
             ['nombre' => 'NIT de otro país'],
+        ];
 
+        foreach ($tipos as $tipo) {
+            DB::table('tipo_doc')->insertOrIgnore($tipo);
+        }
 
-        ]);
+        echo "✅ Tipos de documento cargados\n";
     }
 }

@@ -9,12 +9,17 @@ class Novedad extends Model
 {
     use HasFactory;
 
+    public const ESTADO_ACTIVA = 'activa';
+    public const ESTADO_CERRADA = 'cerrada';
+
     protected $table = 'novedad';
     protected $primaryKey = 'id_novedad';
     protected $fillable = [
         'id_tipo_novedad',
         'id_salario',
+        'id_periodo',
         'empleado_id',
+        'estado',
         'tipo_novedad_nombre',
         'fecha',
         'fecha_inicio',
@@ -55,5 +60,10 @@ class Novedad extends Model
     public function salario()
     {
         return $this->belongsTo(Salario::class, 'id_salario', 'id_salario');
+    }
+
+    public function periodoLiquidacion()
+    {
+        return $this->belongsTo(PeriodoLiquidacion::class, 'id_periodo', 'id_periodo');
     }
 }

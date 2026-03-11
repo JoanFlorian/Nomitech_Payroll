@@ -250,6 +250,9 @@
 		if (!modal) return;
 		modal.classList.remove('hidden');
 		modal.classList.add('flex');
+		requestAnimationFrame(() => {
+			document.getElementById('employee-search')?.focus();
+		});
 	};
 
 	window.__closeNoveltyModal = function () {
@@ -516,20 +519,16 @@
 		let employeeTimer = null;
 		let lastResults = [];
 
-		const renderEmployeeSuggestions = async (query) => {
+		const renderEmployeeSuggestions = async (query, showAll = false) => {
 			const term = String(query || '').trim();
-			if (!term) {
-				if (employeeSuggestions) {
-					employeeSuggestions.innerHTML = '';
-					employeeSuggestions.classList.add('hidden');
-				}
-				return;
-			}
 
 			if (employeeLoading) employeeLoading.classList.remove('hidden');
 			try {
 				const url = new URL(empleadosApiUrl, window.location.origin);
-				url.searchParams.set('search', term);
+				// Si showAll es true o no hay término de búsqueda, mostrar todos los empleados
+				if (term) {
+					url.searchParams.set('search', term);
+				}
 				url.searchParams.set('limit', '12');
 				const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
 				if (!resp.ok) throw new Error('No se pudieron cargar empleados.');
@@ -592,7 +591,8 @@
 		});
 
 		employeeSearch.addEventListener('focus', () => {
-			if (employeeSearch.value) renderEmployeeSuggestions(employeeSearch.value);
+			// Mostrar lista de empleados al hacer clic, incluso si no hay texto
+			renderEmployeeSuggestions(employeeSearch.value, true);
 		});
 
 		document.addEventListener('click', (e) => {
@@ -625,13 +625,69 @@
 		}
 
 		// Recalcular ante cambios relevantes
-		[noveltyType, quantityDays, quantityHours, startDate, endDate, tipoIncapacidad, tipoLicencia, certificadoInput, epsId, afpId, arlId, licenciaRemunerada].forEach((el) => {
+		[noveltyType, quantityDays, quantityHours, tipoIncapacidad, tipoLicencia, certificadoInput, epsId, afpId, arlId, licenciaRemunerada].forEach((el) => {
 			if (!el) return;
 			el.addEventListener('change', () => {
 				applyNoveltyConfig();
 				recalcEstimated();
 			});
 		});
+
+		// Validación de fechas: fecha fin no puede ser anterior a fecha inicio
+		const startDateError = document.getElementById('start-date-error');
+		const endDateError = document.getElementById('end-date-error');
+
+		const validateFechas = () => {
+			const fechaInicio = startDate?.value ? new Date(startDate.value) : null;
+			const fechaFin = endDate?.value ? new Date(endDate.value) : null;
+
+			// Limpiar errores previos
+			if (startDateError) startDateError.classList.add('hidden');
+			if (endDateError) endDateError.classList.add('hidden');
+
+			if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+				if (endDateError) {
+					endDateError.textContent = 'La fecha fin no puede ser anterior a la fecha de inicio.';
+					endDateError.classList.remove('hidden');
+				}
+				return false;
+			}
+			return true;
+		};
+
+		// Establecer min de fecha fin cuando cambia fecha inicio
+		if (startDate) {
+			startDate.addEventListener('change', () => {
+				if (startDate.value && endDate) {
+					endDate.min = startDate.value;
+					// Si la fecha fin actual es menor, limpiarla
+					if (endDate.value && endDate.value < startDate.value) {
+						endDate.value = '';
+					}
+				}
+				validateFechas();
+				recalcEstimated();
+			});
+		}
+
+		if (endDate) {
+			endDate.addEventListener('change', () => {
+				validateFechas();
+				recalcEstimated();
+			});
+		}
+
+		// Validar fechas al enviar el formulario
+		const noveltyForm = document.getElementById('novelty-form');
+		if (noveltyForm) {
+			noveltyForm.addEventListener('submit', (e) => {
+				if (!validateFechas()) {
+					e.preventDefault();
+					if (endDate) endDate.focus();
+					return false;
+				}
+			});
+		}
 
 		unitRadios.forEach((r) => {
 			if (!r) return;

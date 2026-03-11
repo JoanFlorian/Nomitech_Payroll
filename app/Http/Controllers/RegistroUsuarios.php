@@ -194,7 +194,7 @@ class RegistroUsuarios extends Controller
                     'id_tipo_trabajador' => $allData['id_tipo_trabajador'],
                     'id_sub_tipo_trabajador' => $allData['id_sub_tipo_trabajador'],
                     'id_forma_pago' => $allData['id_forma_pago'],
-                    'id_metodo_pago' => $allData['id_metodo_pago'],
+                    'id_metodo_pago' => $allData['id_metodo_pago'] ?? null,
                     'id_arl' => $allData['id_arl'],
                     'id_eps' => $allData['id_eps'],
                     'id_afp' => $allData['id_afp'],
@@ -218,23 +218,29 @@ class RegistroUsuarios extends Controller
                     $contratoData
                 );
 
-                $defaultBankId = Banco::query()->value('id_banco');
-                if (empty($defaultBankId)) {
-                    throw new \RuntimeException('No hay bancos configurados para crear la cuenta del empleado.');
-                }
+                // Solo crear cuenta bancaria si no es forma de pago efectivo
+                $tipoCuenta = $allData['tipo_cuenta'] ?? null;
+                $numeroCuenta = $allData['numero_cuenta'] ?? null;
 
-                Cuenta::updateOrCreate(
-                    [
-                        'id_contrato' => $contrato->id_contrato,
-                        'activo' => true,
-                    ],
-                    [
-                        'id_tipo_cuenta' => $allData['tipo_cuenta'],
-                        'id_banco' => $defaultBankId,
-                        'numero_cuenta' => $allData['numero_cuenta'],
-                        'activo' => true,
-                    ]
-                );
+                if (!empty($tipoCuenta) && !empty($numeroCuenta)) {
+                    $defaultBankId = Banco::query()->value('id_banco');
+                    if (empty($defaultBankId)) {
+                        throw new \RuntimeException('No hay bancos configurados para crear la cuenta del empleado.');
+                    }
+
+                    Cuenta::updateOrCreate(
+                        [
+                            'id_contrato' => $contrato->id_contrato,
+                            'activo' => true,
+                        ],
+                        [
+                            'id_tipo_cuenta' => $tipoCuenta,
+                            'id_banco' => $defaultBankId,
+                            'numero_cuenta' => $numeroCuenta,
+                            'activo' => true,
+                        ]
+                    );
+                }
 
                 // Create initial benefit balances if provided
                 $initialBalances = [

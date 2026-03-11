@@ -11,8 +11,6 @@ use App\Models\Arl;
 use App\Models\Salario;
 use App\Models\TipoNovedad;
 use App\Services\CalculoNovedadService;
-use App\Services\NovedadHistorialService;
-use App\Services\NovedadFechasService;
 use App\Models\PeriodoLiquidacion;
 use Illuminate\Support\Facades\DB;
 
@@ -38,8 +36,8 @@ class NovedadController extends Controller
 
     public function __construct(
         private readonly CalculoNovedadService $calculoNovedadService,
-        private readonly NovedadHistorialService $historialService,
-        private readonly NovedadFechasService $fechasService,
+        private readonly \App\Services\NovedadHistorialService $historialService,
+        private readonly \App\Services\NovedadFechasService $fechasService,
     ) {
     }
 
@@ -58,7 +56,7 @@ class NovedadController extends Controller
         }
 
         $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
-            ->where('estado', 'abierto')
+            ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
             ->orderByDesc('fecha_inicio')
             ->first();
 
@@ -72,14 +70,18 @@ class NovedadController extends Controller
     public function index()
     {
         $empresaId = (int) session('empresa_id');
+        $catalogos = $this->catalogosNovedad();
 
         if ($empresaId <= 0) {
+            $novedadesVacias = Novedad::query()
+                ->whereRaw('1 = 0')
+                ->paginate(4)
+                ->withQueryString();
+
             return view('novedades.index', [
-                'novedades' => collect(),
+                'novedades' => $novedadesVacias,
                 'empleadosBusqueda' => collect(),
-                'epsList' => Eps::query()->orderBy('nombre')->get(['id_eps', 'nombre']),
-                'afpList' => Afp::query()->orderBy('nombre')->get(['id_afp', 'nombre']),
-                'arlList' => Arl::query()->orderBy('nombre')->get(['id_arl', 'nombre']),
+                ...$catalogos,
             ]);
         }
 
@@ -133,16 +135,15 @@ class NovedadController extends Controller
                 $q->where('estado', '!=', 'cerrada')->orWhereNull('estado');
             })
             ->orderByDesc('id_novedad')
-            ->get();
+            ->paginate(4)
+            ->withQueryString();
 
         return view('novedades.index', [
             'novedades' => $novedades,
             'empleadosBusqueda' => $empleadosBusqueda,
             'periodoActivo' => $periodoActivo,
             'empresaId' => $empresaId,
-            'epsList' => Eps::query()->orderBy('nombre')->get(['id_eps', 'nombre']),
-            'afpList' => Afp::query()->orderBy('nombre')->get(['id_afp', 'nombre']),
-            'arlList' => Arl::query()->orderBy('nombre')->get(['id_arl', 'nombre']),
+            ...$catalogos,
         ]);
     }
 
@@ -170,7 +171,10 @@ class NovedadController extends Controller
             $novedadesQuery->where('id_periodo', (int) $filtroPeriodo);
         }
 
-        $novedades = $novedadesQuery->orderByDesc('id_novedad')->get();
+        $novedades = $novedadesQuery
+            ->orderByDesc('id_novedad')
+            ->paginate(10)
+            ->withQueryString();
 
         return view('novedades.historial_novedades', [
             'novedades' => $novedades,
@@ -430,5 +434,14 @@ class NovedadController extends Controller
                     'updated_at' => now(),
                 ]);
         }
+    }
+
+    private function catalogosNovedad(): array
+    {
+        return [
+            'epsList' => Eps::query()->orderBy('nombre')->get(['id_eps', 'nombre']),
+            'afpList' => Afp::query()->orderBy('nombre')->get(['id_afp', 'nombre']),
+            'arlList' => Arl::query()->orderBy('nombre')->get(['id_arl', 'nombre']),
+        ];
     }
 }

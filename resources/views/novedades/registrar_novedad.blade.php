@@ -250,6 +250,9 @@
 		if (!modal) return;
 		modal.classList.remove('hidden');
 		modal.classList.add('flex');
+		requestAnimationFrame(() => {
+			document.getElementById('employee-search')?.focus();
+		});
 	};
 
 	window.__closeNoveltyModal = function () {
@@ -516,20 +519,16 @@
 		let employeeTimer = null;
 		let lastResults = [];
 
-		const renderEmployeeSuggestions = async (query) => {
+		const renderEmployeeSuggestions = async (query, showAll = false) => {
 			const term = String(query || '').trim();
-			if (!term) {
-				if (employeeSuggestions) {
-					employeeSuggestions.innerHTML = '';
-					employeeSuggestions.classList.add('hidden');
-				}
-				return;
-			}
 
 			if (employeeLoading) employeeLoading.classList.remove('hidden');
 			try {
 				const url = new URL(empleadosApiUrl, window.location.origin);
-				url.searchParams.set('search', term);
+				// Si showAll es true o no hay término de búsqueda, mostrar todos los empleados
+				if (term) {
+					url.searchParams.set('search', term);
+				}
 				url.searchParams.set('limit', '12');
 				const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
 				if (!resp.ok) throw new Error('No se pudieron cargar empleados.');
@@ -592,7 +591,8 @@
 		});
 
 		employeeSearch.addEventListener('focus', () => {
-			if (employeeSearch.value) renderEmployeeSuggestions(employeeSearch.value);
+			// Mostrar lista de empleados al hacer clic, incluso si no hay texto
+			renderEmployeeSuggestions(employeeSearch.value, true);
 		});
 
 		document.addEventListener('click', (e) => {

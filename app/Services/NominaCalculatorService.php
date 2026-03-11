@@ -232,7 +232,11 @@ class NominaCalculatorService
             ->join('salario as s', 's.id_salario', '=', 'n.id_salario')
             ->where('s.id_contrato', $idContrato)
             ->where(function ($query) use ($idPeriodo, $fechaInicio, $fechaFin) {
-                $query->where('s.id_periodo', $idPeriodo)
+                $query->where('n.id_periodo', $idPeriodo)
+                    ->orWhere(function ($q) use ($idPeriodo) {
+                        $q->whereNull('n.id_periodo')
+                            ->where('s.id_periodo', $idPeriodo);
+                    })
                     ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
                         $q->whereNotNull('n.fecha_inicio')
                             ->whereNotNull('n.fecha_fin')

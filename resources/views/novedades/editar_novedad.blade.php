@@ -312,7 +312,7 @@
         openEditModal();
     }
 
-    function deleteNovedadByButton(button) {
+    async function deleteNovedadByButton(button) {
         console.log('deleteNovedadByButton called', button);
         if (!button) return;
         
@@ -324,7 +324,41 @@
             return;
         }
 
-        const confirmed = window.confirm('¿Seguro que deseas eliminar esta novedad? Esta accion no se puede deshacer.');
+        let confirmed = false;
+        if (window.Swal) {
+            const result = await Swal.fire({
+                title: '¿Eliminar esta novedad?',
+                html: '<p class="text-gray-600 text-sm mt-2">Esta acción no se puede deshacer. La novedad será eliminada permanentemente del sistema.</p>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-trash3 mr-2"></i>Sí, eliminar',
+                cancelButtonText: '<i class="bi bi-x-circle mr-2"></i>Cancelar',
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                reverseButtons: true,
+                focusCancel: true,
+                customClass: {
+                    popup: 'rounded-2xl shadow-2xl border border-gray-100',
+                    title: 'text-xl font-bold text-gray-800',
+                    htmlContainer: 'text-gray-600',
+                    confirmButton: 'px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300',
+                    cancelButton: 'px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-300',
+                },
+                buttonsStyling: true,
+                allowOutsideClick: false,
+                allowEscapeKey: true,
+                showClass: {
+                    popup: 'animate__animated animate__fadeInDown animate__faster'
+                },
+                hideClass: {
+                    popup: 'animate__animated animate__fadeOutUp animate__faster'
+                }
+            });
+            confirmed = result.isConfirmed;
+        } else {
+            confirmed = window.confirm('¿Seguro que deseas eliminar esta novedad? Esta acción no se puede deshacer.');
+        }
+
         if (!confirmed) return;
 
         deleteForm.action = deleteUrl.replace('__ID__', String(id));

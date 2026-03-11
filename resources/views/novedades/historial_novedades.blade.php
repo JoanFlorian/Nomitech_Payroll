@@ -17,7 +17,7 @@
             
             <a
                 href="{{ route('novedades.index') }}"
-                class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-500 px-5 py-2. 5 text-xs font-semibold text-emerald-600 bg-white shadow-sm hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-500 px-5 py-2.5 text-xs font-semibold text-emerald-600 bg-white shadow-sm hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             >
                 <span class="material-icons text-[18px]">close</span>
                 Cerrar
@@ -27,7 +27,7 @@
 
     @if (isset($empresaId))
         <p class="mt-2 text-xs text-gray-400">
-            Empresa en sesión: {{ $empresaId }} | Registros totales: {{ ($novedades ?? collect())->count() }}
+            Empresa en sesión: {{ $empresaId }} | Registros totales: {{ $novedades->total() }}
         </p>
     @endif
 
@@ -133,6 +133,10 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        <div class="mt-6">
+            {{ $novedades->links() }}
         </div>
     @endif
 </div>

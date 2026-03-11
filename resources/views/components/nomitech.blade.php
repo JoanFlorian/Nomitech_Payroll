@@ -7,7 +7,7 @@
         </div>
         <div>
             <h1 class="text-lg font-bold text-white">Nomitech</h1>
-            <p class="text-sm text-blue-200">Super Administrador</p>
+            <p class="text-sm text-blue-200">{{ Auth::user()->rol->nombre ?? 'Usuario' }}</p>
         </div>
     </div>
 
@@ -40,11 +40,21 @@
             Planes
         </a>
 
-         <a href="{{ route('superadmin.actualizaciones.principal') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
-            {{ request()->routeIs('superadmin.actualizaciones.principal') ? 'bg-blue-800 text-white font-semibold' : '' }}">
-            <i class="bi bi-arrow-repeat text-lg"></i>
-            Actualizaciones
-        </a>
+        @if((int) (Auth::user()->id_rol ?? 0) === 4)
+            <a href="{{ route('superadmin.actualizaciones.principal') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
+                {{ request()->routeIs('superadmin.actualizaciones.principal') ? 'bg-blue-800 text-white font-semibold' : '' }}">
+                <i class="bi bi-arrow-repeat text-lg"></i>
+                Actualizaciones
+            </a>
+        @endif
+
+        @if(in_array((int) (Auth::user()->id_rol ?? 0), [1, 4], true))
+            <a href="{{ route('admin.catalogos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
+                {{ request()->routeIs('admin.catalogos.*') ? 'bg-blue-800 text-white font-semibold' : '' }}">
+                <i class="bi bi-collection text-lg"></i>
+                Catalogos de Empresa
+            </a>
+        @endif
 
     </nav>
 

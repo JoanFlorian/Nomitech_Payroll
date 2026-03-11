@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\CodeVerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
+use App\Http\Controllers\Admin\CatalogosEmpresaController;
 
 use App\Http\Controllers\NovedadController;
 use App\Http\Controllers\NovedadCalculoController;
@@ -150,6 +151,18 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/periodos/exportacion/{id}/descargar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'downloadExport'])
         ->name('periodos.exportar.descargar');
 });
+
+Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin_empresa', 'prevent_back_history'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/catalogos', [CatalogosEmpresaController::class, 'index'])->name('catalogos.index');
+        Route::get('/catalogos/{catalogo}', [CatalogosEmpresaController::class, 'show'])->name('catalogos.show');
+        Route::get('/catalogos/{catalogo}/data', [CatalogosEmpresaController::class, 'data'])->name('catalogos.data');
+        Route::post('/catalogos/{catalogo}', [CatalogosEmpresaController::class, 'store'])->name('catalogos.store');
+        Route::put('/catalogos/{catalogo}/{id}', [CatalogosEmpresaController::class, 'update'])->name('catalogos.update');
+        Route::patch('/catalogos/{catalogo}/{id}/estado', [CatalogosEmpresaController::class, 'toggleEstado'])->name('catalogos.toggle-estado');
+    });
 
 // Superadmin routes protected by auth and role
 Route::middleware(['auth', 'is_superadmin', 'prevent_back_history'])->prefix('superadmin')->name('superadmin.')->group(function () {

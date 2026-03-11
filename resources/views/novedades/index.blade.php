@@ -30,6 +30,14 @@
 					Historial contrato
 				</a>
 
+				<a
+					href="{{ route('novedades.historial_novedades') }}"
+					class="inline-flex items-center justify-center gap-2 rounded-full border border-blue-500 px-5 py-2.5 text-xs font-semibold text-blue-600 bg-white shadow-sm hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+				>
+					<span class="material-icons text-[18px]">list_alt</span>
+					Historial novedades
+				</a>
+
 				<button
 					id="add-novelty-btn"
 					type="button"
@@ -43,11 +51,23 @@
 		</div>
 	</div>
 
-	@if (isset($empresaId))
-		<p class="mt-2 text-xs text-gray-400">
-			Empresa en sesión: {{ $empresaId }}
-			&nbsp;|&nbsp; Empleados cargados para novedades: {{ ($empleadosBusqueda ?? collect())->count() }}
-		</p>
+	@if (isset($periodoActivo) && $periodoActivo)
+		<div class="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+			<span class="material-icons text-blue-400 text-[20px]">event</span>
+			<div class="text-sm">
+				<span class="font-semibold text-blue-700">Período activo:</span>
+				<span class="text-blue-800 ml-1">{{ \Carbon\Carbon::parse($periodoActivo->fecha_inicio)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($periodoActivo->fecha_fin)->format('d/m/Y') }}</span>
+				<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700">{{ strtoupper($periodoActivo->estado) }}</span>
+				<span class="ml-3 text-gray-500">· Empleados: {{ ($empleadosBusqueda ?? collect())->count() }}</span>
+			</div>
+		</div>
+	@else
+		<div class="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
+			<span class="material-icons text-amber-400 text-[20px]">warning</span>
+			<p class="text-sm text-amber-700">
+				<span class="font-semibold">Sin período activo.</span> Se muestran todas las novedades sin filtro de período.
+			</p>
+		</div>
 	@endif
 
 	@if (session('success'))
@@ -1446,6 +1466,59 @@
 		endDateInput?.addEventListener('change', validateDateRange);
 		validateDateRange();
 
+		// ── Auto-fill fecha_fin based on tipo novedad duration ─────────────────
+		const DURACIONES_FIJAS = { LMAT: 126, LPAT: 14, VAC: 15, LIC: 30 };
+
+		const autoFillFechaFin = (tipoInput, fechaInicioInput, fechaFinInput) => {
+			const tipo = normalizeNoveltyType(tipoInput?.value || '');
+			const duracion = DURACIONES_FIJAS[tipo];
+			const fechaInicio = fechaInicioInput?.value;
+			
+			// Solo ejecutar si hay duración fija Y hay fecha inicio
+			if (!duracion || !fechaInicio) return;
+			
+			try {
+				const fin = new Date(fechaInicio);
+				fin.setDate(fin.getDate() + duracion - 1);
+				const yyyy = fin.getFullYear();
+				const mm = String(fin.getMonth() + 1).padStart(2, '0');
+				const dd = String(fin.getDate()).padStart(2, '0');
+				fechaFinInput.value = `${yyyy}-${mm}-${dd}`;
+				console.log(`Auto-fill fecha_fin: ${tipo} (${duracion} días) → ${yyyy}-${mm}-${dd}`);
+			} catch (error) {
+				console.warn('Error al calcular fecha_fin:', error);
+			}
+		};
+
+		// Listeners para auto-cálculo de fecha_fin
+		if (startDateInput) {
+			startDateInput.addEventListener('change', () => {
+				autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+				validateDateRange();
+			});
+			startDateInput.addEventListener('input', () => {
+				autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+			});
+		}
+
+		if (noveltyType) {
+			noveltyType.addEventListener('change', () => {
+				// Si hay fecha_inicio, recalcular fecha_fin
+				if (startDateInput?.value) {
+					autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+				}
+				// Mostrar mensaje si esta novedad tiene duración fija
+				const tipo = normalizeNoveltyType(noveltyType.value || '');
+				const duracion = DURACIONES_FIJAS[tipo];
+				if (paymentAutoMessage) {
+					if (duracion) {
+						paymentAutoMessage.classList.toggle('hidden', false);
+						paymentAutoMessage.textContent = `Esta novedad tiene duración fija de ${duracion} días. La fecha fin se calculará automáticamente.`;
+					}
+				}
+			});
+		}
+
 		const validateEditDateRange = () => {
 			const startDate = editStartDateInput.value;
 			const endDate = editEndDateInput.value;
@@ -1477,8 +1550,26 @@
 			return true;
 		};
 
-		editStartDateInput?.addEventListener('change', validateEditDateRange);
+		editStartDateInput?.addEventListener('change', () => {
+			autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput);
+			validateEditDateRange();
+		});
+		editStartDateInput?.addEventListener('input', () => {
+			autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput);
+		});
 		editEndDateInput?.addEventListener('change', validateEditDateRange);
+		editNoveltyTypeInput?.addEventListener('change', () => {
+			if (editStartDateInput?.value) autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput);
+			// Mostrar mensaje si esta novedad tiene duración fija
+			const tipo = normalizeNoveltyType(editNoveltyTypeInput.value || '');
+			const duracion = DURACIONES_FIJAS[tipo];
+			if (editPaymentAutoMessage) {
+				if (duracion) {
+					editPaymentAutoMessage.classList.toggle('hidden', false);
+					editPaymentAutoMessage.textContent = `Esta novedad tiene duración fija de ${duracion} días. La fecha fin se calculará automáticamente.`;
+				}
+			}
+		});
 
 		const setEditModalData = (data) => {
 			editNovedadIdInput.value = data.id || '';

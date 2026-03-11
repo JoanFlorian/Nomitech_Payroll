@@ -11,6 +11,9 @@ use App\Models\Arl;
 use App\Models\Salario;
 use App\Models\TipoNovedad;
 use App\Services\CalculoNovedadService;
+use App\Services\NovedadHistorialService;
+use App\Services\NovedadFechasService;
+use App\Models\PeriodoLiquidacion;
 use Illuminate\Support\Facades\DB;
 
 class NovedadController extends Controller
@@ -33,8 +36,37 @@ class NovedadController extends Controller
         'LIC' => 'LIC - Licencia',
     ];
 
-    public function __construct(private readonly CalculoNovedadService $calculoNovedadService)
+    public function __construct(
+        private readonly CalculoNovedadService $calculoNovedadService,
+        private readonly NovedadHistorialService $historialService,
+        private readonly NovedadFechasService $fechasService,
+    ) {
+    }
+
+    private function getActivePeriod(): ?PeriodoLiquidacion
     {
+        $periodoId = session('active_period_id');
+        $empresaId = session('empresa_id');
+
+        if ($periodoId) {
+            $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
+                ->where('id_periodo', $periodoId)
+                ->first();
+            if ($periodo) {
+                return $periodo;
+            }
+        }
+
+        $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
+            ->where('estado', 'abierto')
+            ->orderByDesc('fecha_inicio')
+            ->first();
+
+        if ($periodo) {
+            session(['active_period_id' => $periodo->id_periodo]);
+        }
+
+        return $periodo;
     }
 
     public function index()
@@ -82,6 +114,8 @@ class NovedadController extends Controller
             ])
             ->values();
 
+        $periodoActivo = $this->getActivePeriod();
+
         $novedades = Novedad::query()
             ->with(['tipoNovedad', 'salario.contrato.usuario'])
             ->when($empresaId > 0, function ($query) use ($empresaId) {
@@ -89,21 +123,77 @@ class NovedadController extends Controller
                     $q->where('id_empresa', $empresaId);
                 });
             })
+            ->when($periodoActivo, function ($query) use ($periodoActivo) {
+                $query->where(function ($q) use ($periodoActivo) {
+                    $q->where('id_periodo', $periodoActivo->id_periodo)
+                      ->orWhereNull('id_periodo');
+                });
+            })
+            ->where(function ($q) {
+                $q->where('estado', '!=', 'cerrada')->orWhereNull('estado');
+            })
             ->orderByDesc('id_novedad')
             ->get();
 
         return view('novedades.index', [
             'novedades' => $novedades,
             'empleadosBusqueda' => $empleadosBusqueda,
+            'periodoActivo' => $periodoActivo,
+            'empresaId' => $empresaId,
             'epsList' => Eps::query()->orderBy('nombre')->get(['id_eps', 'nombre']),
             'afpList' => Afp::query()->orderBy('nombre')->get(['id_afp', 'nombre']),
             'arlList' => Arl::query()->orderBy('nombre')->get(['id_arl', 'nombre']),
         ]);
     }
 
+    public function historialNovedades()
+    {
+        $empresaId = (int) session('empresa_id');
+        $filtroPeriodo = request('periodo', 'todos');
+
+        $periodos = PeriodoLiquidacion::query()
+            ->when($empresaId > 0, fn ($q) => $q->where('id_empresa', $empresaId))
+            ->orderByDesc('fecha_inicio')
+            ->get(['id_periodo', 'fecha_inicio', 'fecha_fin', 'estado']);
+
+        $novedadesQuery = Novedad::query()
+            ->with(['tipoNovedad', 'salario.contrato.usuario', 'periodoLiquidacion'])
+            ->when($empresaId > 0, function ($query) use ($empresaId) {
+                $query->whereHas('salario.contrato', function ($q) use ($empresaId) {
+                    $q->where('id_empresa', $empresaId);
+                });
+            });
+
+        if ($filtroPeriodo === 'sin_periodo') {
+            $novedadesQuery->whereNull('id_periodo');
+        } elseif ($filtroPeriodo !== 'todos' && is_numeric($filtroPeriodo)) {
+            $novedadesQuery->where('id_periodo', (int) $filtroPeriodo);
+        }
+
+        $novedades = $novedadesQuery->orderByDesc('id_novedad')->get();
+
+        return view('novedades.historial_novedades', [
+            'novedades' => $novedades,
+            'periodos' => $periodos,
+            'filtroPeriodo' => $filtroPeriodo,
+            'empresaId' => $empresaId,
+        ]);
+    }
+
     public function historialContrato()
     {
         $empresaId = (int) session('empresa_id');
+        $filtroPeriodo = request('periodo', 'todos');
+
+        $periodos = PeriodoLiquidacion::query()
+            ->when($empresaId > 0, fn ($q) => $q->where('id_empresa', $empresaId))
+            ->orderByDesc('fecha_inicio')
+            ->get(['id_periodo', 'fecha_inicio', 'fecha_fin', 'estado']);
+
+        $periodoCabecera = null;
+        if ($filtroPeriodo !== 'todos' && is_numeric($filtroPeriodo)) {
+            $periodoCabecera = $periodos->firstWhere('id_periodo', (int) $filtroPeriodo);
+        }
 
         $query = DB::table('historial_contrato as h')
             ->join('contrato as c', 'c.id_contrato', '=', 'h.id_contrato')
@@ -150,10 +240,19 @@ class NovedadController extends Controller
             $query->where('c.id_empresa', $empresaId);
         }
 
+        if ($periodoCabecera) {
+            $query->whereBetween('h.fecha_cambio', [
+                $periodoCabecera->fecha_inicio,
+                \Carbon\Carbon::parse($periodoCabecera->fecha_fin)->endOfDay(),
+            ]);
+        }
+
         $historial = $query->limit(500)->get();
 
         return view('novedades.historial', [
             'historial' => $historial,
+            'periodos' => $periodos,
+            'filtroPeriodo' => $filtroPeriodo,
             'empresaId' => $empresaId,
         ]);
     }
@@ -168,10 +267,11 @@ class NovedadController extends Controller
         }
 
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
-        $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre);
+        $periodo = $this->getActivePeriod();
+        $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, $periodo);
 
-        Novedad::create($payload);
-
+        $novedad = Novedad::create($payload);
+        $this->historialService->registrarCreacion($novedad);
         $this->aplicarEfectosNovedad($data, $salario);
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se registró correctamente.');
@@ -187,11 +287,12 @@ class NovedadController extends Controller
             return $this->buildEmpleadoSalarioErrorResponse(false);
         }
 
+        $novedadAnterior = clone $novedad;
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
-        $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre);
+        $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, null);
 
         $novedad->update($payload);
-
+        $this->historialService->registrarActualizacion($novedadAnterior, $novedad->fresh());
         $this->aplicarEfectosNovedad($data, $salario);
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se actualizó correctamente.');
@@ -199,7 +300,9 @@ class NovedadController extends Controller
 
     public function destroy(int $id_novedad)
     {
-        Novedad::query()->findOrFail($id_novedad)->delete();
+        $novedad = Novedad::query()->findOrFail($id_novedad);
+        $this->historialService->registrarEliminacion($novedad);
+        $novedad->delete();
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se eliminó correctamente.');
     }
@@ -232,7 +335,7 @@ class NovedadController extends Controller
         return TipoNovedad::firstOrCreate(['nombre' => $nombre]);
     }
 
-    private function buildNovedadPayload(array $data, Salario $salario, int $tipoNovedadId, string $tipoNovedadNombre): array
+    private function buildNovedadPayload(array $data, Salario $salario, int $tipoNovedadId, string $tipoNovedadNombre, ?PeriodoLiquidacion $periodo = null): array
     {
         $salarioBase = $this->calculoNovedadService->resolverSalarioBase($salario);
         $resultado = $this->calculoNovedadService->calcularNovedad(array_merge($data, ['salario_base' => $salarioBase]));
@@ -242,15 +345,24 @@ class NovedadController extends Controller
         $valorFirmado = $tipoMovimiento === CalculoNovedadService::OPERACION_DESCUENTO ? -$valorCalculado : $valorCalculado;
         $dias = (float) ($data['dias'] ?? 0);
         $horas = (float) ($data['horas'] ?? 0);
+        $tipoNovedad = (string) ($data['tipo_novedad'] ?? '');
+
+        // Backend enforces fecha_fin for fixed-duration novelty types
+        $fechaInicio = $data['fecha_inicio'];
+        $fechaFin = $this->fechasService->tieneDuracionFija($tipoNovedad)
+            ? ($this->fechasService->calcularFechaFin($tipoNovedad, $fechaInicio, (int) $dias ?: null) ?? $data['fecha_fin'])
+            : $data['fecha_fin'];
 
         return [
             'id_tipo_novedad' => $tipoNovedadId,
             'id_salario' => $salario->id_salario,
+            'id_periodo' => $periodo?->id_periodo ?? $salario->id_periodo ?? null,
             'empleado_id' => $data['empleado_id'],
+            'estado' => Novedad::ESTADO_ACTIVA,
             'tipo_novedad_nombre' => $tipoNovedadNombre,
-            'fecha' => $data['fecha_inicio'],
-            'fecha_inicio' => $data['fecha_inicio'],
-            'fecha_fin' => $data['fecha_fin'],
+            'fecha' => $fechaInicio,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
             'unidad_cantidad' => $data['unidad_cantidad'],
             'dias' => $dias,
             'horas' => $horas,
@@ -263,7 +375,7 @@ class NovedadController extends Controller
             'pago_manual' => $data['pago_manual'] ?? null,
             'tipo_movimiento' => $tipoMovimiento,
             'afecta_ibc' => (bool) ($resultado['afecta_ibc'] ?? false),
-            'tipo_novedad_codigo' => (string) ($data['tipo_novedad'] ?? ''),
+            'tipo_novedad_codigo' => $tipoNovedad,
             'tipo_licencia' => $data['tipo_licencia'] ?? null,
             'tipo_incapacidad' => $data['tipo_incapacidad'] ?? null,
             'certificado_medico' => (bool) ($data['certificado_medico'] ?? false),

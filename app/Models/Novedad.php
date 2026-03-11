@@ -9,6 +9,9 @@ class Novedad extends Model
 {
     use HasFactory;
 
+    public const ESTADO_ACTIVA = 'activa';
+    public const ESTADO_CERRADA = 'cerrada';
+
     protected $table = 'novedad';
     protected $primaryKey = 'id_novedad';
     protected $fillable = [
@@ -16,6 +19,7 @@ class Novedad extends Model
         'id_salario',
         'id_periodo',
         'empleado_id',
+        'estado',
         'tipo_novedad_nombre',
         'fecha',
         'fecha_inicio',

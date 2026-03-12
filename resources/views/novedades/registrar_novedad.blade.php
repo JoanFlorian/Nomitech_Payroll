@@ -681,11 +681,214 @@
 		const noveltyForm = document.getElementById('novelty-form');
 		if (noveltyForm) {
 			noveltyForm.addEventListener('submit', (e) => {
+				// Limpiar todos los errores previos
+				document.querySelectorAll('.text-red-600').forEach((el) => {
+					if (el.id && el.id.includes('-error')) {
+						el.classList.add('hidden');
+					}
+				});
+
+				let hasError = false;
+				const employeeSearchError = document.getElementById('employee-search-error');
+				const noveltyTypeError = document.getElementById('novelty-type-error');
+				const quantityDaysError = document.getElementById('quantity-days-error');
+				const quantityHoursError = document.getElementById('quantity-hours-error');
+				const quantityUnitError = document.getElementById('quantity-unit-error');
+
+				// Validación 1: Empleado seleccionado
+				if (!employeeHidden || !employeeHidden.value) {
+					if (employeeSearchError) {
+						employeeSearchError.textContent = 'Debe seleccionar un empleado de la lista.';
+						employeeSearchError.classList.remove('hidden');
+					}
+					if (employeeSearch) employeeSearch.focus();
+					hasError = true;
+				}
+
+				// Validación 2: Tipo de novedad seleccionado
+				if (!noveltyType || !noveltyType.value) {
+					if (noveltyTypeError) {
+						noveltyTypeError.textContent = 'Debe seleccionar el tipo de novedad.';
+						noveltyTypeError.classList.remove('hidden');
+					}
+					if (!hasError && noveltyType) noveltyType.focus();
+					hasError = true;
+				}
+
+				// Validación 3: Fechas
 				if (!validateFechas()) {
+					if (!hasError && endDate) endDate.focus();
+					hasError = true;
+				}
+
+				// Validación 4: Fechas requeridas
+				if (startDate && !startDate.value) {
+					if (startDateError) {
+						startDateError.textContent = 'La fecha de inicio es obligatoria.';
+						startDateError.classList.remove('hidden');
+					}
+					if (!hasError) startDate.focus();
+					hasError = true;
+				}
+
+				if (endDate && !endDate.value) {
+					if (endDateError) {
+						endDateError.textContent = 'La fecha fin es obligatoria.';
+						endDateError.classList.remove('hidden');
+					}
+					if (!hasError) endDate.focus();
+					hasError = true;
+				}
+
+				// Obtener tipo y unidad actual
+				const currentType = normalizeType(noveltyType?.value || '');
+				const currentUnit = getSelectedUnit();
+				const cfg = NOVELTY_CONFIG[currentType] || null;
+
+				// Validación 5: Cantidad según el tipo de novedad
+				const tiposQueRequierenCantidad = !['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(currentType);
+				
+				if (tiposQueRequierenCantidad) {
+					if (currentUnit === 'dias') {
+						const diasValue = getNumeric(quantityDays);
+						if (diasValue <= 0) {
+							if (quantityDaysError) {
+								quantityDaysError.textContent = 'Debe ingresar la cantidad en días (mayor a 0).';
+								quantityDaysError.classList.remove('hidden');
+							}
+							if (!hasError && quantityDays) quantityDays.focus();
+							hasError = true;
+						}
+					} else if (currentUnit === 'horas') {
+						const horasValue = getNumeric(quantityHours);
+						if (horasValue <= 0) {
+							if (quantityHoursError) {
+								quantityHoursError.textContent = 'Debe ingresar la cantidad en horas (mayor a 0).';
+								quantityHoursError.classList.remove('hidden');
+							}
+							if (!hasError && quantityHours) quantityHours.focus();
+							hasError = true;
+						}
+					}
+				}
+
+				// Validación 6: Tipo de licencia (LIC)
+				if (currentType === 'LIC' && tipoLicencia && !tipoLicencia.value) {
+					const tipoLicenciaError = tipoLicenciaWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!tipoLicenciaError.id) {
+						tipoLicenciaError.id = 'tipo-licencia-error';
+						tipoLicenciaError.className = 'mt-1 text-xs text-red-600';
+						if (tipoLicencia && tipoLicencia.parentNode) {
+							tipoLicencia.parentNode.appendChild(tipoLicenciaError);
+						}
+					}
+					tipoLicenciaError.textContent = 'Debe seleccionar el tipo de licencia.';
+					tipoLicenciaError.classList.remove('hidden');
+					if (!hasError && tipoLicencia) tipoLicencia.focus();
+					hasError = true;
+				}
+
+				// Validación 7: Certificado médico para incapacidades (IGE, IRL, INC)
+				if (['IGE', 'IRL', 'INC'].includes(currentType) && certificadoInput && !certificadoInput.checked) {
+					const certificadoError = certificadoWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!certificadoError.id) {
+						certificadoError.id = 'certificado-medico-error';
+						certificadoError.className = 'mt-1 text-xs text-red-600';
+						if (certificadoInput && certificadoInput.parentNode) {
+							certificadoInput.parentNode.appendChild(certificadoError);
+						}
+					}
+					certificadoError.textContent = 'Debe verificar el certificado médico para las incapacidades.';
+					certificadoError.classList.remove('hidden');
+					hasError = true;
+				}
+
+				// Validación 8: EPS para traslados (TDE, TAE)
+				if (['TDE', 'TAE'].includes(currentType) && epsId && !epsId.value) {
+					const epsError = epsWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!epsError.id) {
+						epsError.id = 'eps-id-error';
+						epsError.className = 'mt-1 text-xs text-red-600';
+						if (epsId && epsId.parentNode) {
+							epsId.parentNode.appendChild(epsError);
+						}
+					}
+					epsError.textContent = 'Debe seleccionar la EPS para el traslado.';
+					epsError.classList.remove('hidden');
+					if (!hasError && epsId) epsId.focus();
+					hasError = true;
+				}
+
+				// Validación 9: AFP para traslados (TDP, TAP)
+				if (['TDP', 'TAP'].includes(currentType) && afpId && !afpId.value) {
+					const afpError = afpWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!afpError.id) {
+						afpError.id = 'afp-id-error';
+						afpError.className = 'mt-1 text-xs text-red-600';
+						if (afpId && afpId.parentNode) {
+							afpId.parentNode.appendChild(afpError);
+						}
+					}
+					afpError.textContent = 'Debe seleccionar la AFP para el traslado.';
+					afpError.classList.remove('hidden');
+					if (!hasError && afpId) afpId.focus();
+					hasError = true;
+				}
+
+				// Validación 10: ARL para variación centro de trabajo (VCT)
+				if (currentType === 'VCT' && arlId && !arlId.value) {
+					const arlError = arlWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!arlError.id) {
+						arlError.id = 'arl-id-error';
+						arlError.className = 'mt-1 text-xs text-red-600';
+						if (arlId && arlId.parentNode) {
+							arlId.parentNode.appendChild(arlError);
+						}
+					}
+					arlError.textContent = 'Debe seleccionar la ARL para la variación de centro de trabajo.';
+					arlError.classList.remove('hidden');
+					if (!hasError && arlId) arlId.focus();
+					hasError = true;
+				}
+
+				// Validación 11: Valor manual para VSP
+				if (currentType === 'VSP' && paymentDisplay) {
+					const valorManual = Number(paymentDisplay.value || 0);
+					if (valorManual <= 0) {
+						if (paymentError) {
+							paymentError.textContent = 'Debe ingresar el nuevo salario para la variación permanente de salario.';
+							paymentError.classList.remove('hidden');
+						}
+						if (!hasError) paymentDisplay.focus();
+						hasError = true;
+					}
+				}
+
+				// Validación 12: Pago manual solo números positivos
+				if (paymentDisplay && paymentDisplay.value && !paymentDisplay.disabled) {
+					const valorPago = Number(paymentDisplay.value);
+					if (!Number.isFinite(valorPago) || valorPago < 0) {
+						if (paymentError) {
+							paymentError.textContent = 'El pago manual debe ser un número válido y positivo.';
+							paymentError.classList.remove('hidden');
+						}
+						if (!hasError) paymentDisplay.focus();
+						hasError = true;
+					}
+				}
+
+				// Si hay errores, prevenir el envío
+				if (hasError) {
 					e.preventDefault();
-					if (endDate) endDate.focus();
 					return false;
 				}
+
+				return true;
 			});
 		}
 

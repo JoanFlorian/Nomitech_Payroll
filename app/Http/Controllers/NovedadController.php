@@ -218,6 +218,14 @@ class NovedadController extends Controller
                 $join->on('afp_nueva.id_afp', '=', 'h.dato_nuevo')
                     ->where('h.tipo_novedad', '=', 'AFP');
             })
+            ->leftJoin('arl as arl_anterior', function ($join) {
+                $join->on('arl_anterior.id_arl', '=', 'h.dato_anterior')
+                    ->where('h.tipo_novedad', '=', 'ARL');
+            })
+            ->leftJoin('arl as arl_nueva', function ($join) {
+                $join->on('arl_nueva.id_arl', '=', 'h.dato_nuevo')
+                    ->where('h.tipo_novedad', '=', 'ARL');
+            })
             ->select(
                 'h.id_historial',
                 'h.id_contrato',
@@ -230,11 +238,13 @@ class NovedadController extends Controller
                 DB::raw("CASE
                     WHEN h.tipo_novedad = 'EPS' THEN COALESCE(eps_anterior.nombre, h.dato_anterior)
                     WHEN h.tipo_novedad = 'AFP' THEN COALESCE(afp_anterior.nombre, h.dato_anterior)
+                    WHEN h.tipo_novedad = 'ARL' THEN COALESCE(arl_anterior.nombre, h.dato_anterior)
                     ELSE h.dato_anterior
                 END as dato_anterior_label"),
                 DB::raw("CASE
                     WHEN h.tipo_novedad = 'EPS' THEN COALESCE(eps_nueva.nombre, h.dato_nuevo)
                     WHEN h.tipo_novedad = 'AFP' THEN COALESCE(afp_nueva.nombre, h.dato_nuevo)
+                    WHEN h.tipo_novedad = 'ARL' THEN COALESCE(arl_nueva.nombre, h.dato_nuevo)
                     ELSE h.dato_nuevo
                 END as dato_nuevo_label")
             )

@@ -15,7 +15,7 @@
         <div>
             <h2 class="text-lg font-bold text-gray-900">Historial de cambios de contrato</h2>
             <p class="text-sm text-gray-500 mt-1">
-                Aquí se muestran los cambios de EPS, AFP y salario registrados por el sistema de novedades.
+                Aquí se muestran los cambios de EPS, AFP, ARL y salario registrados por el sistema de novedades.
             </p>
             @if(isset($empresaId) && $empresaId)
                 <p class="mt-1 text-xs text-gray-400">Empresa en sesión: {{ $empresaId }}</p>
@@ -91,7 +91,10 @@
                             <td class="px-4 py-2 text-gray-800 text-xs">{{ $item->dato_nuevo_label ?? $item->dato_nuevo }}</td>
                             <td class="px-4 py-2 text-gray-800 text-xs">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold
-                                    @if($item->tipo_novedad === 'EPS') bg-blue-50 text-blue-700 @elseif($item->tipo_novedad === 'AFP') bg-emerald-50 text-emerald-700 @else bg-amber-50 text-amber-700 @endif
+                                    @if($item->tipo_novedad === 'EPS') bg-blue-50 text-blue-700 
+                                    @elseif($item->tipo_novedad === 'AFP') bg-emerald-50 text-emerald-700 
+                                    @elseif($item->tipo_novedad === 'ARL') bg-purple-50 text-purple-700 
+                                    @else bg-amber-50 text-amber-700 @endif
                                 ">
                                     {{ $item->tipo_novedad }}
                                 </span>

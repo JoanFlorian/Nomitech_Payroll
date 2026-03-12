@@ -48,6 +48,7 @@ class Usuario extends Authenticatable
         'id_afp',
         'codigo_interno',
         'horas_diarias',
+        'fondo_cesantias',
     ];
 
     protected $hidden = [

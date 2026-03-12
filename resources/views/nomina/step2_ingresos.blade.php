@@ -221,6 +221,36 @@
                                     @endif
                                 </div>
 
+                                {{-- Informational: Integrated benefit payments --}}
+                                @if(isset($benefitPayments) && $benefitPayments->isNotEmpty())
+                                    <div class="md:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                                        <label class="block text-sm font-semibold text-emerald-800 mb-3">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Prestaciones integradas a esta nómina
+                                        </label>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            @foreach($benefitPayments as $bp)
+                                                <div class="rounded-lg bg-white border border-emerald-200 p-3">
+                                                    <div class="text-xs text-gray-500 mb-1">
+                                                        {{ \App\Models\BenefitLedger::benefitTypeLabel($bp->benefit_type) }}
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value="${{ number_format(abs($bp->amount), 0, ',', '.') }}"
+                                                        readonly
+                                                        class="w-full border-2 border-emerald-300 px-3 py-2 rounded-lg text-xs bg-emerald-50 text-emerald-800 font-semibold cursor-not-allowed"
+                                                    >
+                                                </div>
+                                            @endforeach
+                                        </div>
+
+                                        <p class="text-[11px] text-emerald-700 mt-2">
+                                            Estos valores fueron integrados desde el módulo de Provisiones y se incluirán en el pago de nómina del empleado.
+                                        </p>
+                                    </div>
+                                @endif
+
                             </div>
 
                             <p id="otrosIngresosError" class="hidden mt-4 text-sm text-red-600 font-medium"></p>

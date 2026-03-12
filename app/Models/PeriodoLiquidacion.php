@@ -125,6 +125,10 @@ class PeriodoLiquidacion extends Model
      */
     public function canBeClosed(): bool
     {
+        // TEMPORAL: Habilitado para pruebas de provisiones
+        return true;
+
+        /*
         if ($this->estado === self::ESTADO_CERRADO) {
             return false;
         }
@@ -134,5 +138,6 @@ class PeriodoLiquidacion extends Model
         $limiteCierre = $fechaFin->copy()->addDays(10);
 
         return $now->greaterThanOrEqualTo($fechaFin) && $now->lessThanOrEqualTo($limiteCierre);
+        */
     }
 }

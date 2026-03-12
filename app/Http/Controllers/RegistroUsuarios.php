@@ -166,6 +166,7 @@ class RegistroUsuarios extends Controller
                     'direccion' => $allData['direccion'] ?? null,
                     'telefono' => $allData['telefono'] ?? '0000000000',
                     'correo' => $allData['correo'] ?? ((string) $allData['doc']) . '@nomitech.local',
+                    'fondo_cesantias' => $allData['fondo_cesantias'] ?? null,
                     'id_rol' => 3,
                     'activo' => true,
                 ];
@@ -350,6 +351,8 @@ class RegistroUsuarios extends Controller
                 $usuarioData['id_ciudad'] = $data['id_ciudad'];
             if (isset($data['direccion']))
                 $usuarioData['direccion'] = $data['direccion'];
+            if (array_key_exists('fondo_cesantias', $data))
+                $usuarioData['fondo_cesantias'] = $data['fondo_cesantias'];
 
             if (!empty($usuarioData)) {
                 $usuario->update($usuarioData);

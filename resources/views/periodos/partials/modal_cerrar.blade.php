@@ -93,14 +93,18 @@
         const sugRango = document.getElementById('sug_rango');
         const sugFreq = document.getElementById('sug_freq');
 
-        form.action = `/periodos/${id}/cerrar`;
+        // Construir URL robusta usando route() de Laravel
+        const urlCierre = "{{ route('periodos.cerrar', ['id' => ':id']) }}".replace(':id', id);
+        form.action = urlCierre;
+
         rangeText.textContent = `${inicio} - ${fin}`;
 
         // Reset preview
         previewSiguiente.classList.add('hidden');
 
-        // Fetch suggestion
-        fetch(`/periodos/${id}/suggest`)
+        // Fetch suggestion usando route()
+        const urlSuggest = "{{ route('periodos.suggest', ['id' => ':id']) }}".replace(':id', id);
+        fetch(urlSuggest)
             .then(res => res.json())
             .then(data => {
                 if (data.success) {

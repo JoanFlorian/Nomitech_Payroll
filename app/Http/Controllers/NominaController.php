@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Salario;
+use App\Models\BenefitLedger;
 use App\Models\PeriodoLiquidacion;
 use App\Services\NominaCalculatorService;
 use App\Services\NominaEmployeeService;
@@ -727,6 +728,17 @@ class NominaController extends Controller
             ->limit(10)
             ->get();
 
+        // Scheduled benefit payments for this employee/period (informational)
+        $benefitPayments = collect();
+        $employeeDoc = $s1['doc'] ?? null;
+        if ($employeeDoc && $periodoActivo) {
+            $benefitPayments = BenefitLedger::where('employee_id', $employeeDoc)
+                ->where('payroll_period_id', $periodoActivo->id_periodo)
+                ->where('movement_type', BenefitLedger::MOVEMENT_SCHEDULED)
+                ->where('status', BenefitLedger::STATUS_PENDING_PAYROLL)
+                ->get();
+        }
+
         return view('nomina.step2_ingresos', compact(
             'salarioBase',
             's2',
@@ -735,7 +747,8 @@ class NominaController extends Controller
             'periodoActivo',
             'auxilioTransporteDb',
             'aplicaPorTope',
-            'step2AutoRecalculated'
+            'step2AutoRecalculated',
+            'benefitPayments'
         ));
     }
 
@@ -891,32 +904,32 @@ class NominaController extends Controller
             'embargo_fiscal' => $embargoFiscal,
             'pension_voluntaria' => $pensionVoluntaria,
         ]);
-
-        $payload = [
-            'id_contrato' => $s1['id_contrato'],
-            'id_periodo' => $periodoId,
-            'fecha_pago' => $calculo['fecha_pago'],
-            'horas_extra' => $calculo['horas_extra'],
-            'valor_horas_extras_recargos' => $calculo['valor_horas_extras_recargos'],
-            'auxilio_transporte' => $calculo['auxilio_transporte'],
-            'bonificaciones' => $calculo['bonificaciones'],
-            'comisiones' => $calculo['comisiones'],
-            'otros_devengos' => $calculo['otros_devengos'],
-            'eps' => $calculo['eps'],
-            'afp' => $calculo['afp'],
-            'arl' => $calculo['arl'],
-            'seguridad_social' => $calculo['seguridad_social'],
-            'aporte_fp' => $calculo['aporte_fp'],
-            'retencion_fuente' => $calculo['retencion_fuente'],
-            'embargo_fiscal' => $calculo['embargo_fiscal'],
-            'pension_voluntaria' => $calculo['pension_voluntaria'],
-            'caja_compensacion' => $calculo['caja_compensacion'],
-            'dias_a_trabajar' => $calculo['dias_a_trabajar'],
-            'total_devengado' => $calculo['total_devengado'],
-            'total_deducciones' => $calculo['total_deducciones'],
-            'neto_pagar' => $calculo['neto_pagar'],
-            'updated_at' => now(),
-        ];
+ 
+         $payload = [
+             'id_contrato' => $s1['id_contrato'],
+             'id_periodo' => $periodoId,
+             'fecha_pago' => $calculo['fecha_pago'],
+             'horas_extra' => $calculo['horas_extra'],
+             'valor_horas_extras_recargos' => $calculo['valor_horas_extras_recargos'],
+             'auxilio_transporte' => $calculo['auxilio_transporte'],
+             'bonificaciones' => $calculo['bonificaciones'],
+             'comisiones' => $calculo['comisiones'],
+             'otros_devengos' => $calculo['otros_devengos'],
+             'eps' => $calculo['eps'],
+             'afp' => $calculo['afp'],
+             'arl' => $calculo['arl'],
+             'seguridad_social' => $calculo['seguridad_social'],
+             'aporte_fp' => $calculo['aporte_fp'],
+             'retencion_fuente' => $calculo['retencion_fuente'],
+             'embargo_fiscal' => $calculo['embargo_fiscal'],
+             'pension_voluntaria' => $calculo['pension_voluntaria'],
+             'caja_compensacion' => $calculo['caja_compensacion'],
+             'dias_a_trabajar' => $calculo['dias_a_trabajar'],
+             'total_devengado' => $calculo['total_devengado'],
+             'total_deducciones' => $calculo['total_deducciones'],
+             'neto_pagar' => $calculo['neto_pagar'],
+             'updated_at' => now(),
+         ];
 
         $empresaId = (int) session('empresa_id');
 

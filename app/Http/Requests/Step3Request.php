@@ -28,6 +28,7 @@ class Step3Request extends FormRequest
             'numero_cuenta' => ($isCashFormaPago ? 'nullable' : 'required') . '|string|max:20|regex:/^[0-9]{6,20}$/',
             'id_eps' => 'required|integer|exists:eps,id_eps',
             'id_afp' => 'required|integer|exists:afp,id_afp',
+            'fondo_cesantias' => 'nullable|string|max:100',
 
             // Saldos iniciales de prestaciones (opcionales)
             'prima_inicial' => 'nullable|numeric|min:0',
@@ -82,6 +83,9 @@ class Step3Request extends FormRequest
             'id_afp.required' => 'Debe seleccionar la AFP.',
             'id_afp.integer' => 'La AFP no es válida.',
             'id_afp.exists' => 'La AFP seleccionada no existe.',
+
+            'fondo_cesantias.string' => 'El fondo de cesantías debe ser texto.',
+            'fondo_cesantias.max' => 'El fondo de cesantías no puede superar 100 caracteres.',
         ];
     }
 

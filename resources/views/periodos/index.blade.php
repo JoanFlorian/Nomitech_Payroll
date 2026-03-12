@@ -9,6 +9,21 @@
 
 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 md:p-8">
 
+    {{-- ALERTAS --}}
+    @if(session('success'))
+        <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl flex items-center gap-3">
+            <span class="material-icons text-green-500">check_circle</span>
+            <span class="text-sm font-medium">{{ session('success') }}</span>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl flex items-center gap-3">
+            <span class="material-icons text-red-500">error</span>
+            <span class="text-sm font-medium">{{ session('error') }}</span>
+        </div>
+    @endif
+
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
             <h2 class="text-xl font-bold text-gray-900 tracking-tight">Periodos de Nómina</h2>
@@ -398,33 +413,7 @@
         updateEndDate();
     });
 
-    function abrirModalCierre(id, inicio, fin) {
-        const modal = document.getElementById('modalCerrarPeriodo');
-        const form = document.getElementById('formCerrarPeriodo');
-        const rangeText = document.getElementById('cierre_rango');
-        const previewSiguiente = document.getElementById('preview_siguiente');
-        const sugRango = document.getElementById('sug_rango');
-        const sugFreq = document.getElementById('sug_freq');
-
-        form.action = `/periodos/${id}/cerrar`;
-        rangeText.textContent = `${inicio} - ${fin}`;
-
-        // Reset preview
-        previewSiguiente.classList.add('hidden');
-
-        // Fetch suggestion
-        fetch(`/periodos/${id}/suggest`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    sugRango.textContent = `${data.inicio_formato} - ${data.fin_formato}`;
-                    sugFreq.textContent = data.tipo_frecuencia;
-                    previewSiguiente.classList.remove('hidden');
-                }
-            });
-
-        modal.classList.remove('hidden');
-    }
+    });
 </script>
 
 @endsection

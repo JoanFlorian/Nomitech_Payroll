@@ -1,0 +1,50 @@
+[
+    {
+        "batch_id": 11,
+        "fund": "Protecci\u00f3n",
+        "count": 1,
+        "total_amount": 50000,
+        "employees": [
+            {
+                "tipo_doc": "CC",
+                "document_number": "1070599333",
+                "primer_apellido": "adas",
+                "segundo_apellido": "",
+                "primer_nombre": "dsadad",
+                "otros_nombres": "",
+                "fecha_ingreso": "2026-03-12",
+                "fecha_retiro": "",
+                "tipo_trabajador": "Dependiente",
+                "salario_base": "4000000.00",
+                "dias_trabajados": 289,
+                "periodo_liquidacion": "01-01-2026 a 31-12-2026",
+                "amount": 50000,
+                "fund": "Protecci\u00f3n"
+            }
+        ]
+    },
+    {
+        "batch_id": 12,
+        "fund": "Porvenir",
+        "count": 1,
+        "total_amount": 250000,
+        "employees": [
+            {
+                "tipo_doc": "CC",
+                "document_number": "1333599004",
+                "primer_apellido": "Garcia",
+                "segundo_apellido": "",
+                "primer_nombre": "Andrea",
+                "otros_nombres": "",
+                "fecha_ingreso": "2026-03-17",
+                "fecha_retiro": "",
+                "tipo_trabajador": "Dependiente",
+                "salario_base": "3000000.00",
+                "dias_trabajados": 284,
+                "periodo_liquidacion": "01-01-2026 a 31-12-2026",
+                "amount": 250000,
+                "fund": "Porvenir"
+            }
+        ]
+    }
+]

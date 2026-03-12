@@ -129,6 +129,13 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/provisiones/{doc}/historial', [\App\Http\Controllers\ProvisionesController::class, 'historial'])->name('provisiones.historial');
     Route::post('/provisiones/liquidar-individual', [\App\Http\Controllers\ProvisionesController::class, 'liquidarIndividual'])->name('provisiones.liquidar.individual');
     Route::post('/provisiones/liquidar-masivo', [\App\Http\Controllers\ProvisionesController::class, 'liquidarMasivo'])->name('provisiones.liquidar.masivo');
+    Route::post('/provisiones/pagar-prestacion', [\App\Http\Controllers\ProvisionesController::class, 'pagarPrestacion'])->name('provisiones.pagar-prestacion');
+    Route::post('/provisiones/cesantias/retiro-parcial', [\App\Http\Controllers\ProvisionesController::class, 'retiroParcialCesantias'])->name('provisiones.cesantias.retiro-parcial');
+    Route::post('/provisiones/cesantias/retiro-empresa', [\App\Http\Controllers\ProvisionesController::class, 'retiroEmpresa'])->name('provisiones.cesantias.retiro-empresa');
+    Route::post('/provisiones/cesantias/autorizacion-fondo', [\App\Http\Controllers\ProvisionesController::class, 'autorizacionFondo'])->name('provisiones.cesantias.autorizacion-fondo');
+    Route::post('/provisiones/cesantias/consignacion-anual', [\App\Http\Controllers\ProvisionesController::class, 'generarConsignacionAnual'])->name('provisiones.cesantias.consignacion-anual');
+    Route::get('/provisiones/cesantias/certificado/{withdrawal_id}', [\App\Http\Controllers\ProvisionesController::class, 'descargarCertificado'])->name('provisiones.cesantias.certificado');
+    Route::get('/provisiones/comprobante/{movement_id}', [\App\Http\Controllers\ProvisionesController::class, 'descargarComprobantePrestacion'])->name('provisiones.comprobante');
 
     // Nómina Electrónica
     Route::get('/nomina-electronica', [\App\Http\Controllers\NominaElectronicaController::class, 'index'])->name('nomina-electronica.index');

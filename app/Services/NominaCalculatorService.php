@@ -11,10 +11,15 @@ use Illuminate\Support\Facades\DB;
 class NominaCalculatorService
 {
     private $params;
+    private SecuritySocialCalculator $securitySocialCalculator;
 
-    public function __construct(NominaParameterService $paramService)
+    public function __construct(
+        NominaParameterService $paramService,
+        SecuritySocialCalculator $securitySocialCalculator
+    )
     {
         $this->params = $paramService->get();
+        $this->securitySocialCalculator = $securitySocialCalculator;
     }
 
     public function calcularValorHora(float $salarioBase): float
@@ -26,7 +31,8 @@ class NominaCalculatorService
     {
         $eps = $salarioBase * $this->params->eps_employee;
         $afp = $salarioBase * $this->params->pension_employee;
-        $arl = $salarioBase * $this->params->arl_riesgo_1;
+        $aportesEmpresa = $this->securitySocialCalculator->calculate($salarioBase, $this->params);
+        $arl = (float) ($aportesEmpresa['aporte_arl'] ?? 0);
 
         $seguridadSocial = $eps + $afp;
 
@@ -40,6 +46,9 @@ class NominaCalculatorService
             'eps' => $eps,
             'afp' => $afp,
             'arl' => $arl,
+            'caja_compensacion' => (float) ($aportesEmpresa['aporte_caja'] ?? 0),
+            'aporte_salud_empresa' => (float) ($aportesEmpresa['aporte_salud'] ?? 0),
+            'aporte_pension_empresa' => (float) ($aportesEmpresa['aporte_pension'] ?? 0),
             'seguridad_social' => $seguridadSocial,
             'aporte_fp' => $aporteFp,
         ];
@@ -99,12 +108,15 @@ class NominaCalculatorService
 
         $epsRate = (float) ($this->params->eps_employee ?? 0.04);
         $afpRate = (float) ($this->params->pension_employee ?? 0.04);
-        $arlRate = (float) ($this->params->arl_riesgo_1 ?? 0);
-
         $eps = $totalDevengado * $epsRate;
         $afp = $totalDevengado * $afpRate;
         $seguridadSocial = $eps + $afp;
-        $arl = $totalDevengado * $arlRate;
+        $aportesEmpresa = $this->securitySocialCalculator->calculate(
+            $totalDevengado,
+            $this->params,
+            (int) ($contrato->nivel_riesgo ?? 1)
+        );
+        $arl = (float) ($aportesEmpresa['aporte_arl'] ?? 0);
 
         $totalDeducciones =
             $seguridadSocial
@@ -129,12 +141,14 @@ class NominaCalculatorService
             'eps' => $eps,
             'afp' => $afp,
             'arl' => $arl,
+            'aporte_salud_empresa' => (float) ($aportesEmpresa['aporte_salud'] ?? 0),
+            'aporte_pension_empresa' => (float) ($aportesEmpresa['aporte_pension'] ?? 0),
             'seguridad_social' => $seguridadSocial,
             'aporte_fp' => 0,
             'retencion_fuente' => $retencionFuente,
             'embargo_fiscal' => $embargoFiscal,
             'pension_voluntaria' => $pensionVoluntaria,
-            'caja_compensacion' => 0,
+            'caja_compensacion' => (float) ($aportesEmpresa['aporte_caja'] ?? 0),
             'total_devengado' => $totalDevengado,
             'total_deducciones' => $totalDeducciones,
             'neto_pagar' => $netoPagar,

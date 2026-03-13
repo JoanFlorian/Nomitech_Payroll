@@ -12,6 +12,7 @@ return new class extends Migration
             $table->engine = 'InnoDB';
             $table->unsignedBigInteger('id_eps')->primary();   // 👈 ID correcto (NIT)
             $table->string('nombre', 60)->unique();
+            $table->string('codigo_pila', 10)->unique();
             $table->string('telefono', 20)->nullable();
             $table->string('direccion', 120)->nullable();
             $table->timestamps();
@@ -21,6 +22,7 @@ return new class extends Migration
             $table->engine = 'InnoDB';
             $table->unsignedBigInteger('id_afp')->primary();   // 👈 ID correcto (NIT)
             $table->string('nombre', 60)->unique();
+            $table->string('codigo_pila', 10)->unique();
             $table->string('telefono', 20)->nullable();
             $table->string('direccion', 120)->nullable();
             $table->timestamps();
@@ -30,16 +32,31 @@ return new class extends Migration
             $table->engine = 'InnoDB';
             $table->unsignedBigInteger('id_arl')->primary();   // 👈 ID correcto (NIT)
             $table->string('nombre', 60)->unique();
+            $table->string('codigo_pila', 10)->unique();
             $table->string('telefono', 20)->nullable();
             $table->string('direccion', 120)->nullable();
             $table->timestamps();
         });
-    }
+
+        Schema::create('cajas_compensacion', function (Blueprint $table) {
+            $table->engine = 'InnoDB';
+            $table->engine = 'InnoDB';
+            $table->unsignedBigInteger('id_caja')->primary();
+            $table->string('codigo_pila', 10)->unique(); 
+             $table->string('nombre', 80);
+            $table->string('telefono', 20)->nullable();
+            $table->string('direccion', 120)->nullable();
+
+        $table->timestamps();
+    });
+}
+    
 
     public function down(): void
     {
         Schema::dropIfExists('arl');
         Schema::dropIfExists('afp');
         Schema::dropIfExists('eps');
+        Schema::dropIfExists('cajas_compensacion');
     }
 };

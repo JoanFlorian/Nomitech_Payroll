@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\CatalogosEmpresaController;
 
 use App\Http\Controllers\NovedadController;
 use App\Http\Controllers\NovedadCalculoController;
+use App\Http\Controllers\PilaController;
 
 use App\Http\Controllers\ReportesController;
 
@@ -150,6 +151,11 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
         ->name('periodos.exportar');
     Route::get('/periodos/exportacion/{id}/descargar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'downloadExport'])
         ->name('periodos.exportar.descargar');
+
+    // Plantilla PILA
+    Route::get('/pila', [PilaController::class, 'index'])->name('pila.index');
+    Route::post('/pila/generar', [PilaController::class, 'generar'])->name('pila.generar');
+    Route::get('/pila/descargar', [PilaController::class, 'descargarPila'])->name('pila.descargar');
 });
 
 Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin_empresa', 'prevent_back_history'])

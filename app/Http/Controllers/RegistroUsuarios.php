@@ -204,6 +204,7 @@ class RegistroUsuarios extends Controller
                     'id_arl' => $allData['id_arl'],
                     'id_eps' => $allData['id_eps'],
                     'id_afp' => $allData['id_afp'],
+                    'id_caja' => $allData['id_caja'] ?? null,
                     'alto_riesgo' => (int) ($allData['alto_riesgo'] ?? 0),
                     'nivel_riesgo' => $allData['nivel_riesgo'] ?? null,
                     'fecha_inicio' => $allData['fecha_inicio'],

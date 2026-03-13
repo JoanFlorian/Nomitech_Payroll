@@ -49,6 +49,7 @@ class Usuario extends Authenticatable
         'codigo_interno',
         'horas_diarias',
         'fondo_cesantias',
+        'must_change_password',
     ];
 
     protected $hidden = [
@@ -59,10 +60,11 @@ class Usuario extends Authenticatable
     protected function casts(): array
     {
         return [
-            'activo' => 'boolean',
-            'alto_riesgo' => 'boolean',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
+            'activo'               => 'boolean',
+            'alto_riesgo'          => 'boolean',
+            'must_change_password' => 'boolean',
+            'created_at'           => 'datetime',
+            'updated_at'           => 'datetime',
         ];
     }
 

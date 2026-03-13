@@ -19,6 +19,8 @@ use App\Http\Controllers\NovedadController;
 use App\Http\Controllers\NovedadCalculoController;
 
 use App\Http\Controllers\ReportesController;
+use App\Http\Controllers\TrabajadorController;
+use App\Http\Controllers\Auth\CambiarPasswordController;
 
 use Illuminate\Http\Request;
 
@@ -217,6 +219,28 @@ Route::middleware(['auth', 'is_superadmin', 'prevent_back_history'])->prefix('su
     Route::get('/configuracion', function () {
         return view('superadmin.configuracion');
     })->name('configuracion');
+});
+
+// Cambiar contraseña obligatorio en primer ingreso
+Route::middleware(['auth'])->group(function () {
+    Route::get('/cambiar-password', [CambiarPasswordController::class, 'show'])->name('cambiar-password');
+    Route::post('/cambiar-password', [CambiarPasswordController::class, 'update'])->name('cambiar-password.update');
+});
+
+// Portal del Trabajador (solo autenticación requerida)
+Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history', 'must_change_password'])->prefix('trabajador')->name('trabajador.')->group(function () {
+    Route::get('/dashboard', [TrabajadorController::class, 'index'])->name('dashboard');
+    Route::get('/desprendibles', [TrabajadorController::class, 'desprendibles'])->name('desprendibles');
+    Route::get('/desprendible/{id}', [TrabajadorController::class, 'verDesprendible'])->name('desprendible.ver');
+    Route::get('/desprendible/{id}/pdf', [TrabajadorController::class, 'descargarDesprendible'])->name('desprendible.pdf');
+    Route::get('/notas-ajuste', [TrabajadorController::class, 'notasAjuste'])->name('notas');
+    Route::get('/perfil', [TrabajadorController::class, 'perfil'])->name('perfil');
+    Route::post('/perfil', [TrabajadorController::class, 'actualizarPerfil'])->name('perfil.actualizar');
+});
+
+// Redirección raíz del portal del trabajador
+Route::middleware(['auth'])->get('/trabajador', function () {
+    return redirect()->route('trabajador.dashboard');
 });
 
 // Logout robusto (GET por compatibilidad con sidebar actual)

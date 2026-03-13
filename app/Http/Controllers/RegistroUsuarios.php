@@ -6,6 +6,7 @@ use App\Http\Requests\Step1Request;
 use App\Http\Requests\Step2Request;
 use App\Http\Requests\Step3Request;
 use App\Http\Requests\UpdateEmployeePartialRequest;
+use App\Mail\CredencialesEmpleadoMail;
 use App\Models\Empleado;
 use App\Models\Usuario;
 use App\Models\Contrato;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -171,6 +173,7 @@ class RegistroUsuarios extends Controller
                     'fondo_cesantias' => $allData['fondo_cesantias'] ?? null,
                     'id_rol' => 3,
                     'activo' => true,
+                    'must_change_password' => true, // obliga al trabajador a cambiar su contraseña en el primer ingreso
                 ];
 
                 Usuario::firstOrCreate([
@@ -264,6 +267,18 @@ class RegistroUsuarios extends Controller
             });
 
             session()->forget(['employee.step1', 'employee.step2']);
+
+            // Enviar correo con credenciales al trabajador (no bloquea el flujo si falla)
+            try {
+                $usuarioCreado = Usuario::find($allData['doc']);
+                if ($usuarioCreado && filter_var($usuarioCreado->correo, FILTER_VALIDATE_EMAIL)) {
+                    Mail::to($usuarioCreado->correo)->send(new CredencialesEmpleadoMail($usuarioCreado));
+                }
+            } catch (\Exception $mailException) {
+                Log::warning('No se pudo enviar correo de credenciales al empleado: ' . $mailException->getMessage(), [
+                    'doc' => $allData['doc'],
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

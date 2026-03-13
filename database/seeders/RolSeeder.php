@@ -16,7 +16,7 @@ class RolSeeder extends Seeder
         $roles = [
             ['nombre' => 'Representante Legal', 'descripcion' => 'Tiene la capacidad de crear usuarios'],
             ['nombre' => 'Administrador', 'descripcion' => 'Acceso a módulos y permisos asignados por el representante legal'],
-            ['nombre' => 'Empleado', 'descripcion' => 'Acceso únicamente al módulo de desprendibles'],
+            ['nombre' => 'Trabajador', 'descripcion' => 'Acceso únicamente al módulo de desprendibles'],
             ['nombre' => 'Super admin', 'descripcion' => 'Acceso únicamente a los modulos administrativos del sistema'],
         ];
 

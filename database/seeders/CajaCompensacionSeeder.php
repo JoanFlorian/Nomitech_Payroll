@@ -12,7 +12,7 @@ class CajaCompensacionSeeder extends Seeder
         $cajas = [
 
             [
-                'id_caja' => 1,
+                'id_caja' => 860066942,
                 'nombre' => 'COMPENSAR',
                 'codigo_pila' => 'CCF001',
                 'telefono' => '018000915202',
@@ -20,7 +20,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 2,
+                'id_caja' => 860007336,
                 'nombre' => 'COLSUBSIDIO',
                 'codigo_pila' => 'CCF002',
                 'telefono' => '018000910500',
@@ -28,7 +28,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 3,
+                'id_caja' => 860013570,
                 'nombre' => 'CAFAM',
                 'codigo_pila' => 'CCF003',
                 'telefono' => '018000112700',
@@ -36,7 +36,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 4,
+                'id_caja' => 860014841,
                 'nombre' => 'COMFAMA',
                 'codigo_pila' => 'CCF005',
                 'telefono' => '018000415455',
@@ -44,7 +44,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 5,
+                'id_caja' => 860015000,
                 'nombre' => 'COMFENALCO VALLE',
                 'codigo_pila' => 'CCF006',
                 'telefono' => '018000938585',
@@ -52,7 +52,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 6,
+                'id_caja' => 860015001,
                 'nombre' => 'COMFANDI',
                 'codigo_pila' => 'CCF007',
                 'telefono' => '018000930733',
@@ -60,7 +60,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 7,
+                'id_caja' => 890102044,
                 'nombre' => 'CAJACOPI',
                 'codigo_pila' => 'CCF008',
                 'telefono' => '018000912727',
@@ -68,7 +68,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 8,
+                'id_caja' => 891800213,
                 'nombre' => 'COMFABOY',
                 'codigo_pila' => 'CCF009',
                 'telefono' => '018000915555',
@@ -76,7 +76,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 9,
+                'id_caja' => 890700148,
                 'nombre' => 'COMFATOLIMA',
                 'codigo_pila' => 'CCF017',
                 'telefono' => '018000938585',
@@ -84,7 +84,7 @@ class CajaCompensacionSeeder extends Seeder
             ],
 
             [
-                'id_caja' => 10,
+                'id_caja' => 890700149,
                 'nombre' => 'COMFENALCO TOLIMA',
                 'codigo_pila' => 'CCF018',
                 'telefono' => '018000938585',

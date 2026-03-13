@@ -57,13 +57,20 @@
             Periodos de Liquidación
         </a>
 
+        <a href="{{ url('/pila') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+           {{ request()->is('pila*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+            <i class="bi bi-file-earmark-text text-lg"></i>
+            Plantilla PILA
+        </a>
+
         @if(in_array((int) (Auth::user()->id_rol ?? 0), [1, 4], true))
             <a href="{{ route('admin.catalogos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
                 {{ request()->routeIs('admin.catalogos.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
                 <i class="bi bi-collection text-lg"></i>
-                Catalogos de Empresa
+                Catálogos de Empresa
             </a>
         @endif
+        
 
     </nav>
 

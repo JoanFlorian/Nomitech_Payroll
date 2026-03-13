@@ -1,0 +1,186 @@
+:root {
+    --pila-blue-700: #0b5ed7;
+    --pila-blue-800: #084298;
+    --pila-blue-900: #052c65;
+    --pila-surface: #f8fbff;
+    --pila-border: #e3ecfa;
+}
+
+.pila-card {
+    border: 1px solid var(--pila-border);
+    border-radius: 1.05rem;
+    box-shadow: 0 10px 24px rgba(13, 110, 253, 0.09);
+    background: #fff;
+}
+
+.pila-filter-card {
+    background: linear-gradient(180deg, #ffffff 0%, var(--pila-surface) 100%);
+}
+
+.kpi-card {
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    border-top: 4px solid transparent;
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px rgba(13, 110, 253, 0.13);
+}
+
+.kpi-salud {
+    border-top-color: #0d6efd;
+}
+
+.kpi-pension {
+    border-top-color: #0dcaf0;
+}
+
+.kpi-arl {
+    border-top-color: #fd7e14;
+}
+
+.kpi-caja {
+    border-top-color: #198754;
+}
+
+.kpi-icon {
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 0.95rem;
+    display: grid;
+    place-items: center;
+    font-size: 1.28rem;
+}
+
+.pila-table thead th {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: #fff;
+    background: linear-gradient(90deg, var(--pila-blue-800) 0%, var(--pila-blue-700) 100%);
+    border-bottom: 0;
+}
+
+.pila-table tbody td {
+    vertical-align: middle;
+    border-color: #edf2fb;
+    font-size: 0.92rem;
+}
+
+.pila-table.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.badge-soft {
+    background: #e7f1ff;
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+.pila-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #4f6ea5;
+}
+
+.btn-pila-main {
+    border-radius: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    box-shadow: 0 10px 22px rgba(13, 110, 253, 0.22);
+}
+
+.btn-pila-generate {
+    border-radius: 0.8rem;
+    font-weight: 700;
+    box-shadow: 0 10px 22px rgba(25, 135, 84, 0.24);
+}
+
+.pila-search .input-group-text,
+.pila-search .form-control {
+    border-color: #d9e4f7;
+    height: 2.8rem;
+}
+
+.pila-search .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.metric-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 70px;
+    gap: 0.6rem;
+    align-items: center;
+    margin-bottom: 0.55rem;
+}
+
+.metric-track {
+    width: 100%;
+    height: 0.62rem;
+    background: #eaf1fd;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.metric-fill {
+    height: 100%;
+    border-radius: 99px;
+}
+
+.plan-progress-wrap {
+    background: #f4f8ff;
+    border: 1px dashed #c7d9fa;
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+.plan-progress-bar {
+    height: 0.8rem;
+    border-radius: 999px;
+    background: #dbe8ff;
+    overflow: hidden;
+}
+
+.plan-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0d6efd 0%, #198754 100%);
+    transition: width 0.3s ease;
+}
+
+.ring-chart {
+    --ring-size: 170px;
+    --ring-hole: 58px;
+    width: var(--ring-size);
+    height: var(--ring-size);
+    border-radius: 50%;
+    margin: 0 auto;
+    position: relative;
+    display: grid;
+    place-items: center;
+}
+
+.ring-chart::before {
+    content: '';
+    width: calc(var(--ring-size) - var(--ring-hole));
+    height: calc(var(--ring-size) - var(--ring-hole));
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px #e8effd;
+}
+
+.ring-center {
+    position: absolute;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.legend-chip {
+    width: 0.78rem;
+    height: 0.78rem;
+    border-radius: 0.2rem;
+    display: inline-block;
+}

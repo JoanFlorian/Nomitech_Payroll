@@ -10,10 +10,51 @@ class AFPSeeder extends Seeder
     public function run(): void
     {
         $afpList = [
-            ['id_afp' => 1, 'nombre' => 'Protección'],
-            ['id_afp' => 2, 'nombre' => 'Colfondos'],
-            ['id_afp' => 3, 'nombre' => 'Porvenir'],
-            ['id_afp' => 4, 'nombre' => 'Old Mutua'],
+
+            [
+                'id_afp' => 1,
+                'nombre' => 'PROTECCION',
+                'empresa_nit' => '800229739',
+                'codigo_pila' => 'AFP001',
+                'telefono' => '018000525800',
+                'direccion' => 'Medellín, Antioquia',
+                'origen' => 'system',
+                'estado' => 1
+            ],
+
+            [
+                'id_afp' => 2,
+                'nombre' => 'COLFONDOS',
+                'empresa_nit' => '800227940',
+                'codigo_pila' => 'AFP002',
+                'telefono' => '018000510000',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
+            ],
+
+            [
+                'id_afp' => 3,
+                'nombre' => 'PORVENIR',
+                'empresa_nit' => '800224808',
+                'codigo_pila' => 'AFP005',
+                'telefono' => '018000510800',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
+            ],
+
+            [
+                'id_afp' => 4,
+                'nombre' => 'SKANDIA',
+                'empresa_nit' => '860058454',
+                'codigo_pila' => 'AFP004',
+                'telefono' => '018000517526',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
+            ],
+
         ];
 
         foreach ($afpList as $afp) {

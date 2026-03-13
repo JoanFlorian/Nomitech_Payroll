@@ -261,7 +261,14 @@ class PeriodoLiquidacionController extends Controller
      * @param int $id
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function close(Request $request, $id, \App\Services\Payroll\NextPeriodoGeneratorService $generator, \App\Services\Benefits\BenefitAccrualService $accrualService, \App\Services\Benefits\BenefitPaymentService $paymentService)
+    public function close(
+        Request $request, 
+        $id, 
+        \App\Services\Payroll\NextPeriodoGeneratorService $generator, 
+        \App\Services\Benefits\BenefitAccrualService $accrualService, 
+        \App\Services\Benefits\BenefitPaymentService $paymentService,
+        \App\Services\Payroll\TransitoriaSalarioDetectionService $vstDetectionService
+    )
     {
         \Illuminate\Support\Facades\Log::info("Iniciando proceso de cierre para Periodo ID: {$id}");
 
@@ -308,7 +315,7 @@ class PeriodoLiquidacionController extends Controller
 
             \Illuminate\Support\Facades\Log::info("Validaciones superadas o puenteadas. Iniciando transacción de cierre...");
 
-            DB::transaction(function () use ($periodo, $request, $generator, $accrualService, $paymentService) {
+            DB::transaction(function () use ($periodo, $request, $generator, $accrualService, $paymentService, $vstDetectionService) {
                 // Actualizar todos los salarios del periodo a estado 'pagado'
                 $periodo->salarios()->update([
                     'estado' => \App\Models\Salario::ESTADO_PAGADO,
@@ -321,6 +328,10 @@ class PeriodoLiquidacionController extends Controller
                 \App\Models\Novedad::where('id_periodo', $periodo->id_periodo)
                     ->where('estado', \App\Models\Novedad::ESTADO_ACTIVA)
                     ->update(['estado' => \App\Models\Novedad::ESTADO_CERRADA, 'updated_at' => now()]);
+
+                // 🔹 NUEVO: Detectar y registrar automáticamente Variación Transitoria de Salario (VST)
+                // para empleados que tuvieron horas extras, bonificaciones, comisiones u otros conceptos variables
+                $vstDetectionService->detectarYRegistrarVST($periodo);
 
                 // Generate benefit accruals (provisions) for this period
                 $accrualService->generateAccrualsForPeriod($periodo);

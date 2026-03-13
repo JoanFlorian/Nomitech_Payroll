@@ -436,6 +436,9 @@
 					? 'Esta novedad permite valor manual (VSP/VST).'
 					: 'Esta novedad se calcula automáticamente según el salario base y la cantidad.';
 			}
+
+			// Calcular automáticamente la fecha fin cuando cambia el tipo
+			calcularFechaFinAutomatica();
 		};
 
 		const getNumeric = (input) => {
@@ -513,6 +516,57 @@
 			}
 
 			updateNatureBadge(tipo);
+		};
+
+		// Función para calcular automáticamente la fecha fin basada en tipo de novedad y días
+		const calcularFechaFinAutomatica = () => {
+			if (!startDate || !endDate) return;
+
+			const fechaInicio = startDate.value;
+			if (!fechaInicio) {
+				// Si no hay fecha inicio, limpiar fecha fin
+				endDate.value = '';
+				return;
+			}
+
+			const tipo = normalizeType(noveltyType.value);
+			const cfg = NOVELTY_CONFIG[tipo] || null;
+			
+			if (!cfg) return;
+
+			let diasParaCalcular = 0;
+
+			// Determinar días según el tipo de novedad
+			if (cfg.diasFijos !== null) {
+				// Tipos con días fijos: LMAT (126), LPAT (14)
+				diasParaCalcular = cfg.diasFijos;
+			} else if (cfg.editableDias) {
+				// Tipos con días editables: VAC, IGE, IRL, INC, LIC, SLN
+				const dias = getNumeric(quantityDays);
+				if (dias > 0) {
+					diasParaCalcular = dias;
+				} else {
+					// Si no hay días especificados, no calcular
+					return;
+				}
+			} else {
+				// Tipos sin cantidad de días (TDE, TAE, VSP, VST, VCT)
+				// Para estos tipos, fecha_fin = fecha_inicio
+				endDate.value = fechaInicio;
+				return;
+			}
+
+			// Calcular fecha fin: fecha_inicio + (dias - 1)
+			// Se resta 1 porque el primer día es la fecha_inicio (inclusivo)
+			const inicio = new Date(fechaInicio);
+			const fin = new Date(inicio);
+			fin.setDate(inicio.getDate() + diasParaCalcular - 1);
+
+			// Formatear fecha en formato YYYY-MM-DD
+			const year = fin.getFullYear();
+			const month = String(fin.getMonth() + 1).padStart(2, '0');
+			const day = String(fin.getDate()).padStart(2, '0');
+			endDate.value = `${year}-${month}-${day}`;
 		};
 
 		// Autocomplete empleados (solo API, filtrado por empresa en sesión)
@@ -632,6 +686,23 @@
 				recalcEstimated();
 			});
 		});
+
+		// Calcular automáticamente fecha_fin cuando cambian los parámetros relevantes
+		if (noveltyType) {
+			noveltyType.addEventListener('change', () => {
+				calcularFechaFinAutomatica();
+			});
+		}
+		if (startDate) {
+			startDate.addEventListener('change', () => {
+				calcularFechaFinAutomatica();
+			});
+		}
+		if (quantityDays) {
+			quantityDays.addEventListener('input', () => {
+				calcularFechaFinAutomatica();
+			});
+		}
 
 		// Validación de fechas: fecha fin no puede ser anterior a fecha inicio
 		const startDateError = document.getElementById('start-date-error');

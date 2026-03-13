@@ -261,6 +261,7 @@ class NominaController extends Controller
                 $salario->setAttribute('total_novedades', $totalDevNovedades - $totalDedNovedades);
                 $salario->setAttribute('total_novedades_devengado', $totalDevNovedades);
                 $salario->setAttribute('total_novedades_deduccion', $totalDedNovedades);
+                $salario->setAttribute('resumen_novedades', $resumenNovedades);
 
                 return $salario;
             })

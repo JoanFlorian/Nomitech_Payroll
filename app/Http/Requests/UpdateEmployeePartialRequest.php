@@ -141,6 +141,28 @@ class UpdateEmployeePartialRequest extends FormRequest
             $rules['fondo_cesantias'] = 'bail|nullable|string|max:100';
         }
 
+        // Migration Fields (Optional)
+        if ($this->has('prima_inicial')) {
+            $rules['prima_inicial'] = 'bail|nullable|numeric|min:0|max:999999999';
+        }
+        if ($this->has('cesantias_inicial')) {
+            $rules['cesantias_inicial'] = 'bail|nullable|numeric|min:0|max:9999999999';
+        }
+        if ($this->has('intereses_inicial')) {
+            $rules['intereses_inicial'] = 'bail|nullable|numeric|min:0';
+        }
+        if ($this->has('vacaciones_inicial')) {
+            $rules['vacaciones_inicial'] = 'bail|nullable|numeric|min:0|max:180';
+        }
+
+        if ($this->has('email')) {
+            $rules['email'] = 'bail|required|email|max:255|unique:usuario,correo,' . $doc . ',doc';
+        }
+
+        if ($this->has('telefono')) {
+            $rules['telefono'] = 'bail|required|digits:10|regex:/^[0-9]+$/';
+        }
+
         // Estado contrato
         if ($this->has('activo')) {
             $rules['activo'] = 'nullable|boolean';
@@ -178,6 +200,15 @@ class UpdateEmployeePartialRequest extends FormRequest
             'otros_nombres.min' => 'Los otros nombres deben tener mínimo 3 caracteres.',
             'otros_nombres.max' => 'Los otros nombres no pueden superar 50 caracteres.',
             'otros_nombres.regex' => 'Los otros nombres solo pueden contener letras y espacios.',
+
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email' => 'Debe ingresar un correo electrónico válido.',
+            'email.max' => 'El correo no puede superar 255 caracteres.',
+            'email.unique' => 'El correo electrónico ya está registrado en el sistema.',
+
+            'telefono.required' => 'El teléfono es obligatorio.',
+            'telefono.digits' => 'El teléfono debe tener exactamente 10 dígitos.',
+            'telefono.regex' => 'El teléfono solo puede contener números.',
 
             'id_ciudad.required' => 'La ciudad es obligatoria.',
             'id_ciudad.integer' => 'Debe seleccionar una ciudad válida.',
@@ -265,10 +296,15 @@ class UpdateEmployeePartialRequest extends FormRequest
 
             $contratoActual = null;
             if ($doc !== '') {
-                $contratoActual = Contrato::query()->where('doc', $doc)->first();
+                $contratoActual = \App\Models\Contrato::query()->where('doc', $doc)->where('activo', 1)->first();
             }
 
-            $idTipoContratoFecha = (int) ($this->input('id_tipo_contrato') ?? ($contratoActual?->id_tipo_contrato ?? 0));
+            $idTipoContratoFecha = 0;
+            if ($contratoActual instanceof \App\Models\Contrato) {
+                $idTipoContratoFecha = (int) ($this->input('id_tipo_contrato') ?? $contratoActual->id_tipo_contrato);
+            } else {
+                $idTipoContratoFecha = (int) $this->input('id_tipo_contrato', 0);
+            }
             $fechaFin = $this->input('fecha_fin');
 
             if ($idTipoContratoFecha > 0 && $this->isIndefiniteContract($idTipoContratoFecha) && !empty($fechaFin)) {
@@ -290,14 +326,28 @@ class UpdateEmployeePartialRequest extends FormRequest
                 return;
             }
 
-            $salario = $this->has('salario')
-                ? (float) $this->input('salario')
-                : ($this->has('salario_base')
-                    ? (float) $this->input('salario_base')
-                    : (float) ($contratoActual?->salario_base ?? 0));
+            $salario = (float) 0;
+            if ($this->has('salario')) {
+                $salario = (float) $this->input('salario');
+            } elseif ($this->has('salario_base')) {
+                $salario = (float) $this->input('salario_base');
+            } elseif ($contratoActual instanceof \App\Models\Contrato) {
+                $salario = (float) $contratoActual->salario_base;
+            }
 
-            $idTipoContrato = (int) ($this->input('id_tipo_contrato') ?? ($contratoActual?->id_tipo_contrato ?? 0));
-            $idTipoTrabajador = (int) ($this->input('id_tipo_trabajador') ?? ($contratoActual?->id_tipo_trabajador ?? 0));
+            $idTipoContrato = 0;
+            if ($this->has('id_tipo_contrato')) {
+                $idTipoContrato = (int) $this->input('id_tipo_contrato');
+            } elseif ($contratoActual instanceof \App\Models\Contrato) {
+                $idTipoContrato = (int) $contratoActual->id_tipo_contrato;
+            }
+
+            $idTipoTrabajador = 0;
+            if ($this->has('id_tipo_trabajador')) {
+                $idTipoTrabajador = (int) $this->input('id_tipo_trabajador');
+            } elseif ($contratoActual instanceof \App\Models\Contrato) {
+                $idTipoTrabajador = (int) $contratoActual->id_tipo_trabajador;
+            }
 
             if ($idTipoContrato <= 0) {
                 return;
@@ -350,6 +400,30 @@ class UpdateEmployeePartialRequest extends FormRequest
                     'salario',
                     'Para contrato de aprendizaje debe indicar la etapa del aprendiz (lectiva o productiva).'
                 );
+            }
+            $idFormaPago = (int) ($this->input('id_forma_pago') ?? ($contratoActual?->id_forma_pago ?? 0));
+            $isCash = false;
+            
+            if ($idFormaPago > 0) {
+                $nombreForma = \App\Models\FormaPago::query()->where('id_forma_pago', $idFormaPago)->value('nombre');
+                if ($nombreForma) {
+                    $normalized = Str::of($nombreForma)->ascii()->lower()->toString();
+                    $isCash = Str::contains($normalized, ['efectivo', 'contado']);
+                }
+            }
+
+            if (!$isCash) {
+                if ($this->has('tipo_cuenta') && empty($this->input('tipo_cuenta'))) {
+                    $validator->errors()->add('tipo_cuenta', 'Debe seleccionar el tipo de cuenta.');
+                }
+                if ($this->has('numero_cuenta')) {
+                    $numero = $this->input('numero_cuenta');
+                    if (empty($numero)) {
+                        $validator->errors()->add('numero_cuenta', 'Debe ingresar el número de cuenta.');
+                    } elseif (!preg_match('/^[0-9]{6,20}$/', (string)$numero)) {
+                        $validator->errors()->add('numero_cuenta', 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.');
+                    }
+                }
             }
         });
     }
@@ -467,6 +541,17 @@ class UpdateEmployeePartialRequest extends FormRequest
             $salarioNormalizado = $this->normalizeLocalizedNumber($this->input('salario'));
             if ($salarioNormalizado !== null) {
                 $this->merge(['salario' => $salarioNormalizado]);
+            }
+        }
+
+        // Normalize Migration Fields
+        $migrationFields = ['prima_inicial', 'cesantias_inicial', 'intereses_inicial', 'vacaciones_inicial'];
+        foreach ($migrationFields as $field) {
+            if ($this->has($field)) {
+                $val = $this->normalizeLocalizedNumber($this->input($field));
+                if ($val !== null) {
+                    $this->merge([$field => $val]);
+                }
             }
         }
     }

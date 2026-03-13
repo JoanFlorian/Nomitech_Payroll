@@ -93,6 +93,10 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::post('/employees/final', [RegistroUsuarios::class, 'storeFinal'])->name('employees.final');
     Route::post('/employees/clear-session', [RegistroUsuarios::class, 'clearWizardSession'])->name('employees.clear-session');
 
+    // Rutas de Renovación y Datos de Contrato
+    Route::get('/api/employees/{doc}/contract-data', [App\Http\Controllers\EmployeesController::class, 'getContractData']);
+    Route::post('/employees/{doc}/renew', [RegistroUsuarios::class, 'renewContract'])->name('employees.renew');
+
     // Nómina Routes
     Route::get('/nomina', [NominaController::class, 'index'])->name('nomina.index');
     Route::get('/nomina/step-1', [NominaController::class, 'step1'])->name('nomina.step1');
@@ -139,6 +143,8 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
 
     // Nómina Electrónica
     Route::get('/nomina-electronica', [\App\Http\Controllers\NominaElectronicaController::class, 'index'])->name('nomina-electronica.index');
+    Route::get('/nomina-electronica/{id}/detalles', [\App\Http\Controllers\NominaElectronicaController::class, 'getDetalles'])->name('nomina-electronica.detalles');
+    Route::get('/nomina-electronica/pdf/{idSalario}', [\App\Http\Controllers\NominaElectronicaController::class, 'descargarPdf'])->name('nomina-electronica.pdf');
 
     // Gestión de Periodos
     Route::get('/periodos', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'index'])

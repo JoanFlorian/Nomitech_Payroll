@@ -104,7 +104,7 @@
                                 class="bi bi-gift text-sm"></i></span>
                         <span class="text-[10px] font-bold uppercase tracking-widest text-[#1565C0]">Prima</span>
                     </div>
-                    <p class="text-lg font-black text-[#1565C0]">${{ number_format($totals['prima'], 0, ',', '.') }}</p>
+                    <p class="text-lg font-black text-[#1565C0]">${{ number_format($totals['prima'], 2, ',', '.') }}</p>
                 </div>
             </div>
 
@@ -128,7 +128,7 @@
                                 class="bi bi-bank text-sm"></i></span>
                         <span class="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Cesantías</span>
                     </div>
-                    <p class="text-lg font-black text-emerald-600">${{ number_format($totals['cesantias'], 0, ',', '.') }}
+                    <p class="text-lg font-black text-emerald-600">${{ number_format($totals['cesantias'], 2, ',', '.') }}
                     </p>
                 </div>
             </div>
@@ -152,7 +152,7 @@
                                 class="bi bi-percent text-sm"></i></span>
                         <span class="text-[10px] font-bold uppercase tracking-widest text-sky-600">Intereses</span>
                     </div>
-                    <p class="text-lg font-black text-sky-600">${{ number_format($totals['intereses'], 0, ',', '.') }}</p>
+                    <p class="text-lg font-black text-sky-600">${{ number_format($totals['intereses'], 2, ',', '.') }}</p>
                 </div>
             </div>
 
@@ -176,8 +176,8 @@
                                 class="bi bi-sun text-sm"></i></span>
                         <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-600">Vacaciones</span>
                     </div>
-                    <p class="text-lg font-black text-indigo-600">${{ number_format($totals['vacaciones'], 0, ',', '.') }}
-                    </p>
+                    <p class="text-lg font-black text-indigo-600">
+                        {{ number_format($totals['vacaciones'], 2, ',', '.') }} días</p>
                 </div>
             </div>
 
@@ -200,7 +200,7 @@
                                 class="bi bi-calculator text-sm"></i></span>
                         <span class="text-[10px] font-bold uppercase tracking-widest text-blue-100">Total Global</span>
                     </div>
-                    <p class="text-lg font-black text-white">${{ number_format($totals['total'], 0, ',', '.') }}</p>
+                    <p class="text-lg font-black text-white">${{ number_format($totals['total_money'], 2, ',', '.') }}</p>
                 </div>
             </div>
         </div>
@@ -288,7 +288,8 @@
                                         $colorIndex = abs(crc32($balance->employee_id)) % count($colors);
                                         $avatarColor = $colors[$colorIndex];
 
-                                        $totalEmpleado = $balance->prima_balance + $balance->cesantias_balance + $balance->intereses_balance + $balance->vacaciones_balance;
+                                        $totalMonetario = $balance->prima_balance + $balance->cesantias_balance + $balance->intereses_balance;
+                                        $tieneSaldo = ($totalMonetario > 0 || $balance->vacaciones_balance > 0);
                                     @endphp
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center gap-3">
@@ -306,16 +307,16 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right font-medium">
-                                        ${{ number_format($balance->prima_balance, 0, ',', '.') }}
+                                        ${{ number_format($balance->prima_balance, 2, ',', '.') }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right font-medium">
-                                        ${{ number_format($balance->cesantias_balance, 0, ',', '.') }}
+                                        ${{ number_format($balance->cesantias_balance, 2, ',', '.') }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right font-medium">
-                                        ${{ number_format($balance->intereses_balance, 0, ',', '.') }}
+                                        ${{ number_format($balance->intereses_balance, 2, ',', '.') }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right font-medium">
-                                        ${{ number_format($balance->vacaciones_balance, 0, ',', '.') }}
+                                        {{ number_format($balance->vacaciones_balance, 2, ',', '.') }} días
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
                                         <div class="flex items-center justify-center gap-2">
@@ -326,7 +327,7 @@
                                                 <i class="bi bi-clock-history"></i> Historial
                                             </a>
 
-                                            @if($totalEmpleado > 0)
+                                            @if($tieneSaldo)
                                                 {{-- SINGLE unified button --}}
                                                 <button type="button"
                                                     @click.prevent="gestionarModal = true; selectedEmployee = '{{ trim((string) $balance->employee_id) }}'; selectedAmount = ''; selectedBenefit = ''; paymentMode = 'direct'; cesantiasMode = 'pago_directo'; retiroReason = 'housing'"
@@ -399,7 +400,6 @@
                                     <option value="prima">Prima de Servicios</option>
                                     <option value="cesantias">Cesantías</option>
                                     <option value="intereses_cesantias">Intereses de Cesantías</option>
-                                    <option value="vacaciones">Vacaciones Compensadas</option>
                                 </select>
                             </div>
 
@@ -471,7 +471,7 @@
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <span
-                                        x-text="selectedBenefit === 'cesantias' && cesantiasMode === 'autorizacion_fondo' ? 'Monto Autorizado' : 'Monto a Pagar'"></span>
+                                        x-text="selectedBenefit === 'vacaciones' ? 'Días a Compensar' : (selectedBenefit === 'cesantias' && cesantiasMode === 'autorizacion_fondo' ? 'Monto Autorizado' : 'Monto a Pagar')"></span>
                                 </label>
                                 <input type="number" name="amount" x-model="selectedAmount" step="0.01" min="0.01" required
                                     class="w-full border-gray-200 rounded-lg shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-11"
@@ -628,7 +628,6 @@
                                     <option value="prima">Prima</option>
                                     <option value="cesantias">Cesantías</option>
                                     <option value="intereses_cesantias">Intereses de Cesantías</option>
-                                    <option value="vacaciones">Vacaciones</option>
                                 </select>
                             </div>
 

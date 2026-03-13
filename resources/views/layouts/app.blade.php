@@ -105,6 +105,7 @@
     <x-sidebar />
 
     {{-- Main content --}}
+    {{-- Main content --}}
     <main class="flex-1 min-h-screen bg-white relative overflow-hidden rounded-l-3xl shadow-2xl">
         <x-shapes /> {{-- las figuras decorativas --}}
         <div class="h-full w-full flex flex-col p-8 z-10 relative">
@@ -116,6 +117,8 @@
 
     </main>
 </div>
+
+@stack('modals')
 
 @stack('scripts')
 

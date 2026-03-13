@@ -51,7 +51,10 @@ class CalculoNovedadService
             ->where(function ($query) {
                 $query
                     ->where('contrato.activo', true)
-                    ->orWhere('contrato.estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
+                    ->orWhereIn('contrato.estado', [
+                        Contrato::ESTADO_ACTIVO,
+                        Contrato::ESTADO_POR_VENCER,
+                    ]);
             })
             ->when($empresaId > 0, function ($query) use ($empresaId) {
                 $query->where('contrato.id_empresa', $empresaId);

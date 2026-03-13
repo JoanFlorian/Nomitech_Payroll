@@ -13,7 +13,7 @@ class BenefitLedger extends Model
     public const TYPE_PRIMA = 'prima';
     public const TYPE_CESANTIAS = 'cesantias';
     public const TYPE_INTERESES_CESANTIAS = 'intereses_cesantias';
-    public const TYPE_VACACIONES = 'vacaciones';
+    public const TYPE_VACACIONES = 'vacaciones'; // Representado en DÍAS, no en dinero.
 
     /* ── Movement Types ── */
     public const MOVEMENT_ACCRUAL = 'accrual';

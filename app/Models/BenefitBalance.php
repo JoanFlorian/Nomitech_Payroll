@@ -25,7 +25,7 @@ class BenefitBalance extends Model
         'prima_balance' => 'decimal:2',
         'cesantias_balance' => 'decimal:2',
         'intereses_balance' => 'decimal:2',
-        'vacaciones_balance' => 'decimal:2',
+        'vacaciones_balance' => 'decimal:2', // Representado en DÍAS.
     ];
 
     /* ── Relationships ── */

@@ -27,8 +27,12 @@ trait BelongsToCompany
                 $builder->whereHas('contratos', function ($query) use ($empresaId) {
                     $query->where('id_empresa', $empresaId)
                         ->where(function ($q) {
-                            $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
-                                ->orWhere('estado_nomina', Contrato::ESTADO_NOMINA_PENDIENTE);
+                            $q->whereIn('estado', [
+                                Contrato::ESTADO_ACTIVO,
+                                Contrato::ESTADO_POR_VENCER,
+                                Contrato::ESTADO_PROGRAMADO,
+                                Contrato::ESTADO_VENCIDO,
+                            ]);
                         });
                 });
             }

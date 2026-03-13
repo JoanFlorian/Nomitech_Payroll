@@ -21,7 +21,11 @@
     </style>
 </head>
 
-<body class="bg-gray-100 p-8 min-h-screen flex items-center justify-center font-sans">
+@php
+    $isModal = request('is_modal');
+@endphp
+
+<body class="{{ $isModal ? 'bg-white' : 'bg-gray-100 p-8' }} min-h-screen flex items-start justify-center font-sans">
 
     @php
         $empresa = collect([
@@ -158,6 +162,7 @@
 
     </div>
 
+    @if (!$isModal)
     <!-- Actions bar -->
     <div
         class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg no-print flex justify-center gap-4">
@@ -176,6 +181,7 @@
             Imprimir Comprobante
         </button>
     </div>
+    @endif
 
 </body>
 

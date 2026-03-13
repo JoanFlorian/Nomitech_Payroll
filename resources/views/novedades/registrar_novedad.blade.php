@@ -35,6 +35,7 @@
 					</div>
 					<input type="hidden" id="doc_empleado" name="empleado_id" value="{{ old('empleado_id', old('doc_empleado')) }}">
 					<input type="hidden" id="salario-base" name="salario_base" value="{{ old('salario_base') }}">
+					<input type="hidden" id="vacaciones-balance" name="vacaciones_balance" value="{{ old('vacaciones_balance') }}">
 					<ul id="employee-suggestions" class="hidden mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg max-h-64 overflow-y-auto"></ul>
 					<p class="text-xs text-gray-500 mt-2">Escribe nombre o documento y selecciona una opción.</p>
 					<p id="employee-search-error" class="mt-1 text-xs text-red-600 hidden"></p>
@@ -112,6 +113,14 @@
 					<div>
 						<label for="quantity-days" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en días</label>
 						<input id="quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="126" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
+						<div id="vacaciones-balance-info" class="hidden mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+							<div class="flex items-center gap-2 text-indigo-700">
+								<i class="material-icons text-[18px]">wb_sunny</i>
+								<span class="text-[10px] font-bold uppercase tracking-wider">Saldo disponible:</span>
+								<span id="vacaciones-balance-display" class="font-black">0</span>
+								<span class="text-[10px]">días</span>
+							</div>
+						</div>
 						<p id="quantity-days-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('cantidad_dias')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -301,6 +310,9 @@
 		const afpId = document.getElementById('afp-id');
 		const arlWrap = document.getElementById('arl-wrap');
 		const arlId = document.getElementById('arl-id');
+		const vacacionesBalanceInput = document.getElementById('vacaciones-balance');
+		const vacacionesBalanceInfo = document.getElementById('vacaciones-balance-info');
+		const vacacionesBalanceDisplay = document.getElementById('vacaciones-balance-display');
 
 		if (!employeeSearch || !noveltyType) {
 			return;
@@ -368,6 +380,12 @@
 			const tipo = normalizeType(noveltyType.value);
 			const cfg = NOVELTY_CONFIG[tipo] || null;
 			const unit = getSelectedUnit();
+			const vacacionesBalance = Number(vacacionesBalanceInput?.value || 0);
+
+			if (vacacionesBalanceInfo) {
+				vacacionesBalanceInfo.classList.toggle('hidden', tipo !== 'VAC' || !vacacionesBalanceInput?.value);
+				if (vacacionesBalanceDisplay) vacacionesBalanceDisplay.textContent = vacacionesBalance.toFixed(2);
+			}
 
 			updateNatureBadge(tipo);
 
@@ -616,8 +634,11 @@
 						if (!emp) return;
 						const nombre = String(emp.nombre || '').trim();
 						const salario = Number(emp.salario_base || 0);
+						const vacBalance = Number(emp.vacaciones_balance || 0);
 						if (employeeHidden) employeeHidden.value = String(emp.documento || emp.id || '');
 						if (salarioBaseInput) salarioBaseInput.value = salario > 0 ? String(salario) : '';
+						if (vacacionesBalanceInput) vacacionesBalanceInput.value = vacBalance;
+						if (vacacionesBalanceDisplay) vacacionesBalanceDisplay.textContent = vacBalance.toFixed(2);
 						if (employeeSearch) employeeSearch.value = `${nombre} - ${doc}`.trim();
 						if (employeeName) employeeName.value = nombre;
 						if (employeeLastname) employeeLastname.value = '';
@@ -626,6 +647,7 @@
 							employeeSuggestions.innerHTML = '';
 							employeeSuggestions.classList.add('hidden');
 						}
+						applyNoveltyConfig();
 						recalcEstimated();
 					});
 				});
@@ -957,6 +979,24 @@
 				if (hasError) {
 					e.preventDefault();
 					return false;
+				}
+
+				// Validar saldo de vacaciones
+				if (normalizeType(noveltyType.value) === 'VAC') {
+					const balance = Number(vacacionesBalanceInput?.value || 0);
+					const cantidad = getNumeric(quantityDays);
+					if (cantidad > balance) {
+						e.preventDefault();
+						if (quantityDays) {
+							quantityDays.focus();
+							const errorEl = document.getElementById('quantity-days-error');
+							if (errorEl) {
+								errorEl.textContent = `No hay suficiente saldo de vacaciones. Disponible: ${balance.toFixed(2)} días.`;
+								errorEl.classList.remove('hidden');
+							}
+						}
+						return false;
+					}
 				}
 
 				return true;

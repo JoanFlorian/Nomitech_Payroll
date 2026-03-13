@@ -13,6 +13,7 @@
             <input type="hidden" id="edit-novedad-id" name="edit_novedad_id" value="{{ old('edit_novedad_id') }}">
             <input type="hidden" id="edit-doc-empleado" name="empleado_id" value="{{ old('empleado_id', old('doc_empleado')) }}">
             <input type="hidden" id="edit-salario-base" name="salario_base" value="{{ old('salario_base', 0) }}">
+            <input type="hidden" id="edit-vacaciones-balance" name="vacaciones_balance" value="{{ old('vacaciones_balance') }}">
 
             <div class="p-6 md:p-8 space-y-5 max-h-[70vh] overflow-y-auto">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -89,6 +90,14 @@
                     <div>
                         <label for="edit-quantity-days" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en días</label>
                         <input id="edit-quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="126" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
+                        <div id="edit-vacaciones-balance-info" class="hidden mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                            <div class="flex items-center gap-2 text-indigo-700">
+                                <i class="material-icons text-[18px]">wb_sunny</i>
+                                <span class="text-[10px] font-bold uppercase tracking-wider">Saldo disponible:</span>
+                                <span id="edit-vacaciones-balance-display" class="font-black">0</span>
+                                <span class="text-[10px]">días</span>
+                            </div>
+                        </div>
                         <p id="edit-quantity-days-error" class="mt-1 text-xs text-red-600 hidden"></p>
                         @error('cantidad_dias')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -285,6 +294,16 @@
         setValue('edit-eps-id', button.dataset.idEps);
         setValue('edit-afp-id', button.dataset.idAfp);
         setValue('edit-arl-id', button.dataset.idArl);
+        setValue('edit-vacaciones-balance', button.dataset.vacacionesBalance);
+
+        const vacBalance = Number(button.dataset.vacacionesBalance || 0);
+        const displayBalance = document.getElementById('edit-vacaciones-balance-display');
+        if (displayBalance) displayBalance.textContent = vacBalance.toFixed(2);
+        
+        const balanceInfo = document.getElementById('edit-vacaciones-balance-info');
+        if (balanceInfo) {
+            balanceInfo.classList.toggle('hidden', button.dataset.tipo !== 'VAC' || !button.dataset.vacacionesBalance);
+        }
 
         const editPago = document.getElementById('edit-payment');
         const editPagoDisplay = document.getElementById('edit-payment-display');
@@ -308,6 +327,29 @@
         if (editNovedadId) editNovedadId.value = id;
         if (editForm && id) editForm.action = updateUrl.replace('__ID__', String(id));
         if (deleteForm && id) deleteForm.action = deleteUrl.replace('__ID__', String(id));
+        
+        // Validation for vacation balance
+        if (editForm) {
+            editForm.addEventListener('submit', function(e) {
+                const type = document.getElementById('edit-novelty-type').value;
+                if (type === 'VAC') {
+                    const balance = Number(document.getElementById('edit-vacaciones-balance').value || 0);
+                    const currentDays = Number(button.dataset.dias || 0);
+                    const newDays = Number(document.getElementById('edit-quantity-days').value || 0);
+                    
+                    if (newDays > (balance + currentDays)) {
+                        e.preventDefault();
+                        const errorEl = document.getElementById('edit-quantity-days-error');
+                        if (errorEl) {
+                            errorEl.textContent = `No hay suficiente saldo de vacaciones. Disponible: ${(balance + currentDays).toFixed(2)} días.`;
+                            errorEl.classList.remove('hidden');
+                        }
+                        document.getElementById('edit-quantity-days').focus();
+                        return false;
+                    }
+                }
+            }, { once: true });
+        }
 
         openEditModal();
     }

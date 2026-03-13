@@ -43,12 +43,31 @@
 
         {{-- CONTENIDO --}}
         <div class="w-full md:w-2/3 p-8 md:p-10 overflow-y-auto">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">Editar Empleado</h2>
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-2xl font-bold text-gray-800" x-text="isRenewal ? 'Renovación de Contrato' : 'Editar Empleado'"></h2>
                 <button @click="closeModals()" class="text-gray-500 hover:text-gray-800 text-2xl">
                     &times;
                 </button>
             </div>
+
+            {{-- BANNER DE INFORMACIÓN PARA RENOVACIÓN --}}
+            <template x-if="isRenewal">
+                <div class="mb-6 bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r-lg shadow-sm">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-emerald-600 mt-0.5"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-emerald-800 font-medium">
+                                Modo Renovación Activo
+                            </p>
+                            <p class="text-xs text-emerald-700 mt-1">
+                                Estás creando un nuevo contrato para este empleado. Toda la información ha sido precargada; verifica y ajusta las fechas y el salario para el nuevo periodo.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
             <div class="mb-10">
                 <div class="flex justify-between text-sm mb-2">
@@ -174,6 +193,22 @@
                                 title="Incluye referencia vial (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).">
                             <p class="error-message text-red-500 text-sm hidden" data-error="direccion"></p>
                         </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                            <input type="email"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                name="email" id="editEmail" required>
+                            <p class="error-message text-red-500 text-sm hidden" data-error="email"></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                            <input type="text"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                name="telefono" id="editTelefono" required>
+                            <p class="error-message text-red-500 text-sm hidden" data-error="telefono"></p>
+                        </div>
                     </div>
                 </div>
 
@@ -222,6 +257,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
                             <input type="date"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                :class="isRenewal ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/30' : ''"
                                 name="fecha_inicio" id="editFechaInicio">
                             <p class="error-message text-red-500 text-sm hidden" data-error="fecha_inicio"></p>
                         </div>
@@ -230,6 +266,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin</label>
                             <input type="date"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                :class="isRenewal ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/30' : ''"
                                 name="fecha_fin" id="editFechaFin">
                             <p id="editFechaFinHint" class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de
                                 inicio.</p>
@@ -360,7 +397,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">EPS</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
-                                name="id_eps" id="editIdEps" disabled>
+                                name="id_eps" id="editIdEps">
                                 @foreach ($Eps as $eps)
                                     <option value="{{ $eps->id_eps }}">{{ $eps->nombre }}</option>
                                 @endforeach
@@ -372,7 +409,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">AFP</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
-                                name="id_afp" id="editIdAfp" disabled>
+                                name="id_afp" id="editIdAfp">
                                 @foreach ($Afp as $afp)
                                     <option value="{{ $afp->id_afp }}">{{ $afp->nombre }}</option>
                                 @endforeach
@@ -403,6 +440,59 @@
                                 Empleado activo
                             </label>
                         </div>
+
+                        <!-- Configuración de saldos iniciales (Migración) -->
+                        <div class="mt-8 border-t pt-6">
+                            <div class="mb-4">
+                                <h4 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <i class="fas fa-history text-[#1565C0]"></i>
+                                    Continuidad de Provisiones Anteriores
+                                </h4>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    Use estos campos <strong>únicamente</strong> si el empleado ya tiene saldos acumulados por provisiones que la empresa realizó previamente fuera de este sistema.
+                                </p>
+                            </div>
+                            
+                            <div id="editMigrationSection" class="mt-4 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Prima inicial</label>
+                                        <input type="text" id="editPrimaInicial" name="prima_inicial" placeholder="0" 
+                                            class="migration-input-edit w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                                                focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                                            data-type="money">
+                                        <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="prima_inicial"></div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Cesantías inicial</label>
+                                        <input type="text" id="editCesantiasInicial" name="cesantias_inicial" placeholder="0" 
+                                            class="migration-input-edit w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                                                focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                                            data-type="money">
+                                        <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="cesantias_inicial"></div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Intereses cesantías inicial</label>
+                                        <input type="text" id="editInteresesInicial" name="intereses_inicial" placeholder="0" 
+                                            class="migration-input-edit w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                                                focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                                            data-type="money">
+                                        <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="intereses_inicial"></div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Vacaciones inicial (en días)</label>
+                                        <input type="text" id="editVacacionesInicial" name="vacaciones_inicial" placeholder="Ej: 15" 
+                                            class="migration-input-edit w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                                                focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                                            data-type="days">
+                                        <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="vacaciones_inicial"></div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500 italic">
+                                    Nota: Estos valores solo deben ingresarse si el empleado tiene saldos pendientes de periodos no liquidados en este sistema.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -422,8 +512,8 @@
                             Continuar
                         </button>
                         <button type="submit" x-show="editWizardStep === 3"
-                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition">
-                            Guardar Cambios
+                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition"
+                            x-text="isRenewal ? 'Finalizar Renovación' : 'Guardar Cambios'">
                         </button>
                     </div>
                 </div>
@@ -449,16 +539,9 @@
             return NaN;
         }
 
-        // Salary base in COP is handled as integer; strip separators/decimals to avoid cursor-reset issues.
-        const sanitized = value.replace(/\s+/g, '').replace(/[^\d-]/g, '');
-        const isNegative = sanitized.startsWith('-');
-        const digits = sanitized.replace(/-/g, '');
-
-        if (digits === '') {
-            return NaN;
-        }
-
-        const parsed = Number(isNegative ? `-${digits}` : digits);
+        // Remove thousands dots, replace comma with dot
+        const sanitized = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+        const parsed = parseFloat(sanitized);
         return Number.isFinite(parsed) ? parsed : NaN;
     }
 
@@ -650,14 +733,14 @@
         bajoRiesgo.checked = true;
     }
 
-    function isEditCashPaymentMethodSelected() {
-        const metodoPagoInput = document.getElementById('editIdMetodoPago');
-        if (!metodoPagoInput) {
+    function isEditCashFormaPagoSelected() {
+        const formaPagoInput = document.getElementById('editIdFormaPago');
+        if (!formaPagoInput) {
             return false;
         }
 
-        const selectedOption = metodoPagoInput.selectedOptions && metodoPagoInput.selectedOptions[0]
-            ? metodoPagoInput.selectedOptions[0]
+        const selectedOption = formaPagoInput.selectedOptions && formaPagoInput.selectedOptions[0]
+            ? formaPagoInput.selectedOptions[0]
             : null;
 
         if (!selectedOption) {
@@ -670,7 +753,8 @@
             .replace(/[\u0300-\u036f]/g, '')
             .toLowerCase();
 
-        return optionText.includes('efectiv');
+        // Considerar 'efectivo' o 'contado' como pago en efectivo (paridad con registro)
+        return optionText.includes('efectivo') || optionText.includes('contado');
     }
 
     function syncEditBankFieldsByPaymentMethod() {
@@ -685,7 +769,7 @@
             return;
         }
 
-        const isCash = isEditCashPaymentMethodSelected();
+        const isCash = isEditCashFormaPagoSelected();
 
         fields.forEach((field) => {
             if (isCash) {
@@ -852,25 +936,29 @@
                 case 'id_tipo_doc':
                     return validateEditInput(input, value !== '', 'El tipo de documento es obligatorio.', showError);
                 case 'primer_nombre':
-                    return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El primer nombre debe tener entre 3 y 30 caracteres y solo letras.', showError);
+                    return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El primer nombre debe tener entre 3 y 30 caracteres y solo letras y espacios.', showError);
                 case 'otros_nombres':
                     if (value === '') {
                         if (showError) clearEditFieldError(input);
                         return true;
                     }
-                    return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 50, 'Los otros nombres deben tener entre 3 y 50 caracteres y solo letras.', showError);
+                    return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 50, 'Los otros nombres deben tener entre 3 y 50 caracteres y solo letras y espacios.', showError);
                 case 'primer_apellido':
-                    return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El primer apellido debe tener entre 3 y 30 caracteres y solo letras.', showError);
+                    return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El primer apellido debe tener entre 3 y 30 caracteres y solo letras y espacios.', showError);
                 case 'segundo_apellido':
                     if (value === '') {
                         if (showError) clearEditFieldError(input);
                         return true;
                     }
-                    return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El segundo apellido debe tener entre 3 y 30 caracteres y solo letras.', showError);
+                    return validateEditInput(input, EDIT_LETTERS_REGEX.test(value) && value.length >= 3 && value.length <= 30, 'El segundo apellido debe tener entre 3 y 30 caracteres y solo letras y espacios.', showError);
                 case 'id_ciudad':
                     return validateEditInput(input, value !== '', 'La ciudad es obligatoria.', showError);
                 case 'direccion':
-                    return validateEditInput(input, value !== '' && value.length <= 150 && EDIT_ADDRESS_REGEX.test(value), 'La dirección debe incluir referencia vial válida (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).', showError);
+                    return validateEditInput(input, value !== '' && value.length <= 150 && EDIT_ADDRESS_REGEX.test(value), 'La dirección debe incluir texto válido y una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).', showError);
+                case 'email':
+                    return validateEditInput(input, /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 255, 'Debe ingresar un correo electrónico válido.', showError);
+                case 'telefono':
+                    return validateEditInput(input, /^[0-9]{10}$/.test(value), 'El teléfono debe tener exactamente 10 dígitos.', showError);
                 default:
                     return true;
             }
@@ -967,7 +1055,7 @@
         }
 
         if (stepNumber === 3) {
-            const isCashPayment = isEditCashPaymentMethodSelected();
+            const isCashPayment = isEditCashFormaPagoSelected();
 
             switch (fieldName) {
                 case 'id_forma_pago':
@@ -994,6 +1082,74 @@
                     return validateEditInput(input, value !== '', 'Debe seleccionar la EPS.', showError);
                 case 'id_afp':
                     return validateEditInput(input, value !== '', 'Debe seleccionar la AFP.', showError);
+                case 'fondo_cesantias':
+                    if (value === '') {
+                        if (showError) clearEditFieldError(input);
+                        return true;
+                    }
+                    return validateEditInput(input, value.length <= 100, 'El fondo de cesantías no puede superar 100 caracteres.', showError);
+                case 'cesantias_inicial':
+                    if (value === '' || value === '0') {
+                        if (showError) clearEditFieldError(input);
+                        return true;
+                    }
+                    const cVal = parseEditLocalizedNumber(value);
+                    if (Number.isNaN(cVal) || cVal < 0) {
+                        return validateEditInput(input, false, 'Debe ingresar un valor válido.', showError);
+                    }
+                    if (cVal > 0 && cVal < 5000) {
+                        return validateEditInput(input, false, 'Alerta: El valor es inusualmente bajo para un empleado activo.', showError);
+                    }
+                    return validateEditInput(input, true, '', showError);
+                case 'prima_inicial':
+                    if (value === '' || value === '0') {
+                        if (showError) clearEditFieldError(input);
+                        return true;
+                    }
+                    const pVal = parseEditLocalizedNumber(value);
+                    if (Number.isNaN(pVal) || pVal < 0) {
+                        return validateEditInput(input, false, 'Debe ingresar un valor válido.', showError);
+                    }
+                    if (pVal > 0 && pVal < 5000) {
+                        return validateEditInput(input, false, 'Alerta: El valor es inusualmente bajo para un empleado activo.', showError);
+                    }
+                    return validateEditInput(input, true, '', showError);
+                case 'intereses_inicial':
+                    if (value === '' || value === '0') {
+                        if (showError) clearEditFieldError(input);
+                        return true;
+                    }
+                    const iVal = parseEditLocalizedNumber(value);
+                    if (Number.isNaN(iVal) || iVal < 0) {
+                        return validateEditInput(input, false, 'Debe ingresar un valor válido.', showError);
+                    }
+                    if (iVal > 0 && iVal < 100) {
+                        return validateEditInput(input, false, 'Alerta: El valor de intereses es inusualmente bajo.', showError);
+                    }
+                    const editCesantias = document.getElementById('editCesantiasInicial');
+                    if (editCesantias) {
+                        const cesantiasVal = parseEditLocalizedNumber(editCesantias.value);
+                        if (cesantiasVal > 0 && iVal > (cesantiasVal * 0.15)) {
+                            return validateEditInput(input, false, 'Advertencia: Los intereses parecen ser incoherentes con las cesantías.', showError);
+                        }
+                    }
+                    return validateEditInput(input, true, '', showError);
+                case 'vacaciones_inicial':
+                    if (value === '' || value === '0') {
+                        if (showError) clearEditFieldError(input);
+                        return true;
+                    }
+                    const vVal = parseEditLocalizedNumber(value);
+                    if (Number.isNaN(vVal) || vVal < 0) {
+                        return validateEditInput(input, false, 'Debe ingresar un valor válido.', showError);
+                    }
+                    if (vVal > 180) {
+                        return validateEditInput(input, false, 'Error: No se permite acumular más de 180 días.', showError);
+                    }
+                    if (vVal > 60) {
+                        return validateEditInput(input, false, 'Alerta: El trabajador tiene más de 60 días acumulados.', showError);
+                    }
+                    return validateEditInput(input, true, '', showError);
                 default:
                     return true;
             }
@@ -1009,7 +1165,7 @@
         }
 
         const fieldsByStep = {
-            1: ['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion'],
+            1: ['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion', 'email', 'telefono'],
             2: ['id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_tipo_contrato', 'id_arl', 'fecha_inicio', 'fecha_fin', 'horas_diarias', 'salario', 'codigo_interno', 'nivel_riesgo'],
             3: ['id_forma_pago', 'id_metodo_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'fondo_cesantias'],
         };
@@ -1063,7 +1219,9 @@
 
     window.validateEditStepByNumber = validateEditStepByNumber;
 
-    function loadEmployee(doc) {
+    function loadEmployee(doc, options = {}) {
+        const isRenewal = options.isRenewal || false;
+        
         fetch(`/employees/${doc}/edit`)
             .then(response => {
                 if (!response.ok) throw new Error('Error al cargar empleado');
@@ -1079,6 +1237,8 @@
                 document.getElementById('editSegundoApellido').value = data.usuario.segundo_apellido || '';
                 document.getElementById('editIdCiudad').value = data.usuario.id_ciudad || '';
                 document.getElementById('editDireccion').value = data.usuario.direccion || '';
+                document.getElementById('editEmail').value = data.usuario.correo || '';
+                document.getElementById('editTelefono').value = data.usuario.telefono || '';
 
                 const contrato = data.contrato;
                 const cuenta = data.cuenta;
@@ -1087,8 +1247,26 @@
                     document.getElementById('editIdSubTipoTrabajador').value = contrato.id_sub_tipo_trabajador || '';
                     document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
                     document.getElementById('editIdArl').value = contrato.id_arl || '';
-                    document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
-                    document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                    if (isRenewal && contrato.fecha_fin) {
+                        try {
+                            const lastDate = new Date(contrato.fecha_fin + 'T00:00:00');
+                            if (!isNaN(lastDate.getTime())) {
+                                lastDate.setDate(lastDate.getDate() + 1);
+                                document.getElementById('editFechaInicio').value = lastDate.toISOString().split('T')[0];
+                                document.getElementById('editFechaFin').value = ''; 
+                            } else {
+                                document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
+                                document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                            }
+                        } catch (e) {
+                            console.warn('Error al procesar fecha de fin:', e);
+                            document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
+                            document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                        }
+                    } else {
+                        document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
+                        document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                    }
                     syncEditFechaFinByContractType();
                     document.getElementById('editHorasDiarias').value = contrato.horas_diarias || '';
                     document.getElementById('editSalario').value = formatEditLocalizedNumber(contrato.salario_base || '');
@@ -1099,8 +1277,14 @@
 
                     document.getElementById('editIdFormaPago').value = contrato.id_forma_pago || '';
                     document.getElementById('editIdMetodoPago').value = contrato.id_metodo_pago || '';
+                    
+                    // Sincronizar campos bancarios (habilitar/deshabilitar) según método de pago
+                    syncEditBankFieldsByPaymentMethod();
+
+                    // Cargar valores bancarios DESPUÉS del sync para que no se borren
                     document.getElementById('editTipoCuenta').value = cuenta?.id_tipo_cuenta || '';
                     document.getElementById('editNumeroCuenta').value = cuenta?.numero_cuenta || '';
+                    
                     document.getElementById('editIdEps').value = contrato.id_eps || '';
                     document.getElementById('editIdAfp').value = contrato.id_afp || '';
                     document.getElementById('editFondoCesantias').value = data.usuario.fondo_cesantias || '';
@@ -1129,6 +1313,15 @@
                     document.getElementById('editFondoCesantias').value = '';
                     document.getElementById('editActivo').checked = false;
                 }
+
+                // Clear migration fields on load (they are usually for new/migration cases)
+                ['editPrimaInicial', 'editCesantiasInicial', 'editInteresesInicial', 'editVacacionesInicial'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.value = '0';
+                        clearEditFieldError(el);
+                    }
+                });
 
                 syncEditRiskClassification();
                 syncEditBankFieldsByPaymentMethod();
@@ -1171,127 +1364,110 @@
             });
     }
 
-    document.getElementById('editEmployeeForm').addEventListener('submit', function (e) {
-        e.preventDefault();
+    window.loadEmployee = loadEmployee;
 
-        const doc = document.getElementById('editDocField').value;
 
-        const invalidStep = [1, 2, 3].find((step) => !validateEditStepByNumber(step, true));
-        if (invalidStep) {
-            if (typeof getEmpleadosModuleData === 'function') {
-                const moduleData = getEmpleadosModuleData();
-                if (moduleData) {
-                    moduleData.editWizardStep = invalidStep;
-                }
-            }
 
-            showEditValidationAlert('No puedes finalizar hasta corregir los errores del formulario.');
-            return;
-        }
+    document.addEventListener('DOMContentLoaded', function () {
+        const editEmployeeForm = document.getElementById('editEmployeeForm');
+        if (editEmployeeForm) {
+            editEmployeeForm.addEventListener('submit', function (e) {
+                e.preventDefault();
 
-        const { formData, changedCount } = buildChangedFieldsFormData(this);
+                const doc = document.getElementById('editDocField').value;
+                const invalidStep = [1, 2, 3].find((step) => !validateEditStepByNumber(step, true));
 
-        if (changedCount === 0) {
-            Swal.fire('Sin cambios', 'No hay datos modificados para guardar', 'info');
-            return;
-        }
-
-        fetch(`/employees/${doc}/update`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            },
-            body: formData,
-        })
-            .then(response => {
-                if (response.status === 422) {
-                    return response.json().then(data => {
-                        const fieldStepMap = {
-                            id_tipo_doc: 1,
-                            primer_nombre: 1,
-                            otros_nombres: 1,
-                            primer_apellido: 1,
-                            segundo_apellido: 1,
-                            id_ciudad: 1,
-                            direccion: 1,
-                            id_tipo_trabajador: 2,
-                            id_sub_tipo_trabajador: 2,
-                            id_tipo_contrato: 2,
-                            id_arl: 2,
-                            fecha_inicio: 2,
-                            fecha_fin: 2,
-                            horas_diarias: 2,
-                            salario: 2,
-                            salario_base: 2,
-                            codigo_interno: 2,
-                            nivel_riesgo: 2,
-                            id_forma_pago: 3,
-                            id_metodo_pago: 3,
-                            tipo_cuenta: 3,
-                            numero_cuenta: 3,
-                            id_eps: 3,
-                            id_afp: 3,
-                        };
-
-                        let firstFieldWithError = null;
-                        let firstMessage = null;
-
-                        for (const field in data.errors) {
-                            if (!firstFieldWithError) {
-                                firstFieldWithError = field;
-                                firstMessage = Array.isArray(data.errors[field]) ? data.errors[field][0] : data.errors[field];
-                            }
-
-                            const fieldInput = document.querySelector(`#editEmployeeForm [name="${field}"]`);
-                            if (fieldInput) {
-                                setEditFieldError(fieldInput, data.errors[field][0]);
-                            }
+                if (invalidStep) {
+                    if (typeof getEmpleadosModuleData === 'function') {
+                        const moduleData = getEmpleadosModuleData();
+                        if (moduleData) {
+                            moduleData.editWizardStep = invalidStep;
                         }
+                    }
+                    showEditValidationAlert('No puedes finalizar hasta corregir los errores del formulario.');
+                    return;
+                }
 
-                        const errorStep = fieldStepMap[firstFieldWithError] || 3;
-                        if (typeof getEmpleadosModuleData === 'function') {
-                            const moduleData = getEmpleadosModuleData();
+                const moduleData = typeof getEmpleadosModuleData === 'function' ? getEmpleadosModuleData() : null;
+                const isRenewal = moduleData ? moduleData.isRenewal : false;
+                const { formData, changedCount } = buildChangedFieldsFormData(this);
+
+                if (!isRenewal && changedCount === 0) {
+                    Swal.fire('Sin cambios', 'No hay datos modificados para guardar', 'info');
+                    return;
+                }
+
+                const url = isRenewal ? `/employees/${doc}/renew` : `/employees/${doc}/update`;
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: formData,
+                })
+                .then(response => {
+                    if (response.status === 422) {
+                        return response.json().then(data => {
+                            const fieldStepMap = {
+                                id_tipo_doc: 1, primer_nombre: 1, otros_nombres: 1, primer_apellido: 1, segundo_apellido: 1,
+                                id_ciudad: 1, direccion: 1, id_tipo_trabajador: 2, id_sub_tipo_trabajador: 2,
+                                id_tipo_contrato: 2, id_arl: 2, fecha_inicio: 2, fecha_fin: 2, horas_diarias: 2,
+                                salario: 2, salario_base: 2, codigo_interno: 2, nivel_riesgo: 2,
+                                id_forma_pago: 3, id_metodo_pago: 3, tipo_cuenta: 3, numero_cuenta: 3,
+                                id_eps: 3, id_afp: 3,
+                            };
+
+                            let firstFieldWithError = null;
+                            let firstMessage = null;
+
+                            for (const field in data.errors) {
+                                if (!firstFieldWithError) {
+                                    firstFieldWithError = field;
+                                    firstMessage = Array.isArray(data.errors[field]) ? data.errors[field][0] : data.errors[field];
+                                }
+                                const fieldInput = document.querySelector(`#editEmployeeForm [name="${field}"]`);
+                                if (fieldInput) setEditFieldError(fieldInput, data.errors[field][0]);
+                            }
+
+                            const errorStep = fieldStepMap[firstFieldWithError] || 3;
                             if (moduleData) {
                                 moduleData.editWizardStep = errorStep;
                             }
-                        }
 
-                        if (typeof window.showEditValidationAlert === 'function') {
-                            const fallbackMessage = 'No puedes guardar cambios hasta corregir los errores del formulario.';
-                            window.showEditValidationAlert(firstMessage || fallbackMessage);
-                        }
-
-                        throw new Error('Error de validación');
+                            if (typeof window.showEditValidationAlert === 'function') {
+                                window.showEditValidationAlert(firstMessage || 'No puedes guardar cambios hasta corregir los errores del formulario.');
+                            }
+                            throw new Error('Error de validación');
+                        });
+                    }
+                    if (!response.ok) throw new Error('Error al procesar la solicitud');
+                    return response.json();
+                })
+                .then(() => {
+                    if (moduleData && moduleData.editDrafts && doc) {
+                        delete moduleData.editDrafts[doc];
+                    }
+                    const successText = isRenewal ? 'Se ha creado un nuevo contrato correctamente.' : 'Empleado actualizado correctamente';
+                    Swal.fire('Éxito', successText, 'success').then(() => {
+                        window.location.reload();
                     });
-                }
-                if (!response.ok) throw new Error('Error al actualizar empleado');
-                return response.json();
-            })
-            .then(() => {
-                const moduleData = typeof getEmpleadosModuleData === 'function' ? getEmpleadosModuleData() : null;
-                if (moduleData && moduleData.editDrafts && doc) {
-                    delete moduleData.editDrafts[doc];
-                }
-
-                Swal.fire('Éxito', 'Empleado actualizado correctamente', 'success').then(() => {
-                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    if (error.message !== 'Error de validación') {
+                        Swal.fire('Error', 'No se pudo procesar la solicitud', 'error');
+                    }
                 });
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                if (error.message !== 'Error de validación') {
-                    Swal.fire('Error', 'No se pudo actualizar el empleado', 'error');
-                }
             });
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
+        }
         const editFechaInicio = document.getElementById('editFechaInicio');
         const editTipoContrato = document.getElementById('editIdTipoContrato');
         const editTipoTrabajador = document.getElementById('editIdTipoTrabajador');
         const editNivelRiesgo = document.getElementById('editNivelRiesgo');
         const editAltoRiesgo = document.getElementById('editAltoRiesgo');
         const editBajoRiesgo = document.getElementById('editBajoRiesgo');
+        const editIdFormaPago = document.getElementById('editIdFormaPago');
         const editIdMetodoPago = document.getElementById('editIdMetodoPago');
         const editSalario = document.getElementById('editSalario');
         const editCodigoInterno = document.getElementById('editCodigoInterno');
@@ -1363,11 +1539,19 @@
             });
         });
 
-        if (editIdMetodoPago) {
-            editIdMetodoPago.addEventListener('change', function () {
+        if (editIdFormaPago) {
+            editIdFormaPago.addEventListener('change', function () {
                 syncEditBankFieldsByPaymentMethod();
                 validateEditField(3, 'tipo_cuenta', true);
                 validateEditField(3, 'numero_cuenta', true);
+            });
+        }
+
+        if (editIdMetodoPago) {
+            editIdMetodoPago.addEventListener('change', function () {
+                // El método de pago también puede disparar el sync si es necesario en el futuro
+                // pero por ahora la forma de pago es el driver principal según el registro.
+                syncEditBankFieldsByPaymentMethod();
             });
         }
 
@@ -1382,6 +1566,76 @@
 
             editSalario.value = formatEditLocalizedNumber(editSalario.value);
         }
+
+        // Auto-calculate Intereses (12% of Cesantías) in Edit Modal
+        const editCesantias = document.getElementById('editCesantiasInicial');
+        const editIntereses = document.getElementById('editInteresesInicial');
+        
+        if (editCesantias && editIntereses) {
+            editCesantias.addEventListener('input', function() {
+                const cesVal = parseEditLocalizedNumber(this.value);
+                if (!Number.isNaN(cesVal) && cesVal > 0) {
+                    const autoIntereses = cesVal * 0.12;
+                    // Format as whole number (migration values are usually integers, but we allow decimals if needed)
+                    // Here we'll default to integer for auto-calc
+                    editIntereses.value = Math.round(autoIntereses).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    validateEditField(3, 'intereses_inicial', true);
+                }
+            });
+        }
+
+        // Migration fields formatting and validation
+        const migrationInputsEdit = document.querySelectorAll('.migration-input-edit');
+        migrationInputsEdit.forEach(input => {
+            // Clear 0 on focus
+            input.addEventListener('focus', function() {
+                if (this.value === '0' || this.value === '0,00' || this.value === '') {
+                    this.value = '';
+                }
+            });
+
+            // Restore 0 on blur if empty
+            input.addEventListener('blur', function() {
+                if (this.value.trim() === '') {
+                    this.value = '0';
+                    validateEditField(3, this.name, true);
+                }
+            });
+
+            input.addEventListener('input', function() {
+                let cursorPosition = this.selectionStart;
+                let originalLength = this.value.length;
+                
+                if (this.dataset.type === 'money') {
+                    // Use formatting: dots for thousands, one comma for decimals
+                    let sanitized = this.value.replace(/[^\d,]/g, '');
+                    let parts = sanitized.split(',');
+                    let integerPart = parts[0];
+                    let decimalPart = parts.length > 1 ? parts.slice(1).join('') : null;
+                    
+                    let formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    
+                    if (decimalPart !== null) {
+                        this.value = formattedInteger + ',' + decimalPart.substring(0, 2);
+                    } else {
+                        this.value = formattedInteger;
+                    }
+                } else {
+                    // For days, allow numeric and one comma
+                    let val = this.value.replace(/[^\d,]/g, '');
+                    let parts = val.split(',');
+                    if (parts.length > 2) {
+                        val = parts[0] + ',' + parts.slice(1).join('');
+                    }
+                    this.value = val;
+                }
+
+                let newLength = this.value.length;
+                this.setSelectionRange(cursorPosition + (newLength - originalLength), cursorPosition + (newLength - originalLength));
+                
+                validateEditField(3, this.name, true);
+            });
+        });
 
         syncEditFechaFinByContractType();
         syncEditRiskClassification();

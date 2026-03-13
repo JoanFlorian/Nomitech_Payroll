@@ -5,6 +5,7 @@ namespace App\Services\Benefits;
 use App\Models\BenefitBalance;
 use App\Models\BenefitLedger;
 use App\Models\PeriodoLiquidacion;
+use App\Models\TipoContrato;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +26,15 @@ class BenefitAccrualService
         foreach ($salarios as $salario) {
             $contrato = $salario->contrato;
             if (!$contrato) {
+                continue;
+            }
+
+            // EXCLUSIÓN: Contratos de aprendizaje y prestación de servicios no generan prestaciones sociales
+            if (in_array($contrato->id_tipo_contrato, [
+                TipoContrato::TIPO_APRENDIZAJE,
+                TipoContrato::TIPO_PRESTACION_SERVICIOS
+            ])) {
+                Log::info("Saltando causación de beneficios para contrato ID: {$contrato->id_contrato} (Tipo: {$contrato->id_tipo_contrato})");
                 continue;
             }
 
@@ -79,7 +89,8 @@ class BenefitAccrualService
 
     public function calculateVacaciones(float $salarioBase, int $diasTrabajados): float
     {
-        return round($salarioBase * $diasTrabajados / 720, 2);
+        // Formula: (Días trabajados * 15) / 360
+        return round(($diasTrabajados * 15) / 360, 2);
     }
 
     /* ── Ledger + Balance ── */

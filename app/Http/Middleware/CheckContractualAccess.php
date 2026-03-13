@@ -41,21 +41,24 @@ class CheckContractualAccess
             return redirect()->route('licencia.required')->with('error', 'No tienes un contrato vinculado a esta empresa.');
         }
 
-        // 5. Check access based on professional flow
-        // A. Full Access: Active Laboral State OR Pending Payroll State
+        // 5. Check access based on contract state
+        // A. Full Access: Active, Por Vencer, or Programado
         if (
-            $contrato->estado_laboral === Contrato::ESTADO_LABORAL_ACTIVO ||
-            $contrato->estado_nomina === Contrato::ESTADO_NOMINA_PENDIENTE
+            in_array($contrato->estado, [
+                Contrato::ESTADO_ACTIVO,
+                Contrato::ESTADO_POR_VENCER,
+                Contrato::ESTADO_PROGRAMADO,
+            ])
         ) {
             return $next($request);
         }
 
-        // B. Read-Only / Grace Period: Liquidated AND within 3 days
-        if ($contrato->estado_nomina === Contrato::ESTADO_NOMINA_LIQUIDADO) {
-            $fechaLiquidacion = $contrato->fecha_liquidacion_final;
+        // B. Read-Only / Grace Period: Vencido (within grace days from fecha_fin)
+        if ($contrato->estado === Contrato::ESTADO_VENCIDO) {
+            $fechaReferencia = $contrato->fecha_liquidacion_final ?? $contrato->fecha_fin;
 
-            if ($fechaLiquidacion) {
-                $limiteGracia = $fechaLiquidacion->copy()->addDays(Contrato::GRACE_PERIOD_DAYS);
+            if ($fechaReferencia) {
+                $limiteGracia = $fechaReferencia->copy()->addDays(Contrato::GRACE_PERIOD_DAYS);
 
                 if (now()->lessThanOrEqualTo($limiteGracia)) {
                     // Grace period active - allow only GET requests
@@ -63,14 +66,14 @@ class CheckContractualAccess
                         return $next($request);
                     }
 
-                    return back()->with('error', 'Tu contrato ha sido liquidado. El acceso está restringido a modo lectura durante el periodo de gracia.');
+                    return back()->with('error', 'Tu contrato ha vencido. El acceso está restringido a modo lectura durante el periodo de gracia.');
                 }
             }
         }
 
-        // 6. Block all other cases (Grace period expired or no valid state)
+        // 6. Block all other cases (TERMINADO or Grace period expired)
         Auth::logout();
         session()->flush();
-        return redirect()->route('login')->with('error', 'Tu acceso ha expirado debido a la finalización y liquidación de tu contrato.');
+        return redirect()->route('login')->with('error', 'Tu acceso ha expirado debido a la finalización de tu contrato.');
     }
 }

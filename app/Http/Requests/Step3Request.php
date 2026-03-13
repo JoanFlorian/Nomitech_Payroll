@@ -10,6 +10,24 @@ use Illuminate\Support\Str;
 
 class Step3Request extends FormRequest
 {
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $fields = ['prima_inicial', 'cesantias_inicial', 'intereses_inicial', 'vacaciones_inicial'];
+        foreach ($fields as $field) {
+            if ($this->has($field)) {
+                $value = $this->input($field);
+                if (is_string($value)) {
+                    // Normalize: remove thousands dots, replace decimal comma with dot
+                    $normalized = str_replace('.', '', $value);
+                    $normalized = str_replace(',', '.', $normalized);
+                    $this->merge([$field => $normalized]);
+                }
+            }
+        }
+    }
 
 
     public function authorize(): bool
@@ -31,10 +49,10 @@ class Step3Request extends FormRequest
             'fondo_cesantias' => 'nullable|string|max:100',
 
             // Saldos iniciales de prestaciones (opcionales)
-            'prima_inicial' => 'nullable|numeric|min:0',
-            'cesantias_inicial' => 'nullable|numeric|min:0',
+            'prima_inicial' => 'nullable|numeric|min:0|max:999999999',
+            'cesantias_inicial' => 'nullable|numeric|min:0|max:9999999999',
             'intereses_inicial' => 'nullable|numeric|min:0',
-            'vacaciones_inicial' => 'nullable|numeric|min:0',
+            'vacaciones_inicial' => 'nullable|numeric|min:0|max:180',
         ];
     }
 

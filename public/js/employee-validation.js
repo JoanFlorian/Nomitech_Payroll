@@ -381,12 +381,12 @@
                 const contractId = Number(contractInput ? contractInput.value : 0);
 
                 // Tipos de contrato exentos de salario mínimo:
-                // 3: Obra o labor, 6: Prestación de servicios
+                // 6: Prestación de servicios
                 // Estos pueden tener salario menor al mínimo
-                const exentosSmmlv = [3, 6];
+                const exentosSmmlv = [6];
                 
                 if (exentosSmmlv.includes(contractId)) {
-                    // Obra o labor y Prestación de servicios pueden tener cualquier salario
+                    // Prestación de servicios puede tener cualquier salario
                     return validarInput(input, true, '', showError);
                 }
 

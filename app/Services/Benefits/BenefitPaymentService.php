@@ -651,7 +651,7 @@ class BenefitPaymentService
     {
         $contrato = Contrato::where('doc', $employeeId)
             ->where('id_empresa', $companyId)
-            ->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
+            ->where('estado', Contrato::ESTADO_ACTIVO)
             ->first();
 
         if (!$contrato) {
@@ -684,7 +684,11 @@ class BenefitPaymentService
 
         if ($current < $amount) {
             $label = BenefitLedger::benefitTypeLabel($benefitType);
-            throw new \Exception("El monto solicitado (\${$amount}) supera el saldo disponible de {$label} (\${$current}).");
+            $unit = ($benefitType === BenefitLedger::TYPE_VACACIONES) ? 'días' : '$';
+            $displayAmount = ($unit === '$') ? "\${$amount}" : "{$amount} dias";
+            $displayCurrent = ($unit === '$') ? "\${$current}" : "{$current} dias";
+            
+            throw new \Exception("El monto solicitado ({$displayAmount}) supera el saldo disponible de {$label} ({$displayCurrent}).");
         }
 
         return $balance;

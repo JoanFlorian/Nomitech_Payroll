@@ -120,41 +120,51 @@
         </div>
     </div>
 
-    {{-- Saldos Iniciales de Prestaciones (colapsable) --}}
-    <div class="mt-8" x-data="{ showBalances: false }">
-        <button type="button" @click="showBalances = !showBalances"
-            class="flex items-center gap-2 text-sm font-semibold text-[#1565C0] hover:text-[#0D47A1] transition-colors mb-4">
-            <i class="bi" :class="showBalances ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-            <i class="bi bi-box-seam"></i>
-            Saldos Iniciales de Prestaciones (opcional)
-        </button>
-
-        <div x-show="showBalances" x-collapse x-cloak class="bg-blue-50/50 border border-blue-100 rounded-xl p-5">
-            <p class="text-xs text-gray-500 mb-4">
-                Si el empleado ya tiene prestaciones causadas antes de usar el sistema, ingrese los saldos iniciales
-                aquí.
-                Estos valores se registrarán como movimientos iniciales en el ledger.
+    {{-- Sección de Continuidad de Provisiones (Migración) --}}
+    <div class="mt-10 border-t pt-8">
+        <div class="mb-6">
+            <h4 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-history text-[#1565C0]"></i>
+                Continuidad de Provisiones Anteriores
+            </h4>
+            <p class="text-sm text-gray-600 mt-1">
+                Ingrese estos saldos <strong>únicamente</strong> si el empleado ya tiene prestaciones acumuladas de periodos de trabajo anteriores que la empresa ya ha provisionado.
             </p>
+        </div>
+
+        <div class="bg-blue-50/30 border border-blue-100 rounded-xl p-6 ring-1 ring-blue-50">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Prima inicial</label>
-                    <input type="number" name="prima_inicial" step="0.01" min="0" value="0" placeholder="0" class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
-                            focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm">
+                    <input type="text" id="prima_inicial" name="prima_inicial" value="0" placeholder="0" 
+                        class="migration-input w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                            focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                        data-type="money">
+                    <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="prima_inicial"></div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Cesantías inicial</label>
-                    <input type="number" name="cesantias_inicial" step="0.01" min="0" value="0" placeholder="0" class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
-                            focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm">
+                    <input type="text" id="cesantias_inicial" name="cesantias_inicial" value="0" placeholder="0" 
+                        class="migration-input w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                            focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                        data-type="money">
+                    <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="cesantias_inicial"></div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Intereses cesantías inicial</label>
-                    <input type="number" name="intereses_inicial" step="0.01" min="0" value="0" placeholder="0" class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
-                            focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm">
+                    <input type="text" id="intereses_inicial" name="intereses_inicial" value="0" placeholder="0" 
+                        class="migration-input w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                            focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                        data-type="money">
+                    <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="intereses_inicial"></div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Vacaciones inicial</label>
-                    <input type="number" name="vacaciones_inicial" step="0.01" min="0" value="0" placeholder="0" class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
-                            focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Vacaciones inicial (en días)</label>
+                    <input type="text" id="vacaciones_inicial" name="vacaciones_inicial" value="0" placeholder="Ej: 15" 
+                        class="migration-input w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm
+                            focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                        data-type="days">
+                    <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="vacaciones_inicial"></div>
                 </div>
             </div>
         </div>
@@ -173,3 +183,168 @@
         </button>
     </div>
 </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const migrationInputs = document.querySelectorAll('.migration-input');
+    const debounceTimers = {};
+
+    function debounce(func, name, delay = 500) {
+        if (debounceTimers[name]) clearTimeout(debounceTimers[name]);
+        debounceTimers[name] = setTimeout(func, delay);
+    }
+
+    function formatCurrency(value) {
+        if (value === null || value === '') return '';
+        
+        // Remove everything except digits and one comma
+        let sanitized = value.toString().replace(/[^\d,]/g, '');
+        let parts = sanitized.split(',');
+        let integerPart = parts[0];
+        let decimalPart = parts.length > 1 ? parts.slice(1).join('') : null;
+        
+        // Format integer part with dots
+        let formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        
+        if (decimalPart !== null) {
+            return formattedInteger + ',' + decimalPart.substring(0, 2);
+        }
+        return formattedInteger;
+    }
+
+    function parseCurrency(value) {
+        if (!value) return 0;
+        // Strip dots (thousands) and replace comma with dot (decimal)
+        return parseFloat(value.toString().replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
+    function validateField(input) {
+        const name = input.name;
+        const valStr = input.value.trim();
+        const val = parseCurrency(valStr);
+        const errorEl = document.querySelector(`[data-error="${name}"]`);
+        let error = '';
+
+        if (valStr === '' || valStr === '0') {
+            // Optional fields, but we show no error if empty or 0
+            errorEl.classList.add('hidden');
+            input.classList.remove('border-red-500', 'border-amber-500', 'text-amber-700');
+            return;
+        }
+
+        if (val < 0) {
+            error = 'El valor no puede ser negativo.';
+        } else if (isNaN(val)) {
+            error = 'Debe ingresar un número válido.';
+        }
+
+        // Reglas específicas
+        if (!error) {
+            if (name === 'cesantias_inicial') {
+                if (val > 9999999999) {
+                    error = 'Advertencia: El valor ingresado es inusualmente alto.';
+                } else if (val > 0 && val < 5000) {
+                    error = 'Alerta: El valor es inusualmente bajo para un empleado activo.';
+                }
+            } else if (name === 'prima_inicial') {
+                if (val > 0 && val < 5000) {
+                    error = 'Alerta: El valor es inusualmente bajo para un empleado activo.';
+                }
+            } else if (name === 'intereses_inicial') {
+                const cesantiasVal = parseCurrency(document.querySelector('[name="cesantias_inicial"]').value);
+                if (val > 0 && val < 100) {
+                    error = 'Alerta: El valor de intereses es inusualmente bajo.';
+                } else if (cesantiasVal > 0 && val > (cesantiasVal * 0.15)) { // 12% + margen
+                    error = 'Advertencia: Los intereses parecen ser incoherentes con las cesantías.';
+                }
+            } else if (name === 'vacaciones_inicial') {
+                if (val > 180) {
+                    error = 'Error: No se permite acumular más de 180 días.';
+                } else if (val > 60) {
+                    error = 'Alerta: El trabajador tiene más de 60 días acumulados.';
+                }
+            }
+        }
+
+        if (error) {
+            errorEl.textContent = error;
+            errorEl.classList.remove('hidden');
+            if (error.toLowerCase().includes('error') || error.toLowerCase().includes('obligatorio')) {
+                input.classList.add('border-red-500');
+                input.classList.remove('border-amber-500');
+            } else {
+                input.classList.add('border-amber-500');
+                input.classList.remove('border-red-500');
+                input.classList.add('text-amber-700');
+            }
+        } else {
+            errorEl.classList.add('hidden');
+            input.classList.remove('border-red-500', 'border-amber-500', 'text-amber-700');
+        }
+    }
+
+    // Auto-calculate Intereses (12% of Cesantías)
+    const cesantiasInput = document.querySelector('[name="cesantias_inicial"]');
+    const interesesInput = document.querySelector('[name="intereses_inicial"]');
+    
+    if (cesantiasInput && interesesInput) {
+        cesantiasInput.addEventListener('input', function() {
+            // Only auto-calculate if the user hasn't manually focused/set interests or if it's currently 0
+            // Actually, the user asked to auto-calculate, so we do it on every change of cesantías
+            // but we allow them to edit it afterwards.
+            const cesVal = parseCurrency(this.value);
+            if (cesVal > 0) {
+                const autoIntereses = cesVal * 0.12;
+                interesesInput.value = formatCurrency(autoIntereses.toFixed(0));
+                validateField(interesesInput);
+            }
+        });
+    }
+
+    migrationInputs.forEach(input => {
+        // Clear 0 on focus
+        input.addEventListener('focus', function() {
+            if (this.value === '0' || this.value === '0,00' || this.value === '') {
+                this.value = '';
+            }
+        });
+
+        // Restore 0 on blur if empty
+        input.addEventListener('blur', function() {
+            if (this.value.trim() === '') {
+                this.value = '0';
+                validateField(this);
+            }
+        });
+
+        input.addEventListener('input', function(e) {
+            let cursorPosition = this.selectionStart;
+            let originalLength = this.value.length;
+            
+            if (this.dataset.type === 'money') {
+                this.value = formatCurrency(this.value);
+            } else {
+                // For days, allow numeric and one comma
+                let val = this.value.replace(/[^\d,]/g, '');
+                let parts = val.split(',');
+                if (parts.length > 2) {
+                    val = parts[0] + ',' + parts.slice(1).join('');
+                }
+                this.value = val;
+            }
+
+            // Adjust cursor position
+            let newLength = this.value.length;
+            let lengthDiff = newLength - originalLength;
+            this.setSelectionRange(cursorPosition + lengthDiff, cursorPosition + lengthDiff);
+
+            debounce(() => validateField(input), input.name);
+        });
+
+        // Trigger validation once on load if there's a value
+        if (input.value && input.value !== '0') {
+            validateField(input);
+        }
+    });
+});
+</script>

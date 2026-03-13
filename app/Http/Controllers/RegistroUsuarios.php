@@ -18,7 +18,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 
 class RegistroUsuarios extends Controller
 {
@@ -207,8 +209,7 @@ class RegistroUsuarios extends Controller
                     'horas_diarias' => $allData['horas_diarias'] ?? null,
                     'codigo_interno' => $allData['codigo_interno'] ?? null,
                     'activo' => true,
-                    'estado_laboral' => Contrato::ESTADO_LABORAL_ACTIVO,
-                    'estado_nomina' => Contrato::ESTADO_NOMINA_PENDIENTE,
+                    'estado' => Contrato::ESTADO_ACTIVO,
                     'doc' => $allData['doc'],
                 ];
 
@@ -288,6 +289,118 @@ class RegistroUsuarios extends Controller
     }
 
     /**
+     * Procesar la renovación de un contrato.
+     */
+    public function renewContract(UpdateEmployeePartialRequest $request, $doc)
+    {
+        try {
+            DB::beginTransaction();
+
+            $companyId = session('empresa_id');
+            $usuario = Empleado::findOrFail($doc);
+            $contratoAnterior = Contrato::where('doc', $doc)
+                ->where('id_empresa', $companyId)
+                ->orderByDesc('id_contrato')
+                ->firstOrFail();
+
+            // Validación adicional de renovación
+            if ($request->has('fecha_inicio')) {
+                if ($request->fecha_inicio <= $contratoAnterior->fecha_inicio) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Datos inválidos',
+                        'errors' => ['fecha_inicio' => ['La nueva fecha de inicio debe ser posterior a la fecha de inicio del contrato anterior.']]
+                    ], 422);
+                }
+            }
+
+            $data = $request->validated();
+
+            // 1. Actualizar datos del Usuario (si cambiaron durante la renovación)
+            $usuarioData = [];
+            foreach (['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion', 'fondo_cesantias'] as $field) {
+                if (isset($data[$field])) $usuarioData[$field] = $data[$field];
+            }
+            if (!empty($usuarioData)) {
+                $usuario->update($usuarioData);
+            }
+
+            // 2. Crear el nuevo contrato (replicando el anterior)
+            $nuevoContrato = $contratoAnterior->replicate([
+                'id_contrato',
+                'created_at',
+                'updated_at',
+                'fecha_vencimiento_contrato', 
+                'salario_final_pagado_at',
+                'prestaciones_liquidadas_at',
+                'cesantias_transferidas_at',
+                'vacaciones_liquidadas_at'
+            ]);
+
+            // Actualizar con los nuevos datos laborales
+            if (isset($data['id_tipo_contrato'])) $nuevoContrato->id_tipo_contrato = $data['id_tipo_contrato'];
+            if (isset($data['id_tipo_trabajador'])) $nuevoContrato->id_tipo_trabajador = $data['id_tipo_trabajador'];
+            if (isset($data['id_sub_tipo_trabajador'])) $nuevoContrato->id_sub_tipo_trabajador = $data['id_sub_tipo_trabajador'];
+            if (isset($data['id_forma_pago'])) $nuevoContrato->id_forma_pago = $data['id_forma_pago'];
+            if (isset($data['id_metodo_pago'])) $nuevoContrato->id_metodo_pago = $data['id_metodo_pago'];
+            if (isset($data['id_arl'])) $nuevoContrato->id_arl = $data['id_arl'];
+            if (isset($data['id_eps'])) $nuevoContrato->id_eps = $data['id_eps'];
+            if (isset($data['id_afp'])) $nuevoContrato->id_afp = $data['id_afp'];
+            if (isset($data['alto_riesgo'])) $nuevoContrato->alto_riesgo = (int) $data['alto_riesgo'];
+            if (isset($data['nivel_riesgo'])) $nuevoContrato->nivel_riesgo = $data['nivel_riesgo'];
+            if (isset($data['fecha_inicio'])) $nuevoContrato->fecha_inicio = $data['fecha_inicio'];
+            if (isset($data['fecha_fin'])) $nuevoContrato->fecha_fin = $data['fecha_fin'];
+            if (isset($data['salario'])) $nuevoContrato->salario_base = $data['salario'];
+            if (isset($data['horas_diarias'])) $nuevoContrato->horas_diarias = $data['horas_diarias'];
+            
+            // Si el contrato es indefinido, forzar fecha_fin null
+            if ($this->isIndefiniteContract($nuevoContrato->id_tipo_contrato)) {
+                $nuevoContrato->fecha_fin = null;
+            }
+
+            $nuevoContrato->activo = true;
+            $nuevoContrato->estado = Contrato::ESTADO_ACTIVO; 
+            $nuevoContrato->save();
+
+            // 3. Crear/Actualizar cuenta bancaria para el NUEVO contrato
+            $tipoCuenta = $data['tipo_cuenta'] ?? null;
+            $numeroCuenta = $data['numero_cuenta'] ?? null;
+
+            if (!empty($tipoCuenta) && !empty($numeroCuenta)) {
+                $bancoId = Banco::query()->value('id_banco');
+                Cuenta::updateOrCreate(
+                    ['id_contrato' => $nuevoContrato->id_contrato],
+                    [
+                        'id_tipo_cuenta' => $tipoCuenta,
+                        'id_banco' => $bancoId,
+                        'numero_cuenta' => $numeroCuenta,
+                        'activo' => true,
+                    ]
+                );
+            }
+
+            // 4. Sincronizar estados usando el servicio de ciclo de vida
+            $lifecycleService = app(\App\Services\ContractLifecycleService::class);
+            $lifecycleService->procesarCreacionContrato($nuevoContrato);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Contrato renovado exitosamente.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error renovando contrato: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al procesar la renovación.'
+            ], 500);
+        }
+    }
+
+    /**
      * Limpiar sesión del wizard de registro de empleado.
      */
     public function clearWizardSession()
@@ -305,7 +418,10 @@ class RegistroUsuarios extends Controller
      */
     public function editEmployee($doc)
     {
-        $usuario = Empleado::with('contratos')->findOrFail($doc);
+        $usuario = Empleado::with(['contratos' => function($q) {
+            $q->orderByDesc('id_contrato');
+        }])->findOrFail($doc);
+        
         $contrato = $usuario->contratos->first();
         $cuenta = null;
 
@@ -351,6 +467,10 @@ class RegistroUsuarios extends Controller
                 $usuarioData['id_ciudad'] = $data['id_ciudad'];
             if (isset($data['direccion']))
                 $usuarioData['direccion'] = $data['direccion'];
+            if (isset($data['email']))
+                $usuarioData['correo'] = $data['email'];
+            if (isset($data['telefono']))
+                $usuarioData['telefono'] = $data['telefono'];
             if (array_key_exists('fondo_cesantias', $data))
                 $usuarioData['fondo_cesantias'] = $data['fondo_cesantias'];
 

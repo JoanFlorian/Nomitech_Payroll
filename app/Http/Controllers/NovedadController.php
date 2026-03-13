@@ -38,6 +38,7 @@ class NovedadController extends Controller
         private readonly CalculoNovedadService $calculoNovedadService,
         private readonly \App\Services\NovedadHistorialService $historialService,
         private readonly \App\Services\NovedadFechasService $fechasService,
+        private readonly \App\Services\Benefits\BenefitPaymentService $benefitPaymentService,
     ) {
     }
 
@@ -88,17 +89,21 @@ class NovedadController extends Controller
         $buildEmpleadoQuery = static function (int $empresaFilterId) {
             return DB::table('usuario')
                 ->join('contrato', 'contrato.doc', '=', 'usuario.doc')
+                ->leftJoin('benefit_balance', function($join) {
+                    $join->on('benefit_balance.employee_id', '=', 'usuario.doc')
+                         ->on('benefit_balance.tenant_id', '=', 'contrato.id_empresa');
+                })
                 ->where('contrato.id_empresa', $empresaFilterId)
                 ->where(function ($query) {
                     $query->where('contrato.activo', true)
-                        ->orWhere('contrato.estado_laboral', 1)
-                        ->orWhere('contrato.estado_nomina', 1);
+                        ->orWhereIn('contrato.estado', ['ACTIVO', 'POR_VENCER', 'PROGRAMADO', 'VENCIDO']);
                 })
                 ->selectRaw('usuario.doc as doc')
                 ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_nombre, usuario.otros_nombres, usuario.primer_apellido, usuario.segundo_apellido)) as nombre_completo")
                 ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_nombre, usuario.otros_nombres)) as nombres")
                 ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_apellido, usuario.segundo_apellido)) as apellidos")
                 ->selectRaw('contrato.salario_base as salario_base')
+                ->selectRaw('COALESCE(benefit_balance.vacaciones_balance, 0) as vacaciones_balance')
                 ->orderBy('usuario.primer_nombre')
                 ->orderBy('usuario.primer_apellido')
                 ->limit(800);
@@ -113,6 +118,7 @@ class NovedadController extends Controller
                 'apellidos' => (string) ($row->apellidos ?? ''),
                 'nombre_completo' => (string) ($row->nombre_completo ?? ''),
                 'salario_base' => (float) ($row->salario_base ?? 0),
+                'vacaciones_balance' => (float) ($row->vacaciones_balance ?? 0),
             ])
             ->values();
 
@@ -288,6 +294,24 @@ class NovedadController extends Controller
         $this->historialService->registrarCreacion($novedad);
         $this->aplicarEfectosNovedad($data, $salario);
 
+        if (strtoupper($data['tipo_novedad']) === 'VAC' && $periodo) {
+            try {
+                $this->benefitPaymentService->payBenefit(
+                    $data['empleado_id'],
+                    \App\Models\BenefitLedger::TYPE_VACACIONES,
+                    (float) $data['dias'],
+                    (int) session('empresa_id'),
+                    'payroll',
+                    $periodo->id_periodo,
+                    "Novedad VAC [ID:{$novedad->id_novedad}]"
+                );
+            } catch (\Exception $e) {
+                // If ledger fails (e.g. balance), we should probably delete the novelty or report error
+                $novedad->delete();
+                return back()->withErrors(['dias' => 'Error al registrar balance de vacaciones: ' . $e->getMessage()])->withInput();
+            }
+        }
+
         return redirect()->route('novedades.index')->with('success', 'La novedad se registró correctamente.');
     }
 
@@ -309,6 +333,34 @@ class NovedadController extends Controller
         $this->historialService->registrarActualizacion($novedadAnterior, $novedad->fresh());
         $this->aplicarEfectosNovedad($data, $salario);
 
+        if (strtoupper($data['tipo_novedad']) === 'VAC') {
+            $periodo = $this->getActivePeriod();
+            if ($periodo) {
+                // Cleanup old ledger entry
+                \App\Models\BenefitLedger::where('employee_id', $novedad->empleado_id)
+                    ->where('benefit_type', \App\Models\BenefitLedger::TYPE_VACACIONES)
+                    ->where('movement_type', \App\Models\BenefitLedger::MOVEMENT_SCHEDULED)
+                    ->where('reference', 'like', "%[ID:{$novedad->id_novedad}]%")
+                    ->delete();
+
+                try {
+                    $this->benefitPaymentService->payBenefit(
+                        $novedad->empleado_id,
+                        \App\Models\BenefitLedger::TYPE_VACACIONES,
+                        (float) $data['dias'],
+                        (int) session('empresa_id'),
+                        'payroll',
+                        $periodo->id_periodo,
+                        "Novedad VAC [ID:{$novedad->id_novedad}]"
+                    );
+                } catch (\Exception $e) {
+                    // Revert update?
+                    $novedad->update($novedadAnterior->toArray());
+                    return back()->withErrors(['dias' => 'Error al actualizar balance de vacaciones: ' . $e->getMessage()])->withInput();
+                }
+            }
+        }
+
         return redirect()->route('novedades.index')->with('success', 'La novedad se actualizó correctamente.');
     }
 
@@ -316,6 +368,16 @@ class NovedadController extends Controller
     {
         $novedad = Novedad::query()->findOrFail($id_novedad);
         $this->historialService->registrarEliminacion($novedad);
+
+        if (strtoupper($novedad->tipo_novedad_codigo) === 'VAC') {
+             // Cleanup scheduled ledger entry
+             \App\Models\BenefitLedger::where('employee_id', $novedad->empleado_id)
+                ->where('benefit_type', \App\Models\BenefitLedger::TYPE_VACACIONES)
+                ->where('movement_type', \App\Models\BenefitLedger::MOVEMENT_SCHEDULED)
+                ->where('reference', 'like', "%[ID:{$novedad->id_novedad}]%")
+                ->delete();
+        }
+
         $novedad->delete();
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se eliminó correctamente.');

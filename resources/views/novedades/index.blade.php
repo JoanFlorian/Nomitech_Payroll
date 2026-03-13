@@ -183,6 +183,7 @@
 								data-fecha-fin="{{ $novedad->fecha_fin ? \Carbon\Carbon::parse($novedad->fecha_fin)->format('Y-m-d') : '' }}"
 								data-pago="{{ (float) $novedad->pago }}"
 								data-salario-base="{{ (float) ($novedad->salario_base ?? $novedad->salario?->contrato?->salario_base ?? 0) }}"
+								data-vacaciones-balance="{{ (float) ($novedad->salario?->contrato?->benefitBalance?->vacaciones_balance ?? 0) }}"
 								data-observaciones="{{ $novedad->observaciones ?? '' }}"
 							>
 								<span class="material-icons text-[20px]">edit</span>

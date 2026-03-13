@@ -198,7 +198,7 @@
                                 </td>
                                 <td
                                     class="px-6 py-4 whitespace-nowrap text-sm text-right font-black {{ $isNegative ? 'text-red-600' : 'text-emerald-600' }}">
-                                    {{ $isNegative ? '-' : '+' }}${{ number_format(abs($movement->amount), 0, ',', '.') }}
+                                    {{ $isNegative ? '-' : '+' }}${{ number_format(abs($movement->amount), 2, ',', '.') }}
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-500">
                                     <div class="flex flex-col gap-2">
@@ -206,7 +206,8 @@
                                             {{ $movement->reference ?? '—' }}
                                         </span>
                                         @if(in_array($movement->movement_type, ['payment', 'withdrawal']) && $movement->amount < 0)
-                                            <a href="{{ route('provisiones.comprobante', $movement->id) }}" target="_blank"
+                                            <a href="javascript:void(0)" 
+                                                onclick="openPdfModal('{{ route('provisiones.comprobante', $movement->id) }}', true)"
                                                 class="inline-flex items-center gap-1.5 text-xs font-bold text-[#1565C0] hover:text-[#0D47A1] transition-colors w-fit">
                                                 <i class="bi bi-file-earmark-pdf-fill"></i> Comprobante
                                             </a>
@@ -217,12 +218,81 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>
-
-            {{-- Pagination --}}
-            <div class="mt-6">
-                {{ $movements->links() }}
+                {{-- Pagination --}}
+                <div class="mt-6">
+                    {{ $movements->links() }}
+                </div>
             </div>
         @endif
     </div>
+
+    @push('modals')
+    {{-- PDF Preview Modal --}}
+    <div class="modal fade" id="pdfModal" tabindex="-1" aria-labelledby="pdfModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg overflow-hidden rounded-2xl">
+                <div class="modal-header bg-[#1565C0] text-white py-4 px-6 border-0">
+                    <h5 class="modal-title font-bold flex items-center gap-2" id="pdfModalLabel">
+                        <i class="bi bi-file-earmark-text"></i> Vista Previa de Comprobante
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 bg-gray-100" style="height: 80vh; position: relative;">
+                    <div id="pdfLoader" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="text-gray-500 font-medium">Cargando vista previa...</p>
+                    </div>
+                    <iframe id="pdfFrame" src="" class="w-full h-full border-0" onload="document.getElementById('pdfLoader').style.display='none'"></iframe>
+                </div>
+                <div class="modal-footer bg-white py-4 px-6 border-top border-gray-100 flex justify-between">
+                    <button type="button" class="px-6 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-200 transition-all" data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                    <div class="flex gap-3">
+                        <a id="downloadBtn" href="#" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-lg shadow-sm hover:bg-emerald-700 transition-all flex items-center gap-2">
+                            <i class="bi bi-file-earmark-pdf"></i> Descargar PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endpush
+
+    @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function openPdfModal(baseUrl, allowDownload) {
+            const modalElement = document.getElementById('pdfModal');
+            // Use getOrCreateInstance to avoid multiple backdrops and conflicts
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            
+            const frame = document.getElementById('pdfFrame');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const loader = document.getElementById('pdfLoader');
+            
+            // Set URLs
+            const viewUrl = baseUrl + '?is_modal=1';
+            const downloadUrl = baseUrl + '?format=pdf&mode=attachment';
+            
+            // Reset state
+            loader.style.display = 'flex';
+            frame.src = '';
+            
+            // Configure download button visibility
+            if (allowDownload) {
+                downloadBtn.style.display = 'flex';
+                downloadBtn.href = downloadUrl;
+            } else {
+                downloadBtn.style.display = 'none';
+            }
+            
+            // Load and show
+            frame.src = viewUrl;
+            modal.show();
+        }
+    </script>
+    @endpush
 @endsection

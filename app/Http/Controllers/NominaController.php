@@ -998,8 +998,10 @@ class NominaController extends Controller
             ->where('id_empresa', $empresaId)
             ->where(function ($query) {
                 $query->where('activo', true)
-                    ->orWhere('estado_laboral', \App\Models\Contrato::ESTADO_LABORAL_ACTIVO)
-                    ->orWhere('estado_nomina', \App\Models\Contrato::ESTADO_NOMINA_PENDIENTE);
+                    ->orWhereIn('estado', [
+                        \App\Models\Contrato::ESTADO_ACTIVO,
+                        \App\Models\Contrato::ESTADO_POR_VENCER,
+                    ]);
             })
             ->pluck('id_contrato');
 

@@ -23,8 +23,12 @@ class ProvisionesController extends Controller
         $balances = BenefitBalance::where('tenant_id', $empresaId)
             ->where(function ($query) {
                 $query->whereHas('usuario.contratos', function ($q) {
-                    $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
-                        ->orWhere('estado_nomina', Contrato::ESTADO_NOMINA_PENDIENTE);
+                    $q->whereIn('estado', [
+                        Contrato::ESTADO_ACTIVO,
+                        Contrato::ESTADO_POR_VENCER,
+                        Contrato::ESTADO_PROGRAMADO,
+                        Contrato::ESTADO_VENCIDO,
+                    ]);
                 })
                     ->orWhere('prima_balance', '>', 0)
                     ->orWhere('cesantias_balance', '>', 0)
@@ -41,7 +45,8 @@ class ProvisionesController extends Controller
             'intereses' => $balances->sum('intereses_balance'),
             'vacaciones' => $balances->sum('vacaciones_balance'),
         ];
-        $totals['total'] = $totals['prima'] + $totals['cesantias'] + $totals['intereses'] + $totals['vacaciones'];
+        // Total money only includes benefits in currency ($)
+        $totals['total_money'] = $totals['prima'] + $totals['cesantias'] + $totals['intereses'];
 
         // Active payroll period (for payroll integration option)
         $activePeriodId = session('active_period_id');
@@ -395,13 +400,24 @@ class ProvisionesController extends Controller
         return $this->pagarPrestacion($request, $service);
     }
 
-    public function descargarComprobantePrestacion($movementId)
+    public function descargarComprobantePrestacion($movementId, Request $request)
     {
         $empresaId = session('empresa_id');
 
         $movement = BenefitLedger::with(['usuario', 'empresa'])
             ->where('tenant_id', $empresaId)
             ->findOrFail($movementId);
+
+        if ($request->get('format') === 'pdf') {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('provisiones.comprobante_pdf', compact('movement'));
+            
+            $filename = 'comprobante_' . ($movement->usuario->doc ?? $movementId) . '_' . $movement->created_at->format('dmY') . '.pdf';
+            
+            $mode = $request->get('mode', 'inline'); // inline (view) or attachment (download)
+            
+            return $pdf->setPaper('letter', 'portrait')
+                ->stream($filename, ['Attachment' => $mode === 'attachment' ? 1 : 0]);
+        }
 
         return view('provisiones.comprobante', compact('movement'));
     }

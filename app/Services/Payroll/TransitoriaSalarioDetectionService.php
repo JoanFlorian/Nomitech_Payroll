@@ -7,6 +7,7 @@ use App\Models\HistorialNovedad;
 use App\Models\Salario;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class TransitoriaSalarioDetectionService
 {
@@ -106,7 +107,7 @@ class TransitoriaSalarioDetectionService
             number_format($empleado->total_conceptos_variables, 2, ',', '.')
         );
 
-        $usuario = auth()->user();
+        $usuario = Auth::user();
 
         HistorialNovedad::create([
             'id_novedad' => null, // No proviene de una novedad manual

@@ -10,54 +10,77 @@ class ARLSeeder extends Seeder
     public function run(): void
     {
         $arlList = [
+
             [
-                'id_arl' => '800088702',
+                'id_arl' => 800088702,
                 'nombre' => 'ARL SURA',
-                'telefono' => '018000 51 1414',
-                'direccion' => 'Calle 49 # 63-57, Medellín, Antioquia'
+                'codigo_pila' => 'ARL001',
+                'telefono' => '018000511414',
+                'direccion' => 'Medellín, Antioquia',
+                'origen' => 'system',
+                'estado' => 1
             ],
+
             [
-                'id_arl' => '860011153',
-                'nombre' => 'ARL Positiva',
-                'telefono' => '018000 111170',
-                'direccion' => 'Carrera 10 # 52-10, Bogotá D.C.'
+                'id_arl' => 860011153,
+                'nombre' => 'POSITIVA ARL',
+                'codigo_pila' => 'ARL002',
+                'telefono' => '018000111170',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
             ],
+
             [
-                'id_arl' => '860002503',
-                'nombre' => 'ARL Colmena (Liberty)',
-                'telefono' => '018000 113390',
-                'direccion' => 'Carrera 7 # 26-20, Bogotá D.C.'
+                'id_arl' => 860002503,
+                'nombre' => 'COLMENA ARL',
+                'codigo_pila' => 'ARL003',
+                'telefono' => '018000113390',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
             ],
+
             [
-                'id_arl' => '860002183',
-                'nombre' => 'ARL AXA Colpatria',
-                'telefono' => '018000 512620',
-                'direccion' => 'Carrera 7 # 24-89, Bogotá D.C.'
+                'id_arl' => 860002183,
+                'nombre' => 'AXA COLPATRIA ARL',
+                'codigo_pila' => 'ARL004',
+                'telefono' => '018000512620',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
             ],
+
             [
-                'id_arl' => '860002180',
-                'nombre' => 'ARL Bolívar',
-                'telefono' => '018000 123322',
-                'direccion' => 'Calle 26 # 69-76, Bogotá D.C.'
+                'id_arl' => 860002180,
+                'nombre' => 'SEGUROS BOLIVAR ARL',
+                'codigo_pila' => 'ARL005',
+                'telefono' => '018000123322',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
             ],
+
             [
-                'id_arl' => '860002183',
-                'nombre' => 'ARL Allianz',
-                'telefono' => '018000 513500',
-                'direccion' => 'Carrera 7 # 77-07, Bogotá D.C.'
+                'id_arl' => 860006015,
+                'nombre' => 'LA EQUIDAD ARL',
+                'codigo_pila' => 'ARL006',
+                'telefono' => '018000113535',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
             ],
+
             [
-                'id_arl' => '860006015',
-                'nombre' => 'ARL La Equidad',
-                'telefono' => '018000 113535',
-                'direccion' => 'Carrera 68A # 24B-10, Bogotá D.C.'
+                'id_arl' => 860037707,
+                'nombre' => 'ALFA ARL',
+                'codigo_pila' => 'ARL007',
+                'telefono' => '018000111600',
+                'direccion' => 'Bogotá D.C.',
+                'origen' => 'system',
+                'estado' => 1
             ],
-            [
-                'id_arl' => '860037707',
-                'nombre' => 'ARL Seguros de Vida Alfa',
-                'telefono' => '018000 111600',
-                'direccion' => 'Carrera 13 # 93-40, Bogotá D.C.'
-            ],
+
         ];
 
         foreach ($arlList as $arl) {

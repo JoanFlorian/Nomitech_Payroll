@@ -4,8 +4,8 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/nomitech-favicon.svg') }}">
-    <link rel="shortcut icon" href="{{ asset('images/nomitech-favicon.svg') }}">
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/logo nomitech.jpeg') }}">
+    <link rel="shortcut icon" type="image/jpeg" href="{{ asset('images/logo nomitech.jpeg') }}">
     <title>@yield('title') - Nomitech</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>

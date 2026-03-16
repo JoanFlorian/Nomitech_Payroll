@@ -20,6 +20,8 @@ use App\Http\Controllers\NovedadCalculoController;
 use App\Http\Controllers\PilaController;
 
 use App\Http\Controllers\ReportesController;
+use App\Http\Controllers\TrabajadorController;
+use App\Http\Controllers\Auth\CambiarPasswordController;
 
 use Illuminate\Http\Request;
 
@@ -94,6 +96,10 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::post('/employees/final', [RegistroUsuarios::class, 'storeFinal'])->name('employees.final');
     Route::post('/employees/clear-session', [RegistroUsuarios::class, 'clearWizardSession'])->name('employees.clear-session');
 
+    // Rutas de Renovación y Datos de Contrato
+    Route::get('/api/employees/{doc}/contract-data', [App\Http\Controllers\EmployeesController::class, 'getContractData']);
+    Route::post('/employees/{doc}/renew', [RegistroUsuarios::class, 'renewContract'])->name('employees.renew');
+
     // Nómina Routes
     Route::get('/nomina', [NominaController::class, 'index'])->name('nomina.index');
     Route::get('/nomina/step-1', [NominaController::class, 'step1'])->name('nomina.step1');
@@ -130,9 +136,18 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/provisiones/{doc}/historial', [\App\Http\Controllers\ProvisionesController::class, 'historial'])->name('provisiones.historial');
     Route::post('/provisiones/liquidar-individual', [\App\Http\Controllers\ProvisionesController::class, 'liquidarIndividual'])->name('provisiones.liquidar.individual');
     Route::post('/provisiones/liquidar-masivo', [\App\Http\Controllers\ProvisionesController::class, 'liquidarMasivo'])->name('provisiones.liquidar.masivo');
+    Route::post('/provisiones/pagar-prestacion', [\App\Http\Controllers\ProvisionesController::class, 'pagarPrestacion'])->name('provisiones.pagar-prestacion');
+    Route::post('/provisiones/cesantias/retiro-parcial', [\App\Http\Controllers\ProvisionesController::class, 'retiroParcialCesantias'])->name('provisiones.cesantias.retiro-parcial');
+    Route::post('/provisiones/cesantias/retiro-empresa', [\App\Http\Controllers\ProvisionesController::class, 'retiroEmpresa'])->name('provisiones.cesantias.retiro-empresa');
+    Route::post('/provisiones/cesantias/autorizacion-fondo', [\App\Http\Controllers\ProvisionesController::class, 'autorizacionFondo'])->name('provisiones.cesantias.autorizacion-fondo');
+    Route::post('/provisiones/cesantias/consignacion-anual', [\App\Http\Controllers\ProvisionesController::class, 'generarConsignacionAnual'])->name('provisiones.cesantias.consignacion-anual');
+    Route::get('/provisiones/cesantias/certificado/{withdrawal_id}', [\App\Http\Controllers\ProvisionesController::class, 'descargarCertificado'])->name('provisiones.cesantias.certificado');
+    Route::get('/provisiones/comprobante/{movement_id}', [\App\Http\Controllers\ProvisionesController::class, 'descargarComprobantePrestacion'])->name('provisiones.comprobante');
 
     // Nómina Electrónica
     Route::get('/nomina-electronica', [\App\Http\Controllers\NominaElectronicaController::class, 'index'])->name('nomina-electronica.index');
+    Route::get('/nomina-electronica/{id}/detalles', [\App\Http\Controllers\NominaElectronicaController::class, 'getDetalles'])->name('nomina-electronica.detalles');
+    Route::get('/nomina-electronica/pdf/{idSalario}', [\App\Http\Controllers\NominaElectronicaController::class, 'descargarPdf'])->name('nomina-electronica.pdf');
 
     // Gestión de Periodos
     Route::get('/periodos', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'index'])
@@ -210,6 +225,28 @@ Route::middleware(['auth', 'is_superadmin', 'prevent_back_history'])->prefix('su
     Route::get('/configuracion', function () {
         return view('superadmin.configuracion');
     })->name('configuracion');
+});
+
+// Cambiar contraseña obligatorio en primer ingreso
+Route::middleware(['auth'])->group(function () {
+    Route::get('/cambiar-password', [CambiarPasswordController::class, 'show'])->name('cambiar-password');
+    Route::post('/cambiar-password', [CambiarPasswordController::class, 'update'])->name('cambiar-password.update');
+});
+
+// Portal del Trabajador (solo autenticación requerida)
+Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history', 'must_change_password'])->prefix('trabajador')->name('trabajador.')->group(function () {
+    Route::get('/dashboard', [TrabajadorController::class, 'index'])->name('dashboard');
+    Route::get('/desprendibles', [TrabajadorController::class, 'desprendibles'])->name('desprendibles');
+    Route::get('/desprendible/{id}', [TrabajadorController::class, 'verDesprendible'])->name('desprendible.ver');
+    Route::get('/desprendible/{id}/pdf', [TrabajadorController::class, 'descargarDesprendible'])->name('desprendible.pdf');
+    Route::get('/notas-ajuste', [TrabajadorController::class, 'notasAjuste'])->name('notas');
+    Route::get('/perfil', [TrabajadorController::class, 'perfil'])->name('perfil');
+    Route::post('/perfil', [TrabajadorController::class, 'actualizarPerfil'])->name('perfil.actualizar');
+});
+
+// Redirección raíz del portal del trabajador
+Route::middleware(['auth'])->get('/trabajador', function () {
+    return redirect()->route('trabajador.dashboard');
 });
 
 // Logout robusto (GET por compatibilidad con sidebar actual)

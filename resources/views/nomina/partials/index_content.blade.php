@@ -186,10 +186,10 @@
         </button>
 
         <a href="{{ route('nomina.step1', ['fresh' => 1]) }}"
-            title="Crear nueva nomina"
+            title="Agregar empleado"
             class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
             <i class="bi bi-plus-lg"></i>
-            Nueva nomina
+            Agregar empleado
         </a>
 
         @if($periodoActivo && $periodoActivo->estado !== \App\Models\PeriodoLiquidacion::ESTADO_CERRADO)
@@ -282,15 +282,23 @@
 
                             @php
                                 $totalNovedadesVal = (float) ($salario->total_novedades ?? 0);
+                                $resumenNov = $salario->resumen_novedades ?? [];
                             @endphp
                             <td class="whitespace-nowrap px-4 py-3 text-right font-semibold {{ $totalNovedadesVal > 0 ? 'text-emerald-700' : ($totalNovedadesVal < 0 ? 'text-red-600' : 'text-slate-400') }}">
-                                @if($totalNovedadesVal > 0)
-                                    +${{ number_format($totalNovedadesVal, 0, ',', '.') }}
-                                @elseif($totalNovedadesVal < 0)
-                                    -${{ number_format(abs($totalNovedadesVal), 0, ',', '.') }}
-                                @else
-                                    $0
-                                @endif
+                                <div class="inline-flex items-center justify-end gap-1 novedad-cell" data-novedad-breakdown="{{ json_encode($resumenNov) }}">
+                                    <span>
+                                        @if($totalNovedadesVal > 0)
+                                            +${{ number_format($totalNovedadesVal, 0, ',', '.') }}
+                                        @elseif($totalNovedadesVal < 0)
+                                            -${{ number_format(abs($totalNovedadesVal), 0, ',', '.') }}
+                                        @else
+                                            $0
+                                        @endif
+                                    </span>
+                                    @if(!empty($resumenNov) && ($resumenNov['horas_extra'] ?? 0) + ($resumenNov['recargos'] ?? 0) + ($resumenNov['bonificaciones'] ?? 0) + ($resumenNov['otros_devengos'] ?? 0) + ($resumenNov['deducciones'] ?? 0) > 0)
+                                        <i class="bi bi-info-circle text-blue-600 cursor-help text-sm"></i>
+                                    @endif
+                                </div>
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right font-extrabold text-slate-900">
@@ -324,3 +332,240 @@
         </div>
     @endif
 </div>
+
+<div id="novedad-tooltip" class="novedad-tooltip-popup" style="display: none;">
+    <div class="novedad-tooltip-header">
+        <span class="font-semibold">Detalle de Novedades</span>
+    </div>
+    <div class="novedad-tooltip-content" id="novedad-tooltip-content">
+        <!-- Content will be dynamically inserted -->
+    </div>
+</div>
+
+<style>
+    .novedad-tooltip-popup {
+        position: fixed;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        padding: 0;
+        z-index: 1000;
+        min-width: 280px;
+        max-width: 350px;
+        font-size: 13px;
+    }
+
+    .novedad-tooltip-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px 12px 0 0;
+        font-size: 14px;
+    }
+
+    .novedad-tooltip-content {
+        padding: 12px 16px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .novedad-tooltip-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .novedad-tooltip-item:last-child {
+        border-bottom: none;
+    }
+
+    .novedad-tooltip-label {
+        font-weight: 500;
+        color: #475569;
+        font-size: 12px;
+    }
+
+    .novedad-tooltip-value {
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+    .novedad-tooltip-value.devengado {
+        color: #059669;
+    }
+
+    .novedad-tooltip-value.deduccion {
+        color: #dc2626;
+    }
+
+    .novedad-cell {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .novedad-cell:hover {
+        transform: scale(1.05);
+    }
+
+    .novedad-cell i {
+        vertical-align: middle;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const novedadCells = document.querySelectorAll('.novedad-cell');
+    const tooltip = document.getElementById('novedad-tooltip');
+    const tooltipContent = document.getElementById('novedad-tooltip-content');
+    let currentTimeout = null;
+
+    function formatMoney(value) {
+        return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(value);
+    }
+
+    function showTooltip(cell, event) {
+        try {
+            const breakdownData = JSON.parse(cell.getAttribute('data-novedad-breakdown'));
+            
+            if (!breakdownData || Object.keys(breakdownData).length === 0) {
+                return;
+            }
+
+            const horasExtra = parseFloat(breakdownData.horas_extra || 0);
+            const recargos = parseFloat(breakdownData.recargos || 0);
+            const bonificaciones = parseFloat(breakdownData.bonificaciones || 0);
+            const otrosDevengos = parseFloat(breakdownData.otros_devengos || 0);
+            const deducciones = parseFloat(breakdownData.deducciones || 0);
+
+            // Check if there's any data to display
+            if (horasExtra === 0 && recargos === 0 && bonificaciones === 0 && otrosDevengos === 0 && deducciones === 0) {
+                return;
+            }
+
+            let html = '<div class="space-y-1">';
+
+            if (horasExtra > 0 || recargos > 0 || bonificaciones > 0 || otrosDevengos > 0) {
+                html += '<div class="font-bold text-emerald-700 text-xs uppercase tracking-wide mb-2">Devengos</div>';
+                
+                if (horasExtra > 0) {
+                    html += `<div class="novedad-tooltip-item">
+                        <span class="novedad-tooltip-label">Horas Extra</span>
+                        <span class="novedad-tooltip-value devengado">${formatMoney(horasExtra)}</span>
+                    </div>`;
+                }
+                
+                if (recargos > 0) {
+                    html += `<div class="novedad-tooltip-item">
+                        <span class="novedad-tooltip-label">Recargos</span>
+                        <span class="novedad-tooltip-value devengado">${formatMoney(recargos)}</span>
+                    </div>`;
+                }
+                
+                if (bonificaciones > 0) {
+                    html += `<div class="novedad-tooltip-item">
+                        <span class="novedad-tooltip-label">Bonificaciones</span>
+                        <span class="novedad-tooltip-value devengado">${formatMoney(bonificaciones)}</span>
+                    </div>`;
+                }
+                
+                if (otrosDevengos > 0) {
+                    html += `<div class="novedad-tooltip-item">
+                        <span class="novedad-tooltip-label">Otros Devengos</span>
+                        <span class="novedad-tooltip-value devengado">${formatMoney(otrosDevengos)}</span>
+                    </div>`;
+                }
+            }
+
+            if (deducciones > 0) {
+                html += '<div class="font-bold text-red-600 text-xs uppercase tracking-wide mb-2 mt-3">Deducciones</div>';
+                html += `<div class="novedad-tooltip-item">
+                    <span class="novedad-tooltip-label">Total Deducciones</span>
+                    <span class="novedad-tooltip-value deduccion">-${formatMoney(deducciones)}</span>
+                </div>`;
+            }
+
+            html += '</div>';
+
+            tooltipContent.innerHTML = html;
+
+            // Position the tooltip
+            const rect = cell.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            let top = rect.top + window.scrollY - tooltip.offsetHeight - 10;
+            let left = rect.left + window.scrollX + (rect.width / 2) - (tooltip.offsetWidth / 2);
+
+            // Adjust if tooltip goes off-screen
+            if (top < window.scrollY) {
+                top = rect.bottom + window.scrollY + 10;
+            }
+
+            if (left < 10) {
+                left = 10;
+            } else if (left + tooltip.offsetWidth > window.innerWidth - 10) {
+                left = window.innerWidth - tooltip.offsetWidth - 10;
+            }
+
+            tooltip.style.top = top + 'px';
+            tooltip.style.left = left + 'px';
+            tooltip.style.display = 'block';
+        } catch (error) {
+            console.error('Error showing tooltip:', error);
+        }
+    }
+
+    function hideTooltip() {
+        if (currentTimeout) {
+            clearTimeout(currentTimeout);
+        }
+        currentTimeout = setTimeout(() => {
+            tooltip.style.display = 'none';
+        }, 150);
+    }
+
+    novedadCells.forEach(cell => {
+        cell.addEventListener('mouseenter', (e) => {
+            if (currentTimeout) {
+                clearTimeout(currentTimeout);
+            }
+            showTooltip(cell, e);
+        });
+
+        cell.addEventListener('mouseleave', () => {
+            hideTooltip();
+        });
+
+        cell.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (tooltip.style.display === 'none') {
+                showTooltip(cell, e);
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+    });
+
+    // Hide tooltip when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!tooltip.contains(e.target) && !Array.from(novedadCells).some(cell => cell.contains(e.target))) {
+            tooltip.style.display = 'none';
+        }
+    });
+
+    // Hide tooltip on scroll
+    window.addEventListener('scroll', () => {
+        if (tooltip.style.display === 'block') {
+            tooltip.style.display = 'none';
+        }
+    });
+});
+</script>

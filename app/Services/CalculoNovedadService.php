@@ -45,23 +45,33 @@ class CalculoNovedadService
             )->id_periodo;
         }
 
-        return Salario::query()
+        $baseQuery = Salario::query()
             ->join('contrato', 'contrato.id_contrato', '=', 'salario.id_contrato')
             ->where('contrato.doc', $empleadoId)
             ->where(function ($query) {
                 $query
                     ->where('contrato.activo', true)
-                    ->orWhere('contrato.estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
+                    ->orWhereIn('contrato.estado', [
+                        Contrato::ESTADO_ACTIVO,
+                        Contrato::ESTADO_POR_VENCER,
+                    ]);
             })
             ->when($empresaId > 0, function ($query) use ($empresaId) {
                 $query->where('contrato.id_empresa', $empresaId);
             })
-            ->when($activePeriodId > 0, function ($query) use ($activePeriodId) {
-                $query->where('salario.id_periodo', $activePeriodId);
-            })
             ->orderByDesc('salario.id_salario')
-            ->select('salario.*', 'contrato.salario_base as contrato_salario_base')
-            ->first();
+            ->select('salario.*', 'contrato.salario_base as contrato_salario_base');
+
+        // Intentar primero con el período activo; si no hay salario para ese período,
+        // usar el salario más reciente disponible del empleado.
+        if ($activePeriodId > 0) {
+            $salario = (clone $baseQuery)->where('salario.id_periodo', $activePeriodId)->first();
+            if ($salario) {
+                return $salario;
+            }
+        }
+
+        return $baseQuery->first();
     }
 
     public function resolverDias(array $data): float

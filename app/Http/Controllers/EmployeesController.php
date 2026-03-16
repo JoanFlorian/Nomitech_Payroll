@@ -21,16 +21,27 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Models\Contrato;
 use Illuminate\Support\Facades\Schema;
+use App\Services\ContractAlertService;
 
 class EmployeesController extends Controller
 {
     private function contratoActivoCallback(): \Closure
     {
         $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
+        $hasEstado = Schema::hasColumn('contrato', 'estado');
 
-        return function ($q) use ($hasEstadoLaboral) {
+        return function ($q) use ($hasEstadoLaboral, $hasEstado) {
             if ($hasEstadoLaboral) {
                 $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
+                return;
+            }
+
+            if ($hasEstado) {
+                $q->whereIn('estado', [
+                    Contrato::ESTADO_ACTIVO,
+                    Contrato::ESTADO_POR_VENCER,
+                    Contrato::ESTADO_PROGRAMADO,
+                ]);
                 return;
             }
 
@@ -41,10 +52,19 @@ class EmployeesController extends Controller
     private function contratoInactivoCallback(): \Closure
     {
         $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
+        $hasEstado = Schema::hasColumn('contrato', 'estado');
 
-        return function ($q) use ($hasEstadoLaboral) {
+        return function ($q) use ($hasEstadoLaboral, $hasEstado) {
             if ($hasEstadoLaboral) {
                 $q->where('estado_laboral', Contrato::ESTADO_LABORAL_TERMINADO);
+                return;
+            }
+
+            if ($hasEstado) {
+                $q->whereIn('estado', [
+                    Contrato::ESTADO_VENCIDO,
+                    Contrato::ESTADO_TERMINADO,
+                ]);
                 return;
             }
 
@@ -113,6 +133,12 @@ class EmployeesController extends Controller
         $inactivosCount = Empleado::whereHas('contratos', $this->contratoInactivoCallback())->count();
         $sinContratoCount = Empleado::doesntHave('contratos')->count();
 
+        // Alertas de contratos
+        $empresaId = (int) session('empresa_id');
+        $contractAlerts = $empresaId > 0
+            ? app(ContractAlertService::class)->getAlertSummary($empresaId)
+            : ['expiring' => ['count' => 0], 'pending_liquidation' => ['count' => 0]];
+
         // Define the step variable for the view
         $step = $request->input('step', 1);
 
@@ -134,6 +160,7 @@ class EmployeesController extends Controller
             'activosCount',
             'inactivosCount',
             'sinContratoCount',
+            'contractAlerts',
             'step'
         ));
     }
@@ -144,6 +171,29 @@ class EmployeesController extends Controller
     public function export(Request $request)
     {
         return $this->exportarEmpleadosExcel($request);
+    }
+
+    /**
+     * Obtener datos del último contrato para la renovación.
+     */
+    public function getContractData($doc)
+    {
+        $companyId = session('empresa_id');
+        $usuario = Empleado::where('doc', $doc)->firstOrFail();
+        $contrato = Contrato::where('doc', $doc)
+            ->where('id_empresa', $companyId)
+            ->orderByDesc('id_contrato')
+            ->first();
+
+        if (!$contrato) {
+            return response()->json(['success' => false, 'message' => 'No se encontró contrato previo.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'nombre' => $usuario->primer_nombre . ' ' . $usuario->primer_apellido,
+            'contrato' => $contrato
+        ]);
     }
 
     public function exportarEmpleadosExcel(Request $request)

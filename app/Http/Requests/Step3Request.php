@@ -10,6 +10,24 @@ use Illuminate\Support\Str;
 
 class Step3Request extends FormRequest
 {
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $fields = ['prima_inicial', 'cesantias_inicial', 'intereses_inicial', 'vacaciones_inicial'];
+        foreach ($fields as $field) {
+            if ($this->has($field)) {
+                $value = $this->input($field);
+                if (is_string($value)) {
+                    // Normalize: remove thousands dots, replace decimal comma with dot
+                    $normalized = str_replace('.', '', $value);
+                    $normalized = str_replace(',', '.', $normalized);
+                    $this->merge([$field => $normalized]);
+                }
+            }
+        }
+    }
 
 
     public function authorize(): bool
@@ -28,12 +46,14 @@ class Step3Request extends FormRequest
             'numero_cuenta' => ($isCashFormaPago ? 'nullable' : 'required') . '|string|max:20|regex:/^[0-9]{6,20}$/',
             'id_eps' => 'required|integer|exists:eps,id_eps',
             'id_afp' => 'required|integer|exists:afp,id_afp',
+            'id_caja' => 'required|integer|exists:cajas_compensacion,id_caja',
+            'fondo_cesantias' => 'nullable|string|max:100',
 
             // Saldos iniciales de prestaciones (opcionales)
-            'prima_inicial' => 'nullable|numeric|min:0',
-            'cesantias_inicial' => 'nullable|numeric|min:0',
+            'prima_inicial' => 'nullable|numeric|min:0|max:999999999',
+            'cesantias_inicial' => 'nullable|numeric|min:0|max:9999999999',
             'intereses_inicial' => 'nullable|numeric|min:0',
-            'vacaciones_inicial' => 'nullable|numeric|min:0',
+            'vacaciones_inicial' => 'nullable|numeric|min:0|max:180',
         ];
     }
 
@@ -82,6 +102,13 @@ class Step3Request extends FormRequest
             'id_afp.required' => 'Debe seleccionar la AFP.',
             'id_afp.integer' => 'La AFP no es válida.',
             'id_afp.exists' => 'La AFP seleccionada no existe.',
+
+            'id_caja.required' => 'Debe seleccionar la Caja de Compensación.',
+            'id_caja.integer' => 'La Caja de Compensación no es válida.',
+            'id_caja.exists' => 'La Caja de Compensación seleccionada no existe.',
+
+            'fondo_cesantias.string' => 'El fondo de cesantías debe ser texto.',
+            'fondo_cesantias.max' => 'El fondo de cesantías no puede superar 100 caracteres.',
         ];
     }
 

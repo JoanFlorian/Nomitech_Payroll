@@ -4,8 +4,8 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" href="data:,">
-    <link rel="shortcut icon" href="data:,">
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/logo nomitech.jpeg') }}">
+    <link rel="shortcut icon" type="image/jpeg" href="{{ asset('images/logo nomitech.jpeg') }}">
     <title>@yield('title') - Nomitech</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -98,24 +98,73 @@
 <body class="bg-[#1565C0]">
     
 
-<div class="flex min-h-screen">
+<div class="flex min-h-screen relative">
 
+    {{-- Overlay oscuro para móviles cuando el sidebar está abierto --}}
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 lg:hidden hidden" onclick="toggleMobileSidebar()"></div>
 
     {{-- Sidebar --}}
     <x-sidebar />
 
     {{-- Main content --}}
-    <main class="flex-1 min-h-screen bg-white relative overflow-hidden rounded-l-3xl shadow-2xl">
+    <main class="flex-1 min-h-screen bg-white relative overflow-hidden rounded-l-3xl shadow-2xl w-full lg:w-auto">
         <x-shapes /> {{-- las figuras decorativas --}}
-        <div class="h-full w-full flex flex-col p-8 z-10 relative">
-            <h1 class="text-4xl font-bold text-gray-800 mb-8">@yield('page-title')</h1>
-            <div class="flex-grow bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+        
+        {{-- Botón hamburguesa para móviles --}}
+        <button 
+            id="mobile-menu-btn"
+            onclick="toggleMobileSidebar()" 
+            class="lg:hidden fixed top-4 left-4 z-20 bg-[#1565C0] text-white p-3 rounded-lg shadow-lg hover:bg-[#0D47A1] transition"
+            aria-label="Abrir menú"
+        >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+        
+        <div class="h-full w-full flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 sm:mb-6 lg:mb-8 mt-12 lg:mt-0">@yield('page-title')</h1>
+            <div class="flex-grow bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100">
                 @yield('content') {{-- Aquí va el contenido de cada módulo --}}
             </div>
         </div>
 
     </main>
 </div>
+
+<script>
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (sidebar && overlay) {
+        sidebar.classList.toggle('mobile-open');
+        overlay.classList.toggle('hidden');
+        
+        // Evitar scroll del body cuando el sidebar está abierto
+        if (sidebar.classList.contains('mobile-open')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+    }
+}
+
+// Cerrar sidebar al cambiar de tamaño a desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth >= 1024) {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (sidebar && overlay) {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    }
+});
+</script>
+
+@stack('modals')
 
 @stack('scripts')
 

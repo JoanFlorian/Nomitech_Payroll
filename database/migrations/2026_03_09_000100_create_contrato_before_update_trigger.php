@@ -53,6 +53,19 @@ BEGIN
             NOW()
         );
     END IF;
+
+    -- Cambio de ARL
+    IF NOT (OLD.id_arl <=> NEW.id_arl) THEN
+        INSERT INTO historial_contrato (
+            id_contrato, dato_anterior, dato_nuevo, tipo_novedad, fecha_cambio
+        ) VALUES (
+            OLD.id_contrato,
+            CAST(OLD.id_arl AS CHAR),
+            CAST(NEW.id_arl AS CHAR),
+            'ARL',
+            NOW()
+        );
+    END IF;
 END
 SQL
         );

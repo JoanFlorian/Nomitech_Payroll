@@ -137,6 +137,32 @@ class UpdateEmployeePartialRequest extends FormRequest
             $rules['id_afp'] = 'bail|required|integer|exists:afp,id_afp';
         }
 
+        if ($this->has('fondo_cesantias')) {
+            $rules['fondo_cesantias'] = 'bail|nullable|string|max:100';
+        }
+
+        // Migration Fields (Optional)
+        if ($this->has('prima_inicial')) {
+            $rules['prima_inicial'] = 'bail|nullable|numeric|min:0|max:999999999';
+        }
+        if ($this->has('cesantias_inicial')) {
+            $rules['cesantias_inicial'] = 'bail|nullable|numeric|min:0|max:9999999999';
+        }
+        if ($this->has('intereses_inicial')) {
+            $rules['intereses_inicial'] = 'bail|nullable|numeric|min:0';
+        }
+        if ($this->has('vacaciones_inicial')) {
+            $rules['vacaciones_inicial'] = 'bail|nullable|numeric|min:0|max:180';
+        }
+
+        if ($this->has('email')) {
+            $rules['email'] = 'bail|required|email|max:255|unique:usuario,correo,' . $doc . ',doc';
+        }
+
+        if ($this->has('telefono')) {
+            $rules['telefono'] = 'bail|required|digits:10|regex:/^[0-9]+$/';
+        }
+
         // Estado contrato
         if ($this->has('activo')) {
             $rules['activo'] = 'nullable|boolean';
@@ -150,104 +176,116 @@ class UpdateEmployeePartialRequest extends FormRequest
         return [
             // PASO 1 - Datos personales
             'id_tipo_doc.required' => 'El tipo de documento es obligatorio.',
-            'id_tipo_doc.integer'  => 'El tipo de documento no es válido.',
-            'id_tipo_doc.exists'   => 'El tipo de documento seleccionado no es válido.',
+            'id_tipo_doc.integer' => 'El tipo de documento no es válido.',
+            'id_tipo_doc.exists' => 'El tipo de documento seleccionado no es válido.',
 
-            'numero_documento.required'       => 'El número de documento es obligatorio.',
+            'numero_documento.required' => 'El número de documento es obligatorio.',
             'numero_documento.digits_between' => 'El número de documento debe tener entre 5 y 15 dígitos.',
-            'numero_documento.unique'         => 'Este número de documento ya está registrado en el sistema.',
+            'numero_documento.unique' => 'Este número de documento ya está registrado en el sistema.',
 
             'primer_apellido.required' => 'El primer apellido es obligatorio.',
-            'primer_apellido.min'      => 'El primer apellido debe tener mínimo 3 caracteres.',
-            'primer_apellido.max'      => 'El primer apellido no puede superar 30 caracteres.',
-            'primer_apellido.regex'    => 'El primer apellido solo puede contener letras y espacios.',
+            'primer_apellido.min' => 'El primer apellido debe tener mínimo 3 caracteres.',
+            'primer_apellido.max' => 'El primer apellido no puede superar 30 caracteres.',
+            'primer_apellido.regex' => 'El primer apellido solo puede contener letras y espacios.',
 
-            'segundo_apellido.min'   => 'El segundo apellido debe tener mínimo 3 caracteres.',
-            'segundo_apellido.max'   => 'El segundo apellido no puede superar 30 caracteres.',
+            'segundo_apellido.min' => 'El segundo apellido debe tener mínimo 3 caracteres.',
+            'segundo_apellido.max' => 'El segundo apellido no puede superar 30 caracteres.',
             'segundo_apellido.regex' => 'El segundo apellido solo puede contener letras y espacios.',
 
             'primer_nombre.required' => 'El primer nombre es obligatorio.',
-            'primer_nombre.min'      => 'El primer nombre debe tener mínimo 3 caracteres.',
-            'primer_nombre.max'      => 'El primer nombre no puede superar 30 caracteres.',
-            'primer_nombre.regex'    => 'El primer nombre solo puede contener letras y espacios.',
+            'primer_nombre.min' => 'El primer nombre debe tener mínimo 3 caracteres.',
+            'primer_nombre.max' => 'El primer nombre no puede superar 30 caracteres.',
+            'primer_nombre.regex' => 'El primer nombre solo puede contener letras y espacios.',
 
-            'otros_nombres.min'   => 'Los otros nombres deben tener mínimo 3 caracteres.',
-            'otros_nombres.max'   => 'Los otros nombres no pueden superar 50 caracteres.',
+            'otros_nombres.min' => 'Los otros nombres deben tener mínimo 3 caracteres.',
+            'otros_nombres.max' => 'Los otros nombres no pueden superar 50 caracteres.',
             'otros_nombres.regex' => 'Los otros nombres solo pueden contener letras y espacios.',
 
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email' => 'Debe ingresar un correo electrónico válido.',
+            'email.max' => 'El correo no puede superar 255 caracteres.',
+            'email.unique' => 'El correo electrónico ya está registrado en el sistema.',
+
+            'telefono.required' => 'El teléfono es obligatorio.',
+            'telefono.digits' => 'El teléfono debe tener exactamente 10 dígitos.',
+            'telefono.regex' => 'El teléfono solo puede contener números.',
+
             'id_ciudad.required' => 'La ciudad es obligatoria.',
-            'id_ciudad.integer'  => 'Debe seleccionar una ciudad válida.',
-            'id_ciudad.exists'   => 'La ciudad seleccionada no es válida.',
+            'id_ciudad.integer' => 'Debe seleccionar una ciudad válida.',
+            'id_ciudad.exists' => 'La ciudad seleccionada no es válida.',
 
             'direccion.required' => 'La dirección es obligatoria.',
-            'direccion.max'      => 'La dirección no puede superar 150 caracteres.',
-            'direccion.regex'    => 'La dirección debe incluir texto válido y una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).',
+            'direccion.max' => 'La dirección no puede superar 150 caracteres.',
+            'direccion.regex' => 'La dirección debe incluir texto válido y una referencia vial (ej: Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).',
 
             // PASO 2 - Datos laborales
             'fecha_inicio.required' => 'La fecha de inicio es obligatoria.',
-            'fecha_inicio.date'     => 'Debe ingresar una fecha válida.',
+            'fecha_inicio.date' => 'Debe ingresar una fecha válida.',
 
-            'fecha_fin.date'           => 'Debe ingresar una fecha válida.',
-            'fecha_fin.after'          => 'La fecha fin debe ser posterior a la fecha de inicio.',
+            'fecha_fin.date' => 'Debe ingresar una fecha válida.',
+            'fecha_fin.after' => 'La fecha fin debe ser posterior a la fecha de inicio.',
 
             'horas_diarias.required' => 'Las horas diarias son obligatorias.',
-            'horas_diarias.integer'  => 'Las horas diarias deben ser un número entero.',
-            'horas_diarias.min'      => 'Debe trabajar mínimo 1 hora diaria.',
-            'horas_diarias.max'      => 'No puede superar 12 horas diarias.',
+            'horas_diarias.integer' => 'Las horas diarias deben ser un número entero.',
+            'horas_diarias.min' => 'Debe trabajar mínimo 1 hora diaria.',
+            'horas_diarias.max' => 'No puede superar 12 horas diarias.',
 
             'id_tipo_trabajador.required' => 'Debe seleccionar el tipo de trabajador.',
-            'id_tipo_trabajador.integer'  => 'Debe seleccionar un tipo de trabajador válido.',
-            'id_tipo_trabajador.exists'   => 'El tipo de trabajador seleccionado no existe.',
+            'id_tipo_trabajador.integer' => 'Debe seleccionar un tipo de trabajador válido.',
+            'id_tipo_trabajador.exists' => 'El tipo de trabajador seleccionado no existe.',
 
             'id_sub_tipo_trabajador.required' => 'Debe seleccionar el sub tipo de trabajador.',
-            'id_sub_tipo_trabajador.integer'  => 'Debe seleccionar un sub tipo válido.',
-            'id_sub_tipo_trabajador.exists'   => 'El sub tipo de trabajador seleccionado no existe.',
+            'id_sub_tipo_trabajador.integer' => 'Debe seleccionar un sub tipo válido.',
+            'id_sub_tipo_trabajador.exists' => 'El sub tipo de trabajador seleccionado no existe.',
 
             'id_tipo_contrato.required' => 'Debe seleccionar el tipo de contrato.',
-            'id_tipo_contrato.integer'  => 'Debe seleccionar un tipo de contrato válido.',
-            'id_tipo_contrato.exists'   => 'El tipo de contrato seleccionado no existe.',
+            'id_tipo_contrato.integer' => 'Debe seleccionar un tipo de contrato válido.',
+            'id_tipo_contrato.exists' => 'El tipo de contrato seleccionado no existe.',
 
             'id_arl.required' => 'Debe seleccionar la ARL.',
-            'id_arl.integer'  => 'Debe seleccionar una ARL válida.',
-            'id_arl.exists'   => 'La ARL seleccionada no existe.',
+            'id_arl.integer' => 'Debe seleccionar una ARL válida.',
+            'id_arl.exists' => 'La ARL seleccionada no existe.',
 
             'salario.required' => 'El salario es obligatorio.',
-            'salario.numeric'  => 'El salario debe ser un valor numérico.',
-            'salario.min'      => 'El salario no puede ser negativo.',
-            'salario.max'      => 'El salario es demasiado alto.',
+            'salario.numeric' => 'El salario debe ser un valor numérico.',
+            'salario.min' => 'El salario no puede ser negativo.',
+            'salario.max' => 'El salario es demasiado alto.',
 
             'nivel_riesgo.required' => 'Debe seleccionar el nivel de riesgo.',
-            'nivel_riesgo.in'       => 'El nivel de riesgo seleccionado no es válido.',
+            'nivel_riesgo.in' => 'El nivel de riesgo seleccionado no es válido.',
 
-            'codigo_interno.min'      => 'El código interno debe tener mínimo 3 caracteres.',
-            'codigo_interno.max'      => 'El código interno no puede superar 20 caracteres.',
-            'codigo_interno.regex'    => 'El código interno solo puede contener números.',
+            'codigo_interno.min' => 'El código interno debe tener mínimo 3 caracteres.',
+            'codigo_interno.max' => 'El código interno no puede superar 20 caracteres.',
+            'codigo_interno.regex' => 'El código interno solo puede contener números.',
 
             // PASO 3 - Datos financieros
             'id_forma_pago.required' => 'Debe seleccionar la forma de pago.',
-            'id_forma_pago.integer'  => 'La forma de pago no es válida.',
-            'id_forma_pago.exists'   => 'La forma de pago seleccionada no existe.',
+            'id_forma_pago.integer' => 'La forma de pago no es válida.',
+            'id_forma_pago.exists' => 'La forma de pago seleccionada no existe.',
 
             'id_metodo_pago.required' => 'Debe seleccionar el método de pago.',
-            'id_metodo_pago.integer'  => 'El método de pago no es válido.',
-            'id_metodo_pago.exists'   => 'El método de pago seleccionado no existe.',
+            'id_metodo_pago.integer' => 'El método de pago no es válido.',
+            'id_metodo_pago.exists' => 'El método de pago seleccionado no existe.',
 
             'tipo_cuenta.required' => 'Debe seleccionar el tipo de cuenta.',
-            'tipo_cuenta.integer'  => 'El tipo de cuenta no es válido.',
-            'tipo_cuenta.exists'   => 'El tipo de cuenta seleccionada no existe.',
+            'tipo_cuenta.integer' => 'El tipo de cuenta no es válido.',
+            'tipo_cuenta.exists' => 'El tipo de cuenta seleccionada no existe.',
 
             'numero_cuenta.required' => 'Debe ingresar el número de cuenta.',
-            'numero_cuenta.string'   => 'El número de cuenta debe ser texto.',
-            'numero_cuenta.max'      => 'El número de cuenta no puede superar 20 caracteres.',
-            'numero_cuenta.regex'    => 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.',
+            'numero_cuenta.string' => 'El número de cuenta debe ser texto.',
+            'numero_cuenta.max' => 'El número de cuenta no puede superar 20 caracteres.',
+            'numero_cuenta.regex' => 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.',
 
             'id_eps.required' => 'Debe seleccionar la EPS.',
-            'id_eps.integer'  => 'La EPS no es válida.',
-            'id_eps.exists'   => 'La EPS seleccionada no existe.',
+            'id_eps.integer' => 'La EPS no es válida.',
+            'id_eps.exists' => 'La EPS seleccionada no existe.',
 
             'id_afp.required' => 'Debe seleccionar la AFP.',
-            'id_afp.integer'  => 'La AFP no es válida.',
-            'id_afp.exists'   => 'La AFP seleccionada no existe.',
+            'id_afp.integer' => 'La AFP no es válida.',
+            'id_afp.exists' => 'La AFP seleccionada no existe.',
+
+            'fondo_cesantias.string' => 'El fondo de cesantías debe ser texto.',
+            'fondo_cesantias.max' => 'El fondo de cesantías no puede superar 100 caracteres.',
         ];
     }
 
@@ -258,10 +296,15 @@ class UpdateEmployeePartialRequest extends FormRequest
 
             $contratoActual = null;
             if ($doc !== '') {
-                $contratoActual = Contrato::query()->where('doc', $doc)->first();
+                $contratoActual = \App\Models\Contrato::query()->where('doc', $doc)->where('activo', 1)->first();
             }
 
-            $idTipoContratoFecha = (int) ($this->input('id_tipo_contrato') ?? ($contratoActual?->id_tipo_contrato ?? 0));
+            $idTipoContratoFecha = 0;
+            if ($contratoActual instanceof \App\Models\Contrato) {
+                $idTipoContratoFecha = (int) ($this->input('id_tipo_contrato') ?? $contratoActual->id_tipo_contrato);
+            } else {
+                $idTipoContratoFecha = (int) $this->input('id_tipo_contrato', 0);
+            }
             $fechaFin = $this->input('fecha_fin');
 
             if ($idTipoContratoFecha > 0 && $this->isIndefiniteContract($idTipoContratoFecha) && !empty($fechaFin)) {
@@ -283,14 +326,28 @@ class UpdateEmployeePartialRequest extends FormRequest
                 return;
             }
 
-            $salario = $this->has('salario')
-                ? (float) $this->input('salario')
-                : ($this->has('salario_base')
-                    ? (float) $this->input('salario_base')
-                    : (float) ($contratoActual?->salario_base ?? 0));
+            $salario = (float) 0;
+            if ($this->has('salario')) {
+                $salario = (float) $this->input('salario');
+            } elseif ($this->has('salario_base')) {
+                $salario = (float) $this->input('salario_base');
+            } elseif ($contratoActual instanceof \App\Models\Contrato) {
+                $salario = (float) $contratoActual->salario_base;
+            }
 
-            $idTipoContrato = (int) ($this->input('id_tipo_contrato') ?? ($contratoActual?->id_tipo_contrato ?? 0));
-            $idTipoTrabajador = (int) ($this->input('id_tipo_trabajador') ?? ($contratoActual?->id_tipo_trabajador ?? 0));
+            $idTipoContrato = 0;
+            if ($this->has('id_tipo_contrato')) {
+                $idTipoContrato = (int) $this->input('id_tipo_contrato');
+            } elseif ($contratoActual instanceof \App\Models\Contrato) {
+                $idTipoContrato = (int) $contratoActual->id_tipo_contrato;
+            }
+
+            $idTipoTrabajador = 0;
+            if ($this->has('id_tipo_trabajador')) {
+                $idTipoTrabajador = (int) $this->input('id_tipo_trabajador');
+            } elseif ($contratoActual instanceof \App\Models\Contrato) {
+                $idTipoTrabajador = (int) $contratoActual->id_tipo_trabajador;
+            }
 
             if ($idTipoContrato <= 0) {
                 return;
@@ -343,6 +400,30 @@ class UpdateEmployeePartialRequest extends FormRequest
                     'salario',
                     'Para contrato de aprendizaje debe indicar la etapa del aprendiz (lectiva o productiva).'
                 );
+            }
+            $idFormaPago = (int) ($this->input('id_forma_pago') ?? ($contratoActual?->id_forma_pago ?? 0));
+            $isCash = false;
+            
+            if ($idFormaPago > 0) {
+                $nombreForma = \App\Models\FormaPago::query()->where('id_forma_pago', $idFormaPago)->value('nombre');
+                if ($nombreForma) {
+                    $normalized = Str::of($nombreForma)->ascii()->lower()->toString();
+                    $isCash = Str::contains($normalized, ['efectivo', 'contado']);
+                }
+            }
+
+            if (!$isCash) {
+                if ($this->has('tipo_cuenta') && empty($this->input('tipo_cuenta'))) {
+                    $validator->errors()->add('tipo_cuenta', 'Debe seleccionar el tipo de cuenta.');
+                }
+                if ($this->has('numero_cuenta')) {
+                    $numero = $this->input('numero_cuenta');
+                    if (empty($numero)) {
+                        $validator->errors()->add('numero_cuenta', 'Debe ingresar el número de cuenta.');
+                    } elseif (!preg_match('/^[0-9]{6,20}$/', (string)$numero)) {
+                        $validator->errors()->add('numero_cuenta', 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.');
+                    }
+                }
             }
         });
     }
@@ -462,6 +543,17 @@ class UpdateEmployeePartialRequest extends FormRequest
                 $this->merge(['salario' => $salarioNormalizado]);
             }
         }
+
+        // Normalize Migration Fields
+        $migrationFields = ['prima_inicial', 'cesantias_inicial', 'intereses_inicial', 'vacaciones_inicial'];
+        foreach ($migrationFields as $field) {
+            if ($this->has($field)) {
+                $val = $this->normalizeLocalizedNumber($this->input($field));
+                if ($val !== null) {
+                    $this->merge([$field => $val]);
+                }
+            }
+        }
     }
 
     private function resolveHighRiskFromNivel(string $nivelRiesgo): ?int
@@ -522,7 +614,7 @@ class UpdateEmployeePartialRequest extends FormRequest
         throw new HttpResponseException(
             response()->json([
                 'success' => false,
-                'errors'  => $validator->errors(),
+                'errors' => $validator->errors(),
             ], 422)
         );
     }

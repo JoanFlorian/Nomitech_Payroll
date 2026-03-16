@@ -149,94 +149,159 @@
             color: #64748b;
             padding: 14px;
         }
+
+        .page-break {
+            page-break-after: always;
+        }
     </style>
 </head>
 
 <body>
     @php
         $salarios = $salarios ?? collect();
+        $salariosPorPagina = 8;
+        $bloques = $salarios->chunk($salariosPorPagina);
     @endphp
 
-    <div class="report-shell">
-        <div class="header">
-            <table class="title-row">
-                <tr>
-                    <td>
-                        <div class="title">Reporte de Nómina</div>
-                        <div class="subtitle">Consolidado detallado de liquidaciones del periodo consultado</div>
-                    </td>
-                    <td class="text-right">
-                        Generado: {{ $fechaGeneracion ?? now()->format('d/m/Y H:i') }}
-                    </td>
-                </tr>
-            </table>
-            <div class="meta-wrap">
-                Búsqueda: {{ $busqueda ?? 'Sin filtro' }} | Periodo: {{ $periodo ?? 'Sin filtro' }}
-            </div>
-        </div>
-
-        <div class="content">
-            <table class="report-table">
-                <colgroup>
-                    <col style="width: 11%;">
-                    <col style="width: 17%;">
-                    <col style="width: 6%;">
-                    <col style="width: 5%;">
-                    <col style="width: 10%;">
-                    <col style="width: 10%;">
-                    <col style="width: 9%;">
-                    <col style="width: 10%;">
-                    <col style="width: 10%;">
-                    <col style="width: 12%;">
-                </colgroup>
-                <thead>
+    @if ($salarios->isEmpty())
+        <div class="report-shell">
+            <div class="header">
+                <table class="title-row">
                     <tr>
-                        <th>Documento</th>
-                        <th>Empleado</th>
-                        <th class="text-center">Fecha pago</th>
-                        <th class="text-center">Dias</th>
-                        <th class="text-right">Pago por dias</th>
-                        <th class="text-right">Salario inicial</th>
-                        <th class="text-right">Novedades</th>
-                        <th class="text-right">Devengos</th>
-                        <th class="text-right">Deducciones</th>
-                        <th class="text-right">Salario neto</th>
+                        <td>
+                            <div class="title">Reporte de Nómina</div>
+                            <div class="subtitle">Consolidado detallado de liquidaciones del periodo consultado</div>
+                        </td>
+                        <td class="text-right">
+                            Generado: {{ $fechaGeneracion ?? now()->format('d/m/Y H:i') }}
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    @forelse ($salarios as $idx => $salario)
-                        @php
-                            $contrato = $salario->contrato;
-                            $usuario = $contrato?->usuario;
-                            $diasTrabajados = max(0, min(30, (int) ($salario->dias_a_trabajar ?? 0)));
-                            $salarioBase = (float) ($contrato?->salario_base ?? 0);
-                            $valorDia = $salarioBase / 30;
-                            $pagoPorDias = $valorDia * $diasTrabajados;
-                            $novedades = (float) ($salario->total_novedades ?? 0);
-                        @endphp
-                        <tr class="{{ $idx % 2 === 1 ? 'row-alt' : '' }}">
-                            <td>{{ $usuario?->doc ?? '' }}</td>
-                            <td class="text-strong">{{ $usuario?->nombre_completo ?? '' }}</td>
-                            <td class="text-center">{{ $salario->fecha_pago ? \Carbon\Carbon::parse($salario->fecha_pago)->format('Y-m-d') : '' }}</td>
-                            <td class="text-center text-strong">{{ $diasTrabajados }}</td>
-                            <td class="text-right">${{ number_format($pagoPorDias, 0, ',', '.') }}</td>
-                            <td class="text-right">${{ number_format($salarioBase, 0, ',', '.') }}</td>
-                            <td class="text-right {{ $novedades >= 0 ? 'text-success' : 'text-danger' }}">
-                                {{ $novedades >= 0 ? '+' : '-' }}${{ number_format(abs($novedades), 0, ',', '.') }}
-                            </td>
-                            <td class="text-right text-success">${{ number_format((float) $salario->total_devengado, 0, ',', '.') }}</td>
-                            <td class="text-right text-danger">${{ number_format((float) $salario->getRawOriginal('total_deducciones'), 0, ',', '.') }}</td>
-                            <td class="text-right text-strong">${{ number_format((float) $salario->neto_pagar, 0, ',', '.') }}</td>
+                </table>
+                <div class="meta-wrap">
+                    Búsqueda: {{ $busqueda ?? 'Sin filtro' }} | Periodo: {{ $periodo ?? 'Sin filtro' }}
+                </div>
+            </div>
+
+            <div class="content">
+                <table class="report-table">
+                    <colgroup>
+                        <col style="width: 11%;">
+                        <col style="width: 17%;">
+                        <col style="width: 6%;">
+                        <col style="width: 5%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 9%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 12%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Empleado</th>
+                            <th class="text-center">Fecha pago</th>
+                            <th class="text-center">Dias</th>
+                            <th class="text-right">Pago por dias</th>
+                            <th class="text-right">Salario inicial</th>
+                            <th class="text-right">Novedades</th>
+                            <th class="text-right">Devengos</th>
+                            <th class="text-right">Deducciones</th>
+                            <th class="text-right">Salario neto</th>
                         </tr>
-                    @empty
+                    </thead>
+                    <tbody>
                         <tr>
                             <td colspan="10" class="empty">No hay registros de nómina para exportar con los filtros seleccionados.</td>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+    @else
+        @foreach ($bloques as $paginaIndex => $bloque)
+            <div class="report-shell">
+                <div class="header">
+                    <table class="title-row">
+                        <tr>
+                            <td>
+                                <div class="title">Reporte de Nómina</div>
+                                <div class="subtitle">Consolidado detallado de liquidaciones del periodo consultado</div>
+                            </td>
+                            <td class="text-right">
+                                Generado: {{ $fechaGeneracion ?? now()->format('d/m/Y H:i') }}
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="meta-wrap">
+                        Búsqueda: {{ $busqueda ?? 'Sin filtro' }} | Periodo: {{ $periodo ?? 'Sin filtro' }} | Página: {{ $paginaIndex + 1 }}
+                    </div>
+                </div>
+
+                <div class="content">
+                    <table class="report-table">
+                        <colgroup>
+                            <col style="width: 11%;">
+                            <col style="width: 17%;">
+                            <col style="width: 6%;">
+                            <col style="width: 5%;">
+                            <col style="width: 10%;">
+                            <col style="width: 10%;">
+                            <col style="width: 9%;">
+                            <col style="width: 10%;">
+                            <col style="width: 10%;">
+                            <col style="width: 12%;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Documento</th>
+                                <th>Empleado</th>
+                                <th class="text-center">Fecha pago</th>
+                                <th class="text-center">Dias</th>
+                                <th class="text-right">Pago por dias</th>
+                                <th class="text-right">Salario inicial</th>
+                                <th class="text-right">Novedades</th>
+                                <th class="text-right">Devengos</th>
+                                <th class="text-right">Deducciones</th>
+                                <th class="text-right">Salario neto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($bloque as $idx => $salario)
+                                @php
+                                    $contrato = $salario->contrato;
+                                    $usuario = $contrato?->usuario;
+                                    $diasTrabajados = max(0, min(30, (int) ($salario->dias_a_trabajar ?? 0)));
+                                    $salarioBase = (float) ($contrato?->salario_base ?? 0);
+                                    $valorDia = $salarioBase / 30;
+                                    $pagoPorDias = $valorDia * $diasTrabajados;
+                                    $novedades = (float) ($salario->total_novedades ?? 0);
+                                @endphp
+                                <tr class="{{ $idx % 2 === 1 ? 'row-alt' : '' }}">
+                                    <td>{{ $usuario?->doc ?? '' }}</td>
+                                    <td class="text-strong">{{ mb_strtoupper((string) ($usuario?->nombre_completo ?? ''), 'UTF-8') }}</td>
+                                    <td class="text-center">{{ $salario->fecha_pago ? \Carbon\Carbon::parse($salario->fecha_pago)->format('Y-m-d') : '' }}</td>
+                                    <td class="text-center text-strong">{{ $diasTrabajados }}</td>
+                                    <td class="text-right">${{ number_format($pagoPorDias, 0, ',', '.') }}</td>
+                                    <td class="text-right">${{ number_format($salarioBase, 0, ',', '.') }}</td>
+                                    <td class="text-right {{ $novedades >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $novedades >= 0 ? '+' : '-' }}${{ number_format(abs($novedades), 0, ',', '.') }}
+                                    </td>
+                                    <td class="text-right text-success">${{ number_format((float) $salario->total_devengado, 0, ',', '.') }}</td>
+                                    <td class="text-right text-danger">${{ number_format((float) $salario->getRawOriginal('total_deducciones'), 0, ',', '.') }}</td>
+                                    <td class="text-right text-strong">${{ number_format((float) $salario->neto_pagar, 0, ',', '.') }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if (!$loop->last)
+                <div class="page-break"></div>
+            @endif
+        @endforeach
+    @endif
 </body>
 
 </html>

@@ -4,7 +4,28 @@
 {{-- No usamos @section('page-title') para tener control total del layout interno como pide el usuario --}}
 
 @section('content')
-    <div x-data="{ reportModalOpen: false, detailModalOpen: false }" class="relative -m-6 md:-m-8">
+    <div x-data="{ 
+        reportModalOpen: false, 
+        detailModalOpen: false, 
+        loading: false, 
+        employees: [], 
+        selectedPeriod: null,
+        fetchDetails(periodId) {
+            this.loading = true;
+            this.detailModalOpen = true;
+            this.selectedPeriod = periodId;
+            fetch(`/nomina-electronica/${periodId}/detalles`)
+                .then(res => res.json())
+                .then(data => {
+                    this.employees = data;
+                    this.loading = false;
+                })
+                .catch(err => {
+                    console.error(err);
+                    this.loading = false;
+                });
+        }
+    }" class="relative -m-6 md:-m-8">
         {{-- Replicamos el main del snippet dentro del content del layout --}}
         <div class="bg-white p-6 md:p-8 lg:p-12 relative overflow-y-auto min-h-screen">
 
@@ -55,6 +76,49 @@
                     </div>
                 </div>
 
+                {{-- FILTERS SECTION --}}
+                <div class="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-8">
+                    <form action="{{ route('nomina-electronica.index') }}" method="GET" class="flex flex-col md:flex-row items-end gap-4">
+                        <div class="flex-1 min-w-[150px]">
+                            <label for="year" class="block text-sm font-bold text-gray-700 mb-2">Año</label>
+                            <select name="year" id="year" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:border-[#1565C0] transition-colors">
+                                <option value="">Todos los años</option>
+                                @foreach($anos as $ano)
+                                    <option value="{{ $ano }}" {{ request('year') == $ano ? 'selected' : '' }}>{{ $ano }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[180px]">
+                            <label for="month" class="block text-sm font-bold text-gray-700 mb-2">Mes</label>
+                            <select name="month" id="month" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:border-[#1565C0] transition-colors">
+                                <option value="">Todos los meses</option>
+                                @php
+                                    $meses = [
+                                        1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+                                        5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+                                        9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+                                    ];
+                                @endphp
+                                @foreach($meses as $num => $nombre)
+                                    <option value="{{ $num }}" {{ request('month') == $num ? 'selected' : '' }}>{{ $nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="bg-[#1565C0] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center gap-2">
+                                <span class="material-icons text-xl">filter_list</span>
+                                Filtrar
+                            </button>
+                            @if(request()->has('year') || request()->has('month'))
+                                <a href="{{ route('nomina-electronica.index') }}" class="bg-gray-200 text-gray-700 px-6 py-2.5 rounded-xl font-bold hover:bg-gray-300 transition-colors flex items-center gap-2">
+                                    <span class="material-icons text-xl">clear</span>
+                                    Limpiar
+                                </a>
+                            @endif
+                        </div>
+                    </form>
+                </div>
+
                 <div class="space-y-6">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
                         <h3 class="text-2xl font-semibold text-gray-700">Historial de periodos de liquidación</h3>
@@ -65,65 +129,51 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {{-- Card 1 --}}
-                        <div
-                            class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow duration-300">
-                            <div class="flex flex-col h-full">
-                                <div class="flex-grow">
-                                    <p class="text-gray-500 text-sm">Rango del periodo</p>
-                                    <p class="text-lg font-bold text-gray-800 mb-4">01/08/2025 - 15/08/2025</p>
-                                    <p class="text-gray-500 text-sm">Estado general</p>
-                                    <span
-                                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-[#10B981]/10 text-[#10B981]">
-                                        <span class="w-2 h-2 mr-2 rounded-full bg-[#10B981]"></span> Aceptado
-                                    </span>
-                                </div>
-                                <button @click="detailModalOpen = true"
-                                    class="mt-6 w-full text-center bg-gray-100 text-[#1565C0] font-semibold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
-                                    Ver detalle
-                                </button>
-                            </div>
-                        </div>
+                        @forelse ($periodos as $periodo)
+                            {{-- Card --}}
+                            <div
+                                class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+                                <div class="flex flex-col h-full">
+                                    <div class="flex-grow">
+                                        <p class="text-gray-500 text-sm">Rango del periodo</p>
+                                        <p class="text-lg font-bold text-gray-800 mb-1">
+                                            {{ $periodo->fecha_inicio->format('d/m/Y') }} -
+                                            {{ $periodo->fecha_fin->format('d/m/Y') }}
+                                        </p>
+                                        <p class="text-xs font-medium text-[#1565C0] uppercase tracking-wider mb-4">
+                                            {{ $periodo->fecha_inicio->translatedFormat('F Y') }}
+                                        </p>
 
-                        {{-- Card 2 --}}
-                        <div
-                            class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow duration-300">
-                            <div class="flex flex-col h-full">
-                                <div class="flex-grow">
-                                    <p class="text-gray-500 text-sm">Rango del periodo</p>
-                                    <p class="text-lg font-bold text-gray-800 mb-4">16/07/2025 - 31/07/2025</p>
-                                    <p class="text-gray-500 text-sm">Estado general</p>
-                                    <span
-                                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-[#e53935]/10 text-[#e53935]">
-                                        <span class="w-2 h-2 mr-2 rounded-full bg-[#e53935]"></span> Rechazado
-                                    </span>
-                                </div>
-                                <button @click="detailModalOpen = true"
-                                    class="mt-6 w-full text-center bg-gray-100 text-[#1565C0] font-semibold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
-                                    Ver detalle
-                                </button>
-                            </div>
-                        </div>
+                                        <div class="flex flex-col space-y-2">
+                                            <div>
+                                                <p class="text-gray-500 text-xs">Estado liquidación</p>
+                                                <span
+                                                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                                                    {{ $periodo->estado === 'cerrado' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700' }}">
+                                                    {{ ucfirst($periodo->estado) }}
+                                                </span>
+                                            </div>
 
-                        {{-- Card 3 --}}
-                        <div
-                            class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow duration-300">
-                            <div class="flex flex-col h-full">
-                                <div class="flex-grow">
-                                    <p class="text-gray-500 text-sm">Rango del periodo</p>
-                                    <p class="text-lg font-bold text-gray-800 mb-4">01/07/2025 - 15/07/2025</p>
-                                    <p class="text-gray-500 text-sm">Estado general</p>
-                                    <span
-                                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-[#10B981]/10 text-[#10B981]">
-                                        <span class="w-2 h-2 mr-2 rounded-full bg-[#10B981]"></span> Aceptado
-                                    </span>
+                                            <div>
+                                                <p class="text-gray-500 text-xs">Estado nómina electrónica</p>
+                                                <span
+                                                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#10B981]/10 text-[#10B981]">
+                                                    <span class="w-2 h-2 mr-2 rounded-full bg-[#10B981]"></span> Aceptado
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button @click="fetchDetails({{ $periodo->id_periodo }})"
+                                        class="mt-6 w-full text-center bg-gray-100 text-[#1565C0] font-semibold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
+                                        Ver detalle
+                                    </button>
                                 </div>
-                                <button @click="detailModalOpen = true"
-                                    class="mt-6 w-full text-center bg-gray-100 text-[#1565C0] font-semibold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
-                                    Ver detalle
-                                </button>
                             </div>
-                        </div>
+                        @empty
+                            <div class="col-span-full py-12 text-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                                <p class="text-gray-500 font-medium">No se encontraron periodos de liquidación registrados.</p>
+                            </div>
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -293,100 +343,42 @@
                                 para este periodo.</p>
                         </div>
                         <div class="p-6 flex-grow overflow-y-auto">
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {{-- Item 1 --}}
-                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col space-y-3">
-                                    <div class="flex justify-between items-start">
+                            {{-- Skeleton / Loading Spinner --}}
+                            <div x-show="loading" class="flex flex-col items-center justify-center py-12">
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1565C0] mb-4"></div>
+                                <p class="text-gray-500 font-medium">Cargando registros...</p>
+                            </div>
+
+                            <div x-show="!loading && employees.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <template x-for="employee in employees" :key="employee.id_salario">
+                                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col space-y-3">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <p class="font-bold text-gray-800" x-text="'👤 ' + employee.nombre_empleado"></p>
+                                                <p class="text-sm text-gray-600" x-text="'📄 CC ' + employee.documento"></p>
+                                            </div>
+                                            <a :href="'/nomina-electronica/pdf/' + employee.id_salario"
+                                                class="flex items-center text-sm text-[#1565C0] font-semibold hover:text-blue-700 transition-colors">
+                                                <span class="material-icons mr-1 text-base">download</span> Descargar PDF
+                                            </a>
+                                        </div>
                                         <div>
-                                            <p class="font-bold text-gray-800">👤 Ana María García</p>
-                                            <p class="text-sm text-gray-600">📄 CC 1029384756</p>
+                                            <p class="text-sm text-gray-500">Estado de la nómina:</p>
+                                            <span
+                                                class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold"
+                                                :class="employee.estado_nomina_electronica === 'Rechazado' ? 'bg-[#e53935]/10 text-[#e53935]' : 'bg-[#10B981]/10 text-[#10B981]'"
+                                                x-text="employee.estado_nomina_electronica"></span>
                                         </div>
-                                        <button
-                                            class="flex items-center text-sm text-[#1565C0] font-semibold hover:text-blue-700 transition-colors">
-                                            <span class="material-icons mr-1 text-base">download</span> Descargar PDF
-                                        </button>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500">Estado de la nómina:</p>
-                                        <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold bg-[#10B981]/10 text-[#10B981]">Aceptado</span>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500">Fecha de reporte:</p>
-                                        <p class="text-sm text-gray-700 font-medium">16/08/2025</p>
-                                    </div>
-                                </div>
-                                {{-- Item 2 --}}
-                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col space-y-3">
-                                    <div class="flex justify-between items-start">
                                         <div>
-                                            <p class="font-bold text-gray-800">👤 Carlos Pérez</p>
-                                            <p class="text-sm text-gray-600">📄 CC 1098765432</p>
-                                        </div>
-                                        <button
-                                            class="flex items-center text-sm text-[#1565C0] font-semibold hover:text-blue-700 transition-colors">
-                                            <span class="material-icons mr-1 text-base">download</span> Descargar PDF
-                                        </button>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500">Estado de la nómina:</p>
-                                        <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold bg-[#e53935]/10 text-[#e53935]">Rechazado</span>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500">Fecha de reporte:</p>
-                                        <p class="text-sm text-gray-700 font-medium">16/08/2025</p>
-                                    </div>
-                                </div>
-                                {{-- Item 3 --}}
-                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col space-y-3">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <p class="font-bold text-gray-800">👤 Luisa Fernanda Rojas</p>
-                                            <p class="text-sm text-gray-600">📄 CC 1012345678</p>
-                                        </div>
-                                        <button
-                                            class="flex items-center text-sm text-[#1565C0] font-semibold hover:text-blue-700 transition-colors">
-                                            <span class="material-icons mr-1 text-base">download</span> Descargar PDF
-                                        </button>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500">Estado de la nómina:</p>
-                                        <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold bg-[#10B981]/10 text-[#10B981]">Aceptado</span>
-                                        <div
-                                            class="mt-2 flex items-center bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">
-                                            <span class="material-icons text-sm mr-1">info</span> Novedad asociada
-                                            registrada
+                                            <p class="text-sm text-gray-500">Fecha de reporte:</p>
+                                            <p class="text-sm text-gray-700 font-medium" x-text="employee.fecha_reporte"></p>
                                         </div>
                                     </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500">Fecha de reporte:</p>
-                                        <p class="text-sm text-gray-700 font-medium">16/08/2025</p>
-                                    </div>
-                                </div>
-                                {{-- Item 4 --}}
-                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col space-y-3">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <p class="font-bold text-gray-800">👤 Juan David Gómez</p>
-                                            <p class="text-sm text-gray-600">📄 CC 1023456789</p>
-                                        </div>
-                                        <button
-                                            class="flex items-center text-sm text-[#1565C0] font-semibold hover:text-blue-700 transition-colors">
-                                            <span class="material-icons mr-1 text-base">download</span> Descargar PDF
-                                        </button>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500">Estado de la nómina:</p>
-                                        <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-semibold bg-[#10B981]/10 text-[#10B981]">Aceptado</span>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500">Fecha de reporte:</p>
-                                        <p class="text-sm text-gray-700 font-medium">16/08/2025</p>
-                                    </div>
-                                </div>
+                                </template>
+                            </div>
+
+                            <div x-show="!loading && employees.length === 0" class="text-center py-12">
+                                <p class="text-gray-500 font-medium">No se encontraron registros de nómina para este periodo.</p>
                             </div>
                         </div>
                         <div class="flex justify-end items-center p-4 bg-gray-50 border-t border-gray-200">

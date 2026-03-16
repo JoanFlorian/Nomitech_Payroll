@@ -50,8 +50,10 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             ],
             'tipo_novedad' => 'bail|required|string|in:' . implode(',', self::TIPOS_NOVEDAD),
             'unidad_cantidad' => 'bail|required|in:dias,horas',
-            'dias' => 'bail|nullable|integer|min:0|max:126',
-            'horas' => 'bail|nullable|integer|min:0|max:240',
+            'cantidad_dias' => 'bail|nullable|numeric|min:0.01|max:126',
+            'cantidad_horas' => 'bail|nullable|numeric|min:0.01|max:240',
+            'dias' => 'bail|nullable|numeric|min:0.01|max:126',
+            'horas' => 'bail|nullable|numeric|min:0.01|max:240',
             'fecha_inicio' => 'bail|required|date',
             'fecha_fin' => 'bail|required|date|after_or_equal:fecha_inicio',
             'observaciones' => 'bail|nullable|string|max:500',
@@ -59,6 +61,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'valor_manual' => 'bail|nullable|numeric|min:0|max:999999999.99',
             'salario_base' => 'bail|required|numeric|min:1',
             'es_remunerado' => 'bail|nullable|boolean',
+            'licencia_remunerada' => 'bail|nullable|boolean',
             'tipo_licencia' => 'bail|nullable|string|in:luto,calamidad_domestica,permiso_especial,remunerada,no_remunerada',
             'certificado_medico' => 'bail|nullable|boolean',
             'id_eps' => 'bail|nullable|integer|exists:eps,id_eps',
@@ -71,17 +74,40 @@ class StoreNovedadEmpleadoRequest extends FormRequest
     {
         return [
             'empleado_id.required' => 'Debe seleccionar un empleado.',
-            'empleado_id.exists' => 'El empleado seleccionado no es válido.',
+            'empleado_id.exists' => 'El empleado seleccionado no es válido o no pertenece a su empresa.',
             'tipo_novedad.required' => 'Debe seleccionar el tipo de novedad.',
             'tipo_novedad.in' => 'El tipo de novedad seleccionado no es válido.',
+            'unidad_cantidad.required' => 'Debe seleccionar si la cantidad es en días u horas.',
+            'unidad_cantidad.in' => 'La unidad de cantidad debe ser días u horas.',
             'dias.numeric' => 'Los días deben ser numéricos.',
             'horas.numeric' => 'Las horas deben ser numéricas.',
-            'dias.min' => 'Los días no pueden ser negativos.',
-            'horas.min' => 'Las horas no pueden ser negativas.',
+            'cantidad_dias.numeric' => 'Los días deben ser numéricos.',
+            'cantidad_horas.numeric' => 'Las horas deben ser numéricas.',
+            'dias.min' => 'Los días deben ser mayor a 0.',
+            'horas.min' => 'Las horas deben ser mayor a 0.',
+            'cantidad_dias.min' => 'Los días deben ser mayor a 0.',
+            'cantidad_horas.min' => 'Las horas deben ser mayor a 0.',
             'dias.max' => 'Los días no pueden superar 126 por novedad.',
             'horas.max' => 'Las horas no pueden superar 240 por novedad.',
+            'cantidad_dias.max' => 'Los días no pueden superar 126 por novedad.',
+            'cantidad_horas.max' => 'Las horas no pueden superar 240 por novedad.',
+            'fecha_inicio.required' => 'La fecha de inicio es obligatoria.',
+            'fecha_inicio.date' => 'La fecha de inicio debe ser una fecha válida.',
+            'fecha_fin.required' => 'La fecha fin es obligatoria.',
+            'fecha_fin.date' => 'La fecha fin debe ser una fecha válida.',
+            'fecha_fin.after_or_equal' => 'La fecha fin debe ser igual o posterior a la fecha de inicio.',
             'salario_base.required' => 'El salario base es obligatorio.',
             'salario_base.min' => 'El salario base debe ser mayor a 0.',
+            'salario_base.numeric' => 'El salario base debe ser numérico.',
+            'observaciones.max' => 'Las observaciones no pueden superar los 500 caracteres.',
+            'pago_manual.numeric' => 'El pago manual debe ser numérico.',
+            'pago_manual.min' => 'El pago manual no puede ser negativo.',
+            'valor_manual.numeric' => 'El valor manual debe ser numérico.',
+            'valor_manual.min' => 'El valor manual no puede ser negativo.',
+            'tipo_licencia.in' => 'El tipo de licencia seleccionado no es válido.',
+            'id_eps.exists' => 'La EPS seleccionada no es válida.',
+            'id_afp.exists' => 'La AFP seleccionada no es válida.',
+            'id_arl.exists' => 'La ARL seleccionada no es válida.',
         ];
     }
 
@@ -140,22 +166,30 @@ class StoreNovedadEmpleadoRequest extends FormRequest
 
             $requiereCantidad = !in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'], true);
 
-            if ($requiereCantidad && $unidad === 'dias' && $dias < 0) {
-                $validator->errors()->add('dias', 'Debe ingresar la cantidad en días.');
+            // Validación: cantidad requerida según tipo
+            if ($requiereCantidad) {
+                if (!in_array($unidad, ['dias', 'horas'], true)) {
+                    $validator->errors()->add('unidad_cantidad', 'Debe indicar si la novedad se calcula en días u horas.');
+                }
+                
+                if ($unidad === 'dias' && $dias <= 0) {
+                    $validator->errors()->add('dias', 'Debe ingresar la cantidad en días (mayor a 0).');
+                    $validator->errors()->add('cantidad_dias', 'Debe ingresar la cantidad en días (mayor a 0).');
+                }
+
+                if ($unidad === 'horas' && $horas <= 0) {
+                    $validator->errors()->add('horas', 'Debe ingresar la cantidad en horas (mayor a 0).');
+                    $validator->errors()->add('cantidad_horas', 'Debe ingresar la cantidad en horas (mayor a 0).');
+                }
             }
 
-            if ($requiereCantidad && $unidad === 'horas' && $horas < 0) {
-                $validator->errors()->add('horas', 'Debe ingresar la cantidad en horas.');
-            }
-
-            if ($requiereCantidad && !in_array($unidad, ['dias', 'horas'], true)) {
-                $validator->errors()->add('unidad_cantidad', 'Debe indicar si la novedad se calcula en días u horas.');
-            }
-
+            // Validación: máximo días según tipo
             if ($requiereCantidad && $unidad === 'dias' && $dias > self::DIAS_MAXIMO_GENERAL && !in_array($tipo, ['LMAT', 'LPAT'], true)) {
                 $validator->errors()->add('dias', 'Los días no pueden superar 30 por periodo.');
+                $validator->errors()->add('cantidad_dias', 'Los días no pueden superar 30 por periodo.');
             }
 
+            // Validación: licencia de maternidad
             if ($tipo === 'LMAT') {
                 if ($unidad !== 'dias') {
                     $validator->errors()->add('unidad_cantidad', 'La licencia de maternidad solo se registra en días.');
@@ -163,9 +197,16 @@ class StoreNovedadEmpleadoRequest extends FormRequest
 
                 if ($dias > (float) self::DIAS_MAXIMO_MATERNIDAD) {
                     $validator->errors()->add('dias', 'La licencia de maternidad no puede exceder 126 días.');
+                    $validator->errors()->add('cantidad_dias', 'La licencia de maternidad no puede exceder 126 días.');
+                }
+                
+                if ($dias <= 0) {
+                    $validator->errors()->add('dias', 'Debe ingresar la cantidad de días para la licencia de maternidad.');
+                    $validator->errors()->add('cantidad_dias', 'Debe ingresar la cantidad de días para la licencia de maternidad.');
                 }
             }
 
+            // Validación: licencia de paternidad
             if ($tipo === 'LPAT') {
                 if ($unidad !== 'dias') {
                     $validator->errors()->add('unidad_cantidad', 'La licencia de paternidad solo se registra en días.');
@@ -173,40 +214,55 @@ class StoreNovedadEmpleadoRequest extends FormRequest
 
                 if ($dias !== (float) self::DIAS_MAXIMO_PATERNIDAD) {
                     $validator->errors()->add('dias', 'La licencia de paternidad debe ser de 14 días.');
+                    $validator->errors()->add('cantidad_dias', 'La licencia de paternidad debe ser de 14 días.');
                 }
             }
 
+            // Validación: tipo de licencia requerido para LIC
             if ($tipo === 'LIC' && !in_array($tipoLicencia, ['luto', 'calamidad_domestica', 'permiso_especial', 'remunerada', 'no_remunerada'], true)) {
                 $validator->errors()->add('tipo_licencia', 'Debe seleccionar un tipo de licencia válido.');
             }
 
+            // Validación: certificado médico para incapacidades
             if (in_array($tipo, ['IGE', 'IRL', 'INC'], true) && !$certificadoMedico) {
-                $validator->errors()->add('certificado_medico', 'La incapacidad debe contar con certificado médico.');
+                $validator->errors()->add('certificado_medico', 'La incapacidad debe contar con certificado médico verificado.');
             }
 
-            if ($tipo === 'VSP' && ($pagoManual === null || $pagoManual === '' || (float) $pagoManual < 0)) {
+            // Validación: valor manual para VSP
+            if ($tipo === 'VSP' && ($pagoManual === null || $pagoManual === '' || (float) $pagoManual <= 0)) {
                 $validator->errors()->add('valor_manual', 'Debe ingresar el nuevo salario para la variación permanente de salario.');
+                $validator->errors()->add('pago_manual', 'Debe ingresar el nuevo salario para la variación permanente de salario.');
             }
 
+            // Validación: no permitir valor manual en novedades automáticas
             if (!in_array($tipo, ['VSP', 'VST'], true) && $pagoManual !== null && $pagoManual !== '' && (float) $pagoManual > 0) {
                 $validator->errors()->add('valor_manual', 'Esta novedad se calcula automáticamente y no permite valor manual.');
+                $validator->errors()->add('pago_manual', 'Esta novedad se calcula automáticamente y no permite valor manual.');
             }
 
+            // Validación: EPS requerida para traslados
             if (in_array($tipo, ['TDE', 'TAE'], true) && !$this->filled('id_eps')) {
                 $validator->errors()->add('id_eps', 'Debe seleccionar la EPS para el traslado.');
             }
 
+            // Validación: AFP requerida para traslados
             if (in_array($tipo, ['TDP', 'TAP'], true) && !$this->filled('id_afp')) {
                 $validator->errors()->add('id_afp', 'Debe seleccionar la AFP para el traslado.');
             }
 
+            // Validación: ARL requerida para variación de centro de trabajo
             if ($tipo === 'VCT' && !$this->filled('id_arl')) {
                 $validator->errors()->add('id_arl', 'Debe seleccionar la ARL para la variación de centro de trabajo.');
             }
 
-            if ($unidad === 'horas' && $horas > 240) {
-                $validator->errors()->add('horas', 'Las horas no pueden superar 240 por periodo.');
+            // Validación: fechas coherentes
+            $fechaInicio = $this->input('fecha_inicio');
+            $fechaFin = $this->input('fecha_fin');
+            
+            if ($fechaInicio && $fechaFin && strtotime($fechaFin) < strtotime($fechaInicio)) {
+                $validator->errors()->add('fecha_fin', 'La fecha fin debe ser igual o posterior a la fecha de inicio.');
             }
+
         });
     }
 

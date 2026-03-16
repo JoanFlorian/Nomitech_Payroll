@@ -88,6 +88,67 @@
         </div>
     </div>
 
+    @push('modals')
+        {{-- ALERTAS DE CONTRATOS - FLOTANTES TOP-RIGHT GLOBAL --}}
+        @if(isset($contractAlerts) && (($contractAlerts['expiring']['count'] ?? 0) > 0 || ($contractAlerts['pending_liquidation']['count'] ?? 0) > 0))
+        <div class="fixed top-5 right-5 z-[10000] flex flex-col gap-3 w-80">
+            @if(($contractAlerts['expiring']['count'] ?? 0) > 0)
+            <div 
+                x-data
+                x-show="!$store.dismissedAlerts?.includes('expiring')"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 transform translate-x-8"
+                x-transition:enter-end="opacity-100 transform translate-x-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 transform translate-x-0"
+                x-transition:leave-end="opacity-0 transform translate-x-8"
+                class="bg-white border-l-4 border-amber-500 rounded-xl p-4 flex items-start gap-4 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] relative border border-gray-100"
+            >
+                <div class="bg-amber-100 rounded-full p-2.5 flex-shrink-0">
+                    <i class="fas fa-clock text-amber-600 text-lg"></i>
+                </div>
+                <div class="flex-1 pr-6 text-left">
+                    <p class="text-xs font-bold text-gray-900 leading-tight mb-1">ALERTA DE VENCIMIENTO</p>
+                    <p class="text-xs text-gray-600 leading-snug">
+                        {{ $contractAlerts['expiring']['message'] }}
+                    </p>
+                </div>
+                <button @click="dismissAlert('expiring')" class="absolute -top-2 -right-2 w-7 h-7 flex items-center justify-center rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all z-10 border-2 border-white">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+            @endif
+
+            @if(($contractAlerts['pending_liquidation']['count'] ?? 0) > 0)
+            <div 
+                x-data
+                x-show="!$store.dismissedAlerts?.includes('pending')"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 transform translate-x-8"
+                x-transition:enter-end="opacity-100 transform translate-x-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 transform translate-x-0"
+                x-transition:leave-end="opacity-0 transform translate-x-8"
+                class="bg-white border-l-4 border-red-500 rounded-xl p-4 flex items-start gap-4 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] relative border border-gray-100"
+            >
+                <div class="bg-red-100 rounded-full p-2.5 flex-shrink-0">
+                    <i class="fas fa-file-invoice-dollar text-red-600 text-lg"></i>
+                </div>
+                <div class="flex-1 pr-6 text-left">
+                    <p class="text-xs font-bold text-gray-900 leading-tight mb-1">LIQUIDACIÓN PENDIENTE</p>
+                    <p class="text-xs text-gray-600 leading-snug">
+                        {{ $contractAlerts['pending_liquidation']['message'] }}
+                    </p>
+                </div>
+                <button @click="dismissAlert('pending')" class="absolute -top-2 -right-2 w-7 h-7 flex items-center justify-center rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all z-10 border-2 border-white">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+            @endif
+        </div>
+        @endif
+    @endpush
+
     {{-- TABLA DE EMPLEADOS --}}
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">
@@ -138,24 +199,59 @@
                         </td>
                         {{-- ESTADO --}}
                         <td class="py-4 px-6 text-center">
-                            @if($contrato->activo)
-                                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
-                                    <i class="fas fa-check-circle mr-1"></i>Activo
-                                </span>
-                            @else
-                                <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
-                                    <i class="fas fa-times-circle mr-1"></i>Inactivo
-                                </span>
-                            @endif
+                            @php
+                                $estadoDinamico = $contrato->estado_dinamico ?? $contrato->estado ?? 'ACTIVO';
+                            @endphp
+                            @switch($estadoDinamico)
+                                @case('PROGRAMADO')
+                                    <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800">
+                                        <i class="fas fa-calendar-alt mr-1"></i>Programado
+                                    </span>
+                                    @break
+                                @case('ACTIVO')
+                                    <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                                        <i class="fas fa-check-circle mr-1"></i>Activo
+                                    </span>
+                                    @break
+                                @case('POR_VENCER')
+                                    <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                                        <i class="fas fa-clock mr-1"></i>Por Vencer
+                                    </span>
+                                    @break
+                                @case('VENCIDO')
+                                    <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>Vencido
+                                    </span>
+                                    @break
+                                @case('TERMINADO')
+                                    <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600">
+                                        <i class="fas fa-ban mr-1"></i>Terminado
+                                    </span>
+                                    @break
+                                @default
+                                    <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600">
+                                        {{ $estadoDinamico }}
+                                    </span>
+                            @endswitch
                         </td>
                         {{-- ACCIONES --}}
                         <td class="py-4 px-6 text-center">
-                            <button 
-                                @click="openEditModal('{{ $usuario->doc }}')"
-                                class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
-                            >
-                                <i class="fas fa-edit"></i>Editar
-                            </button>
+                            <div class="flex items-center justify-center gap-2">
+                                <button 
+                                    @click="openEditModal('{{ $usuario->doc }}')"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
+                                >
+                                    <i class="fas fa-edit"></i>Editar
+                                </button>
+                                @if(in_array($estadoDinamico ?? '', ['POR_VENCER', 'VENCIDO']))
+                                <button 
+                                    @click="openRenewalModal('{{ $usuario->doc }}')"
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
+                                >
+                                    <i class="fas fa-sync-alt"></i>Renovar
+                                </button>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                     @else
@@ -239,7 +335,7 @@
         <span>+</span>
     </button>
 
-    </div>
+    </div> {{-- .employee-index-compact --}}
 
     {{-- MODAL REGISTRO DE EMPLEADO (WIZARD) --}}
     <div
@@ -310,7 +406,7 @@
         </div>
     </div>
 
-    {{-- MODAL EDITAR EMPLEADO --}}
+    {{-- MODAL EDITAR / RENOVAR EMPLEADO --}}
     @include('empleados.partials.modal_edit')
 
     <style>
@@ -319,12 +415,23 @@
             transform-origin: top left;
         }
     </style>
-</div>
+</div> {{-- x-data --}}
 
 {{-- SweetAlert2 --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('dismissedAlerts', []);
+    });
+
+    window.dismissAlert = function(type) {
+        let current = Alpine.store('dismissedAlerts') || [];
+        if (!current.includes(type)) {
+            Alpine.store('dismissedAlerts', [...current, type]);
+        }
+    };
+
     function getEmpleadosModuleData() {
         const modalDiv = document.querySelector('[x-data*="empleadosModule"]');
         if (!modalDiv) {
@@ -509,11 +616,28 @@
         return {
             showRegistroModal: false,
             showEditModal: false,
+            isRenewal: false,
             wizardStep: 1,
             editWizardStep: 1,
             currentDoc: null,
             registroDraft: null,
             editDrafts: {},
+            dismissedAlerts: [],
+            renewalData: {
+                doc: '',
+                nombre: '',
+                fecha_inicio_anterior: '',
+                fecha_fin_anterior: '',
+                salario_base: 0,
+                id_tipo_contrato: '',
+                horas_diarias: 8,
+                nueva_fecha_inicio: '',
+                nueva_fecha_fin: '',
+                nuevo_salario: 0,
+                continuityMessage: '',
+                hasContinuity: false,
+            },
+            renewalLoading: false,
             
             openRegistroModal() {
                 this.showRegistroModal = true;
@@ -524,8 +648,23 @@
                 }
             },
             
+            async openRenewalModal(doc) {
+                this.currentDoc = doc;
+                this.isRenewal = true;
+                this.editWizardStep = 2; // Enfocar datos laborales
+                this.showEditModal = true;
+
+                if (typeof window.loadEmployee === 'function') {
+                    // El modo renovación se encargará de sugerir fechas tras cargar
+                    window.loadEmployee(doc, { isRenewal: true });
+                }
+            },
+
+
+            
             openEditModal(doc) {
                 this.currentDoc = doc;
+                this.isRenewal = false;
                 this.showEditModal = true;
 
                 const draft = this.editDrafts[doc] || null;
@@ -564,8 +703,13 @@
 
                 this.showRegistroModal = false;
                 this.showEditModal = false;
+                this.isRenewal = false;
                 this.editWizardStep = 1;
                 this.currentDoc = null;
+            },
+
+            dismissAlert(type) {
+                window.dismissAlert(type);
             },
             
             nextStep() {

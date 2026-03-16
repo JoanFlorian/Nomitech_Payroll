@@ -25,10 +25,11 @@ trait BelongsToCompany
             if ($empresaId) {
                 $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
                 $hasEstadoNomina = Schema::hasColumn('contrato', 'estado_nomina');
+                $hasEstado = Schema::hasColumn('contrato', 'estado');
 
                 // Filter via 'contrato' relationship using new contractual states
                 // Visible if: Active Laboral State OR Pending Payroll State
-                $builder->whereHas('contratos', function ($query) use ($empresaId, $hasEstadoLaboral, $hasEstadoNomina) {
+                $builder->whereHas('contratos', function ($query) use ($empresaId, $hasEstadoLaboral, $hasEstadoNomina, $hasEstado) {
                     $query->where('id_empresa', $empresaId);
 
                     if ($hasEstadoLaboral || $hasEstadoNomina) {
@@ -42,6 +43,16 @@ trait BelongsToCompany
                                 $q->{$method}('estado_nomina', Contrato::ESTADO_NOMINA_PENDIENTE);
                             }
                         });
+                        return;
+                    }
+
+                    if ($hasEstado) {
+                        $query->whereIn('estado', [
+                            Contrato::ESTADO_ACTIVO,
+                            Contrato::ESTADO_POR_VENCER,
+                            Contrato::ESTADO_PROGRAMADO,
+                            Contrato::ESTADO_VENCIDO,
+                        ]);
                         return;
                     }
 

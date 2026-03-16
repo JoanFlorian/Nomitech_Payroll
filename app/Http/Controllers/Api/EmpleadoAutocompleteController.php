@@ -23,16 +23,25 @@ class EmpleadoAutocompleteController extends Controller
         $buildQuery = function (int $empresaFilterId) use ($search, $limit) {
             $query = DB::table('usuario')
                 ->join('contrato', 'contrato.doc', '=', 'usuario.doc')
+                ->leftJoin('benefit_balance', function($join) {
+                    $join->on('benefit_balance.employee_id', '=', 'usuario.doc')
+                         ->on('benefit_balance.tenant_id', '=', 'contrato.id_empresa');
+                })
                 ->where(function ($q) {
                     $q->where('contrato.activo', true)
-                        ->orWhere('contrato.estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
-                        ->orWhere('contrato.estado_nomina', Contrato::ESTADO_NOMINA_PENDIENTE);
+                        ->orWhereIn('contrato.estado', [
+                            Contrato::ESTADO_ACTIVO,
+                            Contrato::ESTADO_POR_VENCER,
+                            Contrato::ESTADO_PROGRAMADO,
+                            Contrato::ESTADO_VENCIDO,
+                        ]);
                 })
                 ->where('contrato.id_empresa', $empresaFilterId)
                 ->selectRaw("usuario.doc as id")
                 ->selectRaw("usuario.doc as documento")
                 ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_nombre, usuario.otros_nombres, usuario.primer_apellido, usuario.segundo_apellido)) as nombre")
-                ->selectRaw('contrato.salario_base as salario_base');
+                ->selectRaw('contrato.salario_base as salario_base')
+                ->selectRaw('COALESCE(benefit_balance.vacaciones_balance, 0) as vacaciones_balance');
 
             if ($search !== '') {
                 $term = mb_strtolower($search);
@@ -59,6 +68,7 @@ class EmpleadoAutocompleteController extends Controller
                 'nombre' => (string) $empleado->nombre,
                 'documento' => (string) $empleado->documento,
                 'salario_base' => (float) $empleado->salario_base,
+                'vacaciones_balance' => (float) $empleado->vacaciones_balance,
             ])
             ->values();
 

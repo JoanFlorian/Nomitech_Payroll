@@ -1,5 +1,5 @@
-<h2 class="text-2xl font-bold text-center text-[#424242] mb-2">INICIA SESIÓN</h2>
-<div class="w-20 h-1 bg-[#1565C0] mx-auto mb-8"></div>
+<h2 class="text-xl sm:text-2xl font-bold text-center text-[#424242] mb-2">INICIA SESIÓN</h2>
+<div class="w-16 sm:w-20 h-1 bg-[#1565C0] mx-auto mb-6 sm:mb-8"></div>
 
 <form method="POST" action="{{ route('login.perform') }}">
     @csrf
@@ -7,24 +7,24 @@
     <div class="mb-6">
         <label class="block text-[#424242] text-sm font-medium mb-2">Correo electrónico</label>
         <input type="email" name="correo" id="login-correo" placeholder="tu@email.com" required maxlength="255"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
+            class="w-full px-4 py-3 text-base sm:text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
             value="{{ old('correo') }}" aria-describedby="login-correo-feedback" />
-        <p id="login-correo-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">El correo electrónico es obligatorio.</p>
-        @error('correo') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
+        <p id="login-correo-feedback" class="invalid-feedback text-red-600 text-xs sm:text-sm mt-1 hidden">El correo electrónico es obligatorio.</p>
+        @error('correo') <p class="text-red-600 text-xs sm:text-sm mt-1">{{ $message }}</p> @enderror
     </div>
 
     <div class="mb-6">
         <label class="block text-[#424242] text-sm font-medium mb-2">Contraseña</label>
         <input type="password" name="contrasena" id="login-contrasena" placeholder="••••••••" required maxlength="64"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
+            class="w-full px-4 py-3 text-base sm:text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1565C0] transition bg-white"
             aria-describedby="login-contrasena-feedback" />
-        <p id="login-contrasena-feedback" class="invalid-feedback text-red-600 text-sm mt-1 hidden">La contraseña es obligatoria.</p>
-        @error('contrasena') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
+        <p id="login-contrasena-feedback" class="invalid-feedback text-red-600 text-xs sm:text-sm mt-1 hidden">La contraseña es obligatoria.</p>
+        @error('contrasena') <p class="text-red-600 text-xs sm:text-sm mt-1">{{ $message }}</p> @enderror
     </div>
 
     <div class="mb-4">
         <button type="submit"
-            class="w-full bg-[#1565C0] text-white py-3 px-4 rounded-lg font-semibold text-lg hover:bg-blue-800 transition shadow-md">
+            class="w-full bg-[#1565C0] text-white py-3 px-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-blue-800 transition shadow-md">
             Iniciar Sesión
         </button>
     </div>
@@ -32,7 +32,7 @@
 
 
     <div class="text-center">
-        <a href="{{ route('password.request') }}" class="text-sm text-[#424242] hover:underline">¿Olvidaste la
+        <a href="{{ route('password.request') }}" class="text-xs sm:text-sm text-[#424242] hover:underline">¿Olvidaste la
             contraseña?</a>
     </div>
 </form>

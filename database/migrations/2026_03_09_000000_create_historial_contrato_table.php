@@ -14,7 +14,7 @@ return new class extends Migration
 
             $table->string('dato_anterior', 191);
             $table->string('dato_nuevo', 191);
-            $table->enum('tipo_novedad', ['EPS', 'AFP', 'SALARIO']);
+            $table->enum('tipo_novedad', ['EPS', 'AFP', 'SALARIO', 'ARL']);
             $table->dateTime('fecha_cambio')->useCurrent();
 
             $table->foreign('id_contrato')

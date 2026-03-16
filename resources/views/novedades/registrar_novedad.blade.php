@@ -35,6 +35,7 @@
 					</div>
 					<input type="hidden" id="doc_empleado" name="empleado_id" value="{{ old('empleado_id', old('doc_empleado')) }}">
 					<input type="hidden" id="salario-base" name="salario_base" value="{{ old('salario_base') }}">
+					<input type="hidden" id="vacaciones-balance" name="vacaciones_balance" value="{{ old('vacaciones_balance') }}">
 					<ul id="employee-suggestions" class="hidden mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg max-h-64 overflow-y-auto"></ul>
 					<p class="text-xs text-gray-500 mt-2">Escribe nombre o documento y selecciona una opción.</p>
 					<p id="employee-search-error" class="mt-1 text-xs text-red-600 hidden"></p>
@@ -112,6 +113,14 @@
 					<div>
 						<label for="quantity-days" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en días</label>
 						<input id="quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="126" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
+						<div id="vacaciones-balance-info" class="hidden mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+							<div class="flex items-center gap-2 text-indigo-700">
+								<i class="material-icons text-[18px]">wb_sunny</i>
+								<span class="text-[10px] font-bold uppercase tracking-wider">Saldo disponible:</span>
+								<span id="vacaciones-balance-display" class="font-black">0</span>
+								<span class="text-[10px]">días</span>
+							</div>
+						</div>
 						<p id="quantity-days-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('cantidad_dias')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -250,6 +259,9 @@
 		if (!modal) return;
 		modal.classList.remove('hidden');
 		modal.classList.add('flex');
+		requestAnimationFrame(() => {
+			document.getElementById('employee-search')?.focus();
+		});
 	};
 
 	window.__closeNoveltyModal = function () {
@@ -298,6 +310,9 @@
 		const afpId = document.getElementById('afp-id');
 		const arlWrap = document.getElementById('arl-wrap');
 		const arlId = document.getElementById('arl-id');
+		const vacacionesBalanceInput = document.getElementById('vacaciones-balance');
+		const vacacionesBalanceInfo = document.getElementById('vacaciones-balance-info');
+		const vacacionesBalanceDisplay = document.getElementById('vacaciones-balance-display');
 
 		if (!employeeSearch || !noveltyType) {
 			return;
@@ -365,6 +380,12 @@
 			const tipo = normalizeType(noveltyType.value);
 			const cfg = NOVELTY_CONFIG[tipo] || null;
 			const unit = getSelectedUnit();
+			const vacacionesBalance = Number(vacacionesBalanceInput?.value || 0);
+
+			if (vacacionesBalanceInfo) {
+				vacacionesBalanceInfo.classList.toggle('hidden', tipo !== 'VAC' || !vacacionesBalanceInput?.value);
+				if (vacacionesBalanceDisplay) vacacionesBalanceDisplay.textContent = vacacionesBalance.toFixed(2);
+			}
 
 			updateNatureBadge(tipo);
 
@@ -433,6 +454,9 @@
 					? 'Esta novedad permite valor manual (VSP/VST).'
 					: 'Esta novedad se calcula automáticamente según el salario base y la cantidad.';
 			}
+
+			// Calcular automáticamente la fecha fin cuando cambia el tipo
+			calcularFechaFinAutomatica();
 		};
 
 		const getNumeric = (input) => {
@@ -512,24 +536,71 @@
 			updateNatureBadge(tipo);
 		};
 
+		// Función para calcular automáticamente la fecha fin basada en tipo de novedad y días
+		const calcularFechaFinAutomatica = () => {
+			if (!startDate || !endDate) return;
+
+			const fechaInicio = startDate.value;
+			if (!fechaInicio) {
+				// Si no hay fecha inicio, limpiar fecha fin
+				endDate.value = '';
+				return;
+			}
+
+			const tipo = normalizeType(noveltyType.value);
+			const cfg = NOVELTY_CONFIG[tipo] || null;
+			
+			if (!cfg) return;
+
+			let diasParaCalcular = 0;
+
+			// Determinar días según el tipo de novedad
+			if (cfg.diasFijos !== null) {
+				// Tipos con días fijos: LMAT (126), LPAT (14)
+				diasParaCalcular = cfg.diasFijos;
+			} else if (cfg.editableDias) {
+				// Tipos con días editables: VAC, IGE, IRL, INC, LIC, SLN
+				const dias = getNumeric(quantityDays);
+				if (dias > 0) {
+					diasParaCalcular = dias;
+				} else {
+					// Si no hay días especificados, no calcular
+					return;
+				}
+			} else {
+				// Tipos sin cantidad de días (TDE, TAE, VSP, VST, VCT)
+				// Para estos tipos, fecha_fin = fecha_inicio
+				endDate.value = fechaInicio;
+				return;
+			}
+
+			// Calcular fecha fin: fecha_inicio + (dias - 1)
+			// Se resta 1 porque el primer día es la fecha_inicio (inclusivo)
+			const inicio = new Date(fechaInicio);
+			const fin = new Date(inicio);
+			fin.setDate(inicio.getDate() + diasParaCalcular - 1);
+
+			// Formatear fecha en formato YYYY-MM-DD
+			const year = fin.getFullYear();
+			const month = String(fin.getMonth() + 1).padStart(2, '0');
+			const day = String(fin.getDate()).padStart(2, '0');
+			endDate.value = `${year}-${month}-${day}`;
+		};
+
 		// Autocomplete empleados (solo API, filtrado por empresa en sesión)
 		let employeeTimer = null;
 		let lastResults = [];
 
-		const renderEmployeeSuggestions = async (query) => {
+		const renderEmployeeSuggestions = async (query, showAll = false) => {
 			const term = String(query || '').trim();
-			if (!term) {
-				if (employeeSuggestions) {
-					employeeSuggestions.innerHTML = '';
-					employeeSuggestions.classList.add('hidden');
-				}
-				return;
-			}
 
 			if (employeeLoading) employeeLoading.classList.remove('hidden');
 			try {
 				const url = new URL(empleadosApiUrl, window.location.origin);
-				url.searchParams.set('search', term);
+				// Si showAll es true o no hay término de búsqueda, mostrar todos los empleados
+				if (term) {
+					url.searchParams.set('search', term);
+				}
 				url.searchParams.set('limit', '12');
 				const resp = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
 				if (!resp.ok) throw new Error('No se pudieron cargar empleados.');
@@ -563,8 +634,11 @@
 						if (!emp) return;
 						const nombre = String(emp.nombre || '').trim();
 						const salario = Number(emp.salario_base || 0);
+						const vacBalance = Number(emp.vacaciones_balance || 0);
 						if (employeeHidden) employeeHidden.value = String(emp.documento || emp.id || '');
 						if (salarioBaseInput) salarioBaseInput.value = salario > 0 ? String(salario) : '';
+						if (vacacionesBalanceInput) vacacionesBalanceInput.value = vacBalance;
+						if (vacacionesBalanceDisplay) vacacionesBalanceDisplay.textContent = vacBalance.toFixed(2);
 						if (employeeSearch) employeeSearch.value = `${nombre} - ${doc}`.trim();
 						if (employeeName) employeeName.value = nombre;
 						if (employeeLastname) employeeLastname.value = '';
@@ -573,6 +647,7 @@
 							employeeSuggestions.innerHTML = '';
 							employeeSuggestions.classList.add('hidden');
 						}
+						applyNoveltyConfig();
 						recalcEstimated();
 					});
 				});
@@ -592,7 +667,8 @@
 		});
 
 		employeeSearch.addEventListener('focus', () => {
-			if (employeeSearch.value) renderEmployeeSuggestions(employeeSearch.value);
+			// Mostrar lista de empleados al hacer clic, incluso si no hay texto
+			renderEmployeeSuggestions(employeeSearch.value, true);
 		});
 
 		document.addEventListener('click', (e) => {
@@ -632,6 +708,23 @@
 				recalcEstimated();
 			});
 		});
+
+		// Calcular automáticamente fecha_fin cuando cambian los parámetros relevantes
+		if (noveltyType) {
+			noveltyType.addEventListener('change', () => {
+				calcularFechaFinAutomatica();
+			});
+		}
+		if (startDate) {
+			startDate.addEventListener('change', () => {
+				calcularFechaFinAutomatica();
+			});
+		}
+		if (quantityDays) {
+			quantityDays.addEventListener('input', () => {
+				calcularFechaFinAutomatica();
+			});
+		}
 
 		// Validación de fechas: fecha fin no puede ser anterior a fecha inicio
 		const startDateError = document.getElementById('start-date-error');
@@ -681,11 +774,232 @@
 		const noveltyForm = document.getElementById('novelty-form');
 		if (noveltyForm) {
 			noveltyForm.addEventListener('submit', (e) => {
+				// Limpiar todos los errores previos
+				document.querySelectorAll('.text-red-600').forEach((el) => {
+					if (el.id && el.id.includes('-error')) {
+						el.classList.add('hidden');
+					}
+				});
+
+				let hasError = false;
+				const employeeSearchError = document.getElementById('employee-search-error');
+				const noveltyTypeError = document.getElementById('novelty-type-error');
+				const quantityDaysError = document.getElementById('quantity-days-error');
+				const quantityHoursError = document.getElementById('quantity-hours-error');
+				const quantityUnitError = document.getElementById('quantity-unit-error');
+
+				// Validación 1: Empleado seleccionado
+				if (!employeeHidden || !employeeHidden.value) {
+					if (employeeSearchError) {
+						employeeSearchError.textContent = 'Debe seleccionar un empleado de la lista.';
+						employeeSearchError.classList.remove('hidden');
+					}
+					if (employeeSearch) employeeSearch.focus();
+					hasError = true;
+				}
+
+				// Validación 2: Tipo de novedad seleccionado
+				if (!noveltyType || !noveltyType.value) {
+					if (noveltyTypeError) {
+						noveltyTypeError.textContent = 'Debe seleccionar el tipo de novedad.';
+						noveltyTypeError.classList.remove('hidden');
+					}
+					if (!hasError && noveltyType) noveltyType.focus();
+					hasError = true;
+				}
+
+				// Validación 3: Fechas
 				if (!validateFechas()) {
+					if (!hasError && endDate) endDate.focus();
+					hasError = true;
+				}
+
+				// Validación 4: Fechas requeridas
+				if (startDate && !startDate.value) {
+					if (startDateError) {
+						startDateError.textContent = 'La fecha de inicio es obligatoria.';
+						startDateError.classList.remove('hidden');
+					}
+					if (!hasError) startDate.focus();
+					hasError = true;
+				}
+
+				if (endDate && !endDate.value) {
+					if (endDateError) {
+						endDateError.textContent = 'La fecha fin es obligatoria.';
+						endDateError.classList.remove('hidden');
+					}
+					if (!hasError) endDate.focus();
+					hasError = true;
+				}
+
+				// Obtener tipo y unidad actual
+				const currentType = normalizeType(noveltyType?.value || '');
+				const currentUnit = getSelectedUnit();
+				const cfg = NOVELTY_CONFIG[currentType] || null;
+
+				// Validación 5: Cantidad según el tipo de novedad
+				const tiposQueRequierenCantidad = !['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(currentType);
+				
+				if (tiposQueRequierenCantidad) {
+					if (currentUnit === 'dias') {
+						const diasValue = getNumeric(quantityDays);
+						if (diasValue <= 0) {
+							if (quantityDaysError) {
+								quantityDaysError.textContent = 'Debe ingresar la cantidad en días (mayor a 0).';
+								quantityDaysError.classList.remove('hidden');
+							}
+							if (!hasError && quantityDays) quantityDays.focus();
+							hasError = true;
+						}
+					} else if (currentUnit === 'horas') {
+						const horasValue = getNumeric(quantityHours);
+						if (horasValue <= 0) {
+							if (quantityHoursError) {
+								quantityHoursError.textContent = 'Debe ingresar la cantidad en horas (mayor a 0).';
+								quantityHoursError.classList.remove('hidden');
+							}
+							if (!hasError && quantityHours) quantityHours.focus();
+							hasError = true;
+						}
+					}
+				}
+
+				// Validación 6: Tipo de licencia (LIC)
+				if (currentType === 'LIC' && tipoLicencia && !tipoLicencia.value) {
+					const tipoLicenciaError = tipoLicenciaWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!tipoLicenciaError.id) {
+						tipoLicenciaError.id = 'tipo-licencia-error';
+						tipoLicenciaError.className = 'mt-1 text-xs text-red-600';
+						if (tipoLicencia && tipoLicencia.parentNode) {
+							tipoLicencia.parentNode.appendChild(tipoLicenciaError);
+						}
+					}
+					tipoLicenciaError.textContent = 'Debe seleccionar el tipo de licencia.';
+					tipoLicenciaError.classList.remove('hidden');
+					if (!hasError && tipoLicencia) tipoLicencia.focus();
+					hasError = true;
+				}
+
+				// Validación 7: Certificado médico para incapacidades (IGE, IRL, INC)
+				if (['IGE', 'IRL', 'INC'].includes(currentType) && certificadoInput && !certificadoInput.checked) {
+					const certificadoError = certificadoWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!certificadoError.id) {
+						certificadoError.id = 'certificado-medico-error';
+						certificadoError.className = 'mt-1 text-xs text-red-600';
+						if (certificadoInput && certificadoInput.parentNode) {
+							certificadoInput.parentNode.appendChild(certificadoError);
+						}
+					}
+					certificadoError.textContent = 'Debe verificar el certificado médico para las incapacidades.';
+					certificadoError.classList.remove('hidden');
+					hasError = true;
+				}
+
+				// Validación 8: EPS para traslados (TDE, TAE)
+				if (['TDE', 'TAE'].includes(currentType) && epsId && !epsId.value) {
+					const epsError = epsWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!epsError.id) {
+						epsError.id = 'eps-id-error';
+						epsError.className = 'mt-1 text-xs text-red-600';
+						if (epsId && epsId.parentNode) {
+							epsId.parentNode.appendChild(epsError);
+						}
+					}
+					epsError.textContent = 'Debe seleccionar la EPS para el traslado.';
+					epsError.classList.remove('hidden');
+					if (!hasError && epsId) epsId.focus();
+					hasError = true;
+				}
+
+				// Validación 9: AFP para traslados (TDP, TAP)
+				if (['TDP', 'TAP'].includes(currentType) && afpId && !afpId.value) {
+					const afpError = afpWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!afpError.id) {
+						afpError.id = 'afp-id-error';
+						afpError.className = 'mt-1 text-xs text-red-600';
+						if (afpId && afpId.parentNode) {
+							afpId.parentNode.appendChild(afpError);
+						}
+					}
+					afpError.textContent = 'Debe seleccionar la AFP para el traslado.';
+					afpError.classList.remove('hidden');
+					if (!hasError && afpId) afpId.focus();
+					hasError = true;
+				}
+
+				// Validación 10: ARL para variación centro de trabajo (VCT)
+				if (currentType === 'VCT' && arlId && !arlId.value) {
+					const arlError = arlWrap?.querySelector('.text-red-600') || 
+						document.createElement('p');
+					if (!arlError.id) {
+						arlError.id = 'arl-id-error';
+						arlError.className = 'mt-1 text-xs text-red-600';
+						if (arlId && arlId.parentNode) {
+							arlId.parentNode.appendChild(arlError);
+						}
+					}
+					arlError.textContent = 'Debe seleccionar la ARL para la variación de centro de trabajo.';
+					arlError.classList.remove('hidden');
+					if (!hasError && arlId) arlId.focus();
+					hasError = true;
+				}
+
+				// Validación 11: Valor manual para VSP
+				if (currentType === 'VSP' && paymentDisplay) {
+					const valorManual = Number(paymentDisplay.value || 0);
+					if (valorManual <= 0) {
+						if (paymentError) {
+							paymentError.textContent = 'Debe ingresar el nuevo salario para la variación permanente de salario.';
+							paymentError.classList.remove('hidden');
+						}
+						if (!hasError) paymentDisplay.focus();
+						hasError = true;
+					}
+				}
+
+				// Validación 12: Pago manual solo números positivos
+				if (paymentDisplay && paymentDisplay.value && !paymentDisplay.disabled) {
+					const valorPago = Number(paymentDisplay.value);
+					if (!Number.isFinite(valorPago) || valorPago < 0) {
+						if (paymentError) {
+							paymentError.textContent = 'El pago manual debe ser un número válido y positivo.';
+							paymentError.classList.remove('hidden');
+						}
+						if (!hasError) paymentDisplay.focus();
+						hasError = true;
+					}
+				}
+
+				// Si hay errores, prevenir el envío
+				if (hasError) {
 					e.preventDefault();
-					if (endDate) endDate.focus();
 					return false;
 				}
+
+				// Validar saldo de vacaciones
+				if (normalizeType(noveltyType.value) === 'VAC') {
+					const balance = Number(vacacionesBalanceInput?.value || 0);
+					const cantidad = getNumeric(quantityDays);
+					if (cantidad > balance) {
+						e.preventDefault();
+						if (quantityDays) {
+							quantityDays.focus();
+							const errorEl = document.getElementById('quantity-days-error');
+							if (errorEl) {
+								errorEl.textContent = `No hay suficiente saldo de vacaciones. Disponible: ${balance.toFixed(2)} días.`;
+								errorEl.classList.remove('hidden');
+							}
+						}
+						return false;
+					}
+				}
+
+				return true;
 			});
 		}
 

@@ -13,13 +13,30 @@ class BenefitLedger extends Model
     public const TYPE_PRIMA = 'prima';
     public const TYPE_CESANTIAS = 'cesantias';
     public const TYPE_INTERESES_CESANTIAS = 'intereses_cesantias';
-    public const TYPE_VACACIONES = 'vacaciones';
+    public const TYPE_VACACIONES = 'vacaciones'; // Representado en DÍAS, no en dinero.
 
     /* ── Movement Types ── */
     public const MOVEMENT_ACCRUAL = 'accrual';
     public const MOVEMENT_PAYMENT = 'payment';
+    public const MOVEMENT_WITHDRAWAL = 'withdrawal';
     public const MOVEMENT_ADJUSTMENT = 'adjustment';
     public const MOVEMENT_INITIAL = 'initial';
+    public const MOVEMENT_AUTHORIZATION = 'authorization';
+    public const MOVEMENT_SCHEDULED = 'scheduled_payment';
+
+    /* ── Payment Methods ── */
+    public const PAYMENT_DIRECT = 'direct';
+    public const PAYMENT_PAYROLL = 'payroll';
+
+    /* ── Destinations ── */
+    public const DESTINATION_EMPLOYEE = 'employee';
+    public const DESTINATION_FUND = 'fund';
+
+    /* ── Statuses ── */
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_PROCESSED = 'processed';
+    public const STATUS_REPORTED = 'reported';
+    public const STATUS_PENDING_PAYROLL = 'pending_payroll';
 
     /* ── Sources ── */
     public const SOURCE_PAYROLL = 'payroll';
@@ -33,10 +50,15 @@ class BenefitLedger extends Model
         'contract_id',
         'benefit_type',
         'movement_type',
+        'destination',
         'amount',
         'period_id',
         'source',
         'reference',
+        'status',
+        'batch_id',
+        'payment_method',
+        'payroll_period_id',
     ];
 
     protected $casts = [
@@ -63,6 +85,16 @@ class BenefitLedger extends Model
     public function periodo()
     {
         return $this->belongsTo(PeriodoLiquidacion::class, 'period_id', 'id_periodo');
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(SeveranceBatch::class, 'batch_id', 'id');
+    }
+
+    public function payrollPeriodo()
+    {
+        return $this->belongsTo(PeriodoLiquidacion::class, 'payroll_period_id', 'id_periodo');
     }
 
     /* ── Scopes ── */
@@ -100,9 +132,21 @@ class BenefitLedger extends Model
         return match ($type) {
             self::MOVEMENT_ACCRUAL => 'Causación',
             self::MOVEMENT_PAYMENT => 'Pago',
+            self::MOVEMENT_WITHDRAWAL => 'Retiro',
             self::MOVEMENT_ADJUSTMENT => 'Ajuste',
             self::MOVEMENT_INITIAL => 'Saldo Inicial',
+            self::MOVEMENT_AUTHORIZATION => 'Autorización',
+            self::MOVEMENT_SCHEDULED => 'Programado en Nómina',
             default => $type,
+        };
+    }
+
+    public static function paymentMethodLabel(string $method): string
+    {
+        return match ($method) {
+            self::PAYMENT_DIRECT => 'Pago Inmediato',
+            self::PAYMENT_PAYROLL => 'Integrado a Nómina',
+            default => $method,
         };
     }
 }

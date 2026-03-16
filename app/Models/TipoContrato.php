@@ -13,6 +13,10 @@ class TipoContrato extends Model
     protected $primaryKey = 'id_tipo_contrato';
     protected $fillable = ['nombre', 'seguridad_social'];
     
+    // Tipos de contrato que no generan prestaciones sociales bajo norma colombiana
+    public const TIPO_APRENDIZAJE = 4;
+    public const TIPO_PRESTACION_SERVICIOS = 6;
+    
     protected $casts = [
         'seguridad_social' => 'boolean',
     ];

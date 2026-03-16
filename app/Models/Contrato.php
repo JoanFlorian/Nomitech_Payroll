@@ -41,6 +41,7 @@ class Contrato extends Model
         'id_arl',
         'id_eps',
         'id_afp',
+        'id_caja',
         'fecha_inicio',
         'fecha_fin',
         'salario_base',

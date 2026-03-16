@@ -164,7 +164,7 @@
                             <input 
                                 type="text" 
                                 id="numero_documento" 
-                                value="{{ $usuario->numero_documento }}"
+                                value="{{ $usuario->doc }}"
                                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed select-none"
                                 readonly
                                 tabindex="-1"

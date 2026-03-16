@@ -137,6 +137,10 @@ class UpdateEmployeePartialRequest extends FormRequest
             $rules['id_afp'] = 'bail|required|integer|exists:afp,id_afp';
         }
 
+        if ($this->has('id_caja')) {
+            $rules['id_caja'] = 'bail|required|integer|exists:cajas_compensacion,id_caja';
+        }
+
         if ($this->has('fondo_cesantias')) {
             $rules['fondo_cesantias'] = 'bail|nullable|string|max:100';
         }
@@ -284,6 +288,10 @@ class UpdateEmployeePartialRequest extends FormRequest
             'id_afp.integer' => 'La AFP no es válida.',
             'id_afp.exists' => 'La AFP seleccionada no existe.',
 
+            'id_caja.required' => 'Debe seleccionar la Caja de Compensación.',
+            'id_caja.integer' => 'La Caja de Compensación no es válida.',
+            'id_caja.exists' => 'La Caja de Compensación seleccionada no existe.',
+
             'fondo_cesantias.string' => 'El fondo de cesantías debe ser texto.',
             'fondo_cesantias.max' => 'El fondo de cesantías no puede superar 100 caracteres.',
         ];
@@ -358,17 +366,7 @@ class UpdateEmployeePartialRequest extends FormRequest
                 return;
             }
 
-            if (in_array($idTipoContrato, [1, 2, 3], true)) {
-                if ($salario < $smmlv) {
-                    $validator->errors()->add(
-                        'salario',
-                        'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.'
-                    );
-                }
-                return;
-            }
-
-            if ($idTipoContrato === 5 || $idTipoContrato === 6) {
+            if ($this->isSalaryExemptContract($idTipoContrato)) {
                 return;
             }
 
@@ -399,6 +397,14 @@ class UpdateEmployeePartialRequest extends FormRequest
                 $validator->errors()->add(
                     'salario',
                     'Para contrato de aprendizaje debe indicar la etapa del aprendiz (lectiva o productiva).'
+                );
+                return;
+            }
+
+            if ($salario < $smmlv) {
+                $validator->errors()->add(
+                    'salario',
+                    'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.'
                 );
             }
             $idFormaPago = (int) ($this->input('id_forma_pago') ?? ($contratoActual?->id_forma_pago ?? 0));
@@ -496,6 +502,36 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         return null;
+    }
+
+    private function isSalaryExemptContract(int $idTipoContrato): bool
+    {
+        $nombreTipoContrato = TipoContrato::query()
+            ->where('id_tipo_contrato', $idTipoContrato)
+            ->value('nombre');
+
+        if (!$nombreTipoContrato) {
+            return false;
+        }
+
+        $normalized = Str::of($nombreTipoContrato)
+            ->ascii()
+            ->lower()
+            ->toString();
+
+        if (Str::contains($normalized, 'prestacion') && Str::contains($normalized, 'servicio')) {
+            return true;
+        }
+
+        if (Str::contains($normalized, 'obra')) {
+            return true;
+        }
+
+        if (Str::contains($normalized, 'labor')) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

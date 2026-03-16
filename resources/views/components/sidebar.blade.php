@@ -96,6 +96,12 @@
                 <span class="menu-text whitespace-nowrap">Novedades</span>
             </a>
 
+                <a href="{{ route('admin.notas-ajuste.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                    {{ request()->routeIs('admin.notas-ajuste.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                     <i class="menu-icon bi bi-bell text-lg flex-shrink-0"></i>
+                     <span class="menu-text whitespace-nowrap">Notas de Ajuste</span>
+                </a>
+
             <a href="{{ route('provisiones.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
                {{ request()->routeIs('provisiones.index') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
                 <i class="menu-icon bi bi-box-seam text-lg flex-shrink-0"></i>

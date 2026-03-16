@@ -20,6 +20,7 @@ use App\Http\Controllers\NovedadCalculoController;
 use App\Http\Controllers\PilaController;
 
 use App\Http\Controllers\ReportesController;
+use App\Http\Controllers\NotaAjusteController;
 use App\Http\Controllers\TrabajadorController;
 use App\Http\Controllers\Auth\CambiarPasswordController;
 
@@ -128,6 +129,9 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::delete('/novedades/{id_novedad}', [NovedadController::class, 'destroy'])->name('novedades.destroy');
 
     Route::get('/reportes', [ReportesController::class, 'index'])->name('reportes.index');
+    Route::get('/admin/notas-ajuste', [NotaAjusteController::class, 'adminIndex'])->name('admin.notas-ajuste.index');
+    Route::get('/admin/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'show'])->name('admin.notas-ajuste.show');
+    Route::post('/admin/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'adminUpdate'])->name('admin.notas-ajuste.update');
     Route::get('/reportes/exportar/pdf', [ReportesController::class, 'exportarPdf'])->name('reportes.export.pdf');
     Route::get('/reportes/exportar/excel', [ReportesController::class, 'exportarExcel'])->name('reportes.export.excel');
 
@@ -239,7 +243,10 @@ Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history', 'mus
     Route::get('/desprendibles', [TrabajadorController::class, 'desprendibles'])->name('desprendibles');
     Route::get('/desprendible/{id}', [TrabajadorController::class, 'verDesprendible'])->name('desprendible.ver');
     Route::get('/desprendible/{id}/pdf', [TrabajadorController::class, 'descargarDesprendible'])->name('desprendible.pdf');
-    Route::get('/notas-ajuste', [TrabajadorController::class, 'notasAjuste'])->name('notas');
+    Route::get('/notas-ajuste', [NotaAjusteController::class, 'trabajadorIndex'])->name('notas');
+    Route::get('/notas-ajuste/crear/{idSalario}', [NotaAjusteController::class, 'createForDesprendible'])->name('notas.create');
+    Route::post('/notas-ajuste', [NotaAjusteController::class, 'store'])->name('notas.store');
+    Route::delete('/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'destroy'])->name('notas.destroy');
     Route::get('/perfil', [TrabajadorController::class, 'perfil'])->name('perfil');
     Route::post('/perfil', [TrabajadorController::class, 'actualizarPerfil'])->name('perfil.actualizar');
 });

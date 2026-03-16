@@ -90,6 +90,36 @@
         width: 0;
         height: 0;
     }
+
+    /* Scroll moderno global */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: #1565C0 #E7EEF7;
+    }
+
+    *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    *::-webkit-scrollbar-track {
+        background: linear-gradient(180deg, #f4f8fc 0%, #e7eef7 100%);
+        border-radius: 999px;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #1565C0 0%, #0D47A1 100%);
+        border-radius: 999px;
+        border: 2px solid #f4f8fc;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #1E73D8 0%, #1565C0 100%);
+    }
+
+    .modern-scroll {
+        scroll-behavior: smooth;
+    }
     </style>
 
     @stack('styles')
@@ -123,7 +153,77 @@
         </button>
         
         <div class="h-full w-full flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative">
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 sm:mb-6 lg:mb-8 mt-12 lg:mt-0">@yield('page-title')</h1>
+            <div class="mt-12 lg:mt-0 mb-4 sm:mb-6 lg:mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">@yield('page-title')</h1>
+
+                <div class="flex items-center justify-end gap-3">
+                    @if(Auth::check() && (int) (Auth::user()->id_rol ?? 0) !== 3)
+                        <div x-data="{ open: false }" class="relative" x-cloak>
+                            <button
+                                type="button"
+                                @click="open = !open"
+                                class="relative inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-700 shadow-sm transition hover:border-[#1565C0] hover:text-[#1565C0]"
+                                aria-label="Notificaciones de notas de ajuste"
+                            >
+                                <i class="bi bi-bell text-lg"></i>
+                                @if(($adminUnreadAdjustmentNotesCount ?? 0) > 0)
+                                    <span class="absolute -right-2 -top-2 min-w-[1.5rem] rounded-full bg-red-500 px-2 py-0.5 text-center text-xs font-bold text-white">
+                                        {{ $adminUnreadAdjustmentNotesCount > 99 ? '99+' : $adminUnreadAdjustmentNotesCount }}
+                                    </span>
+                                @endif
+                            </button>
+
+                            <div
+                                x-show="open"
+                                @click.away="open = false"
+                                x-transition
+                                class="absolute right-0 z-50 mt-3 w-[22rem] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl"
+                            >
+                                <div class="border-b border-gray-100 px-4 py-3">
+                                    <p class="text-sm font-semibold text-gray-900">Notas de ajuste</p>
+                                    <p class="text-xs text-gray-500">{{ $adminUnreadAdjustmentNotesCount ?? 0 }} pendientes por revisar</p>
+                                </div>
+
+                                <div class="max-h-96 overflow-y-auto">
+                                    @forelse(($adminUnreadAdjustmentNotes ?? collect()) as $notificationNote)
+                                        <a
+                                            href="{{ route('admin.notas-ajuste.show', $notificationNote) }}"
+                                            class="block border-b border-gray-100 px-4 py-3 transition hover:bg-blue-50"
+                                        >
+                                            <p class="text-sm font-semibold text-gray-800">
+                                                {{ $notificationNote->usuario?->nombre_completo ?? 'Trabajador no disponible' }}
+                                            </p>
+                                            <p class="mt-1 text-xs text-gray-500">
+                                                Nota enviada {{ optional($notificationNote->created_at)->diffForHumans() }}
+                                            </p>
+                                            <p class="mt-1 text-xs text-blue-700">
+                                                {{ $notificationNote->salario?->periodo?->nombre ? 'Periodo: ' . $notificationNote->salario->periodo->nombre : 'Sin periodo asociado' }}
+                                            </p>
+                                        </a>
+                                    @empty
+                                        <div class="px-4 py-6 text-center text-sm text-gray-500">
+                                            No hay notas de ajuste nuevas.
+                                        </div>
+                                    @endforelse
+                                </div>
+
+                                <div class="bg-gray-50 px-4 py-3 text-right">
+                                    <a href="{{ route('admin.notas-ajuste.index') }}" class="text-sm font-medium text-[#1565C0] hover:text-[#0D47A1]">
+                                        Ver todas las notas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @auth
+                        <div class="hidden rounded-xl border border-gray-200 bg-white px-4 py-3 text-right shadow-sm sm:block">
+                            <p class="text-sm font-semibold text-gray-800">{{ Auth::user()->nombre_completo ?? ((Auth::user()->primer_nombre ?? 'Usuario') . ' ' . (Auth::user()->primer_apellido ?? '')) }}</p>
+                            <p class="text-xs text-gray-500">{{ Auth::user()->rol->nombre ?? 'Sin rol' }}</p>
+                        </div>
+                    @endauth
+                </div>
+            </div>
             <div class="flex-grow bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100">
                 @yield('content') {{-- Aquí va el contenido de cada módulo --}}
             </div>

@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Mis Desprendibles')
+@section('page-title', 'Mis Desprendibles')
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-8">
@@ -20,7 +21,7 @@
         <!-- Tabla de Desprendibles -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
             @if($desprendibles->count() > 0)
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto modern-scroll">
                     <table class="w-full">
                         <thead class="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                             <tr>
@@ -72,6 +73,14 @@
                                                class="inline-flex items-center px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                                                title="Descargar PDF">
                                                 <span class="material-icons text-sm">download</span>
+                                            </a>
+
+                                            <!-- Enviar Nota de Ajuste -->
+                                            <a href="{{ route('trabajador.notas.create', $desprendible->id_salario) }}"
+                                               class="inline-flex items-center gap-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                                               title="Enviar Nota de Ajuste">
+                                                <span class="material-icons text-sm">feedback</span>
+                                                Nota
                                             </a>
                                         </div>
                                     </td>

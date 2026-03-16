@@ -10,6 +10,7 @@ use App\Models\Departamento;
 use App\Models\Eps;
 use App\Models\FormaPago;
 use App\Models\MetodoPago;
+use App\Models\NotaAjuste;
 use App\Models\Pais;
 use App\Models\SubTipoTrabajador;
 use App\Models\TipoContrato;
@@ -17,6 +18,7 @@ use App\Models\TipoCuenta;
 use App\Models\TipoDoc;
 use App\Models\TipoTrabajador;
 use App\Models\Usuario;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 
@@ -53,6 +55,32 @@ class ViewServiceProvider extends ServiceProvider
             $Afp = Afp::all();
             $Cajas = CajaCompensacion::orderBy('nombre')->get();
             $view->with(compact('pais', 'departamento', 'ciudad', 'tipodoc', 'tipotrabajadores', 'suptrabajadores', 'contratos', 'Arl', 'formapagos', 'metodopago', 'tipocuenta', 'Eps', 'Afp', 'Cajas'));
+        });
+
+        View::composer('layouts.app', function ($view) {
+            $count = 0;
+            $items = collect();
+
+            if (Auth::check() && (int) (Auth::user()->id_rol ?? 0) !== 3) {
+                $query = NotaAjuste::query()
+                    ->with(['usuario', 'salario.periodo'])
+                    ->pendientes();
+
+                if ((int) Auth::user()->id_rol !== 4) {
+                    $empresaId = (int) session('empresa_id');
+                    if ($empresaId > 0) {
+                        $query->where('id_empresa', $empresaId);
+                    }
+                }
+
+                $count = (clone $query)->count();
+                $items = $query->latest()->limit(5)->get();
+            }
+
+            $view->with([
+                'adminUnreadAdjustmentNotesCount' => $count,
+                'adminUnreadAdjustmentNotes' => $items,
+            ]);
         });
 
 

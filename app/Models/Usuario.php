@@ -94,6 +94,11 @@ class Usuario extends Authenticatable
         return $this->belongsTo(Rol::class, 'id_rol', 'id_rol');
     }
 
+    public function notasAjuste()
+    {
+        return $this->hasMany(NotaAjuste::class, 'usuario_id', 'doc');
+    }
+
     /**
      * Get the e-mail address where password reset links are sent.
      *

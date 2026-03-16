@@ -16,6 +16,12 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class EmpresaController extends Controller
 {
+    private function normalizarCorreo(string $correo): string
+    {
+        $correo = preg_replace('/[\x{00A0}\x{200B}-\x{200D}\x{FEFF}]/u', '', $correo);
+        return trim((string) $correo);
+    }
+
     public function index(Request $request)
     {
         $query = Empresa::with('licencia.plan');
@@ -146,7 +152,7 @@ class EmpresaController extends Controller
 
     public function validarCorreo(Request $request, Empresa $empresa)
     {
-        $correo = trim((string) $request->input('correo', ''));
+        $correo = $this->normalizarCorreo((string) $request->input('correo', ''));
 
         if ($correo === '') {
             return response()->json([
@@ -238,6 +244,10 @@ class EmpresaController extends Controller
 
    public function update(Request $request, Empresa $empresa)
 {
+    $request->merge([
+        'correo' => $this->normalizarCorreo((string) $request->input('correo', '')),
+    ]);
+
     $validated = $request->validate([
 
         
@@ -257,7 +267,7 @@ class EmpresaController extends Controller
         
         'correo' => [
             'required',
-            'email:rfc',
+            'email',
             'max:100',
             Rule::unique((new Empresa())->getTable(), 'correo')
                 ->ignore($empresa->id_empresa, 'id_empresa')

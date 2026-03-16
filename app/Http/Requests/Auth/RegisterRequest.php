@@ -11,6 +11,18 @@ use Illuminate\Validation\Rule;
 
 class RegisterRequest extends FormRequest
 {
+    private function normalizarCorreo(?string $correo): ?string
+    {
+        if ($correo === null) {
+            return null;
+        }
+
+        $correo = preg_replace('/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Zs}]+/u', '', $correo);
+        $correo = trim((string) $correo);
+
+        return $correo === '' ? null : mb_strtolower($correo, 'UTF-8');
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -31,7 +43,7 @@ class RegisterRequest extends FormRequest
             'otros_nombres' => $this->otros_nombres ? ucwords(strtolower($this->otros_nombres)) : null,
             'razon_social' => $this->razon_social ? strtoupper($this->razon_social) : null,
             'nit' => $this->nit ? trim($this->nit) : null,
-            'email' => $this->email ? strtolower($this->email) : null,
+            'email' => $this->normalizarCorreo($this->email),
             'direccion_empresa' => $this->direccion_empresa ? trim($this->direccion_empresa) : null,
         ]);
     }
@@ -110,13 +122,19 @@ class RegisterRequest extends FormRequest
             'email' => [
                 'required',
                 'string',
-                'email',
                 'max:255',
                 function ($attribute, $value, $fail) use ($user) {
+                    $correo = $this->normalizarCorreo((string) $value);
+
+                    if (!$correo || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+                        $fail('El correo electrónico no es válido.');
+                        return;
+                    }
+
                     $isUpdateFlow = $this->routeIs('licencia.pending.post');
 
                     // Buscamos cualquier usuario con ese correo
-                    $existente = \App\Models\Usuario::where('correo', $value)->first();
+                    $existente = \App\Models\Usuario::where('correo', $correo)->first();
 
                     if ($existente) {
                         // Solo permitimos ignorar el duplicado si estamos en el flujo de actualización y es el mismo usuario
@@ -177,7 +195,7 @@ class RegisterRequest extends FormRequest
             'numeric' => 'El :attribute debe ser un número.',
             'digits' => 'El :attribute debe tener exactamente :digits dígito(s).',
             'digits_between' => 'El :attribute debe tener entre :min y :max dígitos.',
-            'email' => 'El :attribute debe ser una dirección de correo válida.',
+            'email.email' => 'El :attribute debe ser una dirección de correo válida.',
             'confirmed' => 'La confirmación de la contraseña no coincide.',
             'regex' => 'El formato del :attribute es inválido.',
 

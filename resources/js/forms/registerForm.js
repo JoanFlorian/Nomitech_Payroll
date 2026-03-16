@@ -23,6 +23,13 @@ export default (initialData = {}) => ({
     touched: {},
     isSubmitting: false,
 
+    sanitizeEmail(value) {
+        if (typeof value !== 'string') return '';
+        return value
+            .replace(/[\u0000-\u001F\u007F-\u009F\u00A0\u1680\u180E\u2000-\u200F\u2028\u2029\u202F\u205F\u2060-\u206F\u3000\uFEFF]/g, '')
+            .trim();
+    },
+
     init() {
         // Cargar plan de la URL si no viene por old input
         if (!this.plan_id) {
@@ -46,12 +53,18 @@ export default (initialData = {}) => ({
 
     // Marcar campo como tocado y validar
     handleBlur(field) {
+        if (field === 'email') {
+            this.email = this.sanitizeEmail(this.email);
+        }
         this.touched[field] = true;
         this.validateField(field, this[field]);
     },
 
     // Validar mientras escribe (opcional para ciertos campos)
     handleInput(field) {
+        if (field === 'email') {
+            this.email = this.sanitizeEmail(this.email);
+        }
         if (this.touched[field]) {
             this.validateField(field, this[field]);
         }
@@ -127,8 +140,10 @@ export default (initialData = {}) => ({
                 return null;
             },
             email: () => {
-                if (!value) return "El Correo Electrónico es requerido";
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "El Correo Electrónico debe ser una dirección válida";
+                const correo = this.sanitizeEmail(value);
+                if (!correo) return "El Correo Electrónico es requerido";
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return "El Correo Electrónico debe ser una dirección válida";
+                this.email = correo;
                 return null;
             },
             password: () => {

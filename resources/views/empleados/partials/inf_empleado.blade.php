@@ -66,8 +66,11 @@
                 class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                 name="doc" inputmode="numeric" minlength="5" maxlength="15" pattern="[0-9]{5,15}" required>
             <div class="error-message invalid-feedback" data-error="doc"></div>
-            {{-- Aviso informativo: la contraseña del trabajador se genera a partir del documento --}}
-            <p class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 flex items-center gap-1.5">
+        </div>
+
+        {{-- Aviso informativo: ocupa el ancho completo sin romper el grid --}}
+        <div class="md:col-span-2">
+            <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-center gap-2">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
                 La contraseña del trabajador se genera automáticamente y corresponde a su número de documento.
             </p>

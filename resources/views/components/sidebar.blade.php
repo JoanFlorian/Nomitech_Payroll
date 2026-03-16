@@ -23,9 +23,13 @@
                     class="block w-full h-full object-contain"
                 >
             </div>
+            @php
+                $empresaNombre = optional(Auth::user()->empresa()->first())->razon_social ?? 'Empresa no asignada';
+            @endphp
             <div class="min-w-0">
                 <p class="text-sm font-bold text-white truncate">{{ Auth::user()->primer_nombre ?? Auth::user()->nombre ?? 'Usuario' }} {{ Auth::user()->primer_apellido ?? '' }}</p>
                 <p class="text-xs text-blue-200 truncate">{{ Auth::user()->rol->nombre ?? 'Sin rol' }}</p>
+                <p class="text-xs text-blue-100 truncate">{{ $empresaNombre }}</p>
             </div>
         </div>
     </div>

@@ -17,22 +17,22 @@
         .fade-in { animation: fade-in 0.45s ease-out both; }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-[#1565C0] to-[#0D47A1] flex items-center justify-center p-4">
+<body class="min-h-screen bg-gradient-to-br from-[#1565C0] to-[#0D47A1] flex items-center justify-center p-4 sm:p-6">
 
     <div class="w-full max-w-md fade-in">
         <!-- Card -->
         <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
             <!-- Header -->
-            <div class="bg-gradient-to-br from-[#1565C0] to-[#1976D2] px-8 pt-8 pb-6 text-center">
-                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="material-icons text-white text-3xl">lock_reset</span>
+            <div class="bg-gradient-to-br from-[#1565C0] to-[#1976D2] px-6 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6 text-center">
+                <div class="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-icons text-white text-2xl sm:text-3xl">lock_reset</span>
                 </div>
-                <h1 class="text-2xl font-bold text-white">Cambiar Contraseña</h1>
-                <p class="text-blue-100 text-sm mt-2">Debes establecer una nueva contraseña para continuar</p>
+                <h1 class="text-xl sm:text-2xl font-bold text-white">Cambiar Contraseña</h1>
+                <p class="text-blue-100 text-xs sm:text-sm mt-2">Debes establecer una nueva contraseña para continuar</p>
             </div>
 
             <!-- Body -->
-            <div class="px-8 py-8">
+            <div class="px-6 sm:px-8 py-6 sm:py-8">
                 <!-- Aviso de seguridad -->
                 <div class="mb-6 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
                     <div class="flex items-start gap-3">

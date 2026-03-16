@@ -1,17 +1,32 @@
 <aside
     id="sidebar"
-    class="sidebar bg-[#1565C0] border-r border-[#0D47A1] h-screen sticky top-0 self-start flex-shrink-0 flex flex-col shadow-lg transition-all duration-300 ease-in-out"
+    class="sidebar bg-[#1565C0] border-r border-[#0D47A1] h-screen sticky top-0 self-start flex-shrink-0 flex flex-col shadow-lg transition-all duration-300 ease-in-out fixed lg:sticky z-40"
     onmouseenter="expandSidebar()"
     onmouseleave="collapseSidebar()">
 
     <!-- HEADER -->
-    <div class="sidebar-header flex items-center gap-3 p-6 border-b border-[#0D47A1] overflow-hidden">
-        <div class="sidebar-icon-container bg-[#1976D2] text-white p-3 rounded-lg flex items-center justify-center flex-shrink-0">
-            <i class="bi bi-shield-lock text-xl"></i>
+    <div class="sidebar-header flex items-center gap-3 p-4 border-b border-[#0D47A1] overflow-hidden">
+        {{-- Logo compacto: solo visible cuando está colapsado --}}
+        <div class="sidebar-brand-compact sidebar-icon-container rounded-xl overflow-hidden bg-white/10 flex-shrink-0">
+            <img
+                src="{{ asset('images/logo nomitech.jpeg') }}"
+                alt="Nomitech"
+                class="block h-full w-full object-contain"
+            >
         </div>
-        <div class="sidebar-header-text">
-            <h1 class="text-lg font-bold text-white whitespace-nowrap">Nomitech</h1>
-            <p class="text-sm text-blue-200 whitespace-nowrap">{{ Auth::user()->rol->nombre ?? 'Usuario' }}</p>
+        {{-- Logo pequeño + info de usuario: solo visible cuando está expandido --}}
+        <div class="sidebar-brand-full flex items-center gap-3 min-w-0">
+            <div class="w-11 h-11 flex-shrink-0 rounded-xl overflow-hidden bg-white/10">
+                <img
+                    src="{{ asset('images/logo nomitech.jpeg') }}"
+                    alt="Nomitech"
+                    class="block w-full h-full object-contain"
+                >
+            </div>
+            <div class="min-w-0">
+                <p class="text-sm font-bold text-white truncate">{{ Auth::user()->primer_nombre ?? Auth::user()->nombre ?? 'Usuario' }} {{ Auth::user()->primer_apellido ?? '' }}</p>
+                <p class="text-xs text-blue-200 truncate">{{ Auth::user()->rol->nombre ?? 'Sin rol' }}</p>
+            </div>
         </div>
     </div>
 
@@ -120,109 +135,196 @@
 <style>
     /* ==================== SIDEBAR COLAPSABLE ==================== */
     
-    /* Estado por defecto: Colapsado */
-    .sidebar {
-        width: 70px;
+    /* RESPONSIVE: M\u00f3viles - sidebar oculto por defecto */
+    @media (max-width: 1023px) {
+        .sidebar {
+            width: 250px !important;
+            left: -250px;
+            top: 0;
+            bottom: 0;
+        }
+        
+        .sidebar.mobile-open {
+            left: 0;
+        }
+        
+        /* En m\u00f3viles siempre mostrar textos */
+        .sidebar .menu-text,
+        .sidebar .sidebar-header-text,
+        .sidebar .sidebar-section-title {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        
+        .sidebar .menu-item,
+        .sidebar .sidebar-footer a {
+            justify-content: flex-start !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        
+        .sidebar .menu-icon {
+            font-size: 1.125rem !important;
+        }
+        
+        .sidebar .sidebar-header {
+            justify-content: flex-start !important;
+        }
+        
+        .sidebar .sidebar-section-title {
+            font-size: 0.75rem !important;
+            padding: 0.5rem 1rem 0.25rem 1rem !important;
+            height: auto !important;
+        }
+        
+        /* Desactivar hover en m\u00f3viles */
+        .sidebar {
+            pointer-events: auto;
+        }
+    }
+    
+    /* DESKTOP: comportamiento normal con hover */
+    @media (min-width: 1024px) {
+        /* Estado por defecto: Colapsado */
+        .sidebar {
+            width: 70px;
+        }
+
+        /* Estado expandido al hacer hover */
+        .sidebar.sidebar-expanded {
+            width: 250px;
+        }
+
+        /* Ocultar textos en modo colapsado */
+        .sidebar .menu-text,
+        .sidebar .sidebar-header-text,
+        .sidebar .sidebar-section-title {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+        }
+
+        /* Mostrar textos en modo expandido */
+        .sidebar.sidebar-expanded .menu-text,
+        .sidebar.sidebar-expanded .sidebar-header-text,
+        .sidebar.sidebar-expanded .sidebar-section-title {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.3s ease-in-out 0.1s, visibility 0.3s ease-in-out 0.1s;
+        }
+
+        /* Iconos más grandes y centrados en modo colapsado */
+        .sidebar .menu-icon {
+            font-size: 1.5rem;
+            transition: font-size 0.3s ease-in-out;
+        }
+
+        .sidebar.sidebar-expanded .menu-icon {
+            font-size: 1.125rem;
+        }
+
+        /* Centrar items en modo colapsado */
+        .sidebar .menu-item {
+            justify-content: center;
+            transition: justify-content 0.3s ease-in-out;
+        }
+
+        .sidebar.sidebar-expanded .menu-item {
+            justify-content: flex-start;
+        }
+
+        /* Ajustes para header en modo colapsado */
+        .sidebar .sidebar-header {
+            justify-content: center;
+            transition: justify-content 0.3s ease-in-out;
+        }
+
+        .sidebar.sidebar-expanded .sidebar-header {
+            justify-content: flex-start;
+        }
+
+        /* Ajustar padding en modo colapsado */
+        .sidebar .menu-item,
+        .sidebar .sidebar-footer a {
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .sidebar.sidebar-expanded .menu-item,
+        .sidebar.sidebar-expanded .sidebar-footer a {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        /* Ocultar sección de título en modo colapsado */
+        .sidebar .sidebar-section-title {
+            font-size: 0;
+            padding: 0;
+            margin: 0;
+            height: 0;
+        }
+
+        .sidebar.sidebar-expanded .sidebar-section-title {
+            font-size: 0.75rem;
+            padding: 0.5rem 1rem 0.25rem 1rem;
+            height: auto;
+        }
     }
 
-    /* Estado expandido al hacer hover */
-    .sidebar.sidebar-expanded {
-        width: 250px;
-    }
-
-    /* Ocultar textos en modo colapsado */
-    .sidebar .menu-text,
-    .sidebar .sidebar-header-text,
-    .sidebar .sidebar-section-title {
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
-    }
-
-    /* Mostrar textos en modo expandido */
-    .sidebar.sidebar-expanded .menu-text,
-    .sidebar.sidebar-expanded .sidebar-header-text,
-    .sidebar.sidebar-expanded .sidebar-section-title {
-        opacity: 1;
-        visibility: visible;
-        transition: opacity 0.3s ease-in-out 0.1s, visibility 0.3s ease-in-out 0.1s;
-    }
-
-    /* Iconos más grandes y centrados en modo colapsado */
-    .sidebar .menu-icon {
-        font-size: 1.5rem;
-        transition: font-size 0.3s ease-in-out;
-    }
-
-    .sidebar.sidebar-expanded .menu-icon {
-        font-size: 1.125rem;
-    }
-
-    /* Centrar items en modo colapsado */
-    .sidebar .menu-item {
-        justify-content: center;
-        transition: justify-content 0.3s ease-in-out;
-    }
-
-    .sidebar.sidebar-expanded .menu-item {
-        justify-content: flex-start;
-    }
-
-    /* Ajustes para header en modo colapsado */
-    .sidebar .sidebar-header {
-        justify-content: center;
-        transition: justify-content 0.3s ease-in-out;
-    }
-
-    .sidebar.sidebar-expanded .sidebar-header {
-        justify-content: flex-start;
-    }
-
-    /* Ajustar padding en modo colapsado */
-    .sidebar .menu-item,
-    .sidebar .sidebar-footer a {
-        padding-left: 0;
-        padding-right: 0;
-    }
-
-    .sidebar.sidebar-expanded .menu-item,
-    .sidebar.sidebar-expanded .sidebar-footer a {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-
-    /* Ocultar sección de título en modo colapsado */
-    .sidebar .sidebar-section-title {
-        font-size: 0;
-        padding: 0;
-        margin: 0;
-        height: 0;
-    }
-
-    .sidebar.sidebar-expanded .sidebar-section-title {
-        font-size: 0.75rem;
-        padding: 0.5rem 1rem 0.25rem 1rem;
-        height: auto;
-    }
-
-    /* Suavizar transiciones de ancho */
+    /* Reglas generales para todos los tamaños */
     .sidebar * {
         transition-property: all;
         transition-timing-function: ease-in-out;
     }
 
-    /* Evitar líneas cortadas en textos */
-    .sidebar .menu-text,
-    .sidebar .sidebar-header-text h1,
-    .sidebar .sidebar-header-text p {
+    .sidebar .menu-text {
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    /* Ajustar el icono del header */
+    .sidebar-brand-full {
+        display: none;
+    }
+
+    .sidebar-brand-compact {
+        display: flex;
+    }
+
     .sidebar-icon-container {
-        min-width: 46px;
-        min-height: 46px;
+        width: 54px;
+        height: 54px;
+        padding: 0.25rem;
+    }
+
+    @media (min-width: 1024px) {
+        /* Colapsado: mostrar solo icono compacto */
+        .sidebar:not(.sidebar-expanded) .sidebar-brand-full {
+            display: none;
+        }
+
+        .sidebar:not(.sidebar-expanded) .sidebar-brand-compact {
+            display: flex;
+        }
+
+        /* Expandido: mostrar logo pequeño + info usuario */
+        .sidebar.sidebar-expanded .sidebar-brand-full {
+            display: flex;
+        }
+
+        .sidebar.sidebar-expanded .sidebar-brand-compact {
+            display: none;
+        }
+
+        .sidebar:not(.sidebar-expanded) .sidebar-icon-container {
+            width: 54px;
+            height: 54px;
+            padding: 0.25rem;
+        }
+
+        .sidebar:not(.sidebar-expanded) .sidebar-header {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
     }
 </style>
 
@@ -230,24 +332,32 @@
     // ==================== FUNCIONES DE COLAPSO DEL SIDEBAR ====================
     
     function expandSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) {
-            sidebar.classList.add('sidebar-expanded');
+        // Solo expandir en desktop
+        if (window.innerWidth >= 1024) {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                sidebar.classList.add('sidebar-expanded');
+            }
         }
     }
 
     function collapseSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) {
-            sidebar.classList.remove('sidebar-expanded');
+        // Solo colapsar en desktop
+        if (window.innerWidth >= 1024) {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                sidebar.classList.remove('sidebar-expanded');
+            }
         }
     }
 
-    // Inicializar el sidebar en modo colapsado al cargar la página
+    // Inicializar el sidebar en modo colapsado al cargar la página (solo desktop)
     document.addEventListener('DOMContentLoaded', function() {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) {
-            sidebar.classList.remove('sidebar-expanded');
+        if (window.innerWidth >= 1024) {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                sidebar.classList.remove('sidebar-expanded');
+            }
         }
     });
 </script>

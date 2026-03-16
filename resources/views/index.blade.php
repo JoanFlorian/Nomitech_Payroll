@@ -10,6 +10,8 @@
     <meta name="description"
         content="Software de nómina electrónica para empresas en Colombia. Calcula salarios, prestaciones sociales y reporta a la DIAN automáticamente con Nomitech. Prueba gratis.">
     <meta name="robots" content="index, follow">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/nomitech-favicon.svg') }}">
+    <link rel="shortcut icon" href="{{ asset('images/nomitech-favicon.svg') }}">
     <link rel="canonical" href="https://nomitech.com/">
 
     <!-- Open Graph -->

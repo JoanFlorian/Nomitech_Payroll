@@ -4,6 +4,7 @@ namespace App\Models\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Contrato;
 
 trait BelongsToCompany
@@ -22,14 +23,30 @@ trait BelongsToCompany
             $empresaId = session('empresa_id');
 
             if ($empresaId) {
+                $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
+                $hasEstadoNomina = Schema::hasColumn('contrato', 'estado_nomina');
+
                 // Filter via 'contrato' relationship using new contractual states
                 // Visible if: Active Laboral State OR Pending Payroll State
-                $builder->whereHas('contratos', function ($query) use ($empresaId) {
-                    $query->where('id_empresa', $empresaId)
-                        ->where(function ($q) {
-                            $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
-                                ->orWhere('estado_nomina', Contrato::ESTADO_NOMINA_PENDIENTE);
+                $builder->whereHas('contratos', function ($query) use ($empresaId, $hasEstadoLaboral, $hasEstadoNomina) {
+                    $query->where('id_empresa', $empresaId);
+
+                    if ($hasEstadoLaboral || $hasEstadoNomina) {
+                        $query->where(function ($q) use ($hasEstadoLaboral, $hasEstadoNomina) {
+                            if ($hasEstadoLaboral) {
+                                $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
+                            }
+
+                            if ($hasEstadoNomina) {
+                                $method = $hasEstadoLaboral ? 'orWhere' : 'where';
+                                $q->{$method}('estado_nomina', Contrato::ESTADO_NOMINA_PENDIENTE);
+                            }
                         });
+                        return;
+                    }
+
+                    // Backward compatibility for older schemas.
+                    $query->where('activo', 1);
                 });
             }
         });

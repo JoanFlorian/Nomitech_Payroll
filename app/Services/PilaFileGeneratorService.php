@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class PilaFileGeneratorService
 {
@@ -12,12 +15,151 @@ class PilaFileGeneratorService
 
     private float $salarioMinimo;
     private float $fondoSolidaridadRate;
+    private float $epsEmployerRate;
+    private float $pensionEmployerRate;
+    private float $cajaRate;
 
     public function __construct(NominaParameterService $nominaParameterService)
     {
         $params = $nominaParameterService->get();
         $this->salarioMinimo = (float) ($params->smmlv ?? config('pila.salario_minimo', 0));
         $this->fondoSolidaridadRate = (float) ($params->fondo_solidaridad ?? 0.01);
+        $this->epsEmployerRate = (float) ($params->eps_employer ?? self::TASA_SALUD_EMPLEADOR);
+        $this->pensionEmployerRate = (float) ($params->pension_employer ?? self::TASA_PENSION_EMPLEADOR);
+        $this->cajaRate = (float) ($params->caja_compensacion ?? self::TASA_CAJA_COMPENSACION);
+    }
+
+    public function buildDetallesDesdeNomina(int $empresaId, int $periodoId): array
+    {
+        $hasIbc = Schema::hasColumn('salario', 'ibc');
+        $hasSalarioBase = Schema::hasColumn('salario', 'salario_base');
+        $hasDiasTrabajados = Schema::hasColumn('salario', 'dias_trabajados');
+        $diasColumn = $hasDiasTrabajados ? 'n.dias_trabajados' : 'n.dias_a_trabajar';
+        $ibcExpr = $hasIbc ? 'n.ibc' : 'n.total_devengado';
+        $salarioBaseExpr = $hasSalarioBase ? 'n.salario_base' : 'c.salario_base';
+
+        $rows = DB::table('salario as n')
+            ->join('contrato as c', 'c.id_contrato', '=', 'n.id_contrato')
+            ->join('usuario as u', 'u.doc', '=', 'c.doc')
+            ->leftJoin('eps as e', 'e.id_eps', '=', 'c.id_eps')
+            ->leftJoin('afp as a', 'a.id_afp', '=', 'c.id_afp')
+            ->leftJoin('arl as ar', 'ar.id_arl', '=', 'c.id_arl')
+            ->leftJoin('cajas_compensacion as cc', 'cc.id_caja', '=', 'c.id_caja')
+            ->where('c.id_empresa', $empresaId)
+            ->where('n.id_periodo', $periodoId)
+            ->orderBy('u.primer_apellido')
+            ->orderBy('u.primer_nombre')
+            ->get([
+                'n.id_salario',
+                'u.doc',
+                'u.id_tipo_doc',
+                'u.primer_nombre',
+                'u.otros_nombres',
+                'u.primer_apellido',
+                'u.segundo_apellido',
+                DB::raw("{$salarioBaseExpr} as salario_base"),
+                DB::raw("{$ibcExpr} as ibc"),
+                DB::raw("{$diasColumn} as dias_trabajados"),
+                'n.eps',
+                'n.afp',
+                'n.arl',
+                'n.caja_compensacion',
+                'n.aporte_fp',
+                'e.codigo_pila as codigo_eps',
+                'a.codigo_pila as codigo_afp',
+                'ar.codigo_pila as codigo_arl',
+                'cc.codigo_pila as codigo_caja',
+            ]);
+
+        $detalles = [];
+
+        foreach ($rows as $row) {
+            $ibc = round(max(0, (float) ($row->ibc ?? 0)), 2);
+            if ($ibc <= 0) {
+                continue;
+            }
+
+            $diasCotizados = $this->validarDiasCotizados((int) ($row->dias_trabajados ?? 0));
+            $aportesPorDefecto = $this->calcularAportesRegistroDos((int) round($ibc));
+            $aporteSalud = round(max(0, (float) ($aportesPorDefecto['salud_empleador'] ?? 0)), 2);
+            $aportePension = round(max(0, (float) ($aportesPorDefecto['pension_empleador'] ?? 0)), 2);
+            $aporteArl = round(max(0, (float) ($row->arl ?? 0)), 2);
+            $aporteCaja = round(max(0, (float) ($row->caja_compensacion ?? 0)), 2);
+            $aporteFondo = round(max(0, (float) ($row->aporte_fp ?? 0)), 2);
+
+            $detalles[] = [
+                'id_nomina' => (int) ($row->id_salario ?? 0),
+                'doc_empleado' => (string) ($row->doc ?? ''),
+                'id_tipo_doc' => (int) ($row->id_tipo_doc ?? 0),
+                'empleado_nombre' => $this->buildNombreCompleto($row),
+                'salario_base' => round(max(0, (float) ($row->salario_base ?? 0)), 2),
+                'ibc' => $ibc,
+                'ibc_salud' => $ibc,
+                'ibc_pension' => $ibc,
+                'ibc_arl' => $ibc,
+                'aporte_salud' => $aporteSalud,
+                'aporte_salud_empresa' => $aporteSalud,
+                'aporte_pension' => $aportePension,
+                'aporte_pension_empresa' => $aportePension,
+                'aporte_arl' => $aporteArl,
+                'aporte_caja' => $aporteCaja,
+                'aporte_fp' => $aporteFondo,
+                'dias_cotizados' => $diasCotizados,
+                'dias_trabajados' => $diasCotizados,
+                'codigo_eps' => (string) ($row->codigo_eps ?? ''),
+                'codigo_afp' => (string) ($row->codigo_afp ?? ''),
+                'codigo_arl' => (string) ($row->codigo_arl ?? ''),
+                'codigo_caja' => (string) ($row->codigo_caja ?? ''),
+            ];
+        }
+
+        return $detalles;
+    }
+
+    public function calcularTotales(array $detalles): array
+    {
+        return [
+            'salud' => (float) array_sum(array_column($detalles, 'aporte_salud')),
+            'pension' => (float) array_sum(array_column($detalles, 'aporte_pension')),
+            'arl' => (float) array_sum(array_column($detalles, 'aporte_arl')),
+            'caja' => (float) array_sum(array_column($detalles, 'aporte_caja')),
+        ];
+    }
+
+    public function guardarArchivoYHistorial(
+        int $empresaId,
+        int $periodoId,
+        object|null $empresa,
+        object $periodo,
+        array $detalles
+    ): array {
+        $contenidoTxt = $this->generate($empresa, $periodo, $detalles);
+        $nombreArchivo = sprintf(
+            'planilla_pila_%d_%d_%s.txt',
+            $empresaId,
+            $periodoId,
+            now()->format('Ymd_His')
+        );
+
+        $rutaArchivo = sprintf('pila/%d/%d/%s', $empresaId, $periodoId, $nombreArchivo);
+        Storage::disk('local')->put($rutaArchivo, $contenidoTxt);
+
+        if (Schema::hasTable('pila_archivos')) {
+            DB::table('pila_archivos')->insert([
+                'periodo_id' => $periodoId,
+                'empresa_id' => $empresaId,
+                'nombre_archivo' => $nombreArchivo,
+                'ruta_archivo' => $rutaArchivo,
+                'total_empleados' => count($detalles),
+                'created_at' => now(),
+            ]);
+        }
+
+        return [
+            'contenido' => $contenidoTxt,
+            'nombre_archivo' => $nombreArchivo,
+            'ruta_archivo' => $rutaArchivo,
+        ];
     }
 
     /**
@@ -59,6 +201,10 @@ class PilaFileGeneratorService
         $ibc = $this->validarIBC((float) ($detalle['ibc'] ?? 0));
         $diasCotizados = $this->validarDiasCotizados((int) ($detalle['dias_cotizados'] ?? 0));
         $aportes = $this->calcularAportesRegistroDos($ibc);
+        $aporteSalud = (float) ($detalle['aporte_salud'] ?? $detalle['aporte_salud_empresa'] ?? $aportes['salud_empleador']);
+        $aportePension = (float) ($detalle['aporte_pension'] ?? $detalle['aporte_pension_empresa'] ?? $aportes['pension_empleador']);
+        $aporteFondo = (float) ($detalle['aporte_fp'] ?? $aportes['fondo_solidaridad']);
+        $aporteCaja = (float) ($detalle['aporte_caja'] ?? $aportes['caja_compensacion']);
 
         $codigoEps = $this->resolverCodigoPilaEntidad($detalle, 'eps', 'codigo_eps');
         $codigoAfp = $this->resolverCodigoPilaEntidad($detalle, 'afp', 'codigo_afp');
@@ -77,19 +223,19 @@ class PilaFileGeneratorService
             $codigoArl,
             $codigoCaja,
             $this->formatInteger($ibc),
-            $this->formatInteger($aportes['salud_empleador']),
-            $this->formatInteger($aportes['pension_empleador']),
-            $this->formatInteger($aportes['fondo_solidaridad']),
-            $this->formatInteger($aportes['caja_compensacion']),
+            $this->formatInteger($aporteSalud),
+            $this->formatInteger($aportePension),
+            $this->formatInteger($aporteFondo),
+            $this->formatInteger($aporteCaja),
             (string) $diasCotizados,
         ]);
     }
 
     private function calcularAportesRegistroDos(int $ibc): array
     {
-        $saludEmpleador = round($ibc * self::TASA_SALUD_EMPLEADOR, 2);
-        $pensionEmpleador = round($ibc * self::TASA_PENSION_EMPLEADOR, 2);
-        $cajaCompensacion = round($ibc * self::TASA_CAJA_COMPENSACION, 2);
+        $saludEmpleador = round($ibc * $this->epsEmployerRate, 2);
+        $pensionEmpleador = round($ibc * $this->pensionEmployerRate, 2);
+        $cajaCompensacion = round($ibc * $this->cajaRate, 2);
 
         $umbralSolidaridad = (float) (4 * $this->salarioMinimo);
         $fondoSolidaridad = $ibc > $umbralSolidaridad
@@ -102,6 +248,20 @@ class PilaFileGeneratorService
             'fondo_solidaridad' => $fondoSolidaridad,
             'caja_compensacion' => $cajaCompensacion,
         ];
+    }
+
+    private function buildNombreCompleto(object $row): string
+    {
+        $partes = [
+            (string) ($row->primer_nombre ?? ''),
+            (string) ($row->otros_nombres ?? ''),
+            (string) ($row->primer_apellido ?? ''),
+            (string) ($row->segundo_apellido ?? ''),
+        ];
+
+        $partes = array_values(array_filter(array_map('trim', $partes), static fn($v) => $v !== ''));
+
+        return implode(' ', $partes);
     }
 
     private function resolverCodigoPilaEntidad(array $detalle, string $relacionKey, string $flatKey): string

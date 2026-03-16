@@ -171,6 +171,7 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/pila', [PilaController::class, 'index'])->name('pila.index');
     Route::post('/pila/generar', [PilaController::class, 'generar'])->name('pila.generar');
     Route::get('/pila/descargar', [PilaController::class, 'descargarPila'])->name('pila.descargar');
+    Route::get('/pila/historial/{id}/descargar', [PilaController::class, 'descargarHistorial'])->name('pila.historial.descargar');
 });
 
 Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin_empresa', 'prevent_back_history'])

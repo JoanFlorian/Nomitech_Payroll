@@ -72,7 +72,7 @@ class PilaController extends Controller
 
         $periodos = PeriodoLiquidacion::query()
             ->when($selectedEmpresaId > 0, fn($q) => $q->where('id_empresa', $selectedEmpresaId))
-            ->where('estado', PeriodoLiquidacion::ESTADO_PENDIENTE)
+            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
             ->orderByDesc('fecha_inicio')
             ->limit(36)
             ->get(['id_periodo', 'id_empresa', 'fecha_inicio', 'fecha_fin', 'estado']);
@@ -164,12 +164,12 @@ class PilaController extends Controller
         $periodo = PeriodoLiquidacion::query()
             ->where('id_periodo', $periodoId)
             ->where('id_empresa', $empresaId)
-            ->where('estado', PeriodoLiquidacion::ESTADO_PENDIENTE)
+            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
             ->first();
 
         if (!$periodo) {
             return back()->withErrors([
-                'pila' => 'El periodo seleccionado no es valido para la empresa activa o no esta pendiente.',
+                'pila' => 'El periodo seleccionado no es valido para la empresa activa o ya fue cerrado.',
             ])->withInput();
         }
 
@@ -305,12 +305,12 @@ class PilaController extends Controller
         $periodo = PeriodoLiquidacion::query()
             ->where('id_periodo', $periodoId)
             ->where('id_empresa', $empresaId)
-            ->where('estado', PeriodoLiquidacion::ESTADO_PENDIENTE)
+            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
             ->first();
 
         if (!$periodo) {
             return back()->withErrors([
-                'pila' => 'El periodo seleccionado no es valido para la empresa activa o no esta pendiente.',
+                'pila' => 'El periodo seleccionado no es valido para la empresa activa o ya fue cerrado.',
             ]);
         }
 
@@ -435,21 +435,40 @@ class PilaController extends Controller
             ? max(1, min(30, $fechaInicio->diffInDays($fechaFin) + 1))
             : 30;
 
+        $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
+        $hasEstadoNomina  = Schema::hasColumn('contrato', 'estado_nomina');
+        $hasEstado        = Schema::hasColumn('contrato', 'estado');
+
+        $contratoActivoClosure = function ($estadoQ) use ($hasEstadoLaboral, $hasEstadoNomina, $hasEstado) {
+            if ($hasEstadoLaboral || $hasEstadoNomina) {
+                if ($hasEstadoLaboral) {
+                    $estadoQ->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
+                }
+                if ($hasEstadoNomina) {
+                    $estadoQ->orWhere('estado_nomina', Contrato::ESTADO_NOMINA_PENDIENTE);
+                }
+            } elseif ($hasEstado) {
+                $estadoQ->whereIn('estado', [
+                    Contrato::ESTADO_ACTIVO,
+                    Contrato::ESTADO_POR_VENCER,
+                    Contrato::ESTADO_PROGRAMADO,
+                    Contrato::ESTADO_VENCIDO,
+                ]);
+            } else {
+                $estadoQ->where('activo', 1);
+            }
+        };
+
         $empleados = Empleado::query()
-            ->with(['contratos' => function ($q) use ($empresaId) {
+            ->with(['contratos' => function ($q) use ($empresaId, $contratoActivoClosure) {
                 $q->where('id_empresa', $empresaId)
-                    ->where(function ($estadoQ) {
-                        $estadoQ->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
-                            ->orWhere('activo', true);
-                    })
+                    ->where($contratoActivoClosure)
+                    ->with(['eps', 'afp', 'arl', 'cajaCompensacion'])
                     ->orderByDesc('id_contrato');
             }])
-            ->whereHas('contratos', function ($q) use ($empresaId) {
+            ->whereHas('contratos', function ($q) use ($empresaId, $contratoActivoClosure) {
                 $q->where('id_empresa', $empresaId)
-                    ->where(function ($estadoQ) {
-                        $estadoQ->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
-                            ->orWhere('activo', true);
-                    });
+                    ->where($contratoActivoClosure);
             })
             ->orderBy('primer_apellido')
             ->orderBy('primer_nombre')
@@ -463,8 +482,8 @@ class PilaController extends Controller
                 continue;
             }
 
-            $salarioBase = (float) ($contrato->salario_base ?? $contrato->salario ?? 0);
-            $nivelRiesgo = (int) ($contrato->nivel_riesgo ?: 1);
+            $salarioBase = (float) ($contrato->salario_base ?? 0);
+            $nivelRiesgo = $this->parsearNivelRiesgo($contrato->nivel_riesgo ?? 1);
             $aportes = $this->calcularAportesSeguridadSocial($salarioBase, $nivelRiesgo);
 
             $detalles[] = [
@@ -486,10 +505,32 @@ class PilaController extends Controller
                 'dias_cotizados' => $diasCotizados,
                 'aporte_caja' => $aportes['aporte_caja'],
                 'nivel_riesgo' => $nivelRiesgo,
+                'codigo_eps' => (string) ($contrato->eps->codigo_pila ?? ''),
+                'codigo_afp' => (string) ($contrato->afp->codigo_pila ?? ''),
+                'codigo_arl' => (string) ($contrato->arl->codigo_pila ?? ''),
+                'codigo_caja' => (string) ($contrato->cajaCompensacion->codigo_pila ?? ''),
             ];
         }
 
         return $detalles;
+    }
+
+    private function parsearNivelRiesgo(mixed $valor): int
+    {
+        if (is_numeric($valor)) {
+            $n = (int) $valor;
+            return $n >= 1 && $n <= 5 ? $n : 1;
+        }
+
+        $mapa = [
+            'nivel i'   => 1, 'nivel 1' => 1, 'i'   => 1,
+            'nivel ii'  => 2, 'nivel 2' => 2, 'ii'  => 2,
+            'nivel iii' => 3, 'nivel 3' => 3, 'iii' => 3,
+            'nivel iv'  => 4, 'nivel 4' => 4, 'iv'  => 4,
+            'nivel v'   => 5, 'nivel 5' => 5, 'v'   => 5,
+        ];
+
+        return $mapa[strtolower(trim((string) $valor))] ?? 1;
     }
 
     private function calcularAportesSeguridadSocial(float $ibc, int $nivelRiesgo): array

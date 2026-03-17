@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\NominaExportacion;
 use App\Services\Banking\BankExportService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class PeriodoLiquidacionController extends Controller
 {
@@ -93,8 +94,8 @@ class PeriodoLiquidacionController extends Controller
             $fechaInicio = \Carbon\Carbon::parse($request->input('fecha_inicio'));
 
             // Seguridad: Validar que el usuario tenga acceso a esa empresa (si no es SuperAdmin)
-            if (auth()->user()->id_rol != 4) {
-                $hasAccess = auth()->user()->empresa()->where('empresa.id_empresa', $empresaId)->exists();
+            if (Auth::user()->id_rol != 4) {
+                $hasAccess = Auth::user()->empresa()->where('empresa.id_empresa', $empresaId)->exists();
                 if (!$hasAccess) {
                     throw new \Exception('No tiene permisos para crear periodos en esta empresa.');
                 }
@@ -369,7 +370,7 @@ class PeriodoLiquidacionController extends Controller
                 ->firstOrFail();
 
             $salarios = $periodo->salarios()
-                ->where('estado', \App\Models\Salario::ESTADO_LIQUIDADO)
+                ->where('estado', \App\Models\Salario::ESTADO_PAGADO)
                 ->with('contrato')
                 ->get();
 

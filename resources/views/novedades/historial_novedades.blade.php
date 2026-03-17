@@ -110,8 +110,20 @@
                             <td class="px-6 py-4 text-sm text-gray-600">
                                 {{ $novedad->fecha_fin ? \Carbon\Carbon::parse($novedad->fecha_fin)->format('d/m/Y') : '—' }}
                             </td>
-                            <td class="px-6 py-4 text-sm text-right font-semibold text-gray-900">
-                                {{ number_format($novedad->valor_novedad, 0, ',', '.') }}
+                            <td class="px-6 py-4 text-sm text-right font-semibold">
+                                @if($novedad->valor_novedad < 0)
+                                    <span class="text-red-600">
+                                        -{{ number_format(abs($novedad->valor_novedad), 0, ',', '.') }}
+                                    </span>
+                                @elseif($novedad->valor_novedad > 0)
+                                    <span class="text-green-600">
+                                        +{{ number_format($novedad->valor_novedad, 0, ',', '.') }}
+                                    </span>
+                                @else
+                                    <span class="text-gray-500">
+                                        {{ number_format($novedad->valor_novedad, 0, ',', '.') }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
                                 {{ $novedad->observaciones ?? '—' }}

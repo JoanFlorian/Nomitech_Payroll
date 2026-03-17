@@ -18,10 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'ensure_active_license' => \App\Http\Middleware\EnsureActiveLicense::class,
-            'is_superadmin' => \App\Http\Middleware\CheckSuperAdmin::class,
-            'admin_empresa' => \App\Http\Middleware\CheckCompanyAdmin::class,
-            'prevent_back_history' => \App\Http\Middleware\PreventBackHistory::class,
-            'contractual_access' => \App\Http\Middleware\CheckContractualAccess::class,
+            'is_superadmin'         => \App\Http\Middleware\CheckSuperAdmin::class,
+            'admin_empresa'         => \App\Http\Middleware\CheckCompanyAdmin::class,
+            'prevent_back_history'  => \App\Http\Middleware\PreventBackHistory::class,
+            'contractual_access'    => \App\Http\Middleware\CheckContractualAccess::class,
+            'permission'            => \App\Http\Middleware\AuthorizePermission::class,
+            'role'                  => \App\Http\Middleware\CheckRole::class,
+            'must_change_password'  => \App\Http\Middleware\MustChangePassword::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

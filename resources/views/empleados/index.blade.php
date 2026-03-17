@@ -6,164 +6,105 @@
 @section('content')
 
 <div x-data="empleadosModule()" @open-modal-registro.window="openRegistroModal()" @close-modal.window="closeModals()">
-    <div class="employee-index-compact">
-
-    {{-- ENCABEZADO --}}
-    <div class="mb-8">
-        <div class="flex justify-between items-center mb-5">
-            <h1 class="text-3xl font-bold text-gray-900">Gestor de Empleados</h1>
-            <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
-                @php
-                    $searchParam = request('search');
-                    $baseParams = $searchParam ? ['search' => $searchParam] : [];
-                    $exportGeneralParams = [];
-                    $exportGeneralParams = $baseParams;
-                    $exportActivosParams = array_merge($baseParams, ['estado' => 'activos']);
-                    $exportInactivosParams = array_merge($baseParams, ['estado' => 'inactivos']);
-                    $exportSinContratoParams = array_merge($baseParams, ['estado' => 'sin_contrato']);
-                    $exportOptions = [
-                        'General (todos) - Excel' => route('employees.export.excel', $exportGeneralParams),
-                        'General (todos) - PDF' => route('employees.export.pdf', $exportGeneralParams),
-                        'Solo activos - Excel' => route('employees.export.excel', $exportActivosParams),
-                        'Solo activos - PDF' => route('employees.export.pdf', $exportActivosParams),
-                        'Solo inactivos - Excel' => route('employees.export.excel', $exportInactivosParams),
-                        'Solo inactivos - PDF' => route('employees.export.pdf', $exportInactivosParams),
-                        'Sin contrato - Excel' => route('employees.export.excel', $exportSinContratoParams),
-                        'Sin contrato - PDF' => route('employees.export.pdf', $exportSinContratoParams),
-                    ];
-                @endphp
-                <select id="exportEmployeesSelect"
-                    class="min-w-[260px] border border-gray-300 rounded-md pl-3 pr-10 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    @foreach ($exportOptions as $label => $url)
-                        <option value="{{ $url }}">{{ $label }}</option>
-                    @endforeach
-                </select>
-                <button type="button"
-                    onclick="window.location.href = document.getElementById('exportEmployeesSelect').value"
-                    class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition">
-                    <i class="fas fa-download mr-2"></i>Exportar
-                </button>
-            </div>
-        </div>
-
-        {{-- BÚSQUEDA Y FILTROS --}}
-        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-            {{-- BARRA DE BÚSQUEDA --}}
-            <form method="GET" action="{{ route('empleados.index') }}" class="mb-4 -mt-2">
-                <div class="flex flex-col md:flex-row gap-3">
-                    <div class="flex-1">
-                        <input 
-                            type="text" 
-                            name="search" 
-                            value="{{ request('search') }}"
-                            placeholder="Buscar por nombre, documento o correo..."
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                        >
-                    </div>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition duration-200">
-                        <i class="fas fa-search mr-2"></i>Buscar
+    @if ($canView)
+    <div class="employee-index-compact p-6">
+        {{-- ENCABEZADO --}}
+        <div class="mb-8">
+            <div class="flex justify-between items-center mb-5">
+                <h1 class="text-3xl font-bold text-gray-900">Gestor de Empleados</h1>
+                @can('export_employees')
+                <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                    @php
+                        $searchParam = request('search');
+                        $baseParams = $searchParam ? ['search' => $searchParam] : [];
+                        $exportGeneralParams = [];
+                        $exportGeneralParams = $baseParams;
+                        $exportActivosParams = array_merge($baseParams, ['estado' => 'activos']);
+                        $exportInactivosParams = array_merge($baseParams, ['estado' => 'inactivos']);
+                        $exportSinContratoParams = array_merge($baseParams, ['estado' => 'sin_contrato']);
+                        $exportOptions = [
+                            'General (todos) - Excel' => route('employees.export.excel', $exportGeneralParams),
+                            'General (todos) - PDF' => route('employees.export.pdf', $exportGeneralParams),
+                            'Solo activos - Excel' => route('employees.export.excel', $exportActivosParams),
+                            'Solo activos - PDF' => route('employees.export.pdf', $exportActivosParams),
+                            'Solo inactivos - Excel' => route('employees.export.excel', $exportInactivosParams),
+                            'Solo inactivos - PDF' => route('employees.export.pdf', $exportInactivosParams),
+                            'Sin contrato - Excel' => route('employees.export.excel', $exportSinContratoParams),
+                            'Sin contrato - PDF' => route('employees.export.pdf', $exportSinContratoParams),
+                        ];
+                    @endphp
+                    <select id="exportEmployeesSelect"
+                        class="min-w-[260px] border border-gray-300 rounded-md pl-3 pr-10 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        @foreach ($exportOptions as $label => $url)
+                            <option value="{{ $url }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <button type="button"
+                        onclick="window.location.href = document.getElementById('exportEmployeesSelect').value"
+                        class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition">
+                        <i class="fas fa-download mr-2"></i>Exportar
                     </button>
                 </div>
-            </form>
+                @endcan
+            </div>
 
-            {{-- FILTROS POR ESTADO --}}
-            <div class="flex flex-wrap gap-2">
-                <a href="{{ route('empleados.index') }}" 
-                   class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ !request('estado') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
-                    <i class="fas fa-list mr-2"></i>Todos ({{ $totalEmpleados }})
-                </a>
-                <a href="{{ route('empleados.index', ['estado' => 'activos']) }}" 
-                   class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'activos' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
-                    <i class="fas fa-check-circle mr-2"></i>Activos ({{ $activosCount }})
-                </a>
-                <a href="{{ route('empleados.index', ['estado' => 'inactivos']) }}" 
-                   class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'inactivos' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
-                    <i class="fas fa-times-circle mr-2"></i>Inactivos ({{ $inactivosCount }})
-                </a>
-                <a href="{{ route('empleados.index', ['estado' => 'sin_contrato']) }}" 
-                   class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'sin_contrato' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
-                    <i class="fas fa-user-slash mr-2"></i>Sin Contrato ({{ $sinContratoCount }})
-                </a>
+            {{-- BÚSQUEDA Y FILTROS --}}
+            <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                {{-- BARRA DE BÚSQUEDA --}}
+                <form method="GET" action="{{ route('empleados.index') }}" class="mb-4 -mt-2">
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <div class="flex-1">
+                            <input 
+                                type="text" 
+                                name="search" 
+                                value="{{ request('search') }}"
+                                placeholder="Buscar por nombre, documento o correo..."
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                            >
+                        </div>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition duration-200">
+                            <i class="fas fa-search mr-2"></i>Buscar
+                        </button>
+                    </div>
+                </form>
+
+                {{-- FILTROS POR ESTADO --}}
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ route('empleados.index') }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ !request('estado') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                        <i class="fas fa-list mr-2"></i>Todos ({{ $totalEmpleados }})
+                    </a>
+                    <a href="{{ route('empleados.index', ['estado' => 'activos']) }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'activos' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                        <i class="fas fa-check-circle mr-2"></i>Activos ({{ $activosCount }})
+                    </a>
+                    <a href="{{ route('empleados.index', ['estado' => 'inactivos']) }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'inactivos' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                        <i class="fas fa-times-circle mr-2"></i>Inactivos ({{ $inactivosCount }})
+                    </a>
+                    <a href="{{ route('empleados.index', ['estado' => 'sin_contrato']) }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'sin_contrato' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                        <i class="fas fa-user-slash mr-2"></i>Sin Contrato ({{ $sinContratoCount }})
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
 
-    @push('modals')
-        {{-- ALERTAS DE CONTRATOS - FLOTANTES TOP-RIGHT GLOBAL --}}
-        @if(isset($contractAlerts) && (($contractAlerts['expiring']['count'] ?? 0) > 0 || ($contractAlerts['pending_liquidation']['count'] ?? 0) > 0))
-        <div class="fixed top-5 right-5 z-[10000] flex flex-col gap-3 w-80">
-            @if(($contractAlerts['expiring']['count'] ?? 0) > 0)
-            <div 
-                x-data
-                x-show="!$store.dismissedAlerts?.includes('expiring')"
-                x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0 transform translate-x-8"
-                x-transition:enter-end="opacity-100 transform translate-x-0"
-                x-transition:leave="transition ease-in duration-200"
-                x-transition:leave-start="opacity-100 transform translate-x-0"
-                x-transition:leave-end="opacity-0 transform translate-x-8"
-                class="bg-white border-l-4 border-amber-500 rounded-xl p-4 flex items-start gap-4 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] relative border border-gray-100"
-            >
-                <div class="bg-amber-100 rounded-full p-2.5 flex-shrink-0">
-                    <i class="fas fa-clock text-amber-600 text-lg"></i>
-                </div>
-                <div class="flex-1 pr-6 text-left">
-                    <p class="text-xs font-bold text-gray-900 leading-tight mb-1">ALERTA DE VENCIMIENTO</p>
-                    <p class="text-xs text-gray-600 leading-snug">
-                        {{ $contractAlerts['expiring']['message'] }}
-                    </p>
-                </div>
-                <button @click="dismissAlert('expiring')" class="absolute -top-2 -right-2 w-7 h-7 flex items-center justify-center rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all z-10 border-2 border-white">
-                    <i class="fas fa-times text-xs"></i>
-                </button>
-            </div>
-            @endif
-
-            @if(($contractAlerts['pending_liquidation']['count'] ?? 0) > 0)
-            <div 
-                x-data
-                x-show="!$store.dismissedAlerts?.includes('pending')"
-                x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0 transform translate-x-8"
-                x-transition:enter-end="opacity-100 transform translate-x-0"
-                x-transition:leave="transition ease-in duration-200"
-                x-transition:leave-start="opacity-100 transform translate-x-0"
-                x-transition:leave-end="opacity-0 transform translate-x-8"
-                class="bg-white border-l-4 border-red-500 rounded-xl p-4 flex items-start gap-4 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] relative border border-gray-100"
-            >
-                <div class="bg-red-100 rounded-full p-2.5 flex-shrink-0">
-                    <i class="fas fa-file-invoice-dollar text-red-600 text-lg"></i>
-                </div>
-                <div class="flex-1 pr-6 text-left">
-                    <p class="text-xs font-bold text-gray-900 leading-tight mb-1">LIQUIDACIÓN PENDIENTE</p>
-                    <p class="text-xs text-gray-600 leading-snug">
-                        {{ $contractAlerts['pending_liquidation']['message'] }}
-                    </p>
-                </div>
-                <button @click="dismissAlert('pending')" class="absolute -top-2 -right-2 w-7 h-7 flex items-center justify-center rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all z-10 border-2 border-white">
-                    <i class="fas fa-times text-xs"></i>
-                </button>
-            </div>
-            @endif
-        </div>
-        @endif
-    @endpush
-
-    {{-- TABLA DE EMPLEADOS --}}
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-gradient-to-r from-[#1565C0] to-[#1976D2] text-white">
-                        <th class="py-4 px-6 font-semibold text-left">Empleado</th>
-                        <th class="py-4 px-6 font-semibold text-left">Documento</th>
-                        <th class="py-4 px-6 font-semibold text-left">Tipo Contrato</th>
-                        <th class="py-4 px-6 font-semibold text-right">Salario Base</th>
-                        <th class="py-4 px-6 font-semibold text-center">Estado</th>
-                        <th class="py-4 px-6 font-semibold text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
+        {{-- TABLA DE EMPLEADOS --}}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gradient-to-r from-[#1565C0] to-[#1976D2] text-white">
+                            <th class="py-4 px-6 font-semibold text-left">Empleado</th>
+                            <th class="py-4 px-6 font-semibold text-left">Documento</th>
+                            <th class="py-4 px-6 font-semibold text-left">Tipo Contrato</th>
+                            <th class="py-4 px-6 font-semibold text-right">Salario Base</th>
+                            <th class="py-4 px-6 font-semibold text-center">Estado</th>
+                            <th class="py-4 px-6 font-semibold text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
                     @forelse ($empleados as $usuario)
                     <?php 
                     $contrato = $usuario->contratos->first();
@@ -237,19 +178,24 @@
                         {{-- ACCIONES --}}
                         <td class="py-4 px-6 text-center">
                             <div class="flex items-center justify-center gap-2">
+                                @can('edit_employee')
                                 <button 
                                     @click="openEditModal('{{ $usuario->doc }}')"
                                     class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
                                 >
                                     <i class="fas fa-edit"></i>Editar
                                 </button>
+                                @endcan
+
                                 @if(in_array($estadoDinamico ?? '', ['POR_VENCER', 'VENCIDO']))
+                                @can('renew_contract')
                                 <button 
                                     @click="openRenewalModal('{{ $usuario->doc }}')"
                                     class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
                                 >
                                     <i class="fas fa-sync-alt"></i>Renovar
                                 </button>
+                                @endcan
                                 @endif
                             </div>
                         </td>
@@ -284,12 +230,14 @@
                         </td>
                         {{-- ACCIONES --}}
                         <td class="py-4 px-6 text-center">
+                            @can('edit_employee')
                             <button 
                                 @click="openEditModal('{{ $usuario->doc }}')"
                                 class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
                             >
                                 <i class="fas fa-edit"></i>Editar
                             </button>
+                            @endcan
                         </td>
                     </tr>
                     @endif
@@ -299,9 +247,11 @@
                             <div class="text-center">
                                 <i class="fas fa-inbox text-6xl text-gray-300 mb-4 block"></i>
                                 <p class="text-gray-600 font-semibold mb-4">No hay empleados registrados</p>
+                                @can('create_employee')
                                 <button @click="openRegistroModal()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg font-semibold transition duration-200 inline-flex items-center gap-2">
                                     <i class="fas fa-plus"></i>Crear nuevo empleado
                                 </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>
@@ -327,6 +277,7 @@
     </div>
 
     {{-- BOTÓN FLOTANTE --}}
+    @can('create_employee')
     <button 
         @click="openRegistroModal()"
         class="fixed bottom-2 right-5 z-40 bg-green-500 hover:bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-3xl font-bold shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95"
@@ -334,8 +285,18 @@
     >
         <span>+</span>
     </button>
+    @endcan
 
     </div> {{-- .employee-index-compact --}}
+    @else
+        <div class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100 m-6">
+            <div class="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6">
+                <i class="bi bi-shield-lock text-4xl text-amber-500"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2 font-manrope">Acceso Restringido</h2>
+            <p class="text-gray-500 text-center max-w-md font-manrope">No tienes los permisos necesarios para visualizar la lista de empleados. <br> Contacta al administrador si crees que esto es un error.</p>
+        </div>
+    @endif
 
     {{-- MODAL REGISTRO DE EMPLEADO (WIZARD) --}}
     <div
@@ -767,12 +728,21 @@
     @if(session('error'))
         Swal.fire({
             icon: 'error',
-            title: '¡Error!',
-            text: '{{ session('error') }}',
+            title: '<span style="color: white; font-weight: bold;">Acceso Denegado</span>',
+            html: '<span style="color: #E2E8F0;">{{ session("error") }}</span>',
             timer: 6000,
             timerProgressBar: true,
             position: 'top-end',
-            toast: true
+            toast: true,
+            showConfirmButton: false,
+            background: '#1565C0 url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.05\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+            iconColor: 'white',
+            didOpen: (toast) => {
+                const b = toast.querySelector('.swal2-timer-progress-bar');
+                if (b) {
+                    b.style.backgroundColor = '#10B981'; // Verde Marca
+                }
+            }
         });
     @endif
 

@@ -68,6 +68,14 @@
             <div class="error-message invalid-feedback" data-error="doc"></div>
         </div>
 
+        {{-- Aviso informativo: ocupa el ancho completo sin romper el grid --}}
+        <div class="md:col-span-2">
+            <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                La contraseña del trabajador se genera automáticamente y corresponde a su número de documento.
+            </p>
+        </div>
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Primer apellido
@@ -206,6 +214,17 @@
                             this.selectedKey = null;
                             this.label = '';
                         }
+                    });
+
+                    window.addEventListener(`set-value-${config.id}`, (e) => {
+                        this.selectedKey = e.detail;
+                        this.updateLabel();
+                        
+                        // Dispatch input event to notify Alpine and any form listeners
+                        this.$dispatch('input', this.selectedKey);
+                        setTimeout(() => {
+                            this.$el.dispatchEvent(new CustomEvent('selected', { detail: { key: this.selectedKey } }));
+                        }, 50);
                     });
                 }
             },

@@ -112,10 +112,12 @@
 
     {{-- BOTON --}}
     <div class="col-12 col-lg-4">
+        @can('view_pila')
         <button type="submit" class="btn btn-primary w-100 py-2 btn-pila-main shadow-sm">
             <i class="bi bi-calculator-fill me-2"></i>
             Calcular Seguridad Social
         </button>
+        @endcan
     </div>
 
 </form>
@@ -314,20 +316,24 @@
                         <input type="hidden" name="id_empresa" value="{{ $selectedEmpresaId }}">
                         <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">
 
+                        @can('export_pila')
                         <button type="submit" class="btn btn-success btn-lg btn-pila-generate" {{ $canGenerate ? '' : 'disabled' }}>
                             <i class="bi bi-file-earmark-check-fill me-2"></i>
                             Generar Planilla PILA
                         </button>
+                        @endcan
                     </form>
 
                     @if($stepGenerada)
                         <form method="GET" action="{{ route('pila.descargar') }}" id="downloadPilaForm">
                             <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">
 
+                            @can('export_pila')
                             <button type="submit" class="btn btn-outline-primary btn-lg" {{ $hasCalculo && $detalles->isNotEmpty() ? '' : 'disabled' }}>
                                 <i class="bi bi-download me-2"></i>
                                 Descargar Planilla PILA
                             </button>
+                            @endcan
                         </form>
                     @endif
                 </div>
@@ -381,7 +387,7 @@
                                 <td colspan="8" class="text-center py-5 text-muted">
                                     <i class="bi bi-people fs-3 d-block mb-2"></i>
                                     {{ $hasCalculo
-                                        ? 'No hay empleados activos para los filtros seleccionados.'
+                                        ? 'No hay empleados con nomina registrada para los filtros seleccionados.'
                                         : 'Seleccione un periodo y presione Calcular Seguridad Social.' }}
                                 </td>
                             </tr>
@@ -395,6 +401,65 @@
                 <nav>
                     <ul class="pagination pagination-sm mb-0" id="paginationList"></ul>
                 </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="card pila-card mt-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <p class="pila-section-title mb-1">Seccion 4</p>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Historial de archivos PILA</h3>
+                    <small class="text-muted d-block mt-1">Archivos generados por periodo para la empresa activa.</small>
+                </div>
+                <span class="badge rounded-pill badge-soft">{{ ($historialPila ?? collect())->count() }} registros</span>
+            </div>
+
+            <div class="table-responsive border rounded-3">
+                <table class="table pila-table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Periodo</th>
+                            <th>Archivo</th>
+                            <th class="text-center">Empleados</th>
+                            <th>Fecha generacion</th>
+                            <th class="text-center">Estado archivo</th>
+                            <th class="text-center">Accion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse(($historialPila ?? collect()) as $item)
+                            <tr>
+                                <td>{{ $item->id }}</td>
+                                <td>
+                                    @if(!empty($item->fecha_inicio) && !empty($item->fecha_fin))
+                                        {{ \Carbon\Carbon::parse($item->fecha_inicio)->format('Y-m-d') }} a {{ \Carbon\Carbon::parse($item->fecha_fin)->format('Y-m-d') }}
+                                    @else
+                                        #{{ $item->periodo_id }}
+                                    @endif
+                                </td>
+                                <td class="fw-semibold">{{ $item->nombre_archivo }}</td>
+                                <td class="text-center">{{ (int) $item->total_empleados }}</td>
+                                <td>{{ \Carbon\Carbon::parse($item->created_at)->format('Y-m-d H:i') }}</td>
+                                <td class="text-center"><span class="badge bg-success-subtle text-success border">Disponible</span></td>
+                                <td class="text-center">
+                                    <a href="{{ route('pila.historial.descargar', ['id' => $item->id]) }}" class="btn btn-sm btn-outline-primary history-download-btn">
+                                        <i class="bi bi-download me-1"></i>
+                                        Descargar TXT
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    No hay historial de archivos PILA para la empresa y periodo seleccionados.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

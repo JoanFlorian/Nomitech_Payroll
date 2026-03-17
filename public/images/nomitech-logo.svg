@@ -1,9 +1,0 @@
-<svg width="340" height="90" viewBox="0 0 340 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="340" height="90" rx="14" fill="#EEF5FF"/>
-  <g transform="translate(18,18)">
-    <rect x="0" y="0" width="54" height="54" rx="12" fill="#1565C0"/>
-    <path d="M13 37V17H19L27 29L35 17H41V37H35V26L27 37L19 26V37H13Z" fill="white"/>
-  </g>
-  <text x="88" y="39" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#0F2A47">NOMITECH</text>
-  <text x="88" y="60" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#1E5AA8">Nomina y Reporteria Empresarial</text>
-</svg>

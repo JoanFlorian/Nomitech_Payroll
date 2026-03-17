@@ -13,7 +13,7 @@
 </head>
 
 <body>
-    <div class="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+    <div class="flex items-center justify-center min-h-screen bg-[#F7F9FC] p-4 sm:p-6 md:p-8">
         <div class="w-full max-w-4xl mx-auto shadow-2xl rounded-2xl overflow-hidden">
             <div class="grid grid-cols-1 md:grid-cols-2">
 

@@ -44,18 +44,22 @@ return new class extends Migration {
             ->update(['estado' => 'VENCIDO']);
 
         // ── Drop old columns ──
-        Schema::table('contrato', function (Blueprint $table) {
-            $table->dropColumn(['estado_laboral', 'estado_nomina']);
-        });
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            Schema::table('contrato', function (Blueprint $table) {
+                $table->dropColumn(['estado_laboral', 'estado_nomina']);
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('contrato', function (Blueprint $table) {
-            // Restore old columns
-            $table->unsignedTinyInteger('estado_laboral')->default(1)->after('activo');
-            $table->unsignedTinyInteger('estado_nomina')->default(1)->after('estado_laboral');
-        });
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            Schema::table('contrato', function (Blueprint $table) {
+                // Restore old columns
+                $table->unsignedTinyInteger('estado_laboral')->default(1)->after('activo');
+                $table->unsignedTinyInteger('estado_nomina')->default(1)->after('estado_laboral');
+            });
+        }
 
         // Reverse mapping
         DB::table('contrato')

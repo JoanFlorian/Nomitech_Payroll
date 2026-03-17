@@ -279,7 +279,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">ARL</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
-                                name="id_arl" id="editIdArl">
+                                name="id_arl" id="editIdArl" disabled>
                                 @foreach ($Arl as $arl)
                                     <option value="{{ $arl->id_arl }}">{{ $arl->nombre }}</option>
                                 @endforeach
@@ -299,6 +299,18 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salario Base</label>
                             <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="salario" id="editSalario" inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
                             <p class="error-message text-red-500 text-sm hidden" data-error="salario"></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Rol del sistema</label>
+                            <select
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                name="id_rol" id="editIdRol">
+                                @foreach ($roles as $rol)
+                                    <option value="{{ $rol->id_rol }}">{{ $rol->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <p class="error-message text-red-500 text-sm hidden" data-error="id_rol"></p>
                         </div>
 
                         <div>
@@ -513,10 +525,19 @@
                             class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition">
                             Continuar
                         </button>
-                        <button type="submit" x-show="editWizardStep === 3"
-                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition"
-                            x-text="isRenewal ? 'Finalizar Renovación' : 'Guardar Cambios'">
+                        @can('edit_employee')
+                        <button type="submit" x-show="editWizardStep === 3 && !isRenewal"
+                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition">
+                            Guardar Cambios
                         </button>
+                        @endcan
+
+                        @can('renew_contract')
+                        <button type="submit" x-show="editWizardStep === 3 && isRenewal"
+                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition">
+                            Finalizar Renovación
+                        </button>
+                        @endcan
                     </div>
                 </div>
             </form>
@@ -1238,14 +1259,25 @@
                 document.getElementById('editPrimerApellido').value = data.usuario.primer_apellido;
                 document.getElementById('editSegundoApellido').value = data.usuario.segundo_apellido || '';
                 
-                const editCityInput = document.querySelector('#editIdCiudad input[name="id_ciudad"]');
-                if (editCityInput) {
-                    editCityInput.value = data.usuario.id_ciudad || '';
-                    editCityInput.dispatchEvent(new Event('input', { bubbles: true }));
+                // Set the department and then the city
+                if (data.usuario.ciudad && data.usuario.ciudad.id_departamento) {
+                    window.dispatchEvent(new CustomEvent('set-value-editIdDepartamento', { detail: String(data.usuario.ciudad.id_departamento) }));
+                } else {
+                    window.dispatchEvent(new CustomEvent('set-value-editIdDepartamento', { detail: null }));
+                }
+
+                if (data.usuario.id_ciudad) {
+                    // Esperar a que las opciones de ciudad se hayan cargado por el handler 'selected' del departamento
+                    setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('set-value-editIdCiudad', { detail: String(data.usuario.id_ciudad) }));
+                    }, 500);
+                } else {
+                    window.dispatchEvent(new CustomEvent('set-value-editIdCiudad', { detail: null }));
                 }
                 document.getElementById('editDireccion').value = data.usuario.direccion || '';
                 document.getElementById('editEmail').value = data.usuario.correo || '';
                 document.getElementById('editTelefono').value = data.usuario.telefono || '';
+                document.getElementById('editIdRol').value = data.usuario.id_rol || '';
 
                 const contrato = data.contrato;
                 const cuenta = data.cuenta;

@@ -55,6 +55,7 @@
         </div>
 
         <div class="flex w-full sm:w-auto flex-wrap items-center gap-2">
+            @can('export_reports')
             <button type="submit" formaction="{{ route('reportes.export.pdf') }}" class="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 bg-[#f59e0b] hover:bg-[#d97706] text-white font-semibold px-5 py-3 rounded-xl shadow-lg shadow-amber-900/10">
                 <i class="bi bi-file-earmark-pdf"></i>
                 PDF
@@ -63,6 +64,7 @@
                 <i class="bi bi-file-earmark-excel"></i>
                 Excel
             </button>
+            @endcan
         </div>
     </form>
 

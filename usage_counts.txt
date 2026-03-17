@@ -1,0 +1,7 @@
+PERMISSION 10 (close_payroll) USAGE:
+Roles: 1,2,3,4,5 (Count: 5)
+Users: 1111110,3200121010 (Count: 2)
+
+PERMISSION 29 (close_period) USAGE:
+Roles: 1,2,3,4,5 (Count: 5)
+Users: 1111110 (Count: 1)

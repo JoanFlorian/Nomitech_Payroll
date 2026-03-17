@@ -42,31 +42,6 @@ class NovedadController extends Controller
     ) {
     }
 
-    private function getActivePeriod(): ?PeriodoLiquidacion
-    {
-        $periodoId = session('active_period_id');
-        $empresaId = session('empresa_id');
-
-        if ($periodoId) {
-            $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
-                ->where('id_periodo', $periodoId)
-                ->first();
-            if ($periodo) {
-                return $periodo;
-            }
-        }
-
-        $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
-            ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
-            ->orderByDesc('fecha_inicio')
-            ->first();
-
-        if ($periodo) {
-            session(['active_period_id' => $periodo->id_periodo]);
-        }
-
-        return $periodo;
-    }
 
     public function index()
     {
@@ -122,7 +97,7 @@ class NovedadController extends Controller
             ])
             ->values();
 
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         $novedades = Novedad::query()
             ->with(['tipoNovedad', 'salario.contrato.usuario'])
@@ -287,7 +262,7 @@ class NovedadController extends Controller
         }
 
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
-        $periodo = $this->getActivePeriod();
+        $periodo = PeriodoLiquidacion::getActivePeriod();
         $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, $periodo);
 
         $novedad = Novedad::create($payload);
@@ -334,7 +309,7 @@ class NovedadController extends Controller
         $this->aplicarEfectosNovedad($data, $salario);
 
         if (strtoupper($data['tipo_novedad']) === 'VAC') {
-            $periodo = $this->getActivePeriod();
+            $periodo = PeriodoLiquidacion::getActivePeriod();
             if ($periodo) {
                 // Cleanup old ledger entry
                 \App\Models\BenefitLedger::where('employee_id', $novedad->empleado_id)

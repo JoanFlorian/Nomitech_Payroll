@@ -147,23 +147,28 @@
                         <div class="flex items-center justify-end gap-2">
                             @if($periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO || $periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_PENDIENTE)
                                 {{-- Boton Liquidar --}}
+                                @can('calculate_payroll')
                                 <a href="{{ route('periodos.select', $periodo->id_periodo) }}"
                                     class="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all shadow-sm">
                                     <span>Liquidar</span>
                                 </a>
+                                @endcan
 
-                                {{-- Boton Cerrar --}}
+                                {{-- DEBUG: canClose={{ auth()->user()->can('close_period') ? 'true' : 'false' }} status={{ $periodo->estado }} canBeClosed={{ $periodo->canBeClosed() ? 'true' : 'false' }} --}}
                                 @if($periodo->canBeClosed())
+                                    @can('close_period')
                                     <button type="button"
                                         onclick="abrirModalCierre({{ $periodo->id_periodo }}, '{{ $periodo->fecha_inicio->format('d/m/Y') }}', '{{ $periodo->fecha_fin->format('d/m/Y') }}')"
                                         class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
                                         Cerrar
                                     </button>
+                                    @endcan
                                 @endif
                             @endif
 
                             @if($periodo->estado === \App\Models\PeriodoLiquidacion::ESTADO_CERRADO)
                                 {{-- Boton Exportar --}}
+                                @can('export_bank_files')
                                 <button type="button" onclick="abrirModalExportar({{ $periodo->id_periodo }})"
                                     class="flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none"
@@ -173,6 +178,7 @@
                                     </svg>
                                     <span>Exportar Pagos</span>
                                 </button>
+                                @endcan
                             @endif
                         </div>
                     </td>
@@ -207,6 +213,7 @@
 
 </div>
 
+@can('create_period')
 {{-- BOTÓN FLOTANTE --}}
 <button onclick="document.getElementById('modalNuevoPeriodo').classList.remove('hidden')"
     class="fixed bottom-8 right-8 w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl hover:bg-blue-700 transition-all flex items-center justify-center group z-40 transform hover:scale-110">
@@ -215,6 +222,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
     </svg>
 </button>
+@endcan
 
 {{-- MODAL NUEVO PERIODO --}}
 <div id="modalNuevoPeriodo" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"

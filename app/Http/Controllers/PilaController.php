@@ -72,7 +72,7 @@ class PilaController extends Controller
 
         $periodos = PeriodoLiquidacion::query()
             ->when($selectedEmpresaId > 0, fn($q) => $q->where('id_empresa', $selectedEmpresaId))
-            ->where('estado', PeriodoLiquidacion::ESTADO_PENDIENTE)
+            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
             ->orderByDesc('fecha_inicio')
             ->limit(36)
             ->get(['id_periodo', 'id_empresa', 'fecha_inicio', 'fecha_fin', 'estado']);
@@ -132,6 +132,29 @@ class PilaController extends Controller
             }
         }
 
+        $historialPila = collect();
+        if (Schema::hasTable('pila_archivos')) {
+            $this->sincronizarHistorialDesdePlanilla();
+
+            $historialPila = DB::table('pila_archivos as pa')
+                ->leftJoin('periodo_liquidacion as pl', 'pl.id_periodo', '=', 'pa.periodo_id')
+                ->when($selectedEmpresaId > 0, fn($q) => $q->where('pa.empresa_id', $selectedEmpresaId))
+                ->when($selectedPeriodoId > 0, fn($q) => $q->where('pa.periodo_id', $selectedPeriodoId))
+                ->orderByDesc('pa.id')
+                ->limit(20)
+                ->get([
+                    'pa.id',
+                    'pa.periodo_id',
+                    'pa.empresa_id',
+                    'pa.nombre_archivo',
+                    'pa.ruta_archivo',
+                    'pa.total_empleados',
+                    'pa.created_at',
+                    'pl.fecha_inicio',
+                    'pl.fecha_fin',
+                ]);
+        }
+
         return view('pila.index', [
             'empresaActual' => $empresaActual,
             'periodos' => $periodos,
@@ -143,6 +166,7 @@ class PilaController extends Controller
             'archivoGenerado' => $archivoGenerado,
             'detalles' => $detalles,
             'totales' => $totales,
+            'historialPila' => $historialPila,
         ]);
     }
 
@@ -164,12 +188,12 @@ class PilaController extends Controller
         $periodo = PeriodoLiquidacion::query()
             ->where('id_periodo', $periodoId)
             ->where('id_empresa', $empresaId)
-            ->where('estado', PeriodoLiquidacion::ESTADO_PENDIENTE)
+            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
             ->first();
 
         if (!$periodo) {
             return back()->withErrors([
-                'pila' => 'El periodo seleccionado no es valido para la empresa activa o no esta pendiente.',
+                'pila' => 'El periodo seleccionado no es valido para la empresa activa o ya fue cerrado.',
             ])->withInput();
         }
 
@@ -177,16 +201,11 @@ class PilaController extends Controller
 
         if (count($detalles) === 0) {
             return back()->withErrors([
-                'pila' => 'No hay empleados activos para generar la planilla PILA en el periodo seleccionado.',
+                'pila' => 'No hay empleados con nomina registrada para generar la planilla PILA en el periodo seleccionado.',
             ])->withInput();
         }
 
-        $totales = [
-            'salud' => array_sum(array_column($detalles, 'aporte_salud')),
-            'pension' => array_sum(array_column($detalles, 'aporte_pension')),
-            'arl' => array_sum(array_column($detalles, 'aporte_arl')),
-            'caja' => array_sum(array_column($detalles, 'aporte_caja')),
-        ];
+        $totales = $this->pilaFileGeneratorService->calcularTotales($detalles);
 
         $datosHash = $this->generarHashPlanilla($empresaId, $periodoId, $detalles, $totales);
         $planillaExistente = $this->buscarPlanillaExistente($empresaId, $periodoId, $periodo->fecha_inicio);
@@ -209,19 +228,15 @@ class PilaController extends Controller
             ->select(['id_empresa', 'razon_social', 'nit'])
             ->find($empresaId);
 
-        $contenidoTxt = $this->construirArchivoPlano($empresa, $periodo, $detalles, $totales);
-        $archivoRelativo = sprintf(
-            'pila/%d/%d/planilla_pila_%d_%d_%s.txt',
-            $empresaId,
-            $periodoId,
-            $empresaId,
-            $periodoId,
-            now()->format('Ymd_His')
-        );
-        Storage::disk('local')->put($archivoRelativo, $contenidoTxt);
-
-        DB::transaction(function () use ($empresaId, $periodoId, $periodo, $detalles, $totales, $datosHash, $planillaExistente, $archivoRelativo): void {
+        DB::transaction(function () use ($empresaId, $periodoId, $periodo, $detalles, $totales, $datosHash, $planillaExistente, $empresa): void {
             $now = now();
+            $archivoGenerado = $this->pilaFileGeneratorService->guardarArchivoYHistorial(
+                $empresaId,
+                $periodoId,
+                $empresa,
+                $periodo,
+                $detalles
+            );
 
             $payloadPlanilla = [
                 'id_empresa' => $empresaId,
@@ -232,7 +247,7 @@ class PilaController extends Controller
                 'total_arl' => $totales['arl'],
                 'total_caja' => $totales['caja'],
                 'estado' => 'generada',
-                'archivo_generado' => $archivoRelativo,
+                'archivo_generado' => $archivoGenerado['ruta_archivo'],
                 'updated_at' => $now,
             ];
 
@@ -305,28 +320,23 @@ class PilaController extends Controller
         $periodo = PeriodoLiquidacion::query()
             ->where('id_periodo', $periodoId)
             ->where('id_empresa', $empresaId)
-            ->where('estado', PeriodoLiquidacion::ESTADO_PENDIENTE)
+            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
             ->first();
 
         if (!$periodo) {
             return back()->withErrors([
-                'pila' => 'El periodo seleccionado no es valido para la empresa activa o no esta pendiente.',
+                'pila' => 'El periodo seleccionado no es valido para la empresa activa o ya fue cerrado.',
             ]);
         }
 
         $detalles = $this->calcularDetalleEmpleados($empresaId, $periodoId);
         if (count($detalles) === 0) {
             return back()->withErrors([
-                'pila' => 'No hay empleados activos para descargar la planilla PILA del periodo seleccionado.',
+                'pila' => 'No hay empleados con nomina registrada para descargar la planilla PILA del periodo seleccionado.',
             ]);
         }
 
-        $totales = [
-            'salud' => array_sum(array_column($detalles, 'aporte_salud')),
-            'pension' => array_sum(array_column($detalles, 'aporte_pension')),
-            'arl' => array_sum(array_column($detalles, 'aporte_arl')),
-            'caja' => array_sum(array_column($detalles, 'aporte_caja')),
-        ];
+        $totales = $this->pilaFileGeneratorService->calcularTotales($detalles);
 
         $empresa = Empresa::query()
             ->select(['id_empresa', 'razon_social', 'nit'])
@@ -344,9 +354,110 @@ class PilaController extends Controller
         ]);
     }
 
+    public function descargarHistorial(int $id): StreamedResponse|RedirectResponse
+    {
+        $empresaId = (int) (session('empresa_id') ?: 0);
+        if ($empresaId <= 0) {
+            return back()->withErrors([
+                'pila' => 'No se pudo identificar la empresa activa de la sesion.',
+            ]);
+        }
+
+        if (!Schema::hasTable('pila_archivos')) {
+            return back()->withErrors([
+                'pila' => 'No existe historial de archivos PILA en este entorno.',
+            ]);
+        }
+
+        $archivo = DB::table('pila_archivos')
+            ->where('id', $id)
+            ->where('empresa_id', $empresaId)
+            ->first();
+
+        if (!$archivo) {
+            return back()->withErrors([
+                'pila' => 'No se encontro el archivo solicitado para la empresa activa.',
+            ]);
+        }
+
+        $rutaArchivo = (string) ($archivo->ruta_archivo ?? '');
+        if ($rutaArchivo === '' || !Storage::disk('local')->exists($rutaArchivo)) {
+            return back()->withErrors([
+                'pila' => 'El archivo solicitado no existe en almacenamiento local.',
+            ]);
+        }
+
+        $contenidoTxt = Storage::disk('local')->get($rutaArchivo);
+        $nombreArchivo = trim((string) ($archivo->nombre_archivo ?? ''));
+        if ($nombreArchivo === '') {
+            $nombreArchivo = basename($rutaArchivo);
+        }
+
+        return response()->streamDownload(function () use ($contenidoTxt): void {
+            echo $contenidoTxt;
+        }, $nombreArchivo, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+        ]);
+    }
+
     private function construirArchivoPlano(?Empresa $empresa, object $periodo, array $detalles, array $totales): string
     {
         return $this->pilaFileGeneratorService->generate($empresa, $periodo, $detalles);
+    }
+
+    private function sincronizarHistorialDesdePlanilla(int $empresaId = 0, int $periodoId = 0): void
+    {
+        if (!Schema::hasTable('planilla_pila')) {
+            return;
+        }
+
+        $rows = DB::table('planilla_pila')
+            ->when($empresaId > 0, fn($q) => $q->where('id_empresa', $empresaId))
+            ->when($periodoId > 0, fn($q) => $q->where('id_periodo', $periodoId))
+            ->whereNotNull('archivo_generado')
+            ->where('archivo_generado', '!=', '')
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get([
+                'id',
+                'id_periodo',
+                'id_empresa',
+                'archivo_generado',
+                'created_at',
+            ]);
+
+        foreach ($rows as $row) {
+            $ruta = (string) ($row->archivo_generado ?? '');
+            if ($ruta === '') {
+                continue;
+            }
+
+            $yaExiste = DB::table('pila_archivos')
+                ->where('empresa_id', (int) $row->id_empresa)
+                ->where('periodo_id', (int) ($row->id_periodo ?? 0))
+                ->where('ruta_archivo', $ruta)
+                ->exists();
+
+            if ($yaExiste) {
+                continue;
+            }
+
+            $totalEmpleados = 0;
+            if (Schema::hasTable('pila_detalle_empleado')) {
+                $totalEmpleados = (int) DB::table('pila_detalle_empleado')
+                    ->where('planilla_id', (int) $row->id)
+                    ->count();
+            }
+
+            DB::table('pila_archivos')->insert([
+                'periodo_id' => (int) ($row->id_periodo ?? 0),
+                'empresa_id' => (int) ($row->id_empresa ?? 0),
+                'nombre_archivo' => basename($ruta),
+                'ruta_archivo' => $ruta,
+                'total_empleados' => $totalEmpleados,
+                'created_at' => $row->created_at ?? now(),
+            ]);
+        }
     }
 
     private function generarHashPlanilla(int $empresaId, int $periodoId, array $detalles, array $totales): string
@@ -428,68 +539,25 @@ class PilaController extends Controller
      */
     private function calcularDetalleEmpleados(int $empresaId, int $periodoId): array
     {
-        $periodo = PeriodoLiquidacion::query()->find($periodoId);
-        $fechaInicio = $periodo ? Carbon::parse($periodo->fecha_inicio) : null;
-        $fechaFin = $periodo ? Carbon::parse($periodo->fecha_fin) : null;
-        $diasCotizados = $periodo
-            ? max(1, min(30, $fechaInicio->diffInDays($fechaFin) + 1))
-            : 30;
+        return $this->pilaFileGeneratorService->buildDetallesDesdeNomina($empresaId, $periodoId);
+    }
 
-        $empleados = Empleado::query()
-            ->with(['contratos' => function ($q) use ($empresaId) {
-                $q->where('id_empresa', $empresaId)
-                    ->where(function ($estadoQ) {
-                        $estadoQ->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
-                            ->orWhere('activo', true);
-                    })
-                    ->orderByDesc('id_contrato');
-            }])
-            ->whereHas('contratos', function ($q) use ($empresaId) {
-                $q->where('id_empresa', $empresaId)
-                    ->where(function ($estadoQ) {
-                        $estadoQ->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO)
-                            ->orWhere('activo', true);
-                    });
-            })
-            ->orderBy('primer_apellido')
-            ->orderBy('primer_nombre')
-            ->get();
-
-        $detalles = [];
-
-        foreach ($empleados as $empleado) {
-            $contrato = $empleado->contratos->first();
-            if (!$contrato) {
-                continue;
-            }
-
-            $salarioBase = (float) ($contrato->salario_base ?? $contrato->salario ?? 0);
-            $nivelRiesgo = (int) ($contrato->nivel_riesgo ?: 1);
-            $aportes = $this->calcularAportesSeguridadSocial($salarioBase, $nivelRiesgo);
-
-            $detalles[] = [
-                'doc_empleado' => (string) $empleado->doc,
-                'id_tipo_doc' => (int) ($empleado->id_tipo_doc ?? 0),
-                'empleado_nombre' => $empleado->nombre_completo,
-                'salario_base' => round($salarioBase, 2),
-                'ibc' => $aportes['ibc'],
-                'ibc_salud' => $aportes['ibc'],
-                'ibc_pension' => $aportes['ibc'],
-                'ibc_arl' => $aportes['ibc'],
-                'aporte_salud' => $aportes['aporte_salud_empresa'],
-                'aporte_salud_empleado' => $aportes['aporte_salud_empleado'],
-                'aporte_salud_empresa' => $aportes['aporte_salud_empresa'],
-                'aporte_pension' => $aportes['aporte_pension_empresa'],
-                'aporte_pension_empleado' => $aportes['aporte_pension_empleado'],
-                'aporte_pension_empresa' => $aportes['aporte_pension_empresa'],
-                'aporte_arl' => $aportes['aporte_arl'],
-                'dias_cotizados' => $diasCotizados,
-                'aporte_caja' => $aportes['aporte_caja'],
-                'nivel_riesgo' => $nivelRiesgo,
-            ];
+    private function parsearNivelRiesgo(mixed $valor): int
+    {
+        if (is_numeric($valor)) {
+            $n = (int) $valor;
+            return $n >= 1 && $n <= 5 ? $n : 1;
         }
 
-        return $detalles;
+        $mapa = [
+            'nivel i'   => 1, 'nivel 1' => 1, 'i'   => 1,
+            'nivel ii'  => 2, 'nivel 2' => 2, 'ii'  => 2,
+            'nivel iii' => 3, 'nivel 3' => 3, 'iii' => 3,
+            'nivel iv'  => 4, 'nivel 4' => 4, 'iv'  => 4,
+            'nivel v'   => 5, 'nivel 5' => 5, 'v'   => 5,
+        ];
+
+        return $mapa[strtolower(trim((string) $valor))] ?? 1;
     }
 
     private function calcularAportesSeguridadSocial(float $ibc, int $nivelRiesgo): array

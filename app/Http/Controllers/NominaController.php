@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Salario;
 use App\Models\BenefitLedger;
 use App\Models\PeriodoLiquidacion;
+use App\Models\Empresa;
 use App\Services\NominaCalculatorService;
 use App\Services\NominaEmployeeService;
 use Illuminate\Http\Request;
@@ -18,44 +19,22 @@ class NominaController extends Controller
 {
     private NominaCalculatorService $calculator;
     private NominaEmployeeService $employeeService;
+    private \App\Services\PlanService $planService;
 
     public function __construct(
         NominaCalculatorService $calculator,
-        NominaEmployeeService $employeeService
+        NominaEmployeeService $employeeService,
+        \App\Services\PlanService $planService
     ) {
         $this->calculator = $calculator;
         $this->employeeService = $employeeService;
+        $this->planService = $planService;
     }
 
     /* ==========================
        PERIODO ACTIVO
     ========================== */
 
-    private function getActivePeriod(): ?PeriodoLiquidacion
-    {
-        $periodoId = session('active_period_id');
-        $empresaId = session('empresa_id');
-
-        $periodo = null;
-        if ($periodoId) {
-            $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
-                ->where('id_periodo', $periodoId)
-                ->first();
-        }
-
-        if (!$periodo) {
-            $periodo = PeriodoLiquidacion::where('id_empresa', $empresaId)
-                ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
-                ->orderByDesc('fecha_inicio')
-                ->first();
-        }
-
-        if ($periodo) {
-            session(['active_period_id' => $periodo->id_periodo]);
-        }
-
-        return $periodo;
-    }
 
     private function parseNumber($value): float
     {
@@ -174,7 +153,7 @@ class NominaController extends Controller
         $periodo = trim((string) $request->input('periodo', ''));
         $empresaId = session('empresa_id');
 
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         $query = Salario::with('contrato.usuario')
             ->select('salario.*')
@@ -228,7 +207,7 @@ class NominaController extends Controller
 
     public function index(Request $request)
     {
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         $salarios = $this->construirConsultaNomina($request)
             ->orderBy(
@@ -283,7 +262,7 @@ class NominaController extends Controller
         session(['nomina.step' => 1]);
 
         $step1 = session('nomina.step1', []);
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
         $isEditing = (bool) session('nomina.editing_id');
 
         $empresaId = session('empresa_id');
@@ -409,7 +388,7 @@ class NominaController extends Controller
         ]);
 
         $empresaId = session('empresa_id');
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         if (!$periodoActivo) {
             return back()->withErrors([
@@ -433,6 +412,14 @@ class NominaController extends Controller
         }
 
         if (!$isEditing) {
+            $empresa = Empresa::find($empresaId);
+            if ($empresa) {
+                $check = $this->planService->checkEmployeeLimit($empresa);
+                if (!$check['can']) {
+                    return back()->with('error', $check['reason'])->withInput();
+                }
+            }
+
             $yaRegistrado = DB::table('salario')
                 ->where('id_contrato', (int) $data['id_contrato'])
                 ->where('id_periodo', (int) $periodoActivo->id_periodo)
@@ -488,7 +475,7 @@ class NominaController extends Controller
         $step2 = session('nomina.step2', []);
 
         $empresaId = session('empresa_id');
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         $salarios = Salario::with('contrato.usuario')
             ->whereHas('contrato', function ($q) use ($empresaId) {
@@ -716,7 +703,7 @@ class NominaController extends Controller
         }
 
         $empresaId = session('empresa_id');
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         $salarios = Salario::with('contrato.usuario')
             ->whereHas('contrato', function ($q) use ($empresaId) {
@@ -881,7 +868,7 @@ class NominaController extends Controller
 
         $periodoId = isset($s1['id_periodo'])
             ? (int) $s1['id_periodo']
-            : (int) optional($this->getActivePeriod())->id_periodo;
+            : (int) optional(PeriodoLiquidacion::getActivePeriod())->id_periodo;
 
         if (!$periodoId) {
             return redirect()->route('nomina.index')
@@ -982,7 +969,7 @@ class NominaController extends Controller
     public function realizarNominaMasiva(Request $request)
     {
         $empresaId = (int) session('empresa_id');
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         if (!$periodoActivo) {
             return redirect()->route('nomina.index')
@@ -1281,7 +1268,7 @@ class NominaController extends Controller
         $q = trim((string) $request->query('q', ''));
         $empresaId = session('empresa_id');
         $excludeLiquidados = filter_var($request->query('exclude_liquidados', false), FILTER_VALIDATE_BOOLEAN);
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         $query = DB::table('usuario')
             ->join('contrato', 'usuario.doc', '=', 'contrato.doc')
@@ -1448,7 +1435,7 @@ class NominaController extends Controller
 
     public function exportarPdf(Request $request)
     {
-        $periodoActivo = $this->getActivePeriod();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         // El PDF siempre se exporta completo para el periodo activo, sin filtros de búsqueda/fecha.
         $exportRequest = $request->duplicate(

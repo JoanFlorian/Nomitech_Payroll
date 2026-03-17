@@ -24,11 +24,11 @@ class Contrato extends Model
     // ── Periodo de Gracia para acceso post-liquidación ──
     public const GRACE_PERIOD_DAYS = 3;
 
-    // ── Aliases de compatibilidad (facilitan la migración gradual) ──
-    public const ESTADO_LABORAL_ACTIVO    = 'ACTIVO';
-    public const ESTADO_LABORAL_TERMINADO = 'TERMINADO';
-    public const ESTADO_NOMINA_PENDIENTE  = 'VENCIDO';
-    public const ESTADO_NOMINA_LIQUIDADO  = 'TERMINADO';
+    // ── Estados laborales y de nómina (valores numéricos para DB) ──
+    public const ESTADO_LABORAL_ACTIVO    = 1;
+    public const ESTADO_LABORAL_TERMINADO = 2;
+    public const ESTADO_NOMINA_PENDIENTE  = 1;
+    public const ESTADO_NOMINA_LIQUIDADO  = 2;
 
     protected $fillable = [
         'doc',
@@ -41,6 +41,7 @@ class Contrato extends Model
         'id_arl',
         'id_eps',
         'id_afp',
+        'id_caja',
         'fecha_inicio',
         'fecha_fin',
         'salario_base',
@@ -231,6 +232,54 @@ class Contrato extends Model
     public function benefitBalance()
     {
         return $this->hasOne(BenefitBalance::class, 'employee_id', 'doc');
+    }
+
+    /**
+     * Relación con EPS
+     */
+    public function eps()
+    {
+        return $this->belongsTo(Eps::class, 'id_eps', 'id_eps');
+    }
+
+    /**
+     * Relación con AFP
+     */
+    public function afp()
+    {
+        return $this->belongsTo(Afp::class, 'id_afp', 'id_afp');
+    }
+
+    /**
+     * Relación con ARL
+     */
+    public function arl()
+    {
+        return $this->belongsTo(Arl::class, 'id_arl', 'id_arl');
+    }
+
+    /**
+     * Relación con Caja de Compensación
+     */
+    public function cajaCompensacion()
+    {
+        return $this->belongsTo(CajaCompensacion::class, 'id_caja', 'id_caja');
+    }
+
+    /**
+     * Relación con Forma de Pago
+     */
+    public function formaPago()
+    {
+        return $this->belongsTo(FormaPago::class, 'id_forma_pago', 'id_forma_pago');
+    }
+
+    /**
+     * Relación con Método de Pago
+     */
+    public function metodoPago()
+    {
+        return $this->belongsTo(MetodoPago::class, 'id_metodo_pago', 'id_metodo_pago');
     }
 }
 

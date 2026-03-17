@@ -70,6 +70,7 @@
                 </p>
             </div>
             <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto mt-4 md:mt-0">
+                @can('manage_provisions')
                 <button type="button" @click.prevent="consignacionModal = true"
                     class="bg-emerald-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-md hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                     <i class="bi bi-file-earmark-arrow-down"></i>
@@ -80,6 +81,7 @@
                     <i class="bi bi-people"></i>
                     Liquidación Masiva
                 </button>
+                @endcan
             </div>
         </div>
 
@@ -329,12 +331,14 @@
 
                                             @if($tieneSaldo)
                                                 {{-- SINGLE unified button --}}
+                                                @can('manage_provisions')
                                                 <button type="button"
                                                     @click.prevent="gestionarModal = true; selectedEmployee = '{{ trim((string) $balance->employee_id) }}'; selectedAmount = ''; selectedBenefit = ''; paymentMode = 'direct'; cesantiasMode = 'pago_directo'; retiroReason = 'housing'"
                                                     class="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#1565C0] to-[#1976D2] rounded-lg shadow-sm hover:from-[#0D47A1] hover:to-[#1565C0] transition-all"
                                                     title="Gestionar prestación">
                                                     <i class="bi bi-cash-stack"></i> Gestionar
                                                 </button>
+                                                @endcan
                                             @endif
                                         </div>
                                     </td>

@@ -174,14 +174,16 @@
                         </div>
 
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
+                            <x-form.searchable-select name="id_departamento" id="editIdDepartamento" icon="location_on" placeholder="Departamento"
+                                :options="$departamento->pluck('nombre', 'id_departamento')" />
+                            <p class="error-message text-red-500 text-sm hidden" data-error="id_departamento"></p>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
-                            <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
-                                name="id_ciudad" id="editIdCiudad">
-                                @foreach ($ciudad as $c)
-                                    <option value="{{ $c->id_ciudad }}">{{ $c->nombre }}</option>
-                                @endforeach
-                            </select>
+                            <x-form.searchable-select name="id_ciudad" id="editIdCiudad" icon="location_city" placeholder="Ciudad / Municipio"
+                                :options="$ciudad->pluck('nombre', 'id_ciudad')" />
                             <p class="error-message text-red-500 text-sm hidden" data-error="id_ciudad"></p>
                         </div>
 
@@ -1256,7 +1258,22 @@
                 document.getElementById('editOtrosNombres').value = data.usuario.otros_nombres || '';
                 document.getElementById('editPrimerApellido').value = data.usuario.primer_apellido;
                 document.getElementById('editSegundoApellido').value = data.usuario.segundo_apellido || '';
-                document.getElementById('editIdCiudad').value = data.usuario.id_ciudad || '';
+                
+                // Set the department and then the city
+                if (data.usuario.ciudad && data.usuario.ciudad.id_departamento) {
+                    window.dispatchEvent(new CustomEvent('set-value-editIdDepartamento', { detail: String(data.usuario.ciudad.id_departamento) }));
+                } else {
+                    window.dispatchEvent(new CustomEvent('set-value-editIdDepartamento', { detail: null }));
+                }
+
+                if (data.usuario.id_ciudad) {
+                    // Esperar a que las opciones de ciudad se hayan cargado por el handler 'selected' del departamento
+                    setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('set-value-editIdCiudad', { detail: String(data.usuario.id_ciudad) }));
+                    }, 500);
+                } else {
+                    window.dispatchEvent(new CustomEvent('set-value-editIdCiudad', { detail: null }));
+                }
                 document.getElementById('editDireccion').value = data.usuario.direccion || '';
                 document.getElementById('editEmail').value = data.usuario.correo || '';
                 document.getElementById('editTelefono').value = data.usuario.telefono || '';

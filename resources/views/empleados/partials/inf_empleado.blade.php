@@ -215,6 +215,17 @@
                             this.label = '';
                         }
                     });
+
+                    window.addEventListener(`set-value-${config.id}`, (e) => {
+                        this.selectedKey = e.detail;
+                        this.updateLabel();
+                        
+                        // Dispatch input event to notify Alpine and any form listeners
+                        this.$dispatch('input', this.selectedKey);
+                        setTimeout(() => {
+                            this.$el.dispatchEvent(new CustomEvent('selected', { detail: { key: this.selectedKey } }));
+                        }, 50);
+                    });
                 }
             },
 

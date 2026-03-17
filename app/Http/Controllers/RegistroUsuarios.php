@@ -501,7 +501,7 @@ class RegistroUsuarios extends Controller
     {
         $usuario = Empleado::with(['contratos' => function($q) {
             $q->orderByDesc('id_contrato');
-        }])->findOrFail($doc);
+        }, 'ciudad'])->findOrFail($doc);
         
         $contrato = $usuario->contratos->first();
         $cuenta = null;

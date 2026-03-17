@@ -185,12 +185,12 @@ class TrabajadorController extends Controller
         $usuario = Auth::user();
         
         // Obtener notas de ajuste del trabajador
-        $notas = HistorialNovedad::with(['novedad', 'salario.periodo'])
+        $notasEnviadas = HistorialNovedad::with(['novedad', 'salario.periodo'])
             ->where('empleado_id', $usuario->doc)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
         
-        return view('trabajador.notas', compact('notas'));
+        return view('trabajador.notas', compact('notasEnviadas'));
     }
     
     /**

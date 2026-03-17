@@ -398,7 +398,14 @@
 <script>
     // ==================== FUNCIONES DE COLAPSO DEL SIDEBAR ====================
     
+    function _isModalOpen() {
+        // Detecta overlays modales visibles (fixed inset-0 con z-index alto)
+        return document.querySelectorAll('.fixed.inset-0').length > 0
+            && [...document.querySelectorAll('.fixed.inset-0')].some(el => el.offsetParent !== null || el.style.display !== 'none');
+    }
+
     function expandSidebar() {
+        if (_isModalOpen()) return;
         // Solo expandir en desktop
         if (window.innerWidth >= 1024) {
             const sidebar = document.getElementById('sidebar');

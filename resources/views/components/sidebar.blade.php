@@ -177,6 +177,29 @@
 </aside>
 
 <style>
+    /* ==================== SIDEBAR SCROLLBAR ==================== */
+    .sidebar nav {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.2) transparent;
+    }
+    .sidebar nav::-webkit-scrollbar {
+        width: 4px;
+    }
+    .sidebar nav::-webkit-scrollbar-track {
+        background: transparent;
+        margin: 8px 0;
+    }
+    .sidebar nav::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.18);
+        border-radius: 9999px;
+    }
+    .sidebar nav:hover::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.35);
+    }
+    .sidebar nav::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.5);
+    }
+
     /* ==================== SIDEBAR COLAPSABLE ==================== */
     
     /* RESPONSIVE: M\u00f3viles - sidebar oculto por defecto */

@@ -1,0 +1,2 @@
+RESULT: DENIED
+LIST: view_payroll,view_novedades,create_novedad,edit_novedad,view_provisions,view_periods,view_electronic_payroll,view_pila,calculate_provisions,adjust_provisions,renew_contract

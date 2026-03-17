@@ -140,4 +140,45 @@ class PeriodoLiquidacion extends Model
         return $now->greaterThanOrEqualTo($fechaFin) && $now->lessThanOrEqualTo($limiteCierre);
         */
     }
+    /**
+     * Obtiene el periodo activo de la empresa validando que no esté cerrado.
+     * Si el periodo en sesión está cerrado o no existe, busca el último abierto o pendiente.
+     * 
+     * @return self|null
+     */
+    public static function getActivePeriod(): ?self
+    {
+        $empresaId = session('empresa_id');
+        if (!$empresaId) {
+            return null;
+        }
+
+        $periodoId = session('active_period_id');
+        $periodo = null;
+
+        // 1. Intentar recuperar el periodo de la sesión
+        if ($periodoId) {
+            $periodo = self::where('id_empresa', $empresaId)
+                ->where('id_periodo', $periodoId)
+                ->whereIn('estado', [self::ESTADO_ABIERTO, self::ESTADO_PENDIENTE])
+                ->first();
+        }
+
+        // 2. Si no hay periodo válido en sesión, buscar el último disponible
+        if (!$periodo) {
+            $periodo = self::where('id_empresa', $empresaId)
+                ->whereIn('estado', [self::ESTADO_ABIERTO, self::ESTADO_PENDIENTE])
+                ->orderByDesc('fecha_inicio')
+                ->first();
+
+            // 3. Actualizar la sesión si encontramos uno nuevo
+            if ($periodo) {
+                session(['active_period_id' => $periodo->id_periodo]);
+            } else {
+                session()->forget('active_period_id');
+            }
+        }
+
+        return $periodo;
+    }
 }

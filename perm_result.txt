@@ -1,0 +1,18 @@
+--- PERMISSION CHECK ---
+NAME: view_employees | ACTIVE: 0
+NAME: create_employee | ACTIVE: 0
+NAME: edit_employee | ACTIVE: 0
+NAME: delete_employee | ACTIVE: 0
+NAME: export_employees | ACTIVE: 0
+NAME: view_payroll | ACTIVE: 1
+NAME: create_payroll_period | ACTIVE: 0
+NAME: calculate_payroll | ACTIVE: 0
+NAME: edit_payroll | ACTIVE: 0
+NAME: close_payroll | ACTIVE: 0
+NAME: reopen_payroll | ACTIVE: 0
+NAME: calculate_provisions | ACTIVE: 1
+NAME: adjust_provisions | ACTIVE: 1
+NAME: renew_contract | ACTIVE: 1
+NAME: export_payroll | ACTIVE: 0
+NAME: close_period | ACTIVE: 1
+--- END ---

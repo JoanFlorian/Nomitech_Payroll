@@ -95,13 +95,16 @@
                         Cambiar Periodo
                     </a>
 
-                    @if($periodoActivo->estado === \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO && $periodoActivo->canBeClosed())
+                    {{-- DEBUG: canClose={{ auth()->user()->can('close_period') ? 'true' : 'false' }} status={{ $periodoActivo->estado }} canBeClosed={{ $periodoActivo->canBeClosed() ? 'true' : 'false' }} --}}
+                    @if(($periodoActivo->estado === 'abierto' || $periodoActivo->estado === 'pendiente') && $periodoActivo->canBeClosed())
+                        @can('close_period')
                         <button type="button"
                             onclick="abrirModalCierre({{ $periodoActivo->id_periodo }}, '{{ $periodoActivo->fecha_inicio->format('d/m/Y') }}', '{{ $periodoActivo->fecha_fin->format('d/m/Y') }}')"
                             class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-red-200 transition hover:bg-red-700">
                             <i class="bi bi-lock-fill"></i>
                             Cerrar Periodo
                         </button>
+                        @endcan
                     @endif
                 </div>
             </div>
@@ -154,6 +157,7 @@
             </div>
 
             <div class="lg:col-span-4 flex flex-wrap gap-2 lg:justify-end">
+                @can('export_payroll')
                 <button
                     type="submit"
                     formaction="{{ route('nomina.export.pdf') }}"
@@ -171,11 +175,13 @@
                     <i class="bi bi-file-earmark-spreadsheet"></i>
                     Excel
                 </button>
+                @endcan
             </div>
         </div>
     </form>
 
     <div class="mb-6 flex flex-wrap items-center gap-3">
+        @can('calculate_payroll')
         <button type="button"
             id="btn-editar-empleado"
             title="Editar empleado seleccionado"
@@ -184,7 +190,9 @@
             <i class="bi bi-pencil-square"></i>
             Editar
         </button>
+        @endcan
 
+        @can('calculate_payroll')
         <a href="{{ route('nomina.step1', ['fresh' => 1]) }}"
             title="Agregar empleado"
             class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
@@ -203,6 +211,7 @@
                 </button>
             </form>
         @endif
+        @endcan
     </div>
 
     <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">

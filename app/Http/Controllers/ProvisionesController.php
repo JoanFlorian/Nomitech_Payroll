@@ -49,13 +49,7 @@ class ProvisionesController extends Controller
         $totals['total_money'] = $totals['prima'] + $totals['cesantias'] + $totals['intereses'];
 
         // Active payroll period (for payroll integration option)
-        $activePeriodId = session('active_period_id');
-        $activePeriod = $activePeriodId
-            ? PeriodoLiquidacion::find($activePeriodId)
-            : PeriodoLiquidacion::where('id_empresa', $empresaId)
-                ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
-                ->latest('id_periodo')
-                ->first();
+        $activePeriod = PeriodoLiquidacion::getActivePeriod();
 
         // Legal date warnings (advisory only)
         $warnings = collect([
@@ -161,13 +155,7 @@ class ProvisionesController extends Controller
             }
 
             // ── Normal flow for all other benefit types (and cesantías pago directo) ──
-            $activePeriodId = session('active_period_id');
-            $period = $activePeriodId
-                ? PeriodoLiquidacion::find($activePeriodId)
-                : PeriodoLiquidacion::where('id_empresa', $empresaId)
-                    ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
-                    ->latest('id_periodo')
-                    ->first();
+            $period = PeriodoLiquidacion::getActivePeriod();
 
             $periodId = $period ? $period->id_periodo : null;
 
@@ -201,13 +189,7 @@ class ProvisionesController extends Controller
             $empresaId = session('empresa_id');
             $benefitType = $request->input('benefit_type');
             $paymentMode = $request->input('payment_mode');
-            $activePeriodId = session('active_period_id');
-            $period = $activePeriodId
-                ? PeriodoLiquidacion::find($activePeriodId)
-                : PeriodoLiquidacion::where('id_empresa', $empresaId)
-                    ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
-                    ->latest('id_periodo')
-                    ->first();
+            $period = PeriodoLiquidacion::getActivePeriod();
 
             $periodId = $period ? $period->id_periodo : null;
 

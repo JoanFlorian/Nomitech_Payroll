@@ -370,7 +370,7 @@ class PeriodoLiquidacionController extends Controller
                 ->firstOrFail();
 
             $salarios = $periodo->salarios()
-                ->where('estado', \App\Models\Salario::ESTADO_LIQUIDADO)
+                ->where('estado', \App\Models\Salario::ESTADO_PAGADO)
                 ->with('contrato')
                 ->get();
 

@@ -57,4 +57,39 @@ class Empresa extends Model
     {
         return $this->hasMany(Pago::class, 'empresa_id', 'id_empresa');
     }
+
+    /**
+     * Get the count of unique employees with active contracts.
+     */
+    public function activeEmployeesCount(): int
+    {
+        return $this->contratos()
+            ->whereIn('estado', [
+                Contrato::ESTADO_ACTIVO,
+                Contrato::ESTADO_POR_VENCER,
+                Contrato::ESTADO_PROGRAMADO
+            ])
+            ->distinct('doc')
+            ->count('doc');
+    }
+
+    /**
+     * Check if the company has reached its plan's employee limit.
+     */
+    public function hasReachedPlanLimit(): bool
+    {
+        $licencia = $this->licencia;
+        if (!$licencia || !$licencia->plan) {
+            return false; // Or default limit if no plan
+        }
+
+        $limit = (int) $licencia->plan->num_empl;
+        
+        // If limit is 0, assume it's unlimited (or define a very high default)
+        if ($limit === 0) {
+            return false;
+        }
+
+        return $this->activeEmployeesCount() >= $limit;
+    }
 }

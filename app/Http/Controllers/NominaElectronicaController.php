@@ -198,4 +198,80 @@ class NominaElectronicaController extends Controller
         $nombreArchivo = 'volante_' . $empleado->doc . '_' . $periodo->fecha_inicio->format('MY') . '.pdf';
         return $pdf->download($nombreArchivo);
     }
+
+    /**
+     * Resumen previo para el modal de exportación.
+     */
+    public function exportPreview($id)
+    {
+        try {
+            $periodo = PeriodoLiquidacion::where('id_periodo', $id)
+                ->where('id_empresa', session('empresa_id'))
+                ->firstOrFail();
+
+            $salarios = $periodo->salarios()
+                ->where('estado', \App\Models\Salario::ESTADO_PAGADO)
+                ->with('contrato')
+                ->get();
+
+            $total = $salarios->sum('salario_neto');
+
+            return response()->json([
+                'success' => true,
+                'periodo' => \Carbon\Carbon::parse($periodo->fecha_inicio)->format('M Y'),
+                'empleados' => $salarios->count(),
+                'total' => number_format($total, 2, ',', '.')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+        }
+    }
+
+    /**
+     * Endpoint para generar exportación bancaria.
+     */
+    public function exportar(Request $request, $id, \App\Services\Banking\BankExportService $service)
+    {
+        try {
+            $tipoExportacion = $request->input('tipo_exportacion', 'bank');
+            $result = $service->generarArchivo($id, $request->input('formato', 'CSV'), $tipoExportacion);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Archivo generado exitosamente.',
+                'archivo_url' => $result['archivo_url'],
+                'download_url' => route('nomina-electronica.exportar.descargar', $result['exportacion']->id),
+                'total_empleados' => $result['total_empleados'],
+                'total_pagado' => $result['total_pagado']
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Descarga un archivo de exportación previamente generado.
+     */
+    public function downloadExport($id)
+    {
+        try {
+            $export = \App\Models\NominaExportacion::where('id', $id)
+                ->where('id_empresa', session('empresa_id'))
+                ->firstOrFail();
+
+            if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($export->archivo_path)) {
+                throw new \Exception('El archivo físico no existe.');
+            }
+
+            $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($export->archivo_path);
+            return response()->download($fullPath);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al descargar: ' . $e->getMessage());
+        }
+    }
 }

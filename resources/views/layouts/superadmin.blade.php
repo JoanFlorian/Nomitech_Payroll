@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <title>Nomitech - Superadmin</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
 
-<body class="font-inter bg-gray-100 overflow-hidden">
+<body class="font-manrope bg-gray-100 overflow-hidden" style="font-family: 'Manrope', sans-serif;">
 
     <div class="flex h-screen overflow-hidden">
         <x-nomitech />

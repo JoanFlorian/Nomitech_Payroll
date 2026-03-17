@@ -34,6 +34,7 @@
 					Historial novedades
 				</a>
 
+				@can('create_novedad')
 				<button
 					id="add-novelty-btn"
 					type="button"
@@ -43,6 +44,7 @@
 					<span class="material-icons text-[20px]">add</span>
 					Añadir Novedad
 				</button>
+				@endcan
 			</div>
 		</div>
 	</div>
@@ -158,6 +160,7 @@
 						</div>
 
 						<div class="flex items-center gap-1.5">
+							@can('edit_novedad')
 							<button
 								type="button"
 								onclick="window.__openEditByButton && window.__openEditByButton(this)"
@@ -188,6 +191,9 @@
 							>
 								<span class="material-icons text-[20px]">edit</span>
 							</button>
+							@endcan
+
+							@can('delete_novedad')
 							<button
 								type="button"
 								onclick="window.__deleteNovedadByButton && window.__deleteNovedadByButton(this)"
@@ -197,6 +203,7 @@
 							>
 								<span class="material-icons text-[20px]">delete</span>
 							</button>
+							@endcan
 						</div>
 					</div>
 

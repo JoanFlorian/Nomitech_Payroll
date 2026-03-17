@@ -1,0 +1,135 @@
+--- USERS WITH CONTRACTS VS USERS IN USUARIO_EMPRESA ---
+
+DOC: 10705000000 | Rol: 3 | Name: Lucia Rada
+  Pivot Links: []
+  Contract Co: [5]
+  !!! MISSING IN PIVOT: [5]
+
+DOC: 1070599001 | Rol: 3 | Name: Juan RICO
+  Pivot Links: []
+  Contract Co: [3]
+  !!! MISSING IN PIVOT: [3]
+
+DOC: 10705990042 | Rol: 3 | Name: Julio Cortazar
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 10705990112 | Rol: 3 | Name: Joan Florian
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 1070599022 | Rol: 3 | Name: Joan Florian
+  Pivot Links: []
+  Contract Co: [2]
+  !!! MISSING IN PIVOT: [2]
+
+DOC: 10705990225 | Rol: 3 | Name: Andres Dorian
+  Pivot Links: []
+  Contract Co: [3]
+  !!! MISSING IN PIVOT: [3]
+
+DOC: 1070599044 | Rol: 3 | Name: Joan Sebastian Florian Salazar
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 1070599222 | Rol: 3 | Name: Maria Rico
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 10705992311 | Rol: 3 | Name: Juan Espinoza
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 1070599333 | Rol: 3 | Name: dsadad adas
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 1070599412 | Rol: 3 | Name: Joan Florian
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 1070599441 | Rol: 3 | Name: Santiago Gutierrez
+  Pivot Links: []
+  Contract Co: [3]
+  !!! MISSING IN PIVOT: [3]
+
+DOC: 1073229004 | Rol: 1 | Name: Cristian Carrascal
+  Pivot Links: [2]
+  Contract Co: []
+
+DOC: 111111 | Rol: 1 | Name: Joan Florian
+  Pivot Links: [1]
+  Contract Co: []
+
+DOC: 1111110 | Rol: 6 | Name: Miguel orozco
+  Pivot Links: []
+  Contract Co: [6]
+  !!! MISSING IN PIVOT: [6]
+
+DOC: 1111112 | Rol: 1 | Name: Cristian Rico
+  Pivot Links: [3]
+  Contract Co: []
+
+DOC: 11111121 | Rol: 1 | Name: Mateo Carrascal
+  Pivot Links: [6]
+  Contract Co: []
+
+DOC: 1220599004 | Rol: 3 | Name: Joan Florian
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 1333599004 | Rol: 3 | Name: Andrea Garcia
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 1899455667 | Rol: 3 | Name: Maria Ricaurte
+  Pivot Links: []
+  Contract Co: [1]
+  !!! MISSING IN PIVOT: [1]
+
+DOC: 2010000000 | Rol: 1 | Name: Sebastian Joan
+  Pivot Links: [5]
+  Contract Co: []
+
+DOC: 2030120301 | Rol: 3 | Name: Tatiana Florez
+  Pivot Links: []
+  Contract Co: [3]
+  !!! MISSING IN PIVOT: [3]
+
+DOC: 301032011 | Rol: 3 | Name: Miguel hincapie
+  Pivot Links: []
+  Contract Co: [6]
+  !!! MISSING IN PIVOT: [6]
+
+DOC: 3200121010 | Rol: 6 | Name: Juanes Perroni
+  Pivot Links: [6]
+  Contract Co: [6]
+
+DOC: 3201203011 | Rol: 3 | Name: Joan Florian
+  Pivot Links: []
+  Contract Co: [5]
+  !!! MISSING IN PIVOT: [5]
+
+DOC: 32423423 | Rol: 3 | Name: Cristian carrascal
+  Pivot Links: []
+  Contract Co: [3]
+  !!! MISSING IN PIVOT: [3]
+
+DOC: 333333 | Rol: 3 | Name: Carlos Gaitan
+  Pivot Links: [6]
+  Contract Co: [6]
+
+DOC: 401020311 | Rol: 3 | Name: Maxim Perez
+  Pivot Links: []
+  Contract Co: [5]
+  !!! MISSING IN PIVOT: [5]
+

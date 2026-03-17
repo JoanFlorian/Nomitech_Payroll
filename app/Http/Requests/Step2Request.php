@@ -44,6 +44,9 @@ class Step2Request extends FormRequest
 
             // BOOLEAN CHECK - alto_riesgo (checkbox)
             'alto_riesgo' => 'nullable|boolean',
+
+            // ROL
+            'id_rol' => 'nullable|integer|exists:roles,id',
         ];
     }
 

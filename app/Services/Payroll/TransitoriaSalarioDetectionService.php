@@ -84,7 +84,8 @@ class TransitoriaSalarioDetectionService
             })
             ->select([
                 'c.doc as empleado_id',
-                DB::raw("CONCAT(u.primer_nombre, ' ', u.primer_apellido) as empleado_nombre"),
+                'u.primer_nombre as empleado_nombre',
+                'u.primer_apellido as empleado_apellido',
                 's.id_salario',
                 DB::raw('COALESCE(s.horas_extra, 0) + COALESCE(s.valor_horas_extras_recargos, 0) + COALESCE(s.bonificaciones, 0) + COALESCE(s.comisiones, 0) + COALESCE(s.otros_devengos, 0) as total_conceptos_variables')
             ])
@@ -123,6 +124,6 @@ class TransitoriaSalarioDetectionService
             'usuario_nombre' => $usuario ? trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? '')) : 'Sistema Automático',
         ]);
 
-        Log::info("TransitoriaSalarioDetectionService: Registrada novedad VST para empleado {$empleado->empleado_id} ({$empleado->empleado_nombre}) con valor \${$empleado->total_conceptos_variables}");
+        Log::info("TransitoriaSalarioDetectionService: Registrada novedad VST para empleado {$empleado->empleado_id} ({$empleado->empleado_nombre} {$empleado->empleado_apellido}) con valor \${$empleado->total_conceptos_variables}");
     }
 }

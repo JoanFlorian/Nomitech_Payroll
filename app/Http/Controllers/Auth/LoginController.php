@@ -110,8 +110,8 @@ class LoginController extends Controller
             return redirect()->route('empleados.index');
         }
 
-        // Empleado (rol 3) o Administrador (rol 2)
-        if ((int) $usuario->id_rol === 2 || (int) $usuario->id_rol === 3) {
+        // Empleado (rol 3) o Perfiles Administrativos (Administrador 2, Auxiliar 6, Auditor 7)
+        if (in_array((int) $usuario->id_rol, [2, 3, 6, 7])) {
             // Get company from contrato (employee contract)
             $contrato = $usuario->contratos()->first();
 
@@ -141,10 +141,11 @@ class LoginController extends Controller
             session(['empresa_id' => $empresa->id_empresa]);
 
             // Redirect based on sub-role
-            if ((int) $usuario->id_rol === 2) {
-                return redirect()->route('empleados.index'); // Administrador
-            } else {
+            if ((int) $usuario->id_rol === 3) {
                 return redirect('/trabajador'); // Empleado
+            } else {
+                $safeRoute = $usuario->getFirstAccessibleRoute();
+                return redirect()->route($safeRoute);
             }
         }
 

@@ -97,6 +97,11 @@ class Usuario extends Authenticatable
         return $this->hasMany(Rol::class, 'id_rol', 'id_rol');
     }
 
+    public function ciudad()
+    {
+        return $this->belongsTo(Ciudad::class, 'id_ciudad', 'id_ciudad');
+    }
+
     public function directPermissions()
     {
         return $this->belongsToMany(Permission::class, 'user_permissions', 'user_id', 'permission_id')

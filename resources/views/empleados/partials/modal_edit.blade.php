@@ -1680,4 +1680,40 @@
         syncEditRiskClassification();
         syncEditBankFieldsByPaymentMethod();
     });
+
+    function handleEditDeptSelectionChange(event) {
+        const deptSelect = event.target?.closest?.('#editIdDepartamento');
+        if (!deptSelect) {
+            return;
+        }
+
+        const selectedKey = event?.detail?.key ?? event?.detail ?? '';
+        syncEditCityOptionsByDepartment(selectedKey);
+    }
+
+    document.addEventListener('selected', handleEditDeptSelectionChange);
+
+    function syncEditCityOptionsByDepartment(deptId) {
+        const normalizedId = deptId !== undefined && deptId !== null ? String(deptId) : '';
+
+        if (!normalizedId) {
+            window.dispatchEvent(new CustomEvent('set-options-editIdCiudad', { detail: {} }));
+            return;
+        }
+
+        fetch(`/api/cities/${encodeURIComponent(normalizedId)}`)
+            .then(response => response.ok ? response.json() : [])
+            .then(data => {
+                const options = {};
+                (data || []).forEach(item => {
+                    if (item && item.id_ciudad && item.nombre) {
+                        options[String(item.id_ciudad)] = item.nombre;
+                    }
+                });
+                window.dispatchEvent(new CustomEvent('set-options-editIdCiudad', { detail: options }));
+            })
+            .catch(() => {
+                window.dispatchEvent(new CustomEvent('set-options-editIdCiudad', { detail: {} }));
+            });
+    }
 </script>

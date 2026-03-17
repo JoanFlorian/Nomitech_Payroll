@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\CatalogosEmpresaController;
 use App\Http\Controllers\NovedadController;
 use App\Http\Controllers\NovedadCalculoController;
 use App\Http\Controllers\PilaController;
+use App\Http\Controllers\NotaAjusteController;
 
 use App\Http\Controllers\ReportesController;
 use App\Http\Controllers\TrabajadorController;
@@ -198,6 +199,11 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin
         Route::post('/roles/permissions', [\App\Http\Controllers\Admin\RoleManagementController::class, 'updatePermission'])->name('roles.update-permission');
         Route::post('/roles/user-permissions', [\App\Http\Controllers\Admin\RoleManagementController::class, 'updateUserPermission'])->name('roles.user-permissions');
         Route::post('/roles/assign-role', [\App\Http\Controllers\Admin\RoleManagementController::class, 'assignRole'])->name('roles.assign-role');
+
+        // Notas de Ajuste (admin)
+        Route::get('/notas-ajuste', [NotaAjusteController::class, 'adminIndex'])->name('notas-ajuste.index');
+        Route::get('/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'show'])->name('notas-ajuste.show');
+        Route::put('/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'adminUpdate'])->name('notas-ajuste.update');
     });
 
 // Superadmin routes protected by auth and role

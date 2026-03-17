@@ -141,7 +141,40 @@
         </button>
         
         <div class="h-full w-full flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative">
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 sm:mb-6 lg:mb-8 mt-12 lg:mt-0">@yield('page-title')</h1>
+            {{-- Header con título + campana --}}
+            <div class="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8 mt-12 lg:mt-0">
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">@yield('page-title')</h1>
+
+                @if(isset($adminUnreadAdjustmentNotesCount) && $adminUnreadAdjustmentNotesCount > 0)
+                <div x-data="{ open: false }" class="relative" @click.away="open = false">
+                    <button @click="open = !open" class="relative p-2 rounded-full hover:bg-gray-100 transition focus:outline-none">
+                        <i class="bi bi-bell text-xl text-gray-600"></i>
+                        <span class="absolute -top-0.5 -right-0.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full shadow">{{ $adminUnreadAdjustmentNotesCount }}</span>
+                    </button>
+
+                    <div x-show="open" x-cloak x-transition
+                         class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                        <div class="px-4 py-3 bg-gradient-to-r from-[#1565C0] to-[#0D47A1] text-white font-semibold text-sm flex items-center gap-2">
+                            <i class="bi bi-bell-fill"></i> Notas de Ajuste Pendientes
+                        </div>
+                        <ul class="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+                            @foreach($adminUnreadAdjustmentNotes as $noti)
+                            <li>
+                                <a href="{{ route('admin.notas-ajuste.show', $noti) }}" class="block px-4 py-3 hover:bg-blue-50 transition">
+                                    <p class="text-sm font-medium text-gray-800 truncate">{{ $noti->usuario->primer_nombre ?? 'Empleado' }} {{ $noti->usuario->primer_apellido ?? '' }}</p>
+                                    <p class="text-xs text-gray-500 truncate">{{ Illuminate\Support\Str::limit($noti->mensaje, 60) }}</p>
+                                    <p class="text-[10px] text-gray-400 mt-1">{{ optional($noti->created_at)->diffForHumans() }}</p>
+                                </a>
+                            </li>
+                            @endforeach
+                        </ul>
+                        <a href="{{ route('admin.notas-ajuste.index') }}" class="block text-center text-sm font-semibold text-[#1565C0] py-3 hover:bg-gray-50 border-t border-gray-100 transition">
+                            Ver todas las notas
+                        </a>
+                    </div>
+                </div>
+                @endif
+            </div>
             <div class="flex-grow bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100">
                 @yield('content') {{-- Aquí va el contenido de cada módulo --}}
             </div>

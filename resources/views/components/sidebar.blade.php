@@ -399,9 +399,15 @@
     // ==================== FUNCIONES DE COLAPSO DEL SIDEBAR ====================
     
     function _isModalOpen() {
-        // Detecta overlays modales visibles (fixed inset-0 con z-index alto)
-        return document.querySelectorAll('.fixed.inset-0').length > 0
-            && [...document.querySelectorAll('.fixed.inset-0')].some(el => el.offsetParent !== null || el.style.display !== 'none');
+        return [...document.querySelectorAll('.fixed.inset-0')].some(el => {
+            // 1. Saltar elementos decorativos marcados como aria-hidden
+            if (el.getAttribute('aria-hidden') === 'true') return false;
+            // 2. Saltar elementos no renderizados (display:none vía clase o inline, o dentro de parent hidden)
+            if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+            // 3. Solo contar si tiene fondo de overlay (backdrop semitransparente real)
+            const bg = window.getComputedStyle(el).backgroundColor;
+            return bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
+        });
     }
 
     function expandSidebar() {

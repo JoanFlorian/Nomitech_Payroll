@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Afp;
 use App\Models\Arl;
+use App\Models\CajaCompensacion;
 use App\Models\Ciudad;
 use App\Models\Departamento;
 use App\Models\Eps;
@@ -50,7 +51,8 @@ class ViewServiceProvider extends ServiceProvider
             $tipocuenta = TipoCuenta::all();
             $Eps = Eps::all();
             $Afp = Afp::all();
-            $view->with(compact('pais', 'departamento', 'ciudad', 'tipodoc', 'tipotrabajadores', 'suptrabajadores', 'contratos', 'Arl', 'formapagos', 'metodopago', 'tipocuenta', 'Eps', 'Afp'));
+            $Cajas = CajaCompensacion::orderBy('nombre')->get();
+            $view->with(compact('pais', 'departamento', 'ciudad', 'tipodoc', 'tipotrabajadores', 'suptrabajadores', 'contratos', 'Arl', 'formapagos', 'metodopago', 'tipocuenta', 'Eps', 'Afp', 'Cajas'));
         });
 
 

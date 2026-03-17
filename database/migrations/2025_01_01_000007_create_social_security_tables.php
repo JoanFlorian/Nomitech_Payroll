@@ -40,16 +40,14 @@ return new class extends Migration
 
         Schema::create('cajas_compensacion', function (Blueprint $table) {
             $table->engine = 'InnoDB';
-            $table->engine = 'InnoDB';
             $table->unsignedBigInteger('id_caja')->primary();
-            $table->string('codigo_pila', 10)->unique(); 
-             $table->string('nombre', 80);
+            $table->string('codigo_pila', 10)->unique();
+            $table->string('nombre', 80);
             $table->string('telefono', 20)->nullable();
             $table->string('direccion', 120)->nullable();
-
-        $table->timestamps();
-    });
-}
+            $table->timestamps();
+        });
+    }
     
 
     public function down(): void

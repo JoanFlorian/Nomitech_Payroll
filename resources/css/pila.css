@@ -184,3 +184,9 @@
     border-radius: 0.2rem;
     display: inline-block;
 }
+
+.history-download-btn {
+    border-radius: 0.6rem;
+    font-weight: 600;
+    min-width: 128px;
+}

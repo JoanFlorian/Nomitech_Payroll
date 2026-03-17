@@ -251,30 +251,38 @@
                                 <template x-if="activeModule == group.module">
                                     <div class="col-span-full grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <template x-for="perm in group.permissions.filter(p => !['edit_payroll', 'reopen_payroll', 'create_payroll', 'create_period', 'create_payroll_period', 'delete_employee'].includes(p.name))" :key="perm.id">
-                                            <div class="flex items-center justify-between p-3.5 rounded-xl border border-slate-50 hover:border-blue-100 hover:bg-blue-50/20 transition-all bg-slate-50/30">
-                                                <div class="flex items-center gap-3">
-                                                    <div :class="perm.active ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-200 border border-slate-100'"
-                                                         class="w-8 h-8 rounded-lg flex items-center justify-center transition-all">
-                                                        <i class="fas" :class="perm.active ? 'fa-check text-[8px]' : 'fa-lock text-[8px]'"></i>
-                                                    </div>
-                                                    <div>
-                                                        <span class="block font-bold text-slate-700 text-[11px] uppercase tracking-tight" x-text="getPermLabel(perm.name)"></span>
-                                                        <p class="text-[9px] text-slate-400 font-medium" x-text="getPermDesc(perm.name)"></p>
-                                                        <div class="flex items-center gap-2 mt-0.5">
-                                                            <template x-if="perm.inherited">
-                                                                <span class="text-[7px] font-bold px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded-md uppercase">Heredado del Rol</span>
-                                                            </template>
-                                                            <template x-if="!perm.inherited">
-                                                                <span class="text-[7px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-500 rounded-md uppercase">Manual</span>
-                                                            </template>
+                                            <div class="flex flex-col gap-2">
+                                                <div class="flex items-center justify-between p-3.5 rounded-xl border border-slate-50 hover:border-blue-100 hover:bg-blue-50/20 transition-all bg-slate-50/30">
+                                                    <div class="flex items-center gap-3">
+                                                        <div :class="perm.active ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-200 border border-slate-100'"
+                                                             class="w-8 h-8 rounded-lg flex items-center justify-center transition-all">
+                                                            <i class="fas" :class="perm.active ? 'fa-check text-[8px]' : 'fa-lock text-[8px]'"></i>
+                                                        </div>
+                                                        <div>
+                                                            <span class="block font-bold text-slate-700 text-[11px] uppercase tracking-tight" x-text="getPermLabel(perm.name)"></span>
+                                                            <p class="text-[9px] text-slate-400 font-medium" x-text="getPermDesc(perm.name)"></p>
+                                                            <div class="flex items-center gap-2 mt-0.5">
+                                                                <template x-if="perm.inherited">
+                                                                    <span class="text-[7px] font-bold px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded-md uppercase">Heredado del Rol</span>
+                                                                </template>
+                                                                <template x-if="!perm.inherited">
+                                                                    <span class="text-[7px] font-bold px-1.5 py-0.5 bg-amber-50 text-amber-500 rounded-md uppercase">Manual</span>
+                                                                </template>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                <label class="relative inline-flex items-center cursor-pointer scale-90">
-                                                    <input type="checkbox" x-model="perm.active" @change="togglePermission(perm)" class="sr-only peer">
-                                                    <div class="w-10 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
-                                                </label>
+                                                    <label class="relative inline-flex items-center cursor-pointer scale-90">
+                                                        <input type="checkbox" x-model="perm.active" @change="togglePermission(perm)" class="sr-only peer">
+                                                        <div class="w-10 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
+                                                    </label>
+                                                </div>
+                                                <template x-if="!perm.active && perm.name.startsWith('view_')">
+                                                    <div class="bg-red-50 text-red-600 text-[10px] p-2 leading-tight rounded-lg flex items-start gap-2 border border-red-100 animate-fadeIn">
+                                                        <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                                                        <p>Con este permiso desactivado el usuario no podrá acceder al módulo completo ni utilizar otros permisos relacionados.</p>
+                                                    </div>
+                                                </template>
                                             </div>
                                         </template>
                                     </div>

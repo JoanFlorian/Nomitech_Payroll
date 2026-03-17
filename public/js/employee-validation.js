@@ -161,6 +161,40 @@
         return optionText.includes('indefinid');
     }
 
+    function isSalaryExemptContractSelected(contractInput) {
+        if (!contractInput) {
+            return false;
+        }
+
+        const selectedOption = contractInput.selectedOptions && contractInput.selectedOptions[0]
+            ? contractInput.selectedOptions[0]
+            : null;
+
+        if (!selectedOption) {
+            return false;
+        }
+
+        const optionText = (selectedOption.textContent || '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+
+        if (optionText.includes('prestacion') && optionText.includes('servicio')) {
+            return true;
+        }
+
+        if (optionText.includes('obra')) {
+            return true;
+        }
+
+        if (optionText.includes('labor')) {
+            return true;
+        }
+
+        return false;
+    }
+
     function getRiskLevelNumber(rawValue) {
         const value = (rawValue || '').toString().trim().toUpperCase();
         if (value === '') {
@@ -380,13 +414,8 @@
                 const contractInput = getField(form, 'id_tipo_contrato');
                 const contractId = Number(contractInput ? contractInput.value : 0);
 
-                // Tipos de contrato exentos de salario mínimo:
-                // 6: Prestación de servicios
-                // Estos pueden tener salario menor al mínimo
-                const exentosSmmlv = [6];
-                
-                if (exentosSmmlv.includes(contractId)) {
-                    // Prestación de servicios puede tener cualquier salario
+                // Excepciones: prestación de servicios y obra/labor.
+                if (isSalaryExemptContractSelected(contractInput)) {
                     return validarInput(input, true, '', showError);
                 }
 
@@ -467,6 +496,8 @@
                 return validarInput(input, value !== '', 'La EPS es obligatoria.', showError);
             case 'id_afp':
                 return validarInput(input, value !== '', 'La AFP es obligatoria.', showError);
+            case 'id_caja':
+                return validarInput(input, value !== '', 'La caja de compensación es obligatoria.', showError);
             default:
                 return true;
         }
@@ -506,7 +537,7 @@
         }
 
         if (form.id === 'step3') {
-            return ['id_forma_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp'];
+            return ['id_forma_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'id_caja'];
         }
 
         return [];

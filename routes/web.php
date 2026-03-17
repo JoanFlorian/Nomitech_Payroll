@@ -20,6 +20,8 @@ use App\Http\Controllers\NovedadCalculoController;
 use App\Http\Controllers\PilaController;
 
 use App\Http\Controllers\ReportesController;
+use App\Http\Controllers\TrabajadorController;
+use App\Http\Controllers\Auth\CambiarPasswordController;
 
 use Illuminate\Http\Request;
 
@@ -146,6 +148,9 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/nomina-electronica', [\App\Http\Controllers\NominaElectronicaController::class, 'index'])->name('nomina-electronica.index')->middleware('permission:view_electronic_payroll');
     Route::get('/nomina-electronica/{id}/detalles', [\App\Http\Controllers\NominaElectronicaController::class, 'getDetalles'])->name('nomina-electronica.detalles')->middleware('permission:view_electronic_payroll');
     Route::get('/nomina-electronica/pdf/{idSalario}', [\App\Http\Controllers\NominaElectronicaController::class, 'descargarPdf'])->name('nomina-electronica.pdf')->middleware('permission:view_electronic_payroll');
+    Route::get('/nomina-electronica/{id}/export-preview', [\App\Http\Controllers\NominaElectronicaController::class, 'exportPreview'])->name('nomina-electronica.export-preview')->middleware('permission:export_bank_files');
+    Route::post('/nomina-electronica/{id}/exportar', [\App\Http\Controllers\NominaElectronicaController::class, 'exportar'])->name('nomina-electronica.exportar')->middleware('permission:export_bank_files');
+    Route::get('/nomina-electronica/exportacion/{id}/descargar', [\App\Http\Controllers\NominaElectronicaController::class, 'downloadExport'])->name('nomina-electronica.exportar.descargar')->middleware('permission:export_bank_files');
 
     // Gestión de Periodos
     Route::get('/periodos', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'index'])
@@ -166,9 +171,11 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
         ->name('periodos.exportar.descargar')->middleware('permission:view_periods');
 
     // Plantilla PILA
+    // Plantilla PILA
     Route::get('/pila', [PilaController::class, 'index'])->name('pila.index')->middleware('permission:view_pila');
     Route::post('/pila/generar', [PilaController::class, 'generar'])->name('pila.generar')->middleware('permission:export_pila');
     Route::get('/pila/descargar', [PilaController::class, 'descargarPila'])->name('pila.descargar')->middleware('permission:export_pila');
+    Route::get('/pila/historial/{id}/descargar', [PilaController::class, 'descargarHistorial'])->name('pila.historial.descargar')->middleware('permission:view_pila');
 });
 
 Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin_empresa', 'permission:manage_catalogos', 'prevent_back_history'])
@@ -233,6 +240,28 @@ Route::middleware(['auth', 'is_superadmin', 'prevent_back_history'])->prefix('su
     Route::get('/configuracion', function () {
         return view('superadmin.configuracion');
     })->name('configuracion');
+});
+
+// Cambiar contraseña obligatorio en primer ingreso
+Route::middleware(['auth'])->group(function () {
+    Route::get('/cambiar-password', [CambiarPasswordController::class, 'show'])->name('cambiar-password');
+    Route::post('/cambiar-password', [CambiarPasswordController::class, 'update'])->name('cambiar-password.update');
+});
+
+// Portal del Trabajador (solo autenticación requerida)
+Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history', 'must_change_password'])->prefix('trabajador')->name('trabajador.')->group(function () {
+    Route::get('/dashboard', [TrabajadorController::class, 'index'])->name('dashboard');
+    Route::get('/desprendibles', [TrabajadorController::class, 'desprendibles'])->name('desprendibles');
+    Route::get('/desprendible/{id}', [TrabajadorController::class, 'verDesprendible'])->name('desprendible.ver');
+    Route::get('/desprendible/{id}/pdf', [TrabajadorController::class, 'descargarDesprendible'])->name('desprendible.pdf');
+    Route::get('/notas-ajuste', [TrabajadorController::class, 'notasAjuste'])->name('notas');
+    Route::get('/perfil', [TrabajadorController::class, 'perfil'])->name('perfil');
+    Route::post('/perfil', [TrabajadorController::class, 'actualizarPerfil'])->name('perfil.actualizar');
+});
+
+// Redirección raíz del portal del trabajador
+Route::middleware(['auth'])->get('/trabajador', function () {
+    return redirect()->route('trabajador.dashboard');
 });
 
 // Logout robusto (GET por compatibilidad con sidebar actual)

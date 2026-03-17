@@ -1,4 +1,4 @@
-<div class="bg-white p-12 flex flex-col justify-center relative overflow-hidden">
+<div class="bg-white p-6 sm:p-8 md:p-12 flex flex-col justify-center relative overflow-hidden min-h-screen md:min-h-0">
 
     <div class="right-shape right-shape-1"></div>
     <div class="right-shape right-shape-2"></div>

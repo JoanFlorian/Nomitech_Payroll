@@ -21,10 +21,58 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Models\Contrato;
 use App\Models\Rol;
+use Illuminate\Support\Facades\Schema;
 use App\Services\ContractAlertService;
 
 class EmployeesController extends Controller
 {
+    private function contratoActivoCallback(): \Closure
+    {
+        $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
+        $hasEstado = Schema::hasColumn('contrato', 'estado');
+
+        return function ($q) use ($hasEstadoLaboral, $hasEstado) {
+            if ($hasEstadoLaboral) {
+                $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
+                return;
+            }
+
+            if ($hasEstado) {
+                $q->whereIn('estado', [
+                    Contrato::ESTADO_ACTIVO,
+                    Contrato::ESTADO_POR_VENCER,
+                    Contrato::ESTADO_PROGRAMADO,
+                ]);
+                return;
+            }
+
+            $q->where('activo', 1);
+        };
+    }
+
+    private function contratoInactivoCallback(): \Closure
+    {
+        $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
+        $hasEstado = Schema::hasColumn('contrato', 'estado');
+
+        return function ($q) use ($hasEstadoLaboral, $hasEstado) {
+            if ($hasEstadoLaboral) {
+                $q->where('estado_laboral', Contrato::ESTADO_LABORAL_TERMINADO);
+                return;
+            }
+
+            if ($hasEstado) {
+                $q->whereIn('estado', [
+                    Contrato::ESTADO_VENCIDO,
+                    Contrato::ESTADO_TERMINADO,
+                ]);
+                return;
+            }
+
+            $q->where('activo', 0);
+        };
+    }
+
     private function construirConsultaEmpleados(Request $request)
     {
         $query = Empleado::with([
@@ -45,20 +93,9 @@ class EmployeesController extends Controller
         if ($request->filled('estado')) {
             $estado = $request->input('estado');
             if ($estado === 'activos') {
-                $query->whereHas('contratos', function ($q) {
-                    $q->whereIn('estado', [
-                        Contrato::ESTADO_ACTIVO,
-                        Contrato::ESTADO_POR_VENCER,
-                        Contrato::ESTADO_PROGRAMADO,
-                    ]);
-                });
+                $query->whereHas('contratos', $this->contratoActivoCallback());
             } elseif ($estado === 'inactivos') {
-                $query->whereHas('contratos', function ($q) {
-                    $q->whereIn('estado', [
-                        Contrato::ESTADO_VENCIDO,
-                        Contrato::ESTADO_TERMINADO,
-                    ]);
-                });
+                $query->whereHas('contratos', $this->contratoInactivoCallback());
             } elseif ($estado === 'sin_contrato') {
                 $query->doesntHave('contratos');
             }
@@ -123,6 +160,19 @@ class EmployeesController extends Controller
         $Eps = Eps::all();
         $Afp = Afp::all();
         $roles = Rol::all();
+
+        // Obtener conteos para los filtros usando Empleado para aislamiento
+        // Usamos los callbacks que ya manejan la existencia de columnas
+        $totalEmpleados = Empleado::with('contratos')->count();
+        $activosCount = Empleado::whereHas('contratos', $this->contratoActivoCallback())->count();
+        $inactivosCount = Empleado::whereHas('contratos', $this->contratoInactivoCallback())->count();
+        $sinContratoCount = Empleado::doesntHave('contratos')->count();
+
+        // Alertas de contratos
+        $empresaId = (int) session('empresa_id');
+        $contractAlerts = $empresaId > 0
+            ? app(ContractAlertService::class)->getAlertSummary($empresaId)
+            : ['expiring' => ['count' => 0], 'pending_liquidation' => ['count' => 0]];
 
         // Define the step variable for the view
         $step = $request->input('step', 1);

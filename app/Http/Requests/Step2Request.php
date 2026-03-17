@@ -169,17 +169,7 @@ class Step2Request extends FormRequest
                 return;
             }
 
-            if (in_array($idTipoContrato, [1, 2, 3], true)) {
-                if ($salario < $smmlv) {
-                    $validator->errors()->add(
-                        'salario',
-                        'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.'
-                    );
-                }
-                return;
-            }
-
-            if ($idTipoContrato === 5 || $idTipoContrato === 6) {
+            if ($this->isSalaryExemptContract($idTipoContrato)) {
                 return;
             }
 
@@ -210,6 +200,14 @@ class Step2Request extends FormRequest
                 $validator->errors()->add(
                     'salario',
                     'Para contrato de aprendizaje debe indicar la etapa del aprendiz (lectiva o productiva).'
+                );
+                return;
+            }
+
+            if ($salario < $smmlv) {
+                $validator->errors()->add(
+                    'salario',
+                    'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.'
                 );
             }
         });
@@ -276,6 +274,36 @@ class Step2Request extends FormRequest
         }
 
         return null;
+    }
+
+    private function isSalaryExemptContract(int $idTipoContrato): bool
+    {
+        $nombreTipoContrato = TipoContrato::query()
+            ->where('id_tipo_contrato', $idTipoContrato)
+            ->value('nombre');
+
+        if (!$nombreTipoContrato) {
+            return false;
+        }
+
+        $normalized = Str::of($nombreTipoContrato)
+            ->ascii()
+            ->lower()
+            ->toString();
+
+        if (Str::contains($normalized, 'prestacion') && Str::contains($normalized, 'servicio')) {
+            return true;
+        }
+
+        if (Str::contains($normalized, 'obra')) {
+            return true;
+        }
+
+        if (Str::contains($normalized, 'labor')) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

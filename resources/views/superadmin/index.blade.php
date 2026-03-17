@@ -13,17 +13,17 @@
             }">
 
         <!-- NAVBAR SUPERIOR -->
-        <div class="flex justify-between items-center bg-transparent">
-            <div class="relative w-1/3">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-transparent gap-4 md:gap-0">
+            <div class="relative w-full md:w-1/3">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                     <i class="bi bi-search text-gray-400"></i>
                 </span>
                 <input type="text"
-                    class="block w-full pl-10 pr-3 py-2 border border-transparent rounded-xl bg-gray-200 focus:bg-white focus:ring-0 sm:text-sm"
+                    class="block w-full pl-10 pr-3 py-2 border border-transparent rounded-xl bg-gray-200 focus:bg-white focus:ring-0 text-sm"
                     placeholder="Buscar reportes, transacciones...">
             </div>
 
-            <div class="flex items-center gap-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full md:w-auto">
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-bold text-gray-500 uppercase">Año Fiscal:</span>
                     <select x-model="selectedYear" @change="updateYear()"
@@ -49,10 +49,10 @@
 
         <!-- RENDIMIENTO DE VENTAS -->
         <div class="flex flex-col gap-1">
-            <h2 class="text-2xl font-bold text-gray-800">Rendimiento de Ventas
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Rendimiento de Ventas
                 {{ $selectedDate ? 'del ' . \Carbon\Carbon::parse($selectedDate)->format('d/m/Y') : 'Anuales' }}
             </h2>
-            <p class="text-sm text-gray-500">Análisis detallado de ingresos acumulados y metas comerciales del período
+            <p class="text-xs sm:text-sm text-gray-500">Análisis detallado de ingresos acumulados y metas comerciales del período
                 actual.</p>
         </div>
 

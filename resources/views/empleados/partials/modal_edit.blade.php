@@ -277,7 +277,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">ARL</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
-                                name="id_arl" id="editIdArl">
+                                name="id_arl" id="editIdArl" disabled>
                                 @foreach ($Arl as $arl)
                                     <option value="{{ $arl->id_arl }}">{{ $arl->nombre }}</option>
                                 @endforeach

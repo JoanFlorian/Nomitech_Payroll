@@ -165,10 +165,28 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <button @click="fetchDetails({{ $periodo->id_periodo }})"
-                                        class="mt-6 w-full text-center bg-gray-100 text-[#1565C0] font-semibold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
-                                        Ver detalle
-                                    </button>
+                                    <div class="mt-6 space-y-2 w-full">
+                                        @can('export_bank_files')
+                                            @if($periodo->estado === 'cerrado')
+                                                <div class="grid grid-cols-2 gap-2">
+                                                    <button onclick="abrirModalExportar({{ $periodo->id_periodo }}, 'bank')"
+                                                        title="Exportar archivo CSV solo con transferencias bancarias"
+                                                        class="w-full flex items-center justify-center gap-1 text-center bg-emerald-50 text-emerald-700 font-semibold py-2 px-2 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200 text-sm">
+                                                        <span class="material-icons text-sm">account_balance</span> Bancos
+                                                    </button>
+                                                    <button onclick="abrirModalExportar({{ $periodo->id_periodo }}, 'general')"
+                                                        title="Exportar archivo CSV general incluyendo pagos en efectivo"
+                                                        class="w-full flex items-center justify-center gap-1 text-center bg-blue-50 text-blue-700 font-semibold py-2 px-2 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 text-sm">
+                                                        <span class="material-icons text-sm">list_alt</span> General
+                                                    </button>
+                                                </div>
+                                            @endif
+                                        @endcan
+                                        <button @click="fetchDetails({{ $periodo->id_periodo }})"
+                                            class="w-full text-center bg-gray-100 text-[#1565C0] font-semibold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors">
+                                            Ver detalle
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         @empty
@@ -394,6 +412,12 @@
                     </div>
                 </div>
             </div>
+            {{-- MODAL INTERNAMENTE REUTILIZA EL DE PERIODOS --}}
+            <script>
+                // Sobrescribir la base URL para que el modal use las rutas del controller NominaElectronica
+                window.exportBaseUrl = '/nomina-electronica';
+            </script>
+            @include('periodos.partials.modal_exportar')
         </div>
     </div>
 @endsection

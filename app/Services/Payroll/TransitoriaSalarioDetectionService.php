@@ -7,6 +7,7 @@ use App\Models\HistorialNovedad;
 use App\Models\Salario;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class TransitoriaSalarioDetectionService
 {
@@ -107,7 +108,7 @@ class TransitoriaSalarioDetectionService
             number_format($empleado->total_conceptos_variables, 2, ',', '.')
         );
 
-        $usuario = auth()->user();
+        $usuario = Auth::user();
 
         HistorialNovedad::create([
             'id_novedad' => null, // No proviene de una novedad manual
@@ -119,8 +120,8 @@ class TransitoriaSalarioDetectionService
             'valor' => $empleado->total_conceptos_variables,
             'observaciones' => $observaciones,
             'accion' => 'crear',
-            'id_usuario' => $usuario ? $usuario->id : null,
-            'usuario_nombre' => $usuario ? ($usuario->nombre ?? 'Usuario') : 'Sistema Automático',
+            'id_usuario' => $usuario ? $usuario->doc : null,
+            'usuario_nombre' => $usuario ? trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? '')) : 'Sistema Automático',
         ]);
 
         Log::info("TransitoriaSalarioDetectionService: Registrada novedad VST para empleado {$empleado->empleado_id} ({$empleado->empleado_nombre} {$empleado->empleado_apellido}) con valor \${$empleado->total_conceptos_variables}");

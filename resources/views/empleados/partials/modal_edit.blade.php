@@ -114,13 +114,13 @@
                 <input type="hidden" id="editDocField" name="doc">
 
                 <div x-show="editWizardStep === 1" x-cloak>
-                    <h3 class="text-lg font-bold text-gray-800 mb-6 border-b pb-3">Datos Personales</h3>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Datos Personales</h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_tipo_doc" id="editIdTipoDoc">
                                 @foreach ($tipodoc as $tipo)
                                     <option value="{{ $tipo->id_tipo_doc }}">{{ $tipo->nombre }}</option>
@@ -132,7 +132,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Número de Documento</label>
                             <input type="number"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed sm:text-sm"
                                 name="numero_documento" id="editNumeroDoc" readonly>
                             <p class="error-message text-red-500 text-sm hidden" data-error="numero_documento"></p>
                         </div>
@@ -140,7 +140,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Primer Nombre</label>
                             <input type="text"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize sm:text-sm"
                                 name="primer_nombre" id="editPrimerNombre" minlength="3" maxlength="30"
                                 pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="primer_nombre"></p>
@@ -149,7 +149,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Otros Nombres</label>
                             <input type="text"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize sm:text-sm"
                                 name="otros_nombres" id="editOtrosNombres" minlength="3" maxlength="50"
                                 pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="otros_nombres"></p>
@@ -158,7 +158,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Primer Apellido</label>
                             <input type="text"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize sm:text-sm"
                                 name="primer_apellido" id="editPrimerApellido" minlength="3" maxlength="30"
                                 pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="primer_apellido"></p>
@@ -167,7 +167,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Segundo Apellido</label>
                             <input type="text"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize sm:text-sm"
                                 name="segundo_apellido" id="editSegundoApellido" minlength="3" maxlength="30"
                                 pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="segundo_apellido"></p>
@@ -190,7 +190,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
                             <input type="text"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] capitalize sm:text-sm"
                                 name="direccion" id="editDireccion" maxlength="150"
                                 title="Incluye referencia vial (Calle, Carrera, Cra, Cl, Av, Transversal, Diagonal, # o No).">
                             <p class="error-message text-red-500 text-sm hidden" data-error="direccion"></p>
@@ -199,7 +199,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
                             <input type="email"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="email" id="editEmail" required>
                             <p class="error-message text-red-500 text-sm hidden" data-error="email"></p>
                         </div>
@@ -207,7 +207,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                             <input type="text"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="telefono" id="editTelefono" required>
                             <p class="error-message text-red-500 text-sm hidden" data-error="telefono"></p>
                         </div>

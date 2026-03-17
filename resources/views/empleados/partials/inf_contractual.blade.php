@@ -190,7 +190,7 @@
             <select id="id_rol" name="id_rol" 
                     class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm">
                 @foreach($roles as $rol)
-                    <option value="{{ $rol->id }}" {{ $rol->name == 'Empleado' ? 'selected' : '' }}>{{ $rol->name }}</option>
+                    <option value="{{ $rol->id_rol }}" {{ $rol->nombre == 'Empleado' ? 'selected' : '' }}>{{ $rol->nombre }}</option>
                 @endforeach
             </select>
             <div class="error-message invalid-feedback" data-error="id_rol"></div>

@@ -1,21 +1,29 @@
 @extends('layouts.app')
 
 @section('title', 'Mis Desprendibles')
-@section('page-title', 'Mis Desprendibles')
+@section('hide-layout-header', '1')
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <div class="mb-8 flex items-center justify-between">
+        <div class="mb-8 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Mis Desprendibles</h1>
                 <p class="text-gray-600">Consulta y descarga tus desprendibles de nómina</p>
             </div>
-            <a href="{{ route('trabajador.dashboard') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <span class="material-icons mr-2 text-sm">arrow_back</span>
-                Volver
-            </a>
+
+            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <a href="{{ route('trabajador.dashboard') }}" class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <span class="material-icons mr-2 text-sm">arrow_back</span>
+                    Volver
+                </a>
+
+                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-right shadow-sm">
+                    <p class="text-sm font-semibold text-gray-800">{{ $usuario->nombre_completo ?? (($usuario->primer_nombre ?? 'Usuario') . ' ' . ($usuario->primer_apellido ?? '')) }}</p>
+                    <p class="text-xs text-gray-500">{{ $usuario->rol->nombre ?? 'Trabajador' }}</p>
+                </div>
+            </div>
         </div>
 
         <!-- Tabla de Desprendibles -->

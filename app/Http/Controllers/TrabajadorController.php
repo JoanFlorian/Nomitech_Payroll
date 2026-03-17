@@ -19,6 +19,10 @@ class TrabajadorController extends Controller
     public function index()
     {
         $usuario = Auth::user();
+        $fechaInicioTrabajador = Contrato::where('doc', $usuario->doc)
+            ->whereNotNull('fecha_inicio')
+            ->orderBy('fecha_inicio', 'asc')
+            ->value('fecha_inicio');
         
         // Obtener contratos del trabajador
         $contratos = Contrato::where('doc', $usuario->doc)->get();
@@ -38,7 +42,7 @@ class TrabajadorController extends Controller
             'neto_pagado' => $ultimoSalario ? $ultimoSalario->salario_neto : 0,
         ];
         
-        return view('trabajador.dashboard', compact('usuario', 'ultimoPago'));
+        return view('trabajador.dashboard', compact('usuario', 'ultimoPago', 'fechaInicioTrabajador'));
     }
     
     /**

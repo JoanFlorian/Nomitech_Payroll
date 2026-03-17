@@ -295,7 +295,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salario Base</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="salario" id="editSalario" inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="salario" id="editSalario" disabled  inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
                             <p class="error-message text-red-500 text-sm hidden" data-error="salario"></p>
                         </div>
 
@@ -397,7 +397,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">EPS</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
-                                name="id_eps" id="editIdEps">
+                                name="id_eps" id="editIdEps" disabled>
                                 @foreach ($Eps as $eps)
                                     <option value="{{ $eps->id_eps }}">{{ $eps->nombre }}</option>
                                 @endforeach
@@ -409,7 +409,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">AFP</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
-                                name="id_afp" id="editIdAfp">
+                                name="id_afp" id="editIdAfp" disabled>
                                 @foreach ($Afp as $afp)
                                     <option value="{{ $afp->id_afp }}">{{ $afp->nombre }}</option>
                                 @endforeach

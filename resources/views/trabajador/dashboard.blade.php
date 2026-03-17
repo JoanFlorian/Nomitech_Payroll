@@ -1,16 +1,26 @@
 @extends('layouts.app')
 
 @section('title', 'Dashboard del Trabajador')
+@section('hide-layout-header', '1')
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-                Bienvenido, {{ $usuario->nombre_completo }}
-            </h1>
-            <p class="text-gray-600">Portal del Trabajador - Nomitech</p>
+        <div class="mb-8 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                    Bienvenido, {{ $usuario->nombre_completo }}
+                </h1>
+                <p class="text-gray-600">Portal del Trabajador - Nomitech</p>
+            </div>
+
+            <div class="flex items-center justify-end">
+                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-right shadow-sm">
+                    <p class="text-sm font-semibold text-gray-800">{{ $usuario->nombre_completo }}</p>
+                    <p class="text-xs text-gray-500">{{ $usuario->rol->nombre ?? 'Trabajador' }}</p>
+                </div>
+            </div>
         </div>
 
         <!-- Mensajes Flash -->
@@ -118,7 +128,7 @@
                             <div>
                                 <p class="text-xs text-gray-400 font-medium">Fecha de ingreso</p>
                                 <p class="text-sm font-semibold text-gray-700">
-                                    {{ $usuario->fecha_inicio ? \Carbon\Carbon::parse($usuario->fecha_inicio)->format('d/m/Y') : 'N/A' }}
+                                    {{ $fechaInicioTrabajador ? \Carbon\Carbon::parse($fechaInicioTrabajador)->format('d/m/Y') : 'N/A' }}
                                 </p>
                             </div>
                         </div>
@@ -217,10 +227,11 @@
 
                 {{-- Antigüedad --}}
                 @php
-                    $fechaIngreso = $usuario->fecha_inicio ? \Carbon\Carbon::parse($usuario->fecha_inicio) : null;
-                    $anios  = $fechaIngreso ? $fechaIngreso->diffInYears(now()) : null;
-                    $meses  = $fechaIngreso ? $fechaIngreso->copy()->addYears($anios)->diffInMonths(now()) : null;
-                    $dias   = $fechaIngreso ? $fechaIngreso->copy()->addYears($anios)->addMonths($meses)->diffInDays(now()) : null;
+                    $fechaIngreso = $fechaInicioTrabajador ? \Carbon\Carbon::parse($fechaInicioTrabajador) : null;
+                    $intervaloAntiguedad = $fechaIngreso ? $fechaIngreso->diff(now()) : null;
+                    $anios = $intervaloAntiguedad ? (int) $intervaloAntiguedad->y : null;
+                    $meses = $intervaloAntiguedad ? (int) $intervaloAntiguedad->m : null;
+                    $dias = $intervaloAntiguedad ? (int) $intervaloAntiguedad->d : null;
                 @endphp
                 <div class="bg-gradient-to-br from-[#1565C0] to-[#1976D2] rounded-2xl shadow-lg p-6 text-white">
                     <div class="flex items-center gap-2 mb-4">

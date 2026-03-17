@@ -24,7 +24,25 @@
                 >
             </div>
             @php
-                $empresaNombre = optional(Auth::user()->empresa()->first())->razon_social ?? 'Empresa no asignada';
+                $authUser = Auth::user();
+                if (strtolower($authUser->rol?->nombre ?? '') === 'trabajador') {
+                    $empresaNombre = optional(
+                        $authUser->contratos()
+                            ->where('activo', 1)
+                            ->latest('id_contrato')
+                            ->with('empresa')
+                            ->first()
+                    )->empresa?->razon_social
+                        ?? optional(
+                            $authUser->contratos()
+                                ->latest('id_contrato')
+                                ->with('empresa')
+                                ->first()
+                        )->empresa?->razon_social
+                        ?? 'Empresa no asignada';
+                } else {
+                    $empresaNombre = optional($authUser->empresa()->first())->razon_social ?? 'Empresa no asignada';
+                }
             @endphp
             <div class="min-w-0">
                 <p class="text-sm font-bold text-white truncate">{{ Auth::user()->primer_nombre ?? Auth::user()->nombre ?? 'Usuario' }} {{ Auth::user()->primer_apellido ?? '' }}</p>

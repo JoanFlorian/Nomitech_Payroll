@@ -159,7 +159,7 @@ class EmployeesController extends Controller
         $tipocuenta = TipoCuenta::all();
         $Eps = Eps::all();
         $Afp = Afp::all();
-        $roles = Rol::all();
+        $roles = Rol::whereIn('nombre', ['Auxiliar de Nómina', 'Empleado'])->get();
 
         // Obtener conteos para los filtros usando Empleado para aislamiento
         // Usamos los callbacks que ya manejan la existencia de columnas

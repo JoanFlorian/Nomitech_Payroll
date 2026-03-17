@@ -26,7 +26,7 @@ class CheckRole
         }
 
         $hasRole = $request->user()->roles()
-            ->where('name', $role)
+            ->where('nombre', $role)
             ->exists();
 
         if (!$hasRole) {

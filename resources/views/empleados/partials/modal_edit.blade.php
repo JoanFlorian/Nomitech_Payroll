@@ -70,7 +70,7 @@
             </template>
 
             <div class="mb-10">
-                <div class="flex justify-between text-sm mb-2">
+                <div class="flex justify-between text-xs mb-2">
                     <span :class="editWizardStep >= 1 ? 'font-semibold text-[rgb(16,185,129)]' : 'text-gray-500'">
                         Información Personal
                     </span>
@@ -114,7 +114,7 @@
                 <input type="hidden" id="editDocField" name="doc">
 
                 <div x-show="editWizardStep === 1" x-cloak>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Datos Personales</h3>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Datos Personales</h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -215,13 +215,13 @@
                 </div>
 
                 <div x-show="editWizardStep === 2" x-cloak>
-                    <h3 class="text-lg font-bold text-gray-800 mb-6 border-b pb-3">Datos Laborales</h3>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Datos Laborales</h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Trabajador</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_tipo_trabajador" id="editIdTipoTrabajador">
                                 @foreach ($tipotrabajadores as $tipo)
                                     <option value="{{ $tipo->id_tipo_trabajador }}">{{ $tipo->nombre }}</option>
@@ -233,7 +233,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Subtipo de Trabajador</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_sub_tipo_trabajador" id="editIdSubTipoTrabajador">
                                 @foreach ($suptrabajadores as $sub)
                                     <option value="{{ $sub->id_sub_tipo_trabajador }}">{{ $sub->nombre }}</option>
@@ -246,7 +246,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Contrato</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_tipo_contrato" id="editIdTipoContrato">
                                 @foreach ($contratos as $contrato)
                                     <option value="{{ $contrato->id_tipo_contrato }}">{{ $contrato->nombre }}</option>
@@ -258,7 +258,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
                             <input type="date"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 :class="isRenewal ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/30' : ''"
                                 name="fecha_inicio" id="editFechaInicio">
                             <p class="error-message text-red-500 text-sm hidden" data-error="fecha_inicio"></p>
@@ -267,7 +267,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin</label>
                             <input type="date"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 :class="isRenewal ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/30' : ''"
                                 name="fecha_fin" id="editFechaFin">
                             <p id="editFechaFinHint" class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de
@@ -278,7 +278,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">ARL</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_arl" id="editIdArl" disabled>
                                 @foreach ($Arl as $arl)
                                     <option value="{{ $arl->id_arl }}">{{ $arl->nombre }}</option>
@@ -290,21 +290,21 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Horas Diarias</label>
                             <input type="number" min="1" max="12"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="horas_diarias" id="editHorasDiarias">
                             <p class="error-message text-red-500 text-sm hidden" data-error="horas_diarias"></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salario Base</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]" name="salario" id="editSalario" disabled  inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="salario" id="editSalario" disabled  inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
                             <p class="error-message text-red-500 text-sm hidden" data-error="salario"></p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Rol del sistema</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_rol" id="editIdRol">
                                 @foreach ($roles as $rol)
                                     <option value="{{ $rol->id_rol }}">{{ $rol->nombre }}</option>
@@ -316,7 +316,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Código Interno</label>
                             <input type="text"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="codigo_interno" id="editCodigoInterno" inputmode="numeric" minlength="3"
                                 maxlength="20" pattern="[0-9]+">
                             <p class="error-message text-red-500 text-sm hidden" data-error="codigo_interno"></p>
@@ -325,7 +325,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Nivel de Riesgo</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="nivel_riesgo" id="editNivelRiesgo">
                                 <option value="">Seleccionar...</option>
                                 <option value="Nivel I">Nivel I</option>
@@ -358,14 +358,14 @@
                 </div>
 
                 <div x-show="editWizardStep === 3" x-cloak>
-                    <h3 class="text-lg font-bold text-gray-800 mb-6 border-b pb-3">Datos Financieros y Seguridad Social
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Datos Financieros y Seguridad Social
                     </h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_forma_pago" id="editIdFormaPago">
                                 @foreach ($formapagos as $forma)
                                     <option value="{{ $forma->id_forma_pago }}">{{ $forma->nombre }}</option>
@@ -377,7 +377,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_metodo_pago" id="editIdMetodoPago">
                                 @foreach ($metodopago as $metodo)
                                     <option value="{{ $metodo->id_metodo_pago }}">{{ $metodo->nombre }}</option>
@@ -389,7 +389,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Cuenta</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="tipo_cuenta" id="editTipoCuenta">
                                 @foreach ($tipocuenta as $tipo)
                                     <option value="{{ $tipo->id_tipo_cuenta }}">{{ $tipo->nombre }}</option>
@@ -401,7 +401,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Número de Cuenta</label>
                             <input type="text"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="numero_cuenta" id="editNumeroCuenta" inputmode="numeric" minlength="6"
                                 maxlength="20" pattern="[0-9]{6,20}">
                             <p class="error-message text-red-500 text-sm hidden" data-error="numero_cuenta"></p>
@@ -410,7 +410,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">EPS</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_eps" id="editIdEps" disabled>
                                 @foreach ($Eps as $eps)
                                     <option value="{{ $eps->id_eps }}">{{ $eps->nombre }}</option>
@@ -422,7 +422,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">AFP</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_afp" id="editIdAfp" disabled>
                                 @foreach ($Afp as $afp)
                                     <option value="{{ $afp->id_afp }}">{{ $afp->nombre }}</option>
@@ -434,7 +434,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fondo de Cesantías</label>
                             <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="fondo_cesantias" id="editFondoCesantias">
                                 <option value="">Seleccionar (Opcional)...</option>
                                 <option value="Protección">Protección</option>
@@ -458,11 +458,11 @@
                         <!-- Configuración de saldos iniciales (Migración) -->
                         <div class="mt-8 border-t pt-6">
                             <div class="mb-4">
-                                <h4 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                <h4 class="text-base font-bold text-gray-800 flex items-center gap-2">
                                     <i class="fas fa-history text-[#1565C0]"></i>
                                     Continuidad de Provisiones Anteriores
                                 </h4>
-                                <p class="text-xs text-gray-600 mt-1">
+                                <p class="text-sm text-gray-600 mt-1">
                                     Use estos campos <strong>únicamente</strong> si el empleado ya tiene saldos acumulados por provisiones que la empresa realizó previamente fuera de este sistema.
                                 </p>
                             </div>

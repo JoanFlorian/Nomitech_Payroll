@@ -263,7 +263,7 @@ class RoleManagementController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:usuario,doc',
-            'role_id' => 'required|exists:roles,id'
+            'role_id' => 'required|exists:rol,id_rol'
         ]);
 
         $id_empresa = session('empresa_id');

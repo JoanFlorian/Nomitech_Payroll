@@ -46,7 +46,7 @@ class Step2Request extends FormRequest
             'alto_riesgo' => 'nullable|boolean',
 
             // ROL
-            'id_rol' => 'nullable|integer|exists:roles,id',
+            'id_rol' => 'nullable|integer|exists:rol,id_rol',
         ];
     }
 

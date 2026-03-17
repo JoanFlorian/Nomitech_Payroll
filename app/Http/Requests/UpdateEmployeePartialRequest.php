@@ -34,7 +34,7 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         if ($this->has('id_rol')) {
-            $rules['id_rol'] = 'bail|nullable|integer|exists:roles,id';
+            $rules['id_rol'] = 'bail|nullable|integer|exists:rol,id_rol';
         }
 
         if ($this->has('numero_documento')) {

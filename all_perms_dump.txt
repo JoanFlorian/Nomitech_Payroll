@@ -1,0 +1,36 @@
+ID: 1 | NAME: view_employees | MOD: Empleados
+ID: 2 | NAME: create_employee | MOD: Empleados
+ID: 3 | NAME: edit_employee | MOD: Empleados
+ID: 4 | NAME: delete_employee | MOD: Empleados
+ID: 5 | NAME: export_employees | MOD: Empleados
+ID: 6 | NAME: view_payroll | MOD: Nomina
+ID: 7 | NAME: create_payroll_period | MOD: Nomina
+ID: 8 | NAME: calculate_payroll | MOD: Nomina
+ID: 9 | NAME: edit_payroll | MOD: Nomina
+ID: 10 | NAME: close_payroll | MOD: Nomina
+ID: 11 | NAME: reopen_payroll | MOD: Nomina
+ID: 12 | NAME: view_novedades | MOD: Novedades
+ID: 13 | NAME: create_novedad | MOD: Novedades
+ID: 14 | NAME: edit_novedad | MOD: Novedades
+ID: 15 | NAME: delete_novedad | MOD: Novedades
+ID: 16 | NAME: approve_novedad | MOD: Novedades
+ID: 17 | NAME: view_provisions | MOD: Provisiones
+ID: 18 | NAME: calculate_provisions | MOD: Provisiones
+ID: 19 | NAME: adjust_provisions | MOD: Provisiones
+ID: 20 | NAME: view_reports | MOD: Reportes
+ID: 21 | NAME: export_reports | MOD: Reportes
+ID: 22 | NAME: generate_electronic_payroll | MOD: Nómina Electrónica
+ID: 23 | NAME: send_electronic_payroll | MOD: Nómina Electrónica
+ID: 24 | NAME: cancel_electronic_payroll | MOD: Nómina Electrónica
+ID: 25 | NAME: renew_contract | MOD: Empleados
+ID: 26 | NAME: export_payroll | MOD: Nomina
+ID: 27 | NAME: view_periods | MOD: Periodos
+ID: 28 | NAME: create_period | MOD: Periodos
+ID: 29 | NAME: close_period | MOD: Periodos
+ID: 30 | NAME: export_period | MOD: Periodos
+ID: 31 | NAME: view_provision_history | MOD: Provisiones
+ID: 32 | NAME: manage_provisions | MOD: Provisiones
+ID: 33 | NAME: view_electronic_payroll | MOD: Nómina Electrónica
+ID: 34 | NAME: transmit_electronic_payroll | MOD: Nómina Electrónica
+ID: 35 | NAME: view_pila | MOD: PILA
+ID: 36 | NAME: export_pila | MOD: PILA

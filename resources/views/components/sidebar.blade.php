@@ -66,61 +66,83 @@
             </a>
         @else
             {{-- ── Módulos de Administrador ── --}}
-            <a href="{{ route('reportes.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-               {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-                <i class="menu-icon bi bi-bar-chart text-lg flex-shrink-0"></i>
-                <span class="menu-text whitespace-nowrap">Reportes</span>
-            </a>
+            @can('view_reports')
+                <a href="{{ route('reportes.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                   {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-bar-chart text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Reportes</span>
+                </a>
+            @endcan
 
-            <a href="/empleados" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-               {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-                <i class="menu-icon bi bi-people text-lg flex-shrink-0"></i>
-                <span class="menu-text whitespace-nowrap">Empleados</span>
-            </a>
+            @can('view_employees')
+                <a href="/empleados" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                   {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-people text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Empleados</span>
+                </a>
+            @endcan
 
-            <a href="{{ route('nomina.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-               {{ request()->is('nomina*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-                <i class="menu-icon bi bi-receipt text-lg flex-shrink-0"></i>
-                <span class="menu-text whitespace-nowrap">Nómina</span>
-            </a>
+            @can('view_payroll')
+                <a href="{{ route('nomina.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                   {{ request()->is('nomina*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-receipt text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Nómina</span>
+                </a>
+            @endcan
 
-            <a href="{{ route('nomina-electronica.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-               {{ request()->is('nomina-electronica*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-                <i class="menu-icon bi bi-send-check text-lg flex-shrink-0"></i>
-                <span class="menu-text whitespace-nowrap">Nómina Electrónica</span>
-            </a>
+            @can('view_electronic_payroll')
+                <a href="{{ route('nomina-electronica.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                   {{ request()->is('nomina-electronica*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-send-check text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Nómina Electrónica</span>
+                </a>
+            @endcan
 
-            <a href="{{ route('novedades.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-               {{ request()->is('novedades*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-                <i class="menu-icon bi bi-journal-text text-lg flex-shrink-0"></i>
-                <span class="menu-text whitespace-nowrap">Novedades</span>
-            </a>
+            @can('view_novedades')
+                <a href="{{ route('novedades.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                   {{ request()->is('novedades*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-journal-text text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Novedades</span>
+                </a>
+            @endcan
 
-            <a href="{{ route('provisiones.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-               {{ request()->routeIs('provisiones.index') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-                <i class="menu-icon bi bi-box-seam text-lg flex-shrink-0"></i>
-                <span class="menu-text whitespace-nowrap">Provisiones</span>
-            </a>
+            @can('view_provisions')
+                <a href="{{ route('provisiones.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                   {{ request()->routeIs('provisiones.index') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-box-seam text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Provisiones</span>
+                </a>
+            @endcan
 
-            <a href="{{ route('periodos.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-               {{ request()->is('periodos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-                <i class="menu-icon bi bi-calendar3 text-lg flex-shrink-0"></i>
-                <span class="menu-text whitespace-nowrap">Periodos de Liquidación</span>
-            </a>
+            @can('view_periods')
+                <a href="{{ route('periodos.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                   {{ request()->is('periodos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-calendar3 text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Periodos de Liquidación</span>
+                </a>
+            @endcan
 
-            <a href="{{ url('/pila') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-               {{ request()->is('pila*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-                <i class="menu-icon bi bi-file-earmark-text text-lg flex-shrink-0"></i>
-                <span class="menu-text whitespace-nowrap">Plantilla PILA</span>
-            </a>
+            @can('view_pila')
+                <a href="{{ url('/pila') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                   {{ request()->is('pila*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-file-earmark-text text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Plantilla PILA</span>
+                </a>
+            @endcan
 
-            @if(in_array((int) (Auth::user()->id_rol ?? 0), [1, 4], true))
+            @can('manage_catalogos')
                 <a href="{{ route('admin.catalogos.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
                     {{ request()->routeIs('admin.catalogos.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
                     <i class="menu-icon bi bi-collection text-lg flex-shrink-0"></i>
-                    <span class="menu-text whitespace-nowrap">Catalogos de Empresa</span>
+                    <span class="menu-text whitespace-nowrap">Catálogos de Empresa</span>
                 </a>
-            @endif
+                
+                <a href="{{ route('admin.roles.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                    {{ request()->routeIs('admin.roles.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                    <i class="menu-icon bi bi-shield-check text-lg flex-shrink-0"></i>
+                    <span class="menu-text whitespace-nowrap">Roles y Permisos</span>
+                </a>
+            @endcan
         @endif
 
     </nav>

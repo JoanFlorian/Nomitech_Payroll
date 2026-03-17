@@ -12,10 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('contrato', function (Blueprint $table) {
-            // Agregar campo id_caja después de id_afp
-            $table->unsignedBigInteger('id_caja')->nullable()->after('id_afp');
-            
-            // Agregar foreign key
+            // Only add the column if it doesn't already exist (handles partial migration)
+            if (!Schema::hasColumn('contrato', 'id_caja')) {
+                $table->unsignedBigInteger('id_caja')->nullable()->after('id_afp');
+            }
+        });
+
+        // Add FK in a separate statement to isolate from column creation
+        Schema::table('contrato', function (Blueprint $table) {
             $table->foreign('id_caja')
                   ->references('id_caja')
                   ->on('cajas_compensacion')

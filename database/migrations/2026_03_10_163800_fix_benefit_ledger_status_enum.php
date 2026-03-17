@@ -10,6 +10,10 @@ return new class extends Migration {
      */
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `benefit_ledger` MODIFY COLUMN `status` ENUM(
             'pending',
             'processed',
@@ -23,6 +27,10 @@ return new class extends Migration {
      */
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE `benefit_ledger` MODIFY COLUMN `status` ENUM(
             'pending',
             'processed',

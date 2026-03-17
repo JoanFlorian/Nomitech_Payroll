@@ -33,6 +33,10 @@ class UpdateEmployeePartialRequest extends FormRequest
             $rules['id_tipo_doc'] = 'bail|required|integer|exists:tipo_doc,id_tipo_doc';
         }
 
+        if ($this->has('id_rol')) {
+            $rules['id_rol'] = 'bail|nullable|integer|exists:roles,id';
+        }
+
         if ($this->has('numero_documento')) {
             $rules['numero_documento'] = 'bail|required|digits_between:5,15|unique:usuario,doc,' . $doc . ',doc';
         }

@@ -19,9 +19,12 @@
 
         <div
             class="relative inline-block overflow-hidden text-left align-middle transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:max-w-lg sm:w-full border border-gray-100 sm:-translate-y-12">
-            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-emerald-50/50">
-                <h3 class="text-lg font-bold text-emerald-900">Exportar Pagos Bancarios</h3>
-                <button onclick="cerrarModalExportar()" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <div class="bg-gradient-to-r from-[#1A237E] to-[#283593] p-6 rounded-t-xl flex justify-between items-center text-white">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <span class="material-icons">account_balance</span>
+                    <span id="titulo_modal_export">Exportar Pagos Bancarios</span>
+                </h2>
+                <button onclick="cerrarModalExportar()" class="text-white hover:text-gray-200 transition-colors">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
                         </path>
@@ -34,9 +37,13 @@
                 <p class="text-sm text-gray-500 font-medium">Cargando resumen de pagos...</p>
             </div>
 
+            <!-- Contenido que se mostrará tras cargar datos -->
             <div id="content_export" class="hidden">
-                <form id="formExportarBanco" onsubmit="procesarExportacion(event)">
+                <form id="formExportarBanco" onsubmit="procesarExportacion(event)" class="space-y-6">
                     @csrf
+                    <input type="hidden" name="tipo_exportacion" id="tipo_exportacion" value="bank">
+
+                    <!-- Info Box -->
                     <div class="px-6 py-6 space-y-6">
                         <div class="grid grid-cols-2 gap-4">
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
@@ -112,9 +119,14 @@
 
 <script>
     let currentPeriodoId = null;
+    // La vista padre debe redefinir `exportBaseUrl` si requiere una ruta distinta a `/periodos`
+    let exportBaseUrl = window.exportBaseUrl || '/periodos';
 
-    function abrirModalExportar(id) {
+    function abrirModalExportar(id, tipo = 'bank') {
         currentPeriodoId = id;
+        document.getElementById('tipo_exportacion').value = tipo;
+        document.getElementById('titulo_modal_export').textContent = tipo === 'bank' ? 'Exportar Pagos Bancarios' : 'Exportar General (CSV)';
+
         const modal = document.getElementById('modalExportarBanco');
         const loading = document.getElementById('loading_export');
         const content = document.getElementById('content_export');
@@ -127,7 +139,7 @@
         form.classList.remove('hidden');
         success.classList.add('hidden');
 
-        fetch(`/periodos/${id}/export-preview`)
+        fetch(`${exportBaseUrl}/${id}/export-preview`)
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -161,7 +173,7 @@
         btn.disabled = true;
         btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Procesando...';
 
-        fetch(`/periodos/${currentPeriodoId}/exportar`, {
+        fetch(`${exportBaseUrl}/${currentPeriodoId}/exportar`, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'

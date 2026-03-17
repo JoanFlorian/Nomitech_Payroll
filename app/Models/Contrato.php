@@ -265,5 +265,21 @@ class Contrato extends Model
     {
         return $this->belongsTo(CajaCompensacion::class, 'id_caja', 'id_caja');
     }
+
+    /**
+     * Relación con Forma de Pago
+     */
+    public function formaPago()
+    {
+        return $this->belongsTo(FormaPago::class, 'id_forma_pago', 'id_forma_pago');
+    }
+
+    /**
+     * Relación con Método de Pago
+     */
+    public function metodoPago()
+    {
+        return $this->belongsTo(MetodoPago::class, 'id_metodo_pago', 'id_metodo_pago');
+    }
 }
 

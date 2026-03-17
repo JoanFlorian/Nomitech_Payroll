@@ -7,6 +7,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return; // SQLite does not support this exact trigger syntax used for MySQL. We bypass it for memory tests.
+        }
+
         // Eliminar si existiera previamente
         DB::unprepared('DROP TRIGGER IF EXISTS tr_contrato_before_update');
 
@@ -73,6 +77,10 @@ SQL
 
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::unprepared('DROP TRIGGER IF EXISTS tr_contrato_before_update');
     }
 };

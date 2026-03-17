@@ -16,7 +16,7 @@ class BankExportService
     /**
      * Generar archivo de exportación bancaria para un periodo cerrado.
      */
-    public function generarArchivo(int $id_periodo, string $formato = 'CSV')
+    public function generarArchivo(int $id_periodo, string $formato = 'CSV', string $tipoExportacion = 'bank')
     {
         $periodo = PeriodoLiquidacion::findOrFail($id_periodo);
 
@@ -27,12 +27,12 @@ class BankExportService
 
         // 2. Obtener nóminas liquidadas del periodo
         $nominas = Salario::where('id_periodo', $id_periodo)
-            ->where('estado', Salario::ESTADO_LIQUIDADO)
-            ->with(['contrato.usuario', 'contrato.cuentaActiva.banco', 'contrato.cuentaActiva.tipoCuenta'])
+            ->where('estado', Salario::ESTADO_PAGADO)
+            ->with(['contrato.usuario', 'contrato.cuentaActiva.banco', 'contrato.cuentaActiva.tipoCuenta', 'contrato.metodoPago', 'contrato.formaPago'])
             ->get();
 
         if ($nominas->isEmpty()) {
-            throw new Exception("No hay nóminas liquidadas para este periodo.");
+            throw new Exception("No hay nóminas pagadas para este periodo.");
         }
 
         // 3. Validar información bancaria
@@ -45,26 +45,45 @@ class BankExportService
             $usuario = $contrato->usuario;
             $cuenta = $contrato->cuentaActiva;
 
+            // Verificar si el pago es en efectivo (no requiere cuenta bancaria)
+            $formaPago = $contrato->formaPago->nombre ?? '';
+            $metodoPago = $contrato->metodoPago->nombre ?? '';
+            $esEfectivo = stripos($formaPago, 'efectivo') !== false 
+                       || stripos($metodoPago, 'efectivo') !== false
+                       || stripos($formaPago, 'contado') !== false
+                       || stripos($metodoPago, 'contado') !== false;
+
             if (!$cuenta || !$cuenta->numero_cuenta || !$cuenta->id_banco || !$cuenta->id_tipo_cuenta) {
-                $erroresBancarios[] = "{$usuario->primer_nombre} {$usuario->primer_apellido} ({$usuario->doc})";
-                continue;
+                if ($tipoExportacion === 'bank') {
+                    if (!$esEfectivo) {
+                        $erroresBancarios[] = "{$usuario->primer_nombre} {$usuario->primer_apellido} ({$usuario->doc})";
+                    }
+                    continue; // En modo 'bank', omitimos a los que no tienen cuenta
+                }
             }
 
             $valor = $nomina->salario_neto ?? 0;
             $totalPagado += $valor;
 
-            $payouts[] = [
+            $row = [
                 'documento' => $usuario->doc,
                 'nombre' => "{$usuario->primer_nombre} {$usuario->primer_apellido}",
                 'banco' => $cuenta->banco->nombre ?? 'N/A',
                 'tipo_cuenta' => $cuenta->tipoCuenta->nombre ?? 'N/A',
-                'numero_cuenta' => $cuenta->numero_cuenta,
+                'numero_cuenta' => $cuenta->numero_cuenta ?? 'N/A',
                 'valor' => $valor,
                 'referencia' => "NOMINA " . strtoupper($periodo->tipo_frecuencia) . " " . \Carbon\Carbon::parse($periodo->fecha_inicio)->format('M Y'),
             ];
+
+            if ($tipoExportacion === 'general') {
+                $nombreMetodo = $metodoPago ?: ($formaPago ?: 'N/A');
+                $row['metodo_pago'] = $nombreMetodo;
+            }
+
+            $payouts[] = $row;
         }
 
-        if (!empty($erroresBancarios)) {
+        if ($tipoExportacion === 'bank' && !empty($erroresBancarios)) {
             $msg = "Falta información bancaria para: " . implode(', ', $erroresBancarios);
             throw new Exception($msg);
         }
@@ -73,7 +92,12 @@ class BankExportService
         $fileName = "export_pago_{$periodo->id_periodo}_" . now()->format('YmdHis') . ".csv";
         $filePath = "banking_exports/{$fileName}";
 
-        $csvContent = $this->generateCSV($payouts);
+        $headers = ['Documento', 'Nombre', 'Banco', 'TipoCuenta', 'NumeroCuenta', 'Valor', 'Referencia'];
+        if ($tipoExportacion === 'general') {
+            $headers[] = 'MetodoPago';
+        }
+
+        $csvContent = $this->generateCSV($payouts, $headers);
         Storage::disk('public')->put($filePath, $csvContent);
 
         // 5. Registrar exportación
@@ -96,12 +120,12 @@ class BankExportService
         ];
     }
 
-    private function generateCSV(array $data)
+    private function generateCSV(array $data, array $headers)
     {
         $handle = fopen('php://temp', 'r+');
 
         // Header
-        fputcsv($handle, ['Documento', 'Nombre', 'Banco', 'TipoCuenta', 'NumeroCuenta', 'Valor', 'Referencia']);
+        fputcsv($handle, $headers);
 
         foreach ($data as $row) {
             fputcsv($handle, $row);

@@ -13,6 +13,7 @@ use App\Models\Banco;
 use App\Models\Empresa;
 use App\Models\Cuenta;
 use App\Models\TipoContrato;
+use App\Models\Rol;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +27,13 @@ class RegistroUsuarios extends Controller
 {
     /** @var array<int, string>|null */
     private static ?array $contratoColumnsCache = null;
+
+    private \App\Services\PlanService $planService;
+
+    public function __construct(\App\Services\PlanService $planService)
+    {
+        $this->planService = $planService;
+    }
 
     private function resolveCompanyId(): ?int
     {
@@ -86,8 +94,33 @@ class RegistroUsuarios extends Controller
      */
     public function storeStep1(Step1Request $request)
     {
+        $companyId = $this->resolveCompanyId();
+        if ($companyId) {
+            $empresa = Empresa::find($companyId);
+            if ($empresa) {
+                // Check if this is a NEW employee or an inactive one being reactivated
+                $docInput = $request->input('doc');
+                $isCurrentlyActive = Contrato::where('doc', $docInput)
+                    ->where('id_empresa', $companyId)
+                    ->whereIn('estado', [
+                        Contrato::ESTADO_ACTIVO,
+                        Contrato::ESTADO_POR_VENCER,
+                        Contrato::ESTADO_PROGRAMADO
+                    ])
+                    ->exists();
+
+                if (!$isCurrentlyActive) {
+                    $check = $this->planService->checkEmployeeLimit($empresa);
+                    if (!$check['can']) {
+                        return response()->json([
+                            'errors' => ['general' => [$check['reason']]]
+                        ], 403);
+                    }
+                }
+            }
+        }
+
         // FormRequest already performs validation and returns JSON errors when
-        // called via AJAX.
         $data = $request->validated();
 
         // get doc from the FormRequest merge; this avoids manual transformation
@@ -169,13 +202,19 @@ class RegistroUsuarios extends Controller
                     'telefono' => $allData['telefono'] ?? '0000000000',
                     'correo' => $allData['correo'] ?? ((string) $allData['doc']) . '@nomitech.local',
                     'fondo_cesantias' => $allData['fondo_cesantias'] ?? null,
-                    'id_rol' => 3,
+                    'id_rol' => $allData['id_rol'] ?? 3,
                     'activo' => true,
                 ];
 
-                Usuario::firstOrCreate([
+                $usuario = Usuario::updateOrCreate([
                     'doc' => $allData['doc'],
                 ], $usuarioData);
+
+                // Link User to Empresa (Required for security scopes)
+                $companyId = $this->resolveCompanyId();
+                if ($companyId) {
+                    $usuario->empresa()->syncWithoutDetaching([$companyId]);
+                }
 
                 // contrato (uso updateOrCreate para no generar múltiples registros si
                 // el formulario se envía más de una vez)
@@ -298,6 +337,32 @@ class RegistroUsuarios extends Controller
 
             $companyId = session('empresa_id');
             $usuario = Empleado::findOrFail($doc);
+            $empresa = Empresa::find($companyId);
+            
+            if ($empresa) {
+                // For renewals, we check if the employee IS ALREADY counted as active.
+                // If they are not (e.g., they were TERMINATED), then renewing them increases the count.
+                $isCurrentlyActive = Contrato::where('doc', $doc)
+                    ->where('id_empresa', $companyId)
+                    ->whereIn('estado', [
+                        Contrato::ESTADO_ACTIVO,
+                        Contrato::ESTADO_POR_VENCER,
+                        Contrato::ESTADO_PROGRAMADO
+                    ])
+                    ->exists();
+
+                if (!$isCurrentlyActive) {
+                    $check = $this->planService->checkEmployeeLimit($empresa);
+                    if (!$check['can']) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Límite alcanzado',
+                            'errors' => ['general' => [$check['reason']]]
+                        ], 403);
+                    }
+                }
+            }
+
             $contratoAnterior = Contrato::where('doc', $doc)
                 ->where('id_empresa', $companyId)
                 ->orderByDesc('id_contrato')
@@ -473,7 +538,16 @@ class RegistroUsuarios extends Controller
                 $usuarioData['telefono'] = $data['telefono'];
             if (array_key_exists('fondo_cesantias', $data))
                 $usuarioData['fondo_cesantias'] = $data['fondo_cesantias'];
+            if (isset($data['id_rol'])) {
+                $usuarioData['id_rol'] = $data['id_rol'];
+            }
 
+            // Link User to Empresa (Ensure scope works)
+            $id_empresa = session('empresa_id');
+            if ($id_empresa) {
+                $usuario->empresa()->syncWithoutDetaching([$id_empresa]);
+            }
+            
             if (!empty($usuarioData)) {
                 $usuario->update($usuarioData);
             }

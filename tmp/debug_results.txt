@@ -1,0 +1,38 @@
+--- ROLES ---
+ID: 1 | Representante Legal
+ID: 2 | Administrador
+ID: 3 | Empleado
+ID: 4 | Superadmin
+ID: 6 | Auxiliar de Nómina
+ID: 7 | Auditor de Nómina
+
+--- ALL USERS IN DB ---
+DOC: 10705000000 | Name: Lucia Rada | Rol: 3 (Empleado) | Companies: []
+DOC: 1070599001 | Name: Juan RICO | Rol: 3 (Empleado) | Companies: []
+DOC: 1070599004 | Name: Super Admin System Root | Rol: 4 (Superadmin) | Companies: []
+DOC: 10705990042 | Name: Julio Cortazar | Rol: 3 (Empleado) | Companies: []
+DOC: 10705990112 | Name: Joan Florian | Rol: 3 (Empleado) | Companies: []
+DOC: 1070599022 | Name: Joan Florian | Rol: 3 (Empleado) | Companies: []
+DOC: 10705990225 | Name: Andres Dorian | Rol: 3 (Empleado) | Companies: []
+DOC: 1070599044 | Name: Joan Sebastian Florian Salazar | Rol: 3 (Empleado) | Companies: []
+DOC: 1070599222 | Name: Maria Rico | Rol: 3 (Empleado) | Companies: []
+DOC: 10705992311 | Name: Juan Espinoza | Rol: 3 (Empleado) | Companies: []
+DOC: 1070599333 | Name: dsadad adas | Rol: 3 (Empleado) | Companies: []
+DOC: 1070599412 | Name: Joan Florian | Rol: 3 (Empleado) | Companies: []
+DOC: 1070599441 | Name: Santiago Gutierrez | Rol: 3 (Empleado) | Companies: []
+DOC: 1073229004 | Name: Cristian Carrascal | Rol: 1 (Representante Legal) | Companies: [2]
+DOC: 111111 | Name: Joan Florian | Rol: 1 (Representante Legal) | Companies: [1]
+DOC: 1111110 | Name: Miguel orozco | Rol: 6 (Auxiliar de Nómina) | Companies: []
+DOC: 1111112 | Name: Cristian Rico | Rol: 1 (Representante Legal) | Companies: [3]
+DOC: 11111121 | Name: Mateo Carrascal | Rol: 1 (Representante Legal) | Companies: [6]
+DOC: 1220599004 | Name: Joan Florian | Rol: 3 (Empleado) | Companies: []
+DOC: 1333599004 | Name: Andrea Garcia | Rol: 3 (Empleado) | Companies: []
+DOC: 1899455667 | Name: Maria Ricaurte | Rol: 3 (Empleado) | Companies: []
+DOC: 2010000000 | Name: Sebastian Joan | Rol: 1 (Representante Legal) | Companies: [5]
+DOC: 2030120301 | Name: Tatiana Florez | Rol: 3 (Empleado) | Companies: []
+DOC: 301032011 | Name: Miguel hincapie | Rol: 3 (Empleado) | Companies: []
+DOC: 3200121010 | Name: Juanes Perroni | Rol: 6 (Auxiliar de Nómina) | Companies: [6]
+DOC: 3201203011 | Name: Joan Florian | Rol: 3 (Empleado) | Companies: []
+DOC: 32423423 | Name: Cristian carrascal | Rol: 3 (Empleado) | Companies: []
+DOC: 333333 | Name: Carlos Gaitan | Rol: 3 (Empleado) | Companies: [6]
+DOC: 401020311 | Name: Maxim Perez | Rol: 3 (Empleado) | Companies: []

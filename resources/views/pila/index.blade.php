@@ -112,10 +112,12 @@
 
     {{-- BOTON --}}
     <div class="col-12 col-lg-4">
+        @can('view_pila')
         <button type="submit" class="btn btn-primary w-100 py-2 btn-pila-main shadow-sm">
             <i class="bi bi-calculator-fill me-2"></i>
             Calcular Seguridad Social
         </button>
+        @endcan
     </div>
 
 </form>
@@ -314,20 +316,24 @@
                         <input type="hidden" name="id_empresa" value="{{ $selectedEmpresaId }}">
                         <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">
 
+                        @can('export_pila')
                         <button type="submit" class="btn btn-success btn-lg btn-pila-generate" {{ $canGenerate ? '' : 'disabled' }}>
                             <i class="bi bi-file-earmark-check-fill me-2"></i>
                             Generar Planilla PILA
                         </button>
+                        @endcan
                     </form>
 
                     @if($stepGenerada)
                         <form method="GET" action="{{ route('pila.descargar') }}" id="downloadPilaForm">
                             <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">
 
+                            @can('export_pila')
                             <button type="submit" class="btn btn-outline-primary btn-lg" {{ $hasCalculo && $detalles->isNotEmpty() ? '' : 'disabled' }}>
                                 <i class="bi bi-download me-2"></i>
                                 Descargar Planilla PILA
                             </button>
+                            @endcan
                         </form>
                     @endif
                 </div>

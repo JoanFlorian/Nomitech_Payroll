@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 
 class Usuario extends Authenticatable
 {
@@ -46,9 +47,9 @@ class Usuario extends Authenticatable
         'numero_cuenta',
         'id_eps',
         'id_afp',
-        'codigo_interno',
         'horas_diarias',
         'fondo_cesantias',
+        'is_owner',
     ];
 
     protected $hidden = [
@@ -61,6 +62,7 @@ class Usuario extends Authenticatable
         return [
             'activo' => 'boolean',
             'alto_riesgo' => 'boolean',
+            'is_owner' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -85,6 +87,134 @@ class Usuario extends Authenticatable
     public function empresa()
     {
         return $this->belongsToMany(Empresa::class, 'usuario_empresa', 'doc', 'id_empresa');
+    }
+
+    public function roles()
+    {
+        // Deprecated: use rol() instead for the single legacy role
+        return $this->hasMany(Rol::class, 'id_rol', 'id_rol');
+    }
+
+    public function directPermissions()
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions', 'user_id', 'permission_id')
+                    ->withPivot('company_id', 'active');
+    }
+
+    /**
+     * Check if the user has a specific permission scoped to the active company.
+     * 
+     * @param string $permission
+     * @return bool
+     */
+    public function hasPermission($permission)
+    {
+        if ($this->is_owner) {
+            return true;
+        }
+
+        $id_empresa = session('empresa_id');
+        
+        // Si no hay empresa activa en sesión, no hay permisos (salvo el owner que ya se validó arriba)
+        if (!$id_empresa) {
+            return false;
+        }
+
+        $cacheKey = "permissions_user_{$this->doc}_company_{$id_empresa}";
+
+        $permissions = Cache::remember($cacheKey, now()->addHours(2), function () use ($id_empresa) {
+            // Obtener excepciones directas del usuario para esta empresa
+            $overrides = $this->directPermissions()
+                ->where('company_id', $id_empresa)
+                ->get()
+                ->keyBy('name');
+
+            // Obtener permisos del Rol único asignado
+            $rolePermissions = $this->rol && $this->rol->permissions 
+                ? $this->rol->permissions->pluck('name')->unique()->toArray()
+                : [];
+
+            $finalPermissions = [];
+
+            // Procesar permisos del Rol, pero filtrar con las denegaciones (active = 0)
+            foreach($rolePermissions as $pName) {
+                $override = $overrides->get($pName);
+                if ($override && $override->pivot->active == 0) {
+                    continue; // Skip denegados
+                }
+                $finalPermissions[] = $pName;
+            }
+
+            // Agregar permisos concedidos explícitamente (active = 1) que no estaban en el rol
+            foreach($overrides as $pName => $override) {
+                if ($override->pivot->active == 1 && !in_array($pName, $finalPermissions)) {
+                    $finalPermissions[] = $pName;
+                }
+            }
+
+            return $finalPermissions;
+        });
+
+        return in_array($permission, $permissions);
+    }
+
+    /**
+     * Determina la primera ruta accesible para el usuario según sus permisos.
+     * Útil para redirecciones inteligentes post-login o cuando se bloquea un acceso.
+     */
+    public function getFirstAccessibleRoute()
+    {
+        // Prioridad de rutas y sus permisos requeridos
+        $routes = [
+            'empleados.index' => 'view_employees',
+            'nomina.index' => 'view_payroll',
+            'novedades.index' => 'view_novedades',
+            'provisiones.index' => 'view_provisions',
+            'nomina-electronica.index' => 'view_electronic_payroll',
+            'reportes.index' => 'view_reports',
+            'periodos.index' => 'view_periods',
+            'admin.catalogos.index' => 'manage_catalogos',
+            'pila.index' => 'view_pila',
+        ];
+
+        foreach ($routes as $route => $permission) {
+            if ($this->hasPermission($permission)) {
+                return $route;
+            }
+        }
+
+        // Si no tiene ningún permiso de módulo, pero es trabajador
+        if ($this->id_rol == 3) {
+            return '/trabajador';
+        }
+
+        return 'index'; // Default a la landing o dashboard principal
+    }
+
+    public function clearPermissionCache()
+    {
+        $id_empresa = session('empresa_id');
+        if ($id_empresa) {
+            Cache::forget("permissions_user_{$this->doc}_company_{$id_empresa}");
+        }
+        
+        // Also clear a potential global cache if needed, but scoping it is safer
+        Cache::forget("permissions_user_{$this->doc}");
+    }
+
+    public function auditLog($action, $module, $entity_id = null)
+    {
+        $id_empresa = session('empresa_id') ?? ($this->empresa->first()->id_empresa ?? null);
+
+        if (!$id_empresa) return;
+
+        return AuditLog::create([
+            'company_id' => $id_empresa,
+            'user_id' => $this->doc,
+            'action' => $action,
+            'module' => $module,
+            'entity_id' => $entity_id,
+        ]);
     }
 
     public function rol()

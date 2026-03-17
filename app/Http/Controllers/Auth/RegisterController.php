@@ -55,7 +55,8 @@ class RegisterController extends Controller
                 'correo' => $request->email,
                 'direccion' => $request->direccion_empresa,
                 'contrasena' => Hash::make($request->password),
-                'id_rol' => 1,
+                'id_rol' => 1, // Representante Legal
+                'is_owner' => true,
             ]);
 
             // 2. Create Empresa (with doc_representante)
@@ -69,6 +70,9 @@ class RegisterController extends Controller
                 'telefono' => $request->telefono_celular,
                 'correo' => $request->email,
             ]);
+
+            // RBAC Integration: Seeding global permissions once if needed (usually done during deployment)
+            // (new \Database\Seeders\CompanyRoleSeeder())->run(); 
 
             // 3. Resolve selected plan from request (or fallback to default ordered plan)
             $planId = $request->input('plan_id');

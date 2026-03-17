@@ -9,8 +9,7 @@
     {{-- Tailwind --}}
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
 
-    {{-- Fonts --}}
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     {{-- Flatpickr Calendar --}}
@@ -22,7 +21,7 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Manrope', sans-serif; }
         [x-cloak]{ display:none !important; }
     </style>
 </head>

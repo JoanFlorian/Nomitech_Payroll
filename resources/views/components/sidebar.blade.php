@@ -15,61 +15,83 @@
     <!-- MENU -->
     <nav class="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
 
-        <a href="{{ route('reportes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-       {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-bar-chart text-lg"></i>
-            Reportes
-        </a>
+        @canany(['view_reports', 'export_reports'])
+            <a href="{{ route('reportes.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+           {{ request()->is('reportes*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-bar-chart text-lg"></i>
+                Reportes
+            </a>
+        @endcanany
 
-        <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-           {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-people text-lg"></i>
-            Empleados
-        </a>
+        @canany(['view_employees', 'create_employee', 'edit_employee', 'renew_contract', 'export_employees'])
+            <a href="/empleados" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+               {{ request()->is('empleados*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-people text-lg"></i>
+                Empleados
+            </a>
+        @endcanany
 
-        <a href="{{ route('nomina.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-           {{ request()->is('nomina*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-receipt text-lg"></i>
-            Nómina
-        </a>
+        @canany(['view_payroll', 'calculate_payroll', 'export_payroll'])
+            <a href="{{ route('nomina.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+               {{ request()->is('nomina*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-receipt text-lg"></i>
+                Nómina
+            </a>
+        @endcanany
 
-        <a href="{{ route('nomina-electronica.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-           {{ request()->is('nomina-electronica*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-send-check text-lg"></i>
-            Nómina Electrónica
-        </a>
+        @canany(['view_electronic_payroll'])
+            <a href="{{ route('nomina-electronica.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+               {{ request()->is('nomina-electronica*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-send-check text-lg"></i>
+                Nómina Electrónica
+            </a>
+        @endcanany
 
-        <a href="{{ route('novedades.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-            {{ request()->is('novedades*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-journal-text text-lg"></i>
-            Novedades
-        </a>
+        @canany(['view_novedades', 'create_novedad', 'edit_novedad', 'delete_novedad'])
+            <a href="{{ route('novedades.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                {{ request()->is('novedades*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-journal-text text-lg"></i>
+                Novedades
+            </a>
+        @endcanany
 
-        <a href="{{ route('provisiones.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-            {{ request()->routeIs('provisiones.index') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-box-seam text-lg"></i>
-            Provisiones
-        </a>
+        @canany(['view_provisions', 'manage_provisions'])
+            <a href="{{ route('provisiones.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                {{ request()->routeIs('provisiones.index') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-box-seam text-lg"></i>
+                Provisiones
+            </a>
+        @endcanany
 
-        <a href="{{ route('periodos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-           {{ request()->is('periodos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-calendar3 text-lg"></i>
-            Periodos de Liquidación
-        </a>
+        @canany(['view_periods', 'create_period', 'close_period', 'export_period'])
+            <a href="{{ route('periodos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+               {{ request()->is('periodos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-calendar3 text-lg"></i>
+                Periodos de Liquidación
+            </a>
+        @endcanany
 
-        <a href="{{ url('/pila') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
-           {{ request()->is('pila*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
-            <i class="bi bi-file-earmark-text text-lg"></i>
-            Plantilla PILA
-        </a>
+        @canany(['view_pila', 'export_pila'])
+            <a href="{{ url('/pila') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+               {{ request()->is('pila*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-file-earmark-text text-lg"></i>
+                Plantilla PILA
+            </a>
+        @endcanany
 
-        @if(in_array((int) (Auth::user()->id_rol ?? 0), [1, 4], true))
+        @can('manage_catalogos')
             <a href="{{ route('admin.catalogos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
                 {{ request()->routeIs('admin.catalogos.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
                 <i class="bi bi-collection text-lg"></i>
                 Catálogos de Empresa
             </a>
-        @endif
+            
+            <a href="{{ route('admin.roles.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
+                {{ request()->routeIs('admin.roles.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
+                <i class="bi bi-shield-check text-lg"></i>
+                Roles y Permisos
+            </a>
+        @endcan
         
 
     </nav>

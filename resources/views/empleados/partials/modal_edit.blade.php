@@ -300,6 +300,18 @@
                         </div>
 
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Rol del sistema</label>
+                            <select
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
+                                name="id_rol" id="editIdRol">
+                                @foreach ($roles as $rol)
+                                    <option value="{{ $rol->id_rol }}">{{ $rol->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <p class="error-message text-red-500 text-sm hidden" data-error="id_rol"></p>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Código Interno</label>
                             <input type="text"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0]"
@@ -511,10 +523,19 @@
                             class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition">
                             Continuar
                         </button>
-                        <button type="submit" x-show="editWizardStep === 3"
-                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition"
-                            x-text="isRenewal ? 'Finalizar Renovación' : 'Guardar Cambios'">
+                        @can('edit_employee')
+                        <button type="submit" x-show="editWizardStep === 3 && !isRenewal"
+                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition">
+                            Guardar Cambios
                         </button>
+                        @endcan
+
+                        @can('renew_contract')
+                        <button type="submit" x-show="editWizardStep === 3 && isRenewal"
+                            class="bg-[#1565C0] text-white py-2 px-6 rounded-md hover:bg-[#0D47A1] transition">
+                            Finalizar Renovación
+                        </button>
+                        @endcan
                     </div>
                 </div>
             </form>
@@ -1239,6 +1260,7 @@
                 document.getElementById('editDireccion').value = data.usuario.direccion || '';
                 document.getElementById('editEmail').value = data.usuario.correo || '';
                 document.getElementById('editTelefono').value = data.usuario.telefono || '';
+                document.getElementById('editIdRol').value = data.usuario.id_rol || '';
 
                 const contrato = data.contrato;
                 const cuenta = data.cuenta;

@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin_empresa' => \App\Http\Middleware\CheckCompanyAdmin::class,
             'prevent_back_history' => \App\Http\Middleware\PreventBackHistory::class,
             'contractual_access' => \App\Http\Middleware\CheckContractualAccess::class,
+            'permission' => \App\Http\Middleware\AuthorizePermission::class,
+            'role' => \App\Http\Middleware\CheckRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

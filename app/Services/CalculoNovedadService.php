@@ -33,17 +33,8 @@ class CalculoNovedadService
     public function obtenerSalarioEmpleado(string $empleadoId): ?Salario
     {
         $empresaId = (int) session('empresa_id');
-        $activePeriodId = (int) session('active_period_id');
-
-        if ($activePeriodId <= 0 && $empresaId > 0) {
-            $activePeriodId = (int) optional(
-                PeriodoLiquidacion::query()
-                    ->where('id_empresa', $empresaId)
-                    ->where('estado', PeriodoLiquidacion::ESTADO_ABIERTO)
-                    ->orderByDesc('fecha_inicio')
-                    ->first()
-            )->id_periodo;
-        }
+        $activePeriod = PeriodoLiquidacion::getActivePeriod();
+        $activePeriodId = $activePeriod ? $activePeriod->id_periodo : 0;
 
         $baseQuery = Salario::query()
             ->join('contrato', 'contrato.id_contrato', '=', 'salario.id_contrato')

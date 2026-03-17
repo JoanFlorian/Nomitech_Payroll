@@ -122,10 +122,12 @@
                 <div class="space-y-6">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
                         <h3 class="text-2xl font-semibold text-gray-700">Historial de periodos de liquidación</h3>
+                        @can('transmit_electronic_payroll')
                         <button @click="reportModalOpen = true"
                             class="bg-[#10B981] text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-[#0C9467] transition-all duration-300 h-11 flex items-center">
                             Reportar a la DIAN
                         </button>
+                        @endcan
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -281,10 +283,12 @@
                                 class="bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition-colors">
                                 Cancelar
                             </button>
+                            @can('transmit_electronic_payroll')
                             <button
                                 class="bg-[#10B981] text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-[#0C9467] transition-colors">
                                 Reportar a la DIAN
                             </button>
+                            @endcan
                         </div>
                     </div>
                 </div>

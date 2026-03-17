@@ -13,15 +13,17 @@ return new class extends Migration {
     public function up(): void
     {
         // 1. Expand movement_type enum to include scheduled_payment
-        DB::statement("ALTER TABLE `benefit_ledger` MODIFY COLUMN `movement_type` ENUM(
-            'accrual',
-            'payment',
-            'adjustment',
-            'initial',
-            'withdrawal',
-            'authorization',
-            'scheduled_payment'
-        ) NOT NULL");
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE `benefit_ledger` MODIFY COLUMN `movement_type` ENUM(
+                'accrual',
+                'payment',
+                'adjustment',
+                'initial',
+                'withdrawal',
+                'authorization',
+                'scheduled_payment'
+            ) NOT NULL");
+        }
 
         // 2. Add payment_method and payroll_period_id columns
         Schema::table('benefit_ledger', function (Blueprint $table) {
@@ -42,13 +44,15 @@ return new class extends Migration {
             $table->dropColumn(['payment_method', 'payroll_period_id']);
         });
 
-        DB::statement("ALTER TABLE `benefit_ledger` MODIFY COLUMN `movement_type` ENUM(
-            'accrual',
-            'payment',
-            'adjustment',
-            'initial',
-            'withdrawal',
-            'authorization'
-        ) NOT NULL");
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE `benefit_ledger` MODIFY COLUMN `movement_type` ENUM(
+                'accrual',
+                'payment',
+                'adjustment',
+                'initial',
+                'withdrawal',
+                'authorization'
+            ) NOT NULL");
+        }
     }
 };

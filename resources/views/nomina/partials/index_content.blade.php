@@ -227,6 +227,7 @@
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-left font-semibold tracking-wide">Documento</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-left font-semibold tracking-wide">Empleado</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-center font-semibold tracking-wide">Estado</th>
+                        <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-center font-semibold tracking-wide">Días</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-right font-semibold tracking-wide">Salario inicial</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-right font-semibold tracking-wide">Devengos</th>
                         <th class="sticky top-0 z-10 bg-slate-900 px-4 py-3 text-right font-semibold tracking-wide">Deducciones</th>
@@ -275,6 +276,10 @@
                                     <i class="bi {{ $badgeIcon }}"></i>
                                     {{ $estadoActual }}
                                 </span>
+                            </td>
+
+                            <td class="px-4 py-3 text-center font-bold text-slate-700">
+                                {{ (int) $salario->dias_a_trabajar }}
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right text-slate-700">

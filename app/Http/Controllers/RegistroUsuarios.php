@@ -31,10 +31,14 @@ class RegistroUsuarios extends Controller
     private static ?array $contratoColumnsCache = null;
 
     private \App\Services\PlanService $planService;
+    private \App\Services\Benefits\BenefitPaymentService $benefitService;
 
-    public function __construct(\App\Services\PlanService $planService)
-    {
+    public function __construct(
+        \App\Services\PlanService $planService,
+        \App\Services\Benefits\BenefitPaymentService $benefitService
+    ) {
         $this->planService = $planService;
+        $this->benefitService = $benefitService;
     }
 
     private function resolveCompanyId(): ?int
@@ -242,7 +246,7 @@ class RegistroUsuarios extends Controller
                     'id_metodo_pago' => $allData['id_metodo_pago'] ?? null,
                     'id_arl' => $allData['id_arl'],
                     'id_eps' => $allData['id_eps'],
-                    'id_afp' => $allData['id_afp'],
+                    'id_afp' => $allData['id_afp'] ?? null,
                     'id_caja' => $allData['id_caja'] ?? null,
                     'alto_riesgo' => (int) ($allData['alto_riesgo'] ?? 0),
                     'nivel_riesgo' => $allData['nivel_riesgo'] ?? null,
@@ -464,6 +468,22 @@ class RegistroUsuarios extends Controller
             $lifecycleService = app(\App\Services\ContractLifecycleService::class);
             $lifecycleService->procesarCreacionContrato($nuevoContrato);
 
+            // 5. Crear saldos iniciales de beneficios si se proporcionan (Migración)
+            $initialBalances = [
+                'prima_inicial'    => (float) ($data['prima_inicial'] ?? 0),
+                'cesantias_inicial' => (float) ($data['cesantias_inicial'] ?? 0),
+                'intereses_inicial' => (float) ($data['intereses_inicial'] ?? 0),
+                'vacaciones_inicial' => (float) ($data['vacaciones_inicial'] ?? 0),
+            ];
+
+            if (array_sum($initialBalances) > 0) {
+                $this->benefitService->createInitialBalances(
+                    $doc,
+                    $companyId,
+                    $initialBalances
+                );
+            }
+
             DB::commit();
 
             return response()->json([
@@ -586,6 +606,8 @@ class RegistroUsuarios extends Controller
                 $contratoData['id_eps'] = $data['id_eps'];
             if (isset($data['id_afp']))
                 $contratoData['id_afp'] = $data['id_afp'];
+            if (isset($data['id_caja']))
+                $contratoData['id_caja'] = $data['id_caja'];
             if (isset($data['alto_riesgo']))
                 $contratoData['alto_riesgo'] = (int) $data['alto_riesgo'];
             if (isset($data['nivel_riesgo']))
@@ -649,6 +671,23 @@ class RegistroUsuarios extends Controller
                         ]
                     );
                 }
+            }
+
+            // Actualizar saldos iniciales de beneficios si se proporcionan (Migración)
+            $initialBalances = [
+                'prima_inicial'    => (float) ($data['prima_inicial'] ?? 0),
+                'cesantias_inicial' => (float) ($data['cesantias_inicial'] ?? 0),
+                'intereses_inicial' => (float) ($data['intereses_inicial'] ?? 0),
+                'vacaciones_inicial' => (float) ($data['vacaciones_inicial'] ?? 0),
+            ];
+
+            if (array_sum($initialBalances) > 0) {
+                $companyId = session('empresa_id');
+                $this->benefitService->createInitialBalances(
+                    $usuario->doc,
+                    (int) $companyId,
+                    $initialBalances
+                );
             }
         });
 

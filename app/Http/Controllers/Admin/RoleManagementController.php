@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Rol;
 use App\Models\Permission;
 use App\Models\Usuario;
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -269,6 +270,40 @@ class RoleManagementController extends Controller
         $id_empresa = session('empresa_id');
         $user = Usuario::findOrFail($request->user_id);
         $role = Rol::where('id_rol', $request->role_id)->firstOrFail();
+        $empresa = Empresa::find($id_empresa);
+
+        if ($empresa) {
+            $planService = app(\App\Services\PlanService::class);
+            
+            // Si el nuevo rol es Administrativo
+            if (in_array($role->nombre, ['Representante Legal', 'Administrador', 'Auditor de Nómina'])) {
+                // Solo validar si NO era ya administrativo (cambio de rol hacia admin o nuevo admin)
+                if (!in_array($user->rol?->nombre, ['Representante Legal', 'Administrador', 'Auditor de Nómina'])) {
+                    $check = $planService->checkAdminLimit($empresa);
+                    if (!$check['can']) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Límite alcanzado',
+                            'errors' => ['role_id' => [$check['reason']]]
+                        ], 403);
+                    }
+                }
+            }
+            
+            // Si el nuevo rol es Auxiliar
+            if ($role->nombre === 'Auxiliar de Nómina') {
+                if ($user->rol?->nombre !== 'Auxiliar de Nómina') {
+                    $check = $planService->checkAuxiliaryLimit($empresa);
+                    if (!$check['can']) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Límite alcanzado',
+                            'errors' => ['role_id' => [$check['reason']]]
+                        ], 403);
+                    }
+                }
+            }
+        }
 
         // Assign Legacy id_rol
         $user->update(['id_rol' => $role->id_rol]);

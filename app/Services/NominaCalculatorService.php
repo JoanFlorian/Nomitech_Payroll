@@ -75,7 +75,11 @@ class NominaCalculatorService
 
         $salarioBase = (float) ($contrato->salario_base ?? 0);
         $valorHora = $salarioBase > 0 ? ($salarioBase / 240) : 0;
-        $diasTrabajados = max(0, min(30, (int) ($input['dias_trabajados'] ?? 30)));
+
+        $resumenNovedades = $this->resumirNovedadesContratoPeriodo($idContrato, $idPeriodo, $valorHora);
+
+        $diasSln = (int) ($resumenNovedades['dias_sln'] ?? 0);
+        $diasTrabajados = max(0, min(30, (int) ($input['dias_trabajados'] ?? 30) - $diasSln));
         $salarioDevengado = ($salarioBase / 30) * $diasTrabajados;
 
         $baseHorasExtra = max(0, (float) ($input['horas_extra'] ?? 0));
@@ -89,7 +93,7 @@ class NominaCalculatorService
         $embargoFiscal = max(0, (float) ($input['embargo_fiscal'] ?? 0));
         $pensionVoluntaria = max(0, (float) ($input['pension_voluntaria'] ?? 0));
 
-        $resumenNovedades = $this->resumirNovedadesContratoPeriodo($idContrato, $idPeriodo, $valorHora);
+
 
         $horasExtra = $baseHorasExtra + (float) ($resumenNovedades['horas_extra'] ?? 0);
         $recargos = $baseRecargos + (float) ($resumenNovedades['recargos'] ?? 0);
@@ -228,6 +232,7 @@ class NominaCalculatorService
             'bonificaciones' => 0.0,
             'otros_devengos' => 0.0,
             'deducciones' => 0.0,
+            'dias_sln' => 0,
         ];
 
         $periodo = PeriodoLiquidacion::query()->find($idPeriodo);
@@ -266,13 +271,44 @@ class NominaCalculatorService
                 'n.pago',
                 'n.horas',
                 'n.cantidad',
+                'n.dias',
                 'n.unidad_cantidad',
                 'n.tipo_novedad_codigo',
                 'n.tipo_novedad_nombre',
+                'n.fecha_inicio',
+                'n.fecha_fin',
             ])
             ->get();
 
         foreach ($novedades as $novedad) {
+            $codigo = strtoupper(trim((string) ($novedad->tipo_novedad_codigo ?? '')));
+
+            // Tipos de novedad que reducen los días trabajados efectivos
+            $tiposQueRestanDias = ['SLN', 'IGE', 'IRL', 'IRP', 'LMA', 'LMAT', 'LPAT', 'VAC'];
+
+            if (in_array($codigo, $tiposQueRestanDias, true)) {
+                $novInicio = $novedad->fecha_inicio ? \Carbon\Carbon::parse($novedad->fecha_inicio) : null;
+                $novFin = $novedad->fecha_fin ? \Carbon\Carbon::parse($novedad->fecha_fin) : null;
+                $pInicio = \Carbon\Carbon::parse($fechaInicio);
+                $pFin = \Carbon\Carbon::parse($fechaFin);
+
+                if ($novInicio && $novFin) {
+                    $efectivoInicio = $novInicio->greaterThan($pInicio) ? $novInicio : $pInicio;
+                    $efectivoFin = $novFin->lessThan($pFin) ? $novFin : $pFin;
+                    $diasEnPeriodo = max(0, $efectivoInicio->diffInDays($efectivoFin) + 1);
+                    $resumen['dias_sln'] += (int) $diasEnPeriodo;
+                } else {
+                    // Fallback: usar campo dias directamente
+                    $resumen['dias_sln'] += (int) ($novedad->dias ?? $novedad->cantidad ?? 0);
+                }
+                
+                // Si es SLN, no se suma a otros devengos/deducciones (ya manejado por reducción de días)
+                // Para los otros tipos (IGE, VAC, etc.), el pago se manejará después en el loop
+                if ($codigo === 'SLN') {
+                    continue;
+                }
+            }
+
             $valor = (float) ($novedad->pago ?? 0);
             $texto = mb_strtolower(trim(((string) ($novedad->tipo_novedad_codigo ?? '')) . ' ' . ((string) ($novedad->tipo_novedad_nombre ?? ''))), 'UTF-8');
 

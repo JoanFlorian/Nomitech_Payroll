@@ -22,7 +22,9 @@ class Plan extends Model
         'stripe_price_id',
         'destacado',
         'orden',
-        'features'
+        'features',
+        'max_admins',
+        'max_auxiliares'
     ];
 
     protected $casts = [

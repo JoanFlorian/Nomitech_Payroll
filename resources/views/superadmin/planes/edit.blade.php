@@ -28,7 +28,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('superadmin.planes.update', $plan) }}" class="space-y-8">
+            <form method="POST" action="{{ route('superadmin.planes.update', $plan) }}" class="space-y-8" x-data="planForm()" @submit="submitForm($event)">
                 @method('PUT')
 
                 @include('superadmin.planes._form')

@@ -80,16 +80,58 @@ class Empresa extends Model
     {
         $licencia = $this->licencia;
         if (!$licencia || !$licencia->plan) {
-            return false; // Or default limit if no plan
-        }
-
-        $limit = (int) $licencia->plan->num_empl;
-        
-        // If limit is 0, assume it's unlimited (or define a very high default)
-        if ($limit === 0) {
             return false;
         }
 
+        $limit = (int) $licencia->plan->num_empl;
+        if ($limit === 0) return false;
+
         return $this->activeEmployeesCount() >= $limit;
+    }
+
+    /**
+     * Get the count of Admin users (Representante Legal, Administrador, Auditor).
+     */
+    public function adminsCount(): int
+    {
+        return $this->usuarios()
+            ->whereIn('id_rol', function($query) {
+                $query->select('id_rol')
+                    ->from('rol')
+                    ->whereIn('nombre', ['Representante Legal', 'Administrador', 'Auditor de Nómina']);
+            })
+            ->count();
+    }
+
+    /**
+     * Get the count of Auxiliary users.
+     */
+    public function auxiliariesCount(): int
+    {
+        return $this->usuarios()
+            ->whereIn('id_rol', function($query) {
+                $query->select('id_rol')
+                    ->from('rol')
+                    ->whereIn('nombre', ['Auxiliar de Nómina']);
+            })
+            ->count();
+    }
+
+    public function canAddAdmin(): bool
+    {
+        $licencia = $this->licencia;
+        if (!$licencia || !$licencia->plan) return true;
+        
+        $limit = (int) $licencia->plan->max_admins;
+        return $this->adminsCount() < $limit;
+    }
+
+    public function canAddAuxiliary(): bool
+    {
+        $licencia = $this->licencia;
+        if (!$licencia || !$licencia->plan) return true;
+        
+        $limit = (int) $licencia->plan->max_auxiliares;
+        return $this->auxiliariesCount() < $limit;
     }
 }

@@ -31,7 +31,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('superadmin.planes.store') }}" class="space-y-8">
+            <form method="POST" action="{{ route('superadmin.planes.store') }}" class="space-y-8" x-data="planForm()" @submit="submitForm($event)">
 
                 @include('superadmin.planes._form')
 

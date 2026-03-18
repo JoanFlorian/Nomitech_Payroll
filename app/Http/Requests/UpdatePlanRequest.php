@@ -41,6 +41,8 @@ class UpdatePlanRequest extends FormRequest
             'valor' => ['required', 'numeric', 'gt:0', 'max:99999999.99', 'regex:/^\d+(\.\d{1,2})?$/'],
             'duracion' => 'required|integer|min:1|max:12',
             'num_empl' => 'required|integer|min:1|max:10000',
+            'max_admins' => 'required|integer|min:1|max:20',
+            'max_auxiliares' => 'required|integer|min:0|max:20',
             'descripcion' => 'nullable|string|max:500',
             'destacado' => 'nullable|boolean',
             'features' => 'required|array|min:2|max:4',
@@ -95,6 +97,14 @@ class UpdatePlanRequest extends FormRequest
             'features.*.min' => 'Cada característica debe tener al menos :min caracteres.',
             'features.*.max' => 'Cada característica no puede exceder :max caracteres.',
             'features.*.regex' => 'Cada característica debe contener al menos una letra y solo permite letras, números, espacios y los símbolos (/,.&-).',
+            'max_admins.required' => 'La cantidad de administradores es obligatoria.',
+            'max_admins.integer' => 'La cantidad de administradores debe ser un número entero.',
+            'max_admins.min' => 'Debe haber al menos 1 administrador.',
+            'max_admins.max' => 'No se permiten más de 20 administradores por plan.',
+            'max_auxiliares.required' => 'La cantidad de auxiliares es obligatoria.',
+            'max_auxiliares.integer' => 'La cantidad de auxiliares debe ser un número entero.',
+            'max_auxiliares.min' => 'La cantidad de auxiliares no puede ser negativa.',
+            'max_auxiliares.max' => 'No se permiten más de 20 auxiliares por plan.',
             'stripe_price_id.starts_with' => 'El Stripe Price Id debe comenzar con "price_".',
         ];
     }

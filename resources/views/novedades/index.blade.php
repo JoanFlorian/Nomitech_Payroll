@@ -141,6 +141,15 @@
 					: ($naturaleza === 'DEDUCCION'
 						? 'bg-red-50 text-red-700 border border-red-200'
 						: 'bg-gray-50 text-gray-700 border border-gray-200');
+
+				// Calcular valor informativo para novedades que descuentan días (SLN, IGE, IRL, etc.)
+				$salarioBase = (float) ($novedad->salario_base ?? $novedad->salario?->contrato?->salario_base ?? 0);
+				$diasNovedad = (float) ($novedad->dias ?? ($novedad->unidad_cantidad === 'dias' ? $novedad->cantidad : 0));
+				$esInformativo = in_array($tipo, ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'INC', 'LIC']);
+				$valorInformativo = $esInformativo && $salarioBase > 0 ? round(($salarioBase / 30) * $diasNovedad) : 0;
+				$pagoDisplay = ((float) $novedad->pago > 0) ? (float) $novedad->pago : $valorInformativo;
+				$pagoColorClass = $naturaleza === 'DEVENGADO' ? 'text-emerald-700' : ($naturaleza === 'DEDUCCION' || $esInformativo ? 'text-red-600' : 'text-gray-800');
+				$pagoLabel = $esInformativo && (float) $novedad->pago <= 0 ? 'Deducción informativa' : 'Pago';
 			@endphp
 
 			<article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden hover:shadow-md transition-all duration-300">
@@ -230,8 +239,11 @@
 							<p class="font-semibold text-gray-800">{{ $cantidadDisplay }} {{ $unidadLabel }}</p>
 						</div>
 						<div>
-							<p class="text-gray-500 mb-1">Pago</p>
-							<p class="font-semibold text-gray-800">$ {{ number_format((float) $novedad->pago, 0, ',', '.') }}</p>
+							<p class="text-gray-500 mb-1">{{ $pagoLabel }}</p>
+							<p class="font-semibold {{ $pagoColorClass }}">$ {{ number_format($pagoDisplay, 0, ',', '.') }}</p>
+							@if($esInformativo && (float) $novedad->pago <= 0)
+								<p class="text-[10px] text-amber-600 mt-0.5">Reduce días trabajados</p>
+							@endif
 						</div>
 					</div>
 				</div>
@@ -292,14 +304,48 @@
 		const deleteUrlTemplate = @json(route('novedades.destroy', ['id_novedad' => '__ID__']));
 		const previewCalculationUrl = @json(route('novedades.calculo.preview'));
 		const empleadosApiUrl = @json(url('/api/empleados'));
+		const closedPeriods = @json($periodosCerrados ?? []);
 
-		console.log('Update URL Template:', updateUrlTemplate);
 		console.log('Delete URL Template:', deleteUrlTemplate);
+		
+		// ── Early Global Assignment for Buttons ──
+		window.__openNoveltyModal = () => {
+			const m = document.getElementById('novelty-modal');
+			if (m) {
+				m.classList.remove('hidden');
+				m.classList.add('flex');
+			}
+		};
+		window.__closeNoveltyModal = () => {
+			const m = document.getElementById('novelty-modal');
+			if (m) {
+				m.classList.remove('flex');
+				m.classList.add('hidden');
+			}
+		};
+		window.__openEditModal = () => {
+			const m = document.getElementById('edit-novelty-modal');
+			if (m) {
+				m.classList.remove('hidden');
+				m.classList.add('flex');
+			}
+		};
+		window.__closeEditModal = () => {
+			const m = document.getElementById('edit-novelty-modal');
+			if (m) {
+				m.classList.remove('flex');
+				m.classList.add('hidden');
+			}
+		};
 
 		const modal = document.getElementById('novelty-modal');
 		const addNoveltyBtn = document.getElementById('add-novelty-btn');
 		const cancelBtn = document.getElementById('cancel-btn');
 		const closeModalBtn = document.getElementById('close-modal-btn');
+		
+		addNoveltyBtn?.addEventListener('click', window.__openNoveltyModal);
+		cancelBtn?.addEventListener('click', window.__closeNoveltyModal);
+		closeModalBtn?.addEventListener('click', window.__closeNoveltyModal);
 
 		const form = document.getElementById('novelty-form');
 		const employeeSearch = document.getElementById('employee-search');
@@ -648,12 +694,17 @@
 			if (!estimatedValueElement || !estimatedNoteElement) return;
 
 			const doc = docEmpleadoInput.value;
-			const unit = getSelectedCreateUnit();
+			const unit = getSelectedCreateUnit() || 'dias';
 			let cantidad = getCreateCantidad();
-			const tipo = normalizeNoveltyType(noveltyType.value || '');
+			// Fallback: leer directamente del input si getCreateCantidad retornó 0
+			if (cantidad === 0 && quantityDaysInput && quantityDaysInput.value) {
+				cantidad = Number(quantityDaysInput.value) || 0;
+			}
+			const tipo = noveltyType.value || '';
 			const tipoNormalizado = normalizeNoveltyType(tipo);
 			const esAutomatica = isAutomaticNoveltyType(tipoNormalizado);
 			const esRemunerada = Boolean(licenciaRemuneradaInput?.checked);
+			const esInformativo = ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC', 'LIC'].includes(tipoNormalizado) && !esRemunerada;
 			const tipoLicencia = tipoLicenciaInput?.value || '';
 			const tipoIncapacidad = tipoIncapacidadInput?.value || '';
 			const certificadoMedico = Boolean(certificadoMedicoInput?.checked);
@@ -663,12 +714,28 @@
 			const salarioBase = Number(salarioBaseInput?.value || 0);
 			const noCantidad = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(tipoNormalizado);
 
-			updateNatureBadge(noveltyNatureBadge, tipo, esRemunerada);
-			const paymentValue = !esAutomatica && paymentInput.value ? getPaymentNumber() : NaN;
+			console.log('[DIAG-CREATE] updateCreateEstimatedValue:', { doc, unit, cantidad, tipo, tipoNormalizado, esAutomatica, esInformativo, salarioBase, noCantidad });
 
-			if (!esAutomatica && Number.isFinite(paymentValue) && paymentValue >= 0) {
-				estimatedNoteElement.textContent = 'Se está usando el pago manual ingresado (cálculo respaldado por backend).';
+			updateNatureBadge(noveltyNatureBadge, tipo, esRemunerada);
+
+			// ── Cálculo informativo local PRIORITARIO (no depende del backend) ──
+			// Se ejecuta ANTES de cualquier validación para que el usuario vea el valor al escribir días
+			if (esInformativo && salarioBase > 0 && cantidad > 0) {
+				const localValorDia = salarioBase / 30;
+				const localValorHora = salarioBase / 240;
+				const valorInformativo = (unit === 'dias' ? localValorDia * cantidad : 0)
+					+ (unit === 'horas' ? localValorHora * cantidad : 0);
+
+				estimatedValueElement.textContent = formatCurrency(valorInformativo);
+				if (noveltyNatureBadge) {
+					noveltyNatureBadge.textContent = 'Naturaleza: DEDUCCIÓN (INF)';
+					noveltyNatureBadge.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
+				}
+				estimatedNoteElement.textContent = 'DEDUCCIÓN INFORMATIVA: El descuento real se aplica reduciendo los días trabajados en la nómina. Valor aprox. dejado de percibir: ' + formatCurrency(valorInformativo);
+				return;
 			}
+
+			const paymentValue = !esAutomatica && paymentInput.value ? getPaymentNumber() : NaN;
 
 			if (!esAutomatica) {
 				estimatedValueElement.textContent = formatCurrency(Number.isFinite(paymentValue) ? paymentValue : 0);
@@ -701,13 +768,17 @@
 					salarioBase,
 				});
 
-				estimatedValueElement.textContent = formatCurrency(result.valor || 0);
 				const isDevengado = (result.operacion || '').toLowerCase() === 'devengado';
+				const valorMostrar = result.valor || 0;
+				
+				estimatedValueElement.textContent = formatCurrency(valorMostrar);
+				
 				updateNatureBadge(noveltyNatureBadge, result.tipo_movimiento === 'sin_movimiento' ? 'TDE' : (result.operacion === 'devengado' ? 'VST' : 'SLN'), esRemunerada);
 				if (esAutomatica) {
-					estimatedNoteElement.textContent = tipoNormalizado === 'LMAT'
+					const note = tipoNormalizado === 'LMAT'
 						? 'Esta novedad se calcula automáticamente según el salario del empleado y los días registrados.'
 						: 'Esta novedad se calcula automáticamente según el salario del empleado y la cantidad de días u horas registradas.';
+					estimatedNoteElement.textContent = note;
 				} else {
 					estimatedNoteElement.textContent = isDevengado
 						? 'Cálculo validado en backend. Naturaleza: DEVENGADO (suma al salario).'
@@ -729,13 +800,14 @@
 			const tipoNormalizado = normalizeNoveltyType(tipo);
 			const esAutomatica = isAutomaticNoveltyType(tipoNormalizado);
 			const esRemunerada = Boolean(editLicenciaRemuneradaInput?.checked);
+			const esInformativo = ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC', 'LIC'].includes(tipoNormalizado) && !esRemunerada;
 			const tipoLicencia = editTipoLicenciaInput?.value || '';
 			const tipoIncapacidad = editTipoIncapacidadInput?.value || '';
 			const certificadoMedico = Boolean(editCertificadoMedicoInput?.checked);
 			const idEps = editEpsIdInput?.value || '';
 			const idAfp = editAfpIdInput?.value || '';
 			const idArl = editArlIdInput?.value || '';
-			const salarioBase = Number(salarioBaseInput?.value || 0);
+			const salarioBase = Number(editSalarioBaseInput?.value || 0);
 			const noCantidad = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(tipoNormalizado);
 
 			updateNatureBadge(editNoveltyNatureBadge, tipo, esRemunerada);
@@ -758,6 +830,20 @@
 				return;
 			}
 
+			// ── Cálculo informativo local (no depende del backend) ──
+			if (esInformativo && salarioBase > 0 && cantidad > 0) {
+				const localValorDia = salarioBase / 30;
+				const localValorHora = salarioBase / 240;
+				const valorInformativo = (unit === 'dias' ? localValorDia * cantidad : 0)
+					+ (unit === 'horas' ? localValorHora * cantidad : 0);
+
+				editEstimatedValueElement.textContent = formatCurrency(valorInformativo);
+				editNoveltyNatureBadge.textContent = 'Naturaleza: DEDUCCIÓN (INF)';
+				editNoveltyNatureBadge.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
+				editEstimatedNoteElement.textContent = 'DEDUCCIÓN INFORMATIVA: El descuento real se aplica reduciendo los días trabajados en la nómina. Valor aprox. dejado de percibir: ' + formatCurrency(valorInformativo);
+				return;
+			}
+
 			try {
 				const result = await fetchCalculationPreview({
 					doc,
@@ -776,13 +862,17 @@
 					salarioBase,
 				});
 
-				editEstimatedValueElement.textContent = formatCurrency(result.valor || 0);
 				const isDevengado = (result.operacion || '').toLowerCase() === 'devengado';
+				const valorMostrar = result.valor || 0;
+				
+				editEstimatedValueElement.textContent = formatCurrency(valorMostrar);
+				
 				updateNatureBadge(editNoveltyNatureBadge, result.tipo_movimiento === 'sin_movimiento' ? 'TDE' : (result.operacion === 'devengado' ? 'VST' : 'SLN'), esRemunerada);
 				if (esAutomatica) {
-					editEstimatedNoteElement.textContent = tipoNormalizado === 'LMAT'
+					const note = tipoNormalizado === 'LMAT'
 						? 'Esta novedad se calcula automáticamente según el salario del empleado y los días registrados.'
 						: 'Esta novedad se calcula automáticamente según el salario del empleado y la cantidad de días u horas registradas.';
+					editEstimatedNoteElement.textContent = note;
 				} else {
 					editEstimatedNoteElement.textContent = isDevengado
 						? 'Cálculo validado en backend. Naturaleza: DEVENGADO (suma al salario).'
@@ -844,6 +934,14 @@
 			const doc = String(employee.doc || '').trim();
 			docEmpleadoInput.value = doc;
 			salarioBaseInput.value = Number(employee.salario_base || 0) > 0 ? String(employee.salario_base) : '';
+			
+			// Actualizar saldo de vacaciones para el modal de creación
+			const vacBalance = Number(employee.vacaciones_balance || 0);
+			const vacInput = document.getElementById('vacaciones-balance');
+			const vacDisplay = document.getElementById('vacaciones-balance-display');
+			if (vacInput) vacInput.value = vacBalance;
+			if (vacDisplay) vacDisplay.textContent = vacBalance.toFixed(2);
+
 			const fullName = toTitleCase(employee.nombre_completo || '');
 			employeeSearch.value = `${fullName} - ${doc}`.trim();
 			employeeNameInput.value = toTitleCase(employee.nombres || fullName || '');
@@ -1168,6 +1266,12 @@
 			const forceDaysOnly = ['LMAT', 'LPAT', 'VAC', 'SLN', 'LIC'].includes(type) || noCantidad;
 			const maxDays = getMaxDaysByType(type);
 
+			// Mostrar/Ocultar info de balance de vacaciones
+			const vacBalanceInfo = document.getElementById('vacaciones-balance-info');
+			if (vacBalanceInfo) {
+				vacBalanceInfo.classList.toggle('hidden', type !== 'VAC');
+			}
+
 			if (forceDaysOnly && createUnitDaysRadio) {
 				createUnitDaysRadio.checked = true;
 			}
@@ -1481,10 +1585,12 @@
 			}
 		}
 
-		updateCreateQuantityMode();
-		updateLicenciaRemuneradaVisibility();
-		toggleCreateManualPayment();
-		updateCreateEstimatedValue();
+		try {
+			updateCreateQuantityMode();
+			updateLicenciaRemuneradaVisibility();
+			toggleCreateManualPayment();
+			updateCreateEstimatedValue();
+		} catch (e) { console.warn('Error during create init:', e); }
 
 		startDateInput?.addEventListener('change', validateDateRange);
 		endDateInput?.addEventListener('change', validateDateRange);
@@ -1493,22 +1599,33 @@
 		// ── Auto-fill fecha_fin based on tipo novedad duration ─────────────────
 		const DURACIONES_FIJAS = { LMAT: 126, LPAT: 14, VAC: 15, LIC: 30 };
 
-		const autoFillFechaFin = (tipoInput, fechaInicioInput, fechaFinInput) => {
+		const autoFillFechaFin = (tipoInput, fechaInicioInput, fechaFinInput, cantidadInput = null) => {
 			const tipo = normalizeNoveltyType(tipoInput?.value || '');
-			const duracion = DURACIONES_FIJAS[tipo];
+			const duracionFija = DURACIONES_FIJAS[tipo];
 			const fechaInicio = fechaInicioInput?.value;
 			
-			// Solo ejecutar si hay duración fija Y hay fecha inicio
-			if (!duracion || !fechaInicio) return;
+			if (!fechaInicio) return;
+
+			let dias = 0;
+			if (duracionFija) {
+				dias = duracionFija;
+			} else if (cantidadInput) {
+				// Para tipos con días editables (SLN, VAC, IGE, etc.)
+				const unit = getSelectedCreateUnit(); // O getSelectedEditUnit si estamos en edit
+				// Nota: Para simplificar, asumimos que si hay cantidadInput y es dias, lo usamos
+				const val = Number(cantidadInput.value || 0);
+				if (val > 0) dias = val;
+			}
+			
+			if (dias <= 0) return;
 			
 			try {
 				const fin = new Date(fechaInicio);
-				fin.setDate(fin.getDate() + duracion - 1);
+				fin.setDate(fin.getDate() + dias - 1);
 				const yyyy = fin.getFullYear();
 				const mm = String(fin.getMonth() + 1).padStart(2, '0');
 				const dd = String(fin.getDate()).padStart(2, '0');
 				fechaFinInput.value = `${yyyy}-${mm}-${dd}`;
-				console.log(`Auto-fill fecha_fin: ${tipo} (${duracion} días) → ${yyyy}-${mm}-${dd}`);
 			} catch (error) {
 				console.warn('Error al calcular fecha_fin:', error);
 			}
@@ -1517,19 +1634,26 @@
 		// Listeners para auto-cálculo de fecha_fin
 		if (startDateInput) {
 			startDateInput.addEventListener('change', () => {
-				autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+				autoFillFechaFin(noveltyType, startDateInput, endDateInput, quantityDaysInput);
 				validateDateRange();
+				updateCreateEstimatedValue();
 			});
 			startDateInput.addEventListener('input', () => {
-				autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+				autoFillFechaFin(noveltyType, startDateInput, endDateInput, quantityDaysInput);
+			});
+		}
+
+		if (quantityDaysInput) {
+			quantityDaysInput.addEventListener('input', () => {
+				autoFillFechaFin(noveltyType, startDateInput, endDateInput, quantityDaysInput);
+				updateCreateEstimatedValue();
 			});
 		}
 
 		if (noveltyType) {
 			noveltyType.addEventListener('change', () => {
-				// Si hay fecha_inicio, recalcular fecha_fin
 				if (startDateInput?.value) {
-					autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+					autoFillFechaFin(noveltyType, startDateInput, endDateInput, quantityDaysInput);
 				}
 				// Mostrar mensaje si esta novedad tiene duración fija
 				const tipo = normalizeNoveltyType(noveltyType.value || '');
@@ -1538,8 +1662,11 @@
 					if (duracion) {
 						paymentAutoMessage.classList.toggle('hidden', false);
 						paymentAutoMessage.textContent = `Esta novedad tiene duración fija de ${duracion} días. La fecha fin se calculará automáticamente.`;
+					} else {
+						paymentAutoMessage.classList.toggle('hidden', true);
 					}
 				}
+				updateCreateEstimatedValue();
 			});
 		}
 
@@ -1602,19 +1729,54 @@
 			editEmployeeNameInput.value = toTitleCase(data.nombres || '');
 			editEmployeeLastnameInput.value = toTitleCase(data.apellidos || '');
 			editNoveltyTypeInput.value = normalizeNoveltyType(data.tipo || '');
+			
 			if (editSalarioBaseInput) {
 				editSalarioBaseInput.value = data.salarioBase || '0';
 			}
+
+			// Manejo de saldo de vacaciones
+			const vacBalance = Number(data.vacacionesBalance || 0);
+			if (editVacacionesBalanceInput) editVacacionesBalanceInput.value = vacBalance;
+			if (editVacacionesBalanceDisplay) editVacacionesBalanceDisplay.textContent = vacBalance.toFixed(2);
+			if (editVacacionesBalanceInfo) {
+				editVacacionesBalanceInfo.classList.toggle('hidden', data.tipo !== 'VAC' || !data.vacacionesBalance);
+			}
+
 			if (editLicenciaRemuneradaInput) {
 				editLicenciaRemuneradaInput.checked = String(data.licenciaRemunerada ?? '1') !== '0';
 			}
+
 			const unit = data.unidad || 'dias';
 			const unitRadio = document.querySelector(`#edit-novelty-form input[name="unidad_cantidad"][value="${unit}"]`);
 			if (unitRadio) unitRadio.checked = true;
+
 			editQuantityDaysInput.value = data.dias || (unit === 'dias' ? (data.cantidad || '') : '');
 			editQuantityHoursInput.value = data.horas || (unit === 'horas' ? (data.cantidad || '') : '');
 			editStartDateInput.value = data.fechaInicio || '';
 			editEndDateInput.value = data.fechaFin || '';
+
+			// ── Lógica de Periodos Cerrados (Bloqueo) ──────────────────────────
+			const fechaInicioVal = data.fechaInicio || '';
+			const isClosed = closedPeriods?.some(p => {
+				if (!fechaInicioVal || !p.fecha_inicio || !p.fecha_fin) return false;
+				return fechaInicioVal >= p.fecha_inicio && fechaInicioVal <= p.fecha_fin;
+			});
+
+			if (editStartDateInput) {
+				editStartDateInput.readOnly = isClosed;
+				if (isClosed) {
+					editStartDateInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+					editStartDateInput.title = 'No se puede editar la fecha de inicio de un periodo cerrado';
+				} else {
+					editStartDateInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+					editStartDateInput.title = '';
+				}
+			}
+			if (editStartDateLock) editStartDateLock.classList.toggle('hidden', !isClosed);
+			if (editStartDateWarning) editStartDateWarning.classList.toggle('hidden', !isClosed);
+			if (deleteNovedadBtn) deleteNovedadBtn.classList.toggle('hidden', isClosed);
+			// ──────────────────────────────────────────────────────────────────
+
 			if (editObservacionesInput) {
 				editObservacionesInput.value = data.observaciones || '';
 			}
@@ -1652,6 +1814,7 @@
 			if (deleteForm && data?.id) {
 				deleteForm.action = deleteUrlTemplate.replace('__ID__', String(data.id));
 			}
+
 			updateEditQuantityMode();
 			updateEditLicenciaRemuneradaVisibility();
 			toggleEditManualPayment();
@@ -1691,6 +1854,7 @@
 					idAfp: editButton.dataset.idAfp,
 					idArl: editButton.dataset.idArl,
 					observaciones: editButton.dataset.observaciones,
+					vacacionesBalance: editButton.dataset.vacacionesBalance,
 				});
 				openEditModal();
 			} catch (error) {
@@ -1732,8 +1896,11 @@
 
 			return Boolean(result.isConfirmed);
 		}
-
 		return confirm('¿Seguro que deseas eliminar esta novedad? Esta acción no se puede deshacer.');
+		};
+
+		// ── Exponer funciones a window para compatibilidad con onclick ──
+		window.__openEditByButton = (button) => {
 			if (!button) return;
 			try {
 				clearAllEditErrors();
@@ -1759,19 +1926,37 @@
 					idAfp: button.dataset.idAfp,
 					idArl: button.dataset.idArl,
 					observaciones: button.dataset.observaciones,
+					vacacionesBalance: button.dataset.vacacionesBalance,
 				});
 				openEditModal();
 			} catch (error) {
-				console.error('Error al abrir modal de edición:', error);
-				alert('Error al abrir el modal: ' + error.message);
+				console.error('Error al abrir modal de edición (onclick):', error);
 			}
 		};
 
 		window.__deleteNovedadByButton = async (button) => {
 			if (!button) return;
 			const id = button.dataset.novedadId;
-			if (!id || !deleteForm) {
-				console.error('No se encontró ID o formulario para eliminar la novedad.');
+			const fechaInicio = button.dataset.fechaInicio;
+			if (!id) return;
+
+			// Validar periodo cerrado
+			const isClosed = closedPeriods?.some(p => {
+				if (!fechaInicio || !p.fecha_inicio || !p.fecha_fin) return false;
+				return fechaInicio >= p.fecha_inicio && fechaInicio <= p.fecha_fin;
+			});
+
+			if (isClosed) {
+				if (window.Swal) {
+					Swal.fire({
+						icon: 'error',
+						title: 'Acción no permitida',
+						text: 'No se puede eliminar esta novedad porque pertenece a un periodo ya cerrado.',
+						confirmButtonColor: '#1565C0'
+					});
+				} else {
+					alert('No se puede eliminar esta novedad porque pertenece a un periodo ya cerrado.');
+				}
 				return;
 			}
 
@@ -1782,12 +1967,12 @@
 					deleteForm.submit();
 				}
 			} catch (error) {
-				console.error('Error al eliminar:', error);
-				alert('Error al eliminar: ' + error.message);
+				console.error('Error al eliminar (onclick):', error);
 			}
 		};
 
 		deleteNovedadBtn?.addEventListener('click', async () => {
+			// El botón en el modal se oculta/muestra preventivamente, pero agregamos validación aquí también
 			const confirmed = await confirmDeleteNovedad();
 			if (confirmed) {
 				if (!deleteForm?.action) {
@@ -1807,8 +1992,29 @@
 			console.log('Delete button clicked', deleteButton.dataset);
 
 			const id = deleteButton.dataset.novedadId;
+			const fechaInicio = deleteButton.dataset.fechaInicio;
 			if (!id) {
 				console.error('No se encontró ID de novedad');
+				return;
+			}
+
+			// Validar si está en un periodo cerrado (misma lógica que el candado)
+			const isClosed = closedPeriods?.some(p => {
+				if (!fechaInicio || !p.fecha_inicio || !p.fecha_fin) return false;
+				return fechaInicio >= p.fecha_inicio && fechaInicio <= p.fecha_fin;
+			});
+
+			if (isClosed) {
+				if (window.Swal) {
+					Swal.fire({
+						icon: 'error',
+						title: 'Acción no permitida',
+						text: 'No se puede eliminar esta novedad porque parte de ella ya ha sido liquidada en un periodo cerrado.',
+						confirmButtonColor: '#1565C0'
+					});
+				} else {
+					alert('No se puede eliminar esta novedad porque parte de ella ya ha sido liquidada en un periodo cerrado.');
+				}
 				return;
 			}
 
@@ -1901,6 +2107,16 @@
 					markInvalid(quantityDaysInput);
 				}
 
+				// Validación de saldo de vacaciones
+				if (tipo === 'VAC') {
+					const balance = Number(document.getElementById('vacaciones-balance')?.value || 0);
+					if (currentDays > balance) {
+						isValid = false;
+						showFieldError('quantityDays', `El empleado solo tiene ${balance.toFixed(2)} días de vacaciones disponibles.`);
+						markInvalid(quantityDaysInput);
+					}
+				}
+
 				if (tipo === 'LMAT' && currentDays !== 126) {
 					isValid = false;
 					showFieldError('quantityDays', 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.');
@@ -1915,7 +2131,7 @@
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
 						: (tipo === 'LPAT'
 							? 'Para licencia de paternidad debe ingresar máximo 14 días.'
-						: 'La cantidad de días no puede ser negativa.');
+							: 'La cantidad de días no puede ser negativa.'));
 					markInvalid(quantityDaysInput);
 				} else if (currentDays > maxDays) {
 					isValid = false;
@@ -1923,7 +2139,7 @@
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
 						: (tipo === 'LPAT'
 							? 'Para licencia de paternidad la cantidad máxima es 14 días.'
-						: 'La cantidad de días no puede superar 30.');
+							: 'La cantidad de días no puede superar 30.'));
 					markInvalid(quantityDaysInput);
 				}
 			}
@@ -2032,6 +2248,16 @@
 					markInvalid(editQuantityDaysInput);
 				}
 
+				// Validación de saldo de vacaciones (Edición)
+				if (tipo === 'VAC') {
+					const balance = Number(document.getElementById('edit-vacaciones-balance')?.value || 0);
+					if (currentDays > balance) {
+						isValid = false;
+						showEditFieldError('quantityDays', `El empleado solo tiene ${balance.toFixed(2)} días de vacaciones disponibles.`);
+						markInvalid(editQuantityDaysInput);
+					}
+				}
+
 				if (tipo === 'LMAT' && currentDays !== 126) {
 					isValid = false;
 					showEditFieldError('quantityDays', 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.');
@@ -2046,7 +2272,7 @@
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
 						: (tipo === 'LPAT'
 							? 'Para licencia de paternidad debe ingresar máximo 14 días.'
-						: 'La cantidad de días no puede ser negativa.');
+						: 'La cantidad de días no puede ser negativa.'));
 					markInvalid(editQuantityDaysInput);
 				} else if (currentDays > maxDays) {
 					isValid = false;
@@ -2054,7 +2280,7 @@
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
 						: (tipo === 'LPAT'
 							? 'Para licencia de paternidad la cantidad máxima es 14 días.'
-						: 'La cantidad de días no puede superar 30.');
+						: 'La cantidad de días no puede superar 30.'));
 					markInvalid(editQuantityDaysInput);
 				}
 			}
@@ -2103,6 +2329,10 @@
 			}
 		});
 
+		if (shouldOpenModal) {
+			window.__openNoveltyModal && window.__openNoveltyModal();
+		}
+
 		if (shouldOpenEditModal && oldEditData.id) {
 			const sourceButton = document.querySelector(`.open-edit-modal[data-novedad-id="${oldEditData.id}"]`);
 			if (sourceButton) {
@@ -2135,5 +2365,39 @@
 			}
 		}
 	});
+
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: '¡Éxito!',
+            text: '{{ session('success') }}',
+            timer: 4000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            position: 'top-end',
+            toast: true
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: '<span style="color: white; font-weight: bold;">Atención</span>',
+            html: '<span style="color: #E2E8F0;">{{ session("error") }}</span>',
+            timer: 6000,
+            timerProgressBar: true,
+            position: 'top-end',
+            toast: true,
+            showConfirmButton: false,
+            background: '#1565C0 url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.05\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+            iconColor: 'white',
+            didOpen: (toast) => {
+                const b = toast.querySelector('.swal2-timer-progress-bar');
+                if (b) {
+                    b.style.backgroundColor = '#10B981'; // Verde Marca
+                }
+            }
+        });
+    @endif
 </script>
 @endpush

@@ -55,14 +55,31 @@ class CalculoNovedadService
 
         // Intentar primero con el período activo; si no hay salario para ese período,
         // usar el salario más reciente disponible del empleado.
+        $salario = null;
         if ($activePeriodId > 0) {
             $salario = (clone $baseQuery)->where('salario.id_periodo', $activePeriodId)->first();
-            if ($salario) {
-                return $salario;
+        }
+
+        if (!$salario) {
+            $salario = $baseQuery->first();
+        }
+
+        // Fallback: si no hay absolutamente ningún registro en la tabla 'salario',
+        // buscamos al menos el contrato para obtener el salario_base.
+        if (!$salario) {
+            $contrato = Contrato::query()
+                ->where('doc', $empleadoId)
+                ->where('id_empresa', $empresaId)
+                ->first();
+            
+            if ($contrato) {
+                // Devolvemos un objeto Salario "fake" o simplemente nos aseguramos que resolverSalarioBase lo entienda
+                // Mejor aún: devolvemos el contrato o null y ajustamos resolverSalarioBase.
+                return null; 
             }
         }
 
-        return $baseQuery->first();
+        return $salario;
     }
 
     public function resolverDias(array $data): float
@@ -127,9 +144,11 @@ class CalculoNovedadService
                 return $resultado;
 
             case 'SLN':
-                $resultado['valor_calculado'] = ($valorDia * $dias) + ($valorHora * $horas);
-                $resultado['tipo_movimiento'] = self::OPERACION_DESCUENTO;
+                // SLN no genera deducción monetaria; reduce los días trabajados en nómina.
+                $resultado['valor_calculado'] = 0.0;
+                $resultado['tipo_movimiento'] = self::OPERACION_SIN_MOVIMIENTO;
                 $resultado['afecta_ibc'] = true;
+                $resultado['dias_suspension'] = $dias;
                 return $resultado;
 
             case 'IGE':

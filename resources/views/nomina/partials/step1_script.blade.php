@@ -45,9 +45,10 @@
 
     function actualizarResumenProporcional() {
         const salarioBase = parseCOP($('salario_base')?.value || 0);
+        const maxDiasSln = Number(diasInput?.dataset.maxSln || 30);
         let dias = Number(diasInput?.value || 0);
         if (!Number.isFinite(dias)) dias = 0;
-        dias = Math.max(0, Math.min(30, Math.trunc(dias)));
+        dias = Math.max(0, Math.min(maxDiasSln, Math.trunc(dias)));
         if (diasInput) diasInput.value = String(dias);
 
         const valorDia = salarioBase / 30;
@@ -391,17 +392,24 @@
 
     function validateDiasTrabajados() {
         if (!diasInput) return true;
+        const maxDiasSln = Number(diasInput.dataset.maxSln || 30);
+        const diasSln = Number(diasInput.dataset.diasSln || 0);
         let dias = Number(diasInput.value || 0);
+
         if (!Number.isFinite(dias)) {
             markError(diasInput);
-            showDiasError('Los dias trabajados deben ser un numero valido entre 0 y 30.');
+            showDiasError(`Los dias trabajados deben ser un numero valido entre 0 y ${maxDiasSln}.`);
             return false;
         }
 
         dias = Math.trunc(dias);
-        if (dias < 0 || dias > 30) {
+        if (dias < 0 || dias > maxDiasSln) {
             markError(diasInput);
-            showDiasError('Los dias trabajados deben estar entre 0 y 30.');
+            if (diasSln > 0 && dias > maxDiasSln) {
+                showDiasError(`El empleado tiene ${diasSln} días de suspensión (SLN). El máximo permitido es ${maxDiasSln} días.`);
+            } else {
+                showDiasError(`Los dias trabajados deben estar entre 0 y ${maxDiasSln}.`);
+            }
             return false;
         }
 
@@ -455,7 +463,8 @@
 
     if (diasInput) {
         diasInput.addEventListener('input', () => {
-            enforceNumericInput(diasInput, 30);
+            const maxDiasSln = Number(diasInput.dataset.maxSln || 30);
+            enforceNumericInput(diasInput, maxDiasSln);
             hideErrors();
             markNeutral(diasInput);
             actualizarResumenProporcional();
@@ -465,7 +474,8 @@
             e.preventDefault();
             const text = (e.clipboardData || window.clipboardData).getData('text');
             diasInput.value = String(text || '');
-            enforceNumericInput(diasInput, 30);
+            const maxDiasSln = Number(diasInput.dataset.maxSln || 30);
+            enforceNumericInput(diasInput, maxDiasSln);
             hideErrors();
             markNeutral(diasInput);
             actualizarResumenProporcional();
@@ -488,7 +498,8 @@
                 if (!employeeValid) {
                     showAlert('Debes seleccionar un empleado válido de la lista.', 'Empleado invalido');
                 } else if (!diasValid) {
-                    showAlert('Ingresa los dias trabajados entre 0 y 30.', 'Dias invalidos');
+                    const maxDiasSln = Number(diasInput?.dataset.maxSln || 30);
+                    showAlert(`Ingresa los dias trabajados entre 0 y ${maxDiasSln}.`, 'Dias invalidos');
                 } else if (!fechaValid) {
                     showAlert('La fecha de pago es obligatoria y no puede ser menor a hoy.', 'Fecha invalida');
                 }

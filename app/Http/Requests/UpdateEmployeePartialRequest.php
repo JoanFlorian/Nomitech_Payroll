@@ -305,6 +305,40 @@ class UpdateEmployeePartialRequest extends FormRequest
     {
         $validator->after(function (\Illuminate\Validation\Validator $validator) {
             $doc = (string) ($this->route('doc') ?? $this->input('doc') ?? '');
+            $id_rol = $this->input('id_rol');
+
+            if ($id_rol && $doc !== '') {
+                $user = \App\Models\Usuario::find($doc);
+                $id_empresa = session('empresa_id');
+                $empresa = \App\Models\Empresa::find($id_empresa);
+                
+                if ($user && $empresa) {
+                    $planService = app(\App\Services\PlanService::class);
+                    $newRole = \App\Models\Rol::find($id_rol);
+                    $oldRole = $user->rol;
+
+                    if ($newRole) {
+                        // Check Admin Limit
+                        if (in_array($newRole->nombre, ['Representante Legal', 'Administrador', 'Auditor de Nómina'])) {
+                            if (!$oldRole || !in_array($oldRole->nombre, ['Representante Legal', 'Administrador', 'Auditor de Nómina'])) {
+                                $check = $planService->checkAdminLimit($empresa);
+                                if (!$check['can']) {
+                                    $validator->errors()->add('id_rol', $check['reason']);
+                                }
+                            }
+                        }
+                        // Check Auxiliary Limit
+                        if ($newRole->nombre === 'Auxiliar de Nómina') {
+                            if (!$oldRole || $oldRole->nombre !== 'Auxiliar de Nómina') {
+                                $check = $planService->checkAuxiliaryLimit($empresa);
+                                if (!$check['can']) {
+                                    $validator->errors()->add('id_rol', $check['reason']);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             $contratoActual = null;
             if ($doc !== '') {

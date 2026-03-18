@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Role;
+use App\Models\Rol;
 use App\Models\Permission;
 use App\Models\Empresa;
 
@@ -40,27 +40,28 @@ class PermissionProfileSeeder extends Seeder
         $auxiliarIds = Permission::whereIn('name', $auxiliarPermissions)->pluck('id')->toArray();
         $auditorIds = Permission::whereIn('name', $auditorPermissions)->pluck('id')->toArray();
 
-        // Aplicar a todas las empresas existentes
-        $empresas = Empresa::all();
+        // Admin permissions (all)
+        $adminIds = Permission::pluck('id')->toArray();
 
-        foreach ($empresas as $empresa) {
-            // Auxiliar
-            $auxiliarRole = Role::where('name', 'Auxiliar de Nómina')
-                                ->where('company_id', $empresa->id_empresa)
-                                ->first();
-            
-            if ($auxiliarRole) {
-                $auxiliarRole->permissions()->sync($auxiliarIds);
-            }
+        // Assign to global roles
+        $auxiliarRole = Rol::where('nombre', 'Auxiliar de Nómina')->first();
+        if ($auxiliarRole) {
+            $auxiliarRole->permissions()->sync($auxiliarIds);
+        }
 
-            // Auditor
-            $auditorRole = Role::where('name', 'Auditor de Nómina')
-                               ->where('company_id', $empresa->id_empresa)
-                               ->first();
+        $auditorRole = Rol::where('nombre', 'Auditor de Nómina')->first();
+        if ($auditorRole) {
+            $auditorRole->permissions()->sync($auditorIds);
+        }
 
-            if ($auditorRole) {
-                $auditorRole->permissions()->sync($auditorIds);
-            }
+        $adminRole = Rol::where('nombre', 'Administrador')->first();
+        if ($adminRole) {
+            $adminRole->permissions()->sync($adminIds);
+        }
+        
+        $legalRole = Rol::where('nombre', 'Representante Legal')->first();
+        if ($legalRole) {
+            $legalRole->permissions()->sync($adminIds);
         }
     }
 }

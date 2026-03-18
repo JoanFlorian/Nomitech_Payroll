@@ -39,6 +39,8 @@ class DatabaseSeeder extends Seeder
             SubTipoTrabajadorSeeder::class,
             PayrollParametersSeeder::class,
             CajaCompensacionSeeder::class,
+            PermissionSeeder::class,
+            PermissionProfileSeeder::class,
         ]);
     }
 }

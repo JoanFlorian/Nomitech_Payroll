@@ -16,14 +16,20 @@ class NovedadCalculoController extends Controller
         $data = $request->validated();
         $salario = $this->calculoNovedadService->obtenerSalarioEmpleado((string) $data['empleado_id']);
 
-        if (!$salario) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se encontro salario base para el empleado seleccionado.',
-            ], 422);
+        $salarioBase = $this->calculoNovedadService->resolverSalarioBase($salario);
+        
+        // Fallback proactivo: si el servicio no encontró salario en DB,
+        // confiamos en el salario_base enviado desde el frontend para la previsualización.
+        if ($salarioBase <= 0 && isset($data['salario_base']) && $data['salario_base'] > 0) {
+            $salarioBase = (float) $data['salario_base'];
         }
 
-        $salarioBase = $this->calculoNovedadService->resolverSalarioBase($salario);
+        if ($salarioBase <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo determinar el salario base para el cálculo.',
+            ], 422);
+        }
         $resultado = $this->calculoNovedadService->calcularNovedad(array_merge($data, ['salario_base' => $salarioBase]));
         $tipoNovedad = (string) ($resultado['tipo_novedad'] ?? $data['tipo_novedad'] ?? '');
         $operacion = (string) ($resultado['tipo_movimiento'] ?? CalculoNovedadService::OPERACION_SIN_MOVIMIENTO);

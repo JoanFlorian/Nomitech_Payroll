@@ -12,6 +12,7 @@ use App\Models\Salario;
 use App\Models\TipoNovedad;
 use App\Services\CalculoNovedadService;
 use App\Models\PeriodoLiquidacion;
+use App\Services\NominaCalculatorService;
 use Illuminate\Support\Facades\DB;
 
 class NovedadController extends Controller
@@ -34,11 +35,18 @@ class NovedadController extends Controller
         'LIC' => 'LIC - Licencia',
     ];
 
+    /**
+     * Tipos de novedad mutuamente exclusivos: no pueden coexistir en las
+     * mismas fechas para un mismo empleado.
+     */
+    private const TIPOS_EXCLUSIVOS = ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC'];
+
     public function __construct(
         private readonly CalculoNovedadService $calculoNovedadService,
         private readonly \App\Services\NovedadHistorialService $historialService,
         private readonly \App\Services\NovedadFechasService $fechasService,
         private readonly \App\Services\Benefits\BenefitPaymentService $benefitPaymentService,
+        private readonly NominaCalculatorService $calculator,
     ) {
     }
 
@@ -107,9 +115,16 @@ class NovedadController extends Controller
                 });
             })
             ->when($periodoActivo, function ($query) use ($periodoActivo) {
+                // Incluir novedades del periodo o sin periodo AND novedades que se solapen por fecha
                 $query->where(function ($q) use ($periodoActivo) {
                     $q->where('id_periodo', $periodoActivo->id_periodo)
-                      ->orWhereNull('id_periodo');
+                      ->orWhereNull('id_periodo')
+                      ->orWhere(function($sub) use ($periodoActivo) {
+                          $sub->whereNotNull('fecha_inicio')
+                              ->whereNotNull('fecha_fin')
+                              ->whereDate('fecha_inicio', '<=', $periodoActivo->fecha_fin->toDateString())
+                              ->whereDate('fecha_fin', '>=', $periodoActivo->fecha_inicio->toDateString());
+                      });
                 });
             })
             ->where(function ($q) {
@@ -119,12 +134,14 @@ class NovedadController extends Controller
             ->paginate(4)
             ->withQueryString();
 
+        $periodosCerrados = PeriodoLiquidacion::where('estado', PeriodoLiquidacion::ESTADO_CERRADO)->get(['fecha_inicio', 'fecha_fin']);
+
         return view('novedades.index', [
             'novedades' => $novedades,
             'empleadosBusqueda' => $empleadosBusqueda,
             'periodoActivo' => $periodoActivo,
-            'empresaId' => $empresaId,
-            ...$catalogos,
+            'periodosCerrados' => $periodosCerrados,
+            'catalogos' => $this->catalogosNovedad(),
         ]);
     }
 
@@ -261,6 +278,18 @@ class NovedadController extends Controller
             return $this->buildEmpleadoSalarioErrorResponse(true);
         }
 
+        // Validar coexistencia de novedades exclusivas
+        $coexistenciaError = $this->verificarCoexistencia(
+            (string) $data['empleado_id'],
+            strtoupper((string) $data['tipo_novedad']),
+            $data['fecha_inicio'],
+            $data['fecha_fin']
+        );
+        if ($coexistenciaError) {
+            session()->flash('error', $coexistenciaError);
+            return back()->withErrors(['tipo_novedad' => $coexistenciaError])->withInput()->with('open_novedad_modal', true);
+        }
+
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
         $periodo = PeriodoLiquidacion::getActivePeriod();
         $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, $periodo);
@@ -286,6 +315,8 @@ class NovedadController extends Controller
                 return back()->withErrors(['dias' => 'Error al registrar balance de vacaciones: ' . $e->getMessage()])->withInput();
             }
         }
+        
+        $this->refreshPayrollRecalculation((string) $data['empleado_id']);
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se registró correctamente.');
     }
@@ -300,7 +331,36 @@ class NovedadController extends Controller
             return $this->buildEmpleadoSalarioErrorResponse(false);
         }
 
+        // Validar coexistencia de novedades exclusivas (excluyendo la novedad que se está editando)
+        $coexistenciaError = $this->verificarCoexistencia(
+            (string) $data['empleado_id'],
+            strtoupper((string) $data['tipo_novedad']),
+            $data['fecha_inicio'],
+            $data['fecha_fin'],
+            $id_novedad
+        );
+        if ($coexistenciaError) {
+            session()->flash('error', $coexistenciaError);
+            return back()->withErrors(['tipo_novedad' => $coexistenciaError])->withInput();
+        }
+
         $novedadAnterior = clone $novedad;
+
+        // Validar si la fecha_inicio original pertenece a un periodo cerrado
+        if ($novedadAnterior->fecha_inicio) {
+            $periodoCerrado = PeriodoLiquidacion::query()
+                ->where('estado', PeriodoLiquidacion::ESTADO_CERRADO)
+                ->whereDate('fecha_inicio', '<=', $novedadAnterior->fecha_inicio->toDateString())
+                ->whereDate('fecha_fin', '>=', $novedadAnterior->fecha_inicio->toDateString())
+                ->exists();
+
+            if ($periodoCerrado && $novedadAnterior->fecha_inicio->toDateString() !== $data['fecha_inicio']) {
+                $mensaje = 'No se puede modificar la fecha de inicio de esta novedad porque ya ha sido liquidada en un periodo cerrado.';
+                session()->flash('error', $mensaje);
+                return back()->withErrors(['fecha_inicio' => $mensaje])->withInput();
+            }
+        }
+
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
         $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, null);
 
@@ -336,12 +396,30 @@ class NovedadController extends Controller
             }
         }
 
+        $this->refreshPayrollRecalculation((string) $data['empleado_id']);
+
         return redirect()->route('novedades.index')->with('success', 'La novedad se actualizó correctamente.');
     }
 
     public function destroy(int $id_novedad)
     {
         $novedad = Novedad::query()->findOrFail($id_novedad);
+
+        // Validar si la fecha_inicio pertenece a un periodo cerrado
+        if ($novedad->fecha_inicio) {
+            $periodoCerrado = PeriodoLiquidacion::query()
+                ->where('estado', PeriodoLiquidacion::ESTADO_CERRADO)
+                ->whereDate('fecha_inicio', '<=', $novedad->fecha_inicio->toDateString())
+                ->whereDate('fecha_fin', '>=', $novedad->fecha_inicio->toDateString())
+                ->exists();
+
+            if ($periodoCerrado) {
+                $mensaje = 'No se puede eliminar esta novedad porque parte de ella ya ha sido liquidada en un periodo cerrado.';
+                session()->flash('error', $mensaje);
+                return back()->withErrors(['error' => $mensaje]);
+            }
+        }
+
         $this->historialService->registrarEliminacion($novedad);
 
         if (strtoupper($novedad->tipo_novedad_codigo) === 'VAC') {
@@ -353,7 +431,10 @@ class NovedadController extends Controller
                 ->delete();
         }
 
+        $doc = $novedad->empleado_id;
         $novedad->delete();
+
+        $this->refreshPayrollRecalculation((string) $doc);
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se eliminó correctamente.');
     }
@@ -372,8 +453,11 @@ class NovedadController extends Controller
 
     private function buildEmpleadoSalarioErrorResponse(bool $openModal)
     {
+        $message = 'El empleado seleccionado no tiene una nómina activa o salario registrado en el periodo de liquidación actual para asociar la novedad.';
+        session()->flash('error', $message);
+
         $response = back()
-            ->withErrors(['empleado_id' => 'El empleado seleccionado no tiene una nómina registrada para asociar la novedad.'])
+            ->withErrors(['empleado_id' => $message])
             ->withInput();
 
         return $openModal ? $response->with('open_novedad_modal', true) : $response;
@@ -483,6 +567,50 @@ class NovedadController extends Controller
         }
     }
 
+    /**
+     * Verifica que una novedad exclusiva no se solape con otra del mismo grupo.
+     * Retorna un mensaje de error si hay conflicto, o null si todo está bien.
+     */
+    private function verificarCoexistencia(
+        string $empleadoId,
+        string $tipoNovedad,
+        string $fechaInicio,
+        string $fechaFin,
+        ?int $excludeNovedadId = null
+    ): ?string {
+        if (!in_array($tipoNovedad, self::TIPOS_EXCLUSIVOS, true)) {
+            return null;
+        }
+
+        $conflicto = Novedad::query()
+            ->where('empleado_id', $empleadoId)
+            ->whereIn('tipo_novedad_codigo', self::TIPOS_EXCLUSIVOS)
+            ->where(function ($q) {
+                $q->where('estado', '!=', Novedad::ESTADO_CERRADA)
+                  ->orWhereNull('estado');
+            })
+            ->whereDate('fecha_inicio', '<=', $fechaFin)
+            ->whereDate('fecha_fin', '>=', $fechaInicio)
+            ->when($excludeNovedadId, function ($q, $id) {
+                $q->where('id_novedad', '!=', $id);
+            })
+            ->first();
+
+        if (!$conflicto) {
+            return null;
+        }
+
+        $labelConflicto = self::TIPOS_NOVEDAD_LABELS[$conflicto->tipo_novedad_codigo] 
+            ?? $conflicto->tipo_novedad_codigo;
+
+        $fInicio = $conflicto->fecha_inicio ? $conflicto->fecha_inicio->format('d/m/Y') : '?';
+        $fFin = $conflicto->fecha_fin ? $conflicto->fecha_fin->format('d/m/Y') : '?';
+
+        return "No se puede registrar esta novedad porque ya existe una novedad "
+            . "\"{$labelConflicto}\" registrada del {$fInicio} al {$fFin}. "
+            . "Estas novedades no pueden coexistir en el mismo periodo de tiempo.";
+    }
+
     private function catalogosNovedad(): array
     {
         return [
@@ -490,5 +618,49 @@ class NovedadController extends Controller
             'afpList' => Afp::query()->orderBy('nombre')->get(['id_afp', 'nombre']),
             'arlList' => Arl::query()->orderBy('nombre')->get(['id_arl', 'nombre']),
         ];
+    }
+
+    /**
+     * Dispara el recálculo de la nómina del empleado para el periodo activo.
+     */
+    private function refreshPayrollRecalculation(string $doc, ?int $periodoId = null): void
+    {
+        if (!$periodoId) {
+            $periodo = PeriodoLiquidacion::getActivePeriod();
+            if (!$periodo) return;
+            $periodoId = optional($periodo)->id_periodo;
+        }
+
+        $empresaId = (int) session('empresa_id');
+        $contrato = DB::table('contrato')->where('doc', $doc)->where('id_empresa', $empresaId)->first();
+        if (!$contrato) return;
+
+        $salarioRaw = DB::table('salario')
+            ->where('id_contrato', $contrato->id_contrato)
+            ->where('id_periodo', $periodoId)
+            ->first();
+
+        // Si no hay nómina creada, no recalculamos (se creará al liquidar masivamente o individualmente)
+        if (!($salarioRaw instanceof \stdClass)) return;
+
+        // Extraer valores actuales para no perder entradas manuales
+        // EXCLUIMOS dias_trabajados para que el calculador use el valor base (30 o proporcional al contrato)
+        // y reste las novedades vigentes. Si lo pasamos aquí, estaríamos pasando el RESULTADO anterior
+        // como base del nuevo cálculo, lo que causaría que los días no "volvieran a la normalidad".
+        $input = [
+            'fecha_pago' => optional($salarioRaw)->fecha_pago ?? now()->toDateString(),
+            'horas_extra' => (float) ($salarioRaw->horas_extra ?? 0),
+            'recargos' => max(0, (float) ($salarioRaw->valor_horas_extras_recargos ?? 0) - (float) ($salarioRaw->horas_extra ?? 0)),
+            'bonificaciones' => (float) ($salarioRaw->bonificaciones ?? 0),
+            'comisiones' => (float) ($salarioRaw->comisiones ?? 0),
+            'otros_devengos' => (float) ($salarioRaw->otros_devengos ?? 0),
+            'auxilio_transporte' => (float) ($salarioRaw->auxilio_transporte ?? 0),
+            'retencion_fuente' => (float) ($salarioRaw->retencion_fuente ?? 0),
+            'embargo_fiscal' => (float) ($salarioRaw->embargo_fiscal ?? 0),
+            'pension_voluntaria' => (float) ($salarioRaw->pension_voluntaria ?? 0),
+        ];
+
+        // Forzar el guardado usando el servicio de recálculo
+        $this->calculator->guardarNominaEmpleado($contrato->id_contrato, $periodoId, $input);
     }
 }

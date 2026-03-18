@@ -12,21 +12,27 @@
     });
 
     function parseLocalizedNumber(rawValue) {
+        if (typeof rawValue === 'number') return rawValue;
+
         const value = (rawValue || '').toString().trim();
         if (value === '') {
             return NaN;
         }
 
-        // Salary base in COP is handled as integer; strip separators/decimals to avoid cursor-reset issues.
-        const sanitized = value.replace(/\s+/g, '').replace(/[^\d-]/g, '');
-        const isNegative = sanitized.startsWith('-');
-        const digits = sanitized.replace(/-/g, '');
-
-        if (digits === '') {
-            return NaN;
+        // Detectar si es un formato numérico crudo (ej: "1300000.00" de DB)
+        const isRawFloat = /^-?\d+\.\d+$/.test(value);
+        if (isRawFloat) {
+            return parseFloat(value);
         }
 
-        const parsed = Number(isNegative ? `-${digits}` : digits);
+        const isRawInt = /^-?\d+$/.test(value);
+        if (isRawInt) {
+            return parseInt(value, 10);
+        }
+
+        // Limpieza de formato localizado centralizada
+        const sanitized = value.replace(/\s+/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+        const parsed = parseFloat(sanitized);
         return Number.isFinite(parsed) ? parsed : NaN;
     }
 

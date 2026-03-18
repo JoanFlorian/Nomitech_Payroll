@@ -147,6 +147,32 @@ class Step2Request extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $id_rol = $this->input('id_rol');
+            if ($id_rol) {
+                $id_empresa = session('empresa_id');
+                $empresa = \App\Models\Empresa::find($id_empresa);
+                if ($empresa) {
+                    $planService = app(\App\Services\PlanService::class);
+                    $role = \App\Models\Rol::find($id_rol);
+                    if ($role) {
+                        // Check Admin Limit
+                        if (in_array($role->nombre, ['Representante Legal', 'Administrador', 'Auditor de Nómina'])) {
+                            $check = $planService->checkAdminLimit($empresa);
+                            if (!$check['can']) {
+                                $validator->errors()->add('id_rol', $check['reason']);
+                            }
+                        }
+                        // Check Auxiliary Limit
+                        if ($role->nombre === 'Auxiliar de Nómina') {
+                            $check = $planService->checkAuxiliaryLimit($empresa);
+                            if (!$check['can']) {
+                                $validator->errors()->add('id_rol', $check['reason']);
+                            }
+                        }
+                    }
+                }
+            }
+
             $idTipoContrato = (int) $this->input('id_tipo_contrato');
             $salario = (float) $this->input('salario', 0);
             $fechaFin = $this->input('fecha_fin');

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Salario extends Model
 {
     protected $table = 'salario';
+    protected $primaryKey = 'id_salario';
     protected $guarded = [];
 
     // Estados de Salario (Nómina)

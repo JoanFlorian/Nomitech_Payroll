@@ -127,10 +127,12 @@
                         Dias Trabajados <span class="text-red-500">*</span>
                     </label>
                     <input id="dias_trabajados" name="dias_trabajados" type="number"
-                        min="0" max="30" step="1"
+                        min="0" max="{{ $s1['max_dias_trabajados'] ?? 30 }}" step="1"
+                        data-max-sln="{{ $s1['max_dias_trabajados'] ?? 30 }}"
+                        data-dias-sln="{{ $s1['dias_sln'] ?? 0 }}"
                         inputmode="numeric"
                         pattern="[0-9]+"
-                        value="{{ old('dias_trabajados', $s1['dias_trabajados'] ?? 30) }}"
+                        value="{{ old('dias_trabajados', $s1['dias_trabajados'] ?? ($s1['max_dias_trabajados'] ?? 30)) }}"
                         class="w-full border-2 border-gray-300 px-4 py-3 rounded-xl text-sm focus:border-blue-500 focus:outline-none transition bg-white shadow-sm"
                         required>
                     <p id="diasError" class="hidden text-red-600 text-sm mt-2 font-medium"></p>

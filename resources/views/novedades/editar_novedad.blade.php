@@ -113,8 +113,6 @@
                         @enderror
                     </div>
 
-                    {{-- Select de tipo de incapacidad eliminado en edición --}}
-
                     <div id="edit-tipo-licencia-wrap" class="hidden">
                         <label for="edit-tipo-licencia" class="block text-sm font-medium text-gray-700 mb-1">Tipo de licencia</label>
                         <select id="edit-tipo-licencia" name="tipo_licencia" class="w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] transition">
@@ -166,7 +164,13 @@
 
                     <div>
                         <label for="edit-start-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-                        <input id="edit-start-date" name="fecha_inicio" type="date" value="{{ old('fecha_inicio') }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                        <div class="relative">
+                            <input id="edit-start-date" name="fecha_inicio" type="date" value="{{ old('fecha_inicio') }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                            <div id="edit-start-date-lock" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-amber-500" title="Fecha protegida por periodo cerrado">
+                                <span class="material-icons text-[18px]">lock</span>
+                            </div>
+                        </div>
+                        <p id="edit-start-date-warning" class="mt-1 text-[10px] text-amber-600 font-medium hidden">Esta fecha no se puede modificar porque pertenece a un periodo ya liquidado.</p>
                         <p id="edit-start-date-error" class="mt-1 text-xs text-red-600 hidden"></p>
                         @error('fecha_inicio')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -231,191 +235,3 @@
         </form>
     </div>
 </div>
-
-@push('scripts')
-<script>
-(function() {
-    console.log('=== Edit Modal Script Loading ===');
-    
-    const updateUrl = @json(route('novedades.update', ['id_novedad' => '__ID__']));
-    const deleteUrl = @json(route('novedades.destroy', ['id_novedad' => '__ID__']));
-
-    function openEditModal() {
-        console.log('openEditModal called');
-        const modal = document.getElementById('edit-novelty-modal');
-        if (!modal) {
-            console.error('Modal not found: edit-novelty-modal');
-            return;
-        }
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        console.log('Modal opened');
-    }
-
-    function closeEditModal() {
-        const modal = document.getElementById('edit-novelty-modal');
-        if (!modal) return;
-        modal.classList.remove('flex');
-        modal.classList.add('hidden');
-    }
-
-    function openEditByButton(button) {
-        console.log('openEditByButton called', button);
-        if (!button) {
-            console.error('No button provided');
-            return;
-        }
-
-        const id = button.dataset.novedadId || '';
-        console.log('Novedad ID:', id);
-        
-        const editForm = document.getElementById('edit-novelty-form');
-        const deleteForm = document.getElementById('delete-novedad-form');
-        const editNovedadId = document.getElementById('edit-novedad-id');
-
-        const setValue = (elementId, value) => {
-            const el = document.getElementById(elementId);
-            if (el) el.value = value || '';
-        };
-
-        setValue('edit-doc-empleado', button.dataset.doc);
-        setValue('edit-employee-name', button.dataset.nombres);
-        setValue('edit-employee-lastname', button.dataset.apellidos);
-        setValue('edit-employee-doc', button.dataset.doc);
-        setValue('edit-novelty-type', button.dataset.tipo);
-        setValue('edit-quantity-days', button.dataset.dias);
-        setValue('edit-quantity-hours', button.dataset.horas);
-        setValue('edit-start-date', button.dataset.fechaInicio);
-        setValue('edit-end-date', button.dataset.fechaFin);
-        setValue('edit-observaciones', button.dataset.observaciones);
-        setValue('edit-salario-base', button.dataset.salarioBase);
-        setValue('edit-tipo-licencia', button.dataset.tipoLicencia);
-        setValue('edit-tipo-incapacidad', button.dataset.tipoIncapacidad);
-        setValue('edit-eps-id', button.dataset.idEps);
-        setValue('edit-afp-id', button.dataset.idAfp);
-        setValue('edit-arl-id', button.dataset.idArl);
-        setValue('edit-vacaciones-balance', button.dataset.vacacionesBalance);
-
-        const vacBalance = Number(button.dataset.vacacionesBalance || 0);
-        const displayBalance = document.getElementById('edit-vacaciones-balance-display');
-        if (displayBalance) displayBalance.textContent = vacBalance.toFixed(2);
-        
-        const balanceInfo = document.getElementById('edit-vacaciones-balance-info');
-        if (balanceInfo) {
-            balanceInfo.classList.toggle('hidden', button.dataset.tipo !== 'VAC' || !button.dataset.vacacionesBalance);
-        }
-
-        const editPago = document.getElementById('edit-payment');
-        const editPagoDisplay = document.getElementById('edit-payment-display');
-        if (editPago) editPago.value = button.dataset.pago || '';
-        if (editPagoDisplay) editPagoDisplay.value = button.dataset.pago || '';
-
-        const unidad = button.dataset.unidad || 'dias';
-        const unidadRadio = document.querySelector('#edit-novelty-form input[name="unidad_cantidad"][value="' + unidad + '"]');
-        if (unidadRadio) unidadRadio.checked = true;
-
-        const licenciaRemunerada = document.getElementById('edit-licencia-remunerada');
-        if (licenciaRemunerada) {
-            licenciaRemunerada.checked = String(button.dataset.licenciaRemunerada || '0') === '1';
-        }
-
-        const certificado = document.getElementById('edit-certificado-medico');
-        if (certificado) {
-            certificado.checked = String(button.dataset.certificadoMedico || '0') === '1';
-        }
-
-        if (editNovedadId) editNovedadId.value = id;
-        if (editForm && id) editForm.action = updateUrl.replace('__ID__', String(id));
-        if (deleteForm && id) deleteForm.action = deleteUrl.replace('__ID__', String(id));
-        
-        // Validation for vacation balance
-        if (editForm) {
-            editForm.addEventListener('submit', function(e) {
-                const type = document.getElementById('edit-novelty-type').value;
-                if (type === 'VAC') {
-                    const balance = Number(document.getElementById('edit-vacaciones-balance').value || 0);
-                    const currentDays = Number(button.dataset.dias || 0);
-                    const newDays = Number(document.getElementById('edit-quantity-days').value || 0);
-                    
-                    if (newDays > (balance + currentDays)) {
-                        e.preventDefault();
-                        const errorEl = document.getElementById('edit-quantity-days-error');
-                        if (errorEl) {
-                            errorEl.textContent = `No hay suficiente saldo de vacaciones. Disponible: ${(balance + currentDays).toFixed(2)} días.`;
-                            errorEl.classList.remove('hidden');
-                        }
-                        document.getElementById('edit-quantity-days').focus();
-                        return false;
-                    }
-                }
-            }, { once: true });
-        }
-
-        openEditModal();
-    }
-
-    async function deleteNovedadByButton(button) {
-        console.log('deleteNovedadByButton called', button);
-        if (!button) return;
-        
-        const id = button.dataset.novedadId || '';
-        const deleteForm = document.getElementById('delete-novedad-form');
-        
-        if (!id || !deleteForm) {
-            console.error('Missing id or deleteForm', { id, deleteForm });
-            return;
-        }
-
-        let confirmed = false;
-        if (window.Swal) {
-            const result = await Swal.fire({
-                title: '¿Eliminar esta novedad?',
-                html: '<p class="text-gray-600 text-sm mt-2">Esta acción no se puede deshacer. La novedad será eliminada permanentemente del sistema.</p>',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: '<i class="bi bi-trash3 mr-2"></i>Sí, eliminar',
-                cancelButtonText: '<i class="bi bi-x-circle mr-2"></i>Cancelar',
-                confirmButtonColor: '#dc2626',
-                cancelButtonColor: '#6b7280',
-                reverseButtons: true,
-                focusCancel: true,
-                customClass: {
-                    popup: 'rounded-2xl shadow-2xl border border-gray-100',
-                    title: 'text-xl font-bold text-gray-800',
-                    htmlContainer: 'text-gray-600',
-                    confirmButton: 'px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300',
-                    cancelButton: 'px-6 py-3 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all duration-300',
-                },
-                buttonsStyling: true,
-                allowOutsideClick: false,
-                allowEscapeKey: true,
-                showClass: {
-                    popup: 'animate__animated animate__fadeInDown animate__faster'
-                },
-                hideClass: {
-                    popup: 'animate__animated animate__fadeOutUp animate__faster'
-                }
-            });
-            confirmed = result.isConfirmed;
-        } else {
-            confirmed = window.confirm('¿Seguro que deseas eliminar esta novedad? Esta acción no se puede deshacer.');
-        }
-
-        if (!confirmed) return;
-
-        deleteForm.action = deleteUrl.replace('__ID__', String(id));
-        console.log('Submitting delete form to:', deleteForm.action);
-        deleteForm.submit();
-    }
-
-    // Registrar en window
-    window.__openEditModal = openEditModal;
-    window.__closeEditModal = closeEditModal;
-    window.__openEditByButton = openEditByButton;
-    window.__deleteNovedadByButton = deleteNovedadByButton;
-
-    console.log('=== Edit Modal Functions Registered ===');
-    console.log('__openEditByButton:', typeof window.__openEditByButton);
-})();
-</script>
-@endpush

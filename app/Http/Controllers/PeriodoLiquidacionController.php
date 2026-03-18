@@ -325,9 +325,14 @@ class PeriodoLiquidacionController extends Controller
 
                 $periodo->close();
 
-                // Cerrar novedades activas del periodo
+                // Cerrar novedades activas del periodo que TERMINAN en este periodo
+                // Las novedades que se extienden al futuro (fecha_fin > periodo->fecha_fin) deben seguir activas
                 \App\Models\Novedad::where('id_periodo', $periodo->id_periodo)
                     ->where('estado', \App\Models\Novedad::ESTADO_ACTIVA)
+                    ->where(function($q) use ($periodo) {
+                        $q->whereNull('fecha_fin')
+                          ->orWhere('fecha_fin', '<=', $periodo->fecha_fin->toDateString());
+                    })
                     ->update(['estado' => \App\Models\Novedad::ESTADO_CERRADA, 'updated_at' => now()]);
 
                 // 🔹 NUEVO: Detectar y registrar automáticamente Variación Transitoria de Salario (VST)

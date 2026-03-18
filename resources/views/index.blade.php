@@ -125,12 +125,27 @@
 
         /* Swiper Carousel Customization */
         .pricing-swiper {
-            padding: 50px 0;
+            padding: 60px 15px;
+            overflow: visible !important; /* Allow scale/shadows to show */
         }
 
         .pricing-swiper .swiper-slide {
             display: flex;
             height: auto;
+            padding: 10px 12px; /* Internal spacing for shadows/scale */
+        }
+
+        .pricing-card {
+            transition: all 0.3s ease;
+            min-height: 520px;
+        }
+
+        .plan-description {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            height: 40px; /* Aligns price */
         }
 
         .pricing-swiper .swiper-button-next,
@@ -516,32 +531,48 @@
                     <div class="swiper-wrapper">
                         @forelse($planes as $plan)
                             <div class="swiper-slide">
-                                <div class="h-full p-8 rounded-3xl {{ $plan->destacado ? 'border-2 border-primary bg-white shadow-xl' : 'border border-slate-200 bg-slate-50' }} flex flex-col">
+                                <div class="pricing-card h-full w-full p-8 rounded-3xl {{ $plan->destacado ? 'border-2 border-primary bg-white shadow-xl scale-[1.03] z-10' : 'border border-slate-200 bg-slate-50' }} flex flex-col relative">
                                     @if($plan->destacado)
-                                        <span class="inline-block mb-4 px-4 py-1 text-xs font-bold text-primary bg-primary/10 rounded-full w-fit">
-                                            Más popular
-                                        </span>
+                                        <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+                                            <span class="px-4 py-1.5 text-[10px] font-black tracking-widest uppercase text-white bg-primary rounded-full shadow-lg">
+                                                Recomendado
+                                            </span>
+                                        </div>
                                     @endif
                                     
-                                    <h3 class="font-extrabold text-xl mb-2">{{ $plan->nombre }}</h3>
-                                    <p class="text-slate-500 text-sm mb-6">
-                                        {{ $plan->descripcion }}
-                                    </p>
-                                    <p class="text-4xl font-extrabold mb-6">
-                                        ${{ number_format($plan->valor) }}<span class="text-base font-medium text-slate-500"> / mes</span>
-                                    </p>
-                                    <ul class="space-y-3 text-sm mb-8 flex-grow">
-                                        @if($plan->features && is_array($plan->features))
-                                            @foreach($plan->features as $feature)
-                                                <li class="flex items-center gap-2">
-                                                    <span class="material-symbols-outlined text-accent text-base">check</span>
-                                                    {{ $feature }}
-                                                </li>
-                                            @endforeach
-                                        @endif
-                                    </ul>
+                                    <div class="mb-6">
+                                        <h3 class="font-extrabold text-2xl mb-2">{{ $plan->nombre }}</h3>
+                                        <p class="text-slate-500 text-sm plan-description">
+                                            {{ $plan->descripcion }}
+                                        </p>
+                                    </div>
+
+                                    <div class="mb-8">
+                                        <div class="flex items-baseline gap-1">
+                                            <span class="text-4xl font-black text-slate-900">${{ number_format($plan->valor) }}</span>
+                                            <span class="text-slate-500 font-bold text-sm">/ 3 meses</span>
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">
+                                            Facturado cada trimestre
+                                        </p>
+                                    </div>
+
+                                    <div class="flex-grow">
+                                        <p class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4">Incluye:</p>
+                                        <ul class="space-y-3 text-sm mb-8">
+                                            @if($plan->features && is_array($plan->features))
+                                                @foreach($plan->features as $feature)
+                                                    <li class="flex items-start gap-3">
+                                                        <span class="material-symbols-outlined text-accent text-[18px] shrink-0">check_circle</span>
+                                                        <span class="text-slate-600 leading-tight">{{ $feature }}</span>
+                                                    </li>
+                                                @endforeach
+                                            @endif
+                                        </ul>
+                                    </div>
+
                                     <a href="{{ route('register.create', ['plan_id' => $plan->id]) }}"
-                                        class="w-full py-3 rounded-xl {{ $plan->destacado ? 'bg-primary text-white font-bold hover:opacity-90' : 'bg-white border border-slate-200 font-bold hover:bg-slate-100' }} text-center transition-all">
+                                        class="w-full py-4 rounded-xl {{ $plan->destacado ? 'bg-primary text-white font-black shadow-lg shadow-primary/20 hover:opacity-90' : 'bg-slate-900 text-white font-black hover:bg-slate-800' }} text-center transition-all">
                                         {{ $plan->destacado ? 'Comenzar ahora' : 'Elegir plan' }}
                                     </a>
                                 </div>
@@ -624,6 +655,9 @@
                 slidesPerView: 1,
                 spaceBetween: 30,
                 loop: false,
+                centeredSlides: false,
+                watchOverflow: true,
+                grabCursor: true,
                 navigation: {
                     nextEl: '.pricing-swiper .swiper-button-next',
                     prevEl: '.pricing-swiper .swiper-button-prev',

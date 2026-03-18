@@ -48,11 +48,54 @@ class PlanService
     }
 
     /**
+     * Check if a tenant can add a new admin user.
+     */
+    public function checkAdminLimit(Empresa $empresa): array
+    {
+        $licencia = $empresa->licencia;
+        if (!$licencia || !$licencia->plan) return ['can' => true, 'reason' => null];
+
+        $plan = $licencia->plan;
+        $currentCount = $empresa->adminsCount();
+        $limit = (int) $plan->max_admins;
+
+        if ($limit > 0 && $currentCount >= $limit) {
+            return [
+                'can' => false,
+                'reason' => "Límite de administradores alcanzado para tu plan ({$limit})."
+            ];
+        }
+
+        return ['can' => true, 'reason' => null];
+    }
+
+    /**
+     * Check if a tenant can add a new auxiliary user.
+     */
+    public function checkAuxiliaryLimit(Empresa $empresa): array
+    {
+        $licencia = $empresa->licencia;
+        if (!$licencia || !$licencia->plan) return ['can' => true, 'reason' => null];
+
+        $plan = $licencia->plan;
+        $currentCount = $empresa->auxiliariesCount();
+        $limit = (int) $plan->max_auxiliares;
+
+        if ($currentCount >= $limit) {
+            return [
+                'can' => false,
+                'reason' => "Límite de auxiliares de nómina alcanzado para tu plan ({$limit})."
+            ];
+        }
+
+        return ['can' => true, 'reason' => null];
+    }
+
+    /**
      * Future check for electronic payroll credits.
      */
     public function hasCreditsForElectronicPayroll(Empresa $empresa): bool
     {
-        // Placeholder for credit system logic
         return true;
     }
 }

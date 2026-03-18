@@ -432,6 +432,19 @@
                         </div>
 
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Caja de Compensación</label>
+                            <select
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                                name="id_caja" id="editIdCaja">
+                                <option value="">Seleccionar...</option>
+                                @foreach ($Cajas as $caja)
+                                    <option value="{{ $caja->id_caja }}">{{ $caja->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <p class="error-message text-red-500 text-sm hidden" data-error="id_caja"></p>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fondo de Cesantías</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
@@ -454,10 +467,11 @@
                                 Empleado activo
                             </label>
                         </div>
+                    </div>
 
-                        <!-- Configuración de saldos iniciales (Migración) -->
-                        <div class="mt-8 border-t pt-6">
-                            <div class="mb-4">
+                    <!-- Configuración de saldos iniciales (Migración) -->
+                        <div class="mt-8 border-t pt-8">
+                            <div class="mb-6">
                                 <h4 class="text-base font-bold text-gray-800 flex items-center gap-2">
                                     <i class="fas fa-history text-[#1565C0]"></i>
                                     Continuidad de Provisiones Anteriores
@@ -467,7 +481,7 @@
                                 </p>
                             </div>
                             
-                            <div id="editMigrationSection" class="mt-4 space-y-4">
+                            <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 ring-1 ring-blue-100 shadow-sm">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Prima inicial</label>
@@ -502,11 +516,10 @@
                                         <div class="error-message text-xs text-red-500 mt-1 hidden" data-error="vacaciones_inicial"></div>
                                     </div>
                                 </div>
-                                <p class="text-xs text-gray-500 italic">
+                                <p class="text-xs text-gray-400 italic mt-4">
                                     Nota: Estos valores solo deben ingresarse si el empleado tiene saldos pendientes de periodos no liquidados en este sistema.
                                 </p>
                             </div>
-                        </div>
                     </div>
                 </div>
 
@@ -557,20 +570,14 @@
     });
 
     function parseEditLocalizedNumber(rawValue) {
+        if (typeof rawValue === 'number') return rawValue;
+        
         const value = (rawValue ?? '').toString().trim();
         if (value === '') {
             return NaN;
         }
 
-        // Plain numeric value from server (e.g., "2000000" or "2000000.00").
-        // The dot here is a decimal separator, NOT a thousands separator.
-        // We must NOT strip it — otherwise "2000000.00" becomes 200000000.
-        if (/^\d+(\.\d+)?$/.test(value)) {
-            return parseFloat(value);
-        }
-
-        // Spanish/Colombian locale format: thousands=dot, decimal=comma
-        // e.g., "2.000.000" or "2.000.000,50"
+        // Remove thousands dots, replace comma with dot
         const sanitized = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
         const parsed = parseFloat(sanitized);
         return Number.isFinite(parsed) ? parsed : NaN;
@@ -900,11 +907,25 @@
             return;
         }
 
-        input.classList.add('border-red-500');
         const errorEl = document.querySelector(`#editEmployeeForm [data-error="${input.name}"]`);
-        if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.classList.remove('hidden');
+        if (!errorEl) return;
+
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+
+        // Distinguir entre Error (Rojo) y Advertencia (Ámbar)
+        const isWarning = message.toLowerCase().includes('alerta') || message.toLowerCase().includes('advertencia');
+        
+        if (isWarning) {
+            input.classList.remove('border-red-500');
+            input.classList.add('border-amber-500', 'text-amber-700');
+            errorEl.classList.remove('text-red-500');
+            errorEl.classList.add('text-amber-600');
+        } else {
+            input.classList.add('border-red-500');
+            input.classList.remove('border-amber-500', 'text-amber-700');
+            errorEl.classList.add('text-red-500');
+            errorEl.classList.remove('text-amber-600');
         }
     }
 
@@ -913,11 +934,12 @@
             return;
         }
 
-        input.classList.remove('border-red-500');
+        input.classList.remove('border-red-500', 'border-amber-500', 'text-amber-700');
         const errorEl = document.querySelector(`#editEmployeeForm [data-error="${input.name}"]`);
         if (errorEl) {
             errorEl.textContent = '';
             errorEl.classList.add('hidden');
+            errorEl.classList.remove('text-red-500', 'text-amber-600');
         }
     }
 
@@ -1136,6 +1158,8 @@
                     return validateEditInput(input, value !== '', 'Debe seleccionar la EPS.', showError);
                 case 'id_afp':
                     return validateEditInput(input, value !== '', 'Debe seleccionar la AFP.', showError);
+                case 'id_caja':
+                    return validateEditInput(input, value !== '', 'Debe seleccionar la caja de compensación.', showError);
                 case 'fondo_cesantias':
                     if (value === '') {
                         if (showError) clearEditFieldError(input);
@@ -1151,6 +1175,9 @@
                     if (Number.isNaN(cVal) || cVal < 0) {
                         return validateEditInput(input, false, 'Debe ingresar un valor válido.', showError);
                     }
+                    if (cVal > 9999999999) {
+                        return validateEditInput(input, false, 'Advertencia: El valor ingresado es inusualmente alto.', showError);
+                    }
                     if (cVal > 0 && cVal < 5000) {
                         return validateEditInput(input, false, 'Alerta: El valor es inusualmente bajo para un empleado activo.', showError);
                     }
@@ -1163,6 +1190,9 @@
                     const pVal = parseEditLocalizedNumber(value);
                     if (Number.isNaN(pVal) || pVal < 0) {
                         return validateEditInput(input, false, 'Debe ingresar un valor válido.', showError);
+                    }
+                    if (pVal > 9999999999) {
+                        return validateEditInput(input, false, 'Advertencia: El valor ingresado es inusualmente alto.', showError);
                     }
                     if (pVal > 0 && pVal < 5000) {
                         return validateEditInput(input, false, 'Alerta: El valor es inusualmente bajo para un empleado activo.', showError);
@@ -1177,8 +1207,11 @@
                     if (Number.isNaN(iVal) || iVal < 0) {
                         return validateEditInput(input, false, 'Debe ingresar un valor válido.', showError);
                     }
-                    if (iVal > 0 && iVal < 100) {
-                        return validateEditInput(input, false, 'Alerta: El valor de intereses es inusualmente bajo.', showError);
+                    if (iVal > 9999999999) {
+                        return validateEditInput(input, false, 'Advertencia: El valor ingresado es inusualmente alto.', showError);
+                    }
+                    if (iVal > 0 && iVal < 1000) {
+                        return validateEditInput(input, false, 'Alerta: El valor es inusualmente bajo.', showError);
                     }
                     const editCesantias = document.getElementById('editCesantiasInicial');
                     if (editCesantias) {
@@ -1221,7 +1254,7 @@
         const fieldsByStep = {
             1: ['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion', 'email', 'telefono'],
             2: ['id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_tipo_contrato', 'id_arl', 'fecha_inicio', 'fecha_fin', 'horas_diarias', 'salario', 'codigo_interno', 'nivel_riesgo'],
-            3: ['id_forma_pago', 'id_metodo_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'fondo_cesantias'],
+            3: ['id_forma_pago', 'id_metodo_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'id_caja', 'fondo_cesantias', 'prima_inicial', 'cesantias_inicial', 'intereses_inicial', 'vacaciones_inicial'],
         };
 
         const fields = fieldsByStep[stepNumber] || [];
@@ -1319,26 +1352,23 @@
                     document.getElementById('editIdArl').value = contrato.id_arl || '';
                     if (isRenewal && contrato.fecha_fin) {
                         try {
-                            // Normalize to YYYY-MM-DD in case server returns full ISO string
-                            const rawFechaFin = String(contrato.fecha_fin).substring(0, 10);
-                            const lastDate = new Date(rawFechaFin + 'T00:00:00');
+                            const lastDate = new Date(contrato.fecha_fin + 'T00:00:00');
                             if (!isNaN(lastDate.getTime())) {
                                 lastDate.setDate(lastDate.getDate() + 1);
                                 document.getElementById('editFechaInicio').value = lastDate.toISOString().split('T')[0];
                                 document.getElementById('editFechaFin').value = ''; 
                             } else {
-                                document.getElementById('editFechaInicio').value = contrato.fecha_inicio ? String(contrato.fecha_inicio).substring(0, 10) : '';
-                                document.getElementById('editFechaFin').value = contrato.fecha_fin ? String(contrato.fecha_fin).substring(0, 10) : '';
+                                document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
+                                document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
                             }
                         } catch (e) {
                             console.warn('Error al procesar fecha de fin:', e);
-                            document.getElementById('editFechaInicio').value = contrato.fecha_inicio ? String(contrato.fecha_inicio).substring(0, 10) : '';
-                            document.getElementById('editFechaFin').value = contrato.fecha_fin ? String(contrato.fecha_fin).substring(0, 10) : '';
+                            document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
+                            document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
                         }
                     } else {
-                        // Normalize ISO datetime to YYYY-MM-DD for input[type="date"]
-                        document.getElementById('editFechaInicio').value = contrato.fecha_inicio ? String(contrato.fecha_inicio).substring(0, 10) : '';
-                        document.getElementById('editFechaFin').value = contrato.fecha_fin ? String(contrato.fecha_fin).substring(0, 10) : '';
+                        document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
+                        document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
                     }
                     syncEditFechaFinByContractType();
                     document.getElementById('editHorasDiarias').value = contrato.horas_diarias != null ? contrato.horas_diarias : '';
@@ -1360,6 +1390,7 @@
                     
                     document.getElementById('editIdEps').value = contrato.id_eps || '';
                     document.getElementById('editIdAfp').value = contrato.id_afp || '';
+                    document.getElementById('editIdCaja').value = contrato.id_caja || '';
                     document.getElementById('editFondoCesantias').value = data.usuario.fondo_cesantias || '';
                     document.getElementById('editActivo').checked = contrato.activo == 1;
                 } else {

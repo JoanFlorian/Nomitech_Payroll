@@ -324,6 +324,13 @@ class NominaController extends Controller
             $detalleEstimado = !empty($detalleHoras);
         }
 
+        // Calcular días de suspensión (SLN) dentro del periodo
+        $periodoEdit = PeriodoLiquidacion::query()->find((int) $registro->id_periodo);
+        $diasSln = $periodoEdit
+            ? $this->calcularDiasSlnPeriodo((int) $registro->id_contrato, $periodoEdit)
+            : 0;
+        $maxDias = max(0, 30 - $diasSln);
+
         session(['nomina.editing_id' => (int) $registro->id_salario]);
         session([
             'nomina.step1' => [
@@ -338,6 +345,8 @@ class NominaController extends Controller
                 'salario_base_proporcional' => $salarioBaseProporcional,
                 'fecha_pago' => $registro->fecha_pago,
                 'dias_trabajados' => $diasTrabajados,
+                'dias_sln' => $diasSln,
+                'max_dias_trabajados' => $maxDias,
             ]
         ]);
         session([
@@ -433,6 +442,20 @@ class NominaController extends Controller
         }
 
         $diasTrabajados = max(0, min(30, (int) $data['dias_trabajados']));
+
+        // Calcular días de suspensión (SLN) dentro del periodo activo
+        $diasSln = $this->calcularDiasSlnPeriodo(
+            (int) $data['id_contrato'],
+            $periodoActivo
+        );
+        $maxDias = max(0, 30 - $diasSln);
+
+        if ($diasTrabajados > $maxDias) {
+            return back()->withErrors([
+                'dias_trabajados' => "Los días trabajados no pueden exceder {$maxDias} días debido a {$diasSln} día(s) de suspensión (SLN) registrados en este periodo.",
+            ])->withInput();
+        }
+
         $salarioBaseMensual = (float) ($empleado->salario_base ?? 0);
         $valorDia = $salarioBaseMensual / 30;
         $salarioBaseProporcional = $valorDia * $diasTrabajados;
@@ -449,6 +472,8 @@ class NominaController extends Controller
             'salario_base_proporcional' => $salarioBaseProporcional,
             'fecha_pago' => $data['fecha_pago'],
             'dias_trabajados' => $diasTrabajados,
+            'dias_sln' => $diasSln,
+            'max_dias_trabajados' => $maxDias,
         ];
 
         session(['nomina.step1' => $step1]);
@@ -1617,5 +1642,45 @@ class NominaController extends Controller
         }
 
         return $detalle;
+    }
+
+    /**
+     * Calcula los días de suspensión (SLN) que caen dentro de un periodo de
+     * liquidación para un contrato dado. Los rangos de fecha de la novedad se
+     * recortan a los límites del periodo.
+     */
+    private function calcularDiasSlnPeriodo(int $idContrato, PeriodoLiquidacion $periodo): int
+    {
+        $pInicio = Carbon::parse($periodo->fecha_inicio);
+        $pFin = Carbon::parse($periodo->fecha_fin);
+
+        $novedadesSln = DB::table('novedad as n')
+            ->join('salario as s', 's.id_salario', '=', 'n.id_salario')
+            ->where('s.id_contrato', $idContrato)
+            ->where('n.tipo_novedad_codigo', 'SLN')
+            ->where(function ($q) {
+                $q->where('n.estado', '!=', 'cerrada')
+                  ->orWhereNull('n.estado');
+            })
+            ->whereNotNull('n.fecha_inicio')
+            ->whereNotNull('n.fecha_fin')
+            ->whereDate('n.fecha_inicio', '<=', $pFin->toDateString())
+            ->whereDate('n.fecha_fin', '>=', $pInicio->toDateString())
+            ->select('n.fecha_inicio', 'n.fecha_fin', 'n.dias')
+            ->get();
+
+        $totalDias = 0;
+
+        foreach ($novedadesSln as $nov) {
+            $slnInicio = Carbon::parse($nov->fecha_inicio);
+            $slnFin = Carbon::parse($nov->fecha_fin);
+
+            $efectivoInicio = $slnInicio->greaterThan($pInicio) ? $slnInicio : $pInicio;
+            $efectivoFin = $slnFin->lessThan($pFin) ? $slnFin : $pFin;
+
+            $totalDias += max(0, $efectivoInicio->diffInDays($efectivoFin) + 1);
+        }
+
+        return $totalDias;
     }
 }

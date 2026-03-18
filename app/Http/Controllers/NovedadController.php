@@ -55,6 +55,8 @@ class NovedadController extends Controller
     {
         $empresaId = (int) session('empresa_id');
         $catalogos = $this->catalogosNovedad();
+        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
+        $periodoId = $periodoActivo ? $periodoActivo->id_periodo : 0;
 
         if ($empresaId <= 0) {
             $novedadesVacias = Novedad::query()
@@ -65,11 +67,12 @@ class NovedadController extends Controller
             return view('novedades.index', [
                 'novedades' => $novedadesVacias,
                 'empleadosBusqueda' => collect(),
+                'periodoActivo' => $periodoActivo,
                 ...$catalogos,
             ]);
         }
 
-        $buildEmpleadoQuery = static function (int $empresaFilterId) {
+        $buildEmpleadoQuery = static function (int $empresaFilterId) use ($periodoId) {
             return DB::table('usuario')
                 ->join('contrato', 'contrato.doc', '=', 'usuario.doc')
                 ->leftJoin('benefit_balance', function($join) {
@@ -87,6 +90,7 @@ class NovedadController extends Controller
                 ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_apellido, usuario.segundo_apellido)) as apellidos")
                 ->selectRaw('contrato.salario_base as salario_base')
                 ->selectRaw('COALESCE(benefit_balance.vacaciones_balance, 0) as vacaciones_balance')
+                ->selectRaw('(SELECT COALESCE(SUM(n.dias), 0) FROM novedad n WHERE n.empleado_id = usuario.doc AND n.tipo_novedad_codigo = "VAC" AND n.id_periodo = ?) as vacaciones_registradas', [$periodoId])
                 ->orderBy('usuario.primer_nombre')
                 ->orderBy('usuario.primer_apellido')
                 ->limit(800);
@@ -102,10 +106,9 @@ class NovedadController extends Controller
                 'nombre_completo' => (string) ($row->nombre_completo ?? ''),
                 'salario_base' => (float) ($row->salario_base ?? 0),
                 'vacaciones_balance' => (float) ($row->vacaciones_balance ?? 0),
+                'vacaciones_registradas' => (float) ($row->vacaciones_registradas ?? 0),
             ])
             ->values();
-
-        $periodoActivo = PeriodoLiquidacion::getActivePeriod();
 
         $novedades = Novedad::query()
             ->with(['tipoNovedad', 'salario.contrato.usuario'])

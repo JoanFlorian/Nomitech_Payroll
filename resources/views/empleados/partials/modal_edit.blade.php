@@ -297,7 +297,15 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salario Base</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="salario" id="editSalario" disabled inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000">
+                            <input type="text"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                                :class="!isRenewal ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'"
+                                name="salario"
+                                id="editSalario"
+                                :disabled="!isRenewal"
+                                inputmode="decimal"
+                                autocomplete="off"
+                                placeholder="Ej: 2.000.000,00">
                             <p class="error-message text-red-500 text-sm hidden" data-error="salario"></p>
                         </div>
 
@@ -577,8 +585,27 @@
             return NaN;
         }
 
-        // Remove thousands dots, replace comma with dot
-        const sanitized = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+        // Si contiene coma, o más de un punto, es definitivamente formato es-CO (1.234.567,89)
+        const hasComma = value.includes(',');
+        const dots = (value.match(/\./g) || []).length;
+
+        if (hasComma || dots > 1) {
+            const sanitized = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+            return parseFloat(sanitized);
+        }
+
+        if (dots === 1) {
+            // Un solo punto: ¿1.234 (mil) o 1234.56 (DB)?
+            const parts = value.split('.');
+            if (parts[1].length >= 3) {
+                // Si el punto está seguido de 3 o más dígitos, lo tratamos como separador de miles.
+                return parseFloat(value.replace(/\./g, '').replace(/[^\d.-]/g, ''));
+            }
+            // Si tiene menos de 3 dígitos después del punto, es un decimal crudo de BD
+            return parseFloat(value.replace(/[^\d.-]/g, ''));
+        }
+
+        const sanitized = value.replace(/[^\d.-]/g, '');
         const parsed = parseFloat(sanitized);
         return Number.isFinite(parsed) ? parsed : NaN;
     }

@@ -14,6 +14,8 @@
             <input type="hidden" id="edit-doc-empleado" name="empleado_id" value="{{ old('empleado_id', old('doc_empleado')) }}">
             <input type="hidden" id="edit-salario-base" name="salario_base" value="{{ old('salario_base', 0) }}">
             <input type="hidden" id="edit-vacaciones-balance" name="vacaciones_balance" value="{{ old('vacaciones_balance') }}">
+            <input type="hidden" id="edit-vacaciones-registradas" name="vacaciones_registradas" value="0">
+            <input type="hidden" id="edit-original-days" value="0">
 
             <div class="p-6 md:p-8 space-y-5 max-h-[70vh] overflow-y-auto">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

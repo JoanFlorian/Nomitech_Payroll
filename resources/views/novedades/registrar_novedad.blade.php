@@ -36,6 +36,7 @@
 					<input type="hidden" id="doc_empleado" name="empleado_id" value="{{ old('empleado_id', old('doc_empleado')) }}">
 					<input type="hidden" id="salario-base" name="salario_base" value="{{ old('salario_base') }}">
 					<input type="hidden" id="vacaciones-balance" name="vacaciones_balance" value="{{ old('vacaciones_balance') }}">
+                    <input type="hidden" id="vacaciones-registradas" name="vacaciones_registradas" value="{{ old('vacaciones_registradas', 0) }}">
 					<ul id="employee-suggestions" class="hidden mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-lg max-h-64 overflow-y-auto"></ul>
 					<p class="text-xs text-gray-500 mt-2">Escribe nombre o documento y selecciona una opción.</p>
 					<p id="employee-search-error" class="mt-1 text-xs text-red-600 hidden"></p>

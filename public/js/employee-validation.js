@@ -14,24 +14,33 @@
     function parseLocalizedNumber(rawValue) {
         if (typeof rawValue === 'number') return rawValue;
 
-        const value = (rawValue || '').toString().trim();
+        const value = (rawValue ?? '').toString().trim();
         if (value === '') {
             return NaN;
         }
 
-        // Detectar si es un formato numérico crudo (ej: "1300000.00" de DB)
-        const isRawFloat = /^-?\d+\.\d+$/.test(value);
-        if (isRawFloat) {
-            return parseFloat(value);
+        // Si contiene coma, o más de un punto, es definitivamente formato es-CO (1.234.567,89)
+        const hasComma = value.includes(',');
+        const dots = (value.match(/\./g) || []).length;
+
+        if (hasComma || dots > 1) {
+            const sanitized = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+            return parseFloat(sanitized);
         }
 
-        const isRawInt = /^-?\d+$/.test(value);
-        if (isRawInt) {
-            return parseInt(value, 10);
+        if (dots === 1) {
+            // Un solo punto: ¿1.234 (mil) o 1234.56 (DB)?
+            const parts = value.split('.');
+            if (parts[1].length >= 3) {
+                // Si el punto está seguido de 3 o más dígitos, lo tratamos como separador de miles.
+                // Esto es clave cuando se escribe "1.234" y luego un "5" -> "1.2345" debe ser 12345.
+                return parseFloat(value.replace(/\./g, '').replace(/[^\d.-]/g, ''));
+            }
+            // Si tiene menos de 3 dígitos después del punto, es probable que sea un decimal (crudo DB)
+            return parseFloat(value.replace(/[^\d.-]/g, ''));
         }
 
-        // Limpieza de formato localizado centralizada
-        const sanitized = value.replace(/\s+/g, '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+        const sanitized = value.replace(/[^\d.-]/g, '');
         const parsed = parseFloat(sanitized);
         return Number.isFinite(parsed) ? parsed : NaN;
     }

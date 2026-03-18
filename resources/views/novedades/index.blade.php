@@ -937,9 +937,12 @@
 			
 			// Actualizar saldo de vacaciones para el modal de creación
 			const vacBalance = Number(employee.vacaciones_balance || 0);
+			const vacRegistradas = Number(employee.vacaciones_registradas || 0);
 			const vacInput = document.getElementById('vacaciones-balance');
+			const vacRegInput = document.getElementById('vacaciones-registradas');
 			const vacDisplay = document.getElementById('vacaciones-balance-display');
 			if (vacInput) vacInput.value = vacBalance;
+			if (vacRegInput) vacRegInput.value = vacRegistradas;
 			if (vacDisplay) vacDisplay.textContent = vacBalance.toFixed(2);
 
 			const fullName = toTitleCase(employee.nombre_completo || '');
@@ -1597,7 +1600,7 @@
 		validateDateRange();
 
 		// ── Auto-fill fecha_fin based on tipo novedad duration ─────────────────
-		const DURACIONES_FIJAS = { LMAT: 126, LPAT: 14, VAC: 15, LIC: 30 };
+		const DURACIONES_FIJAS = { LMAT: 126, LPAT: 14, LIC: 30 };
 
 		const autoFillFechaFin = (tipoInput, fechaInicioInput, fechaFinInput, cantidadInput = null) => {
 			const tipo = normalizeNoveltyType(tipoInput?.value || '');
@@ -1738,6 +1741,20 @@
 			const vacBalance = Number(data.vacacionesBalance || 0);
 			if (editVacacionesBalanceInput) editVacacionesBalanceInput.value = vacBalance;
 			if (editVacacionesBalanceDisplay) editVacacionesBalanceDisplay.textContent = vacBalance.toFixed(2);
+			
+			// Buscar vacaciones registradas en el array global de empleados si no viene en data
+			let vacRegistradas = Number(data.vacacionesRegistradas || 0);
+			if (vacRegistradas === 0 && data.doc) {
+				const emp = employees.find(e => String(e.doc) === String(data.doc));
+				if (emp) vacRegistradas = Number(emp.vacaciones_registradas || 0);
+			}
+			const editVacRegInput = document.getElementById('edit-vacaciones-registradas');
+			if (editVacRegInput) editVacRegInput.value = vacRegistradas;
+
+			const originalDaysValue = data.dias || (data.unidad === 'dias' ? data.cantidad : 0);
+			const editOrigDaysInput = document.getElementById('edit-original-days');
+			if (editOrigDaysInput) editOrigDaysInput.value = originalDaysValue;
+
 			if (editVacacionesBalanceInfo) {
 				editVacacionesBalanceInfo.classList.toggle('hidden', data.tipo !== 'VAC' || !data.vacacionesBalance);
 			}
@@ -2110,9 +2127,11 @@
 				// Validación de saldo de vacaciones
 				if (tipo === 'VAC') {
 					const balance = Number(document.getElementById('vacaciones-balance')?.value || 0);
-					if (currentDays > balance) {
+					const registradas = Number(document.getElementById('vacaciones-registradas')?.value || 0);
+					if ((currentDays + registradas) > balance) {
 						isValid = false;
-						showFieldError('quantityDays', `El empleado solo tiene ${balance.toFixed(2)} días de vacaciones disponibles.`);
+						const disponibleReal = Math.max(0, balance - registradas);
+						showFieldError('quantityDays', `El empleado tiene ${balance.toFixed(2)} días en total, pero ya ha registrado ${registradas.toFixed(2)} días en este periodo. Saldo restante: ${disponibleReal.toFixed(2)} días.`);
 						markInvalid(quantityDaysInput);
 					}
 				}
@@ -2251,9 +2270,14 @@
 				// Validación de saldo de vacaciones (Edición)
 				if (tipo === 'VAC') {
 					const balance = Number(document.getElementById('edit-vacaciones-balance')?.value || 0);
-					if (currentDays > balance) {
+					const registradas = Number(document.getElementById('edit-vacaciones-registradas')?.value || 0);
+					const originalDays = Number(document.getElementById('edit-original-days')?.value || 0);
+					
+					// El total acumulado es: Registradas - Lo que ya tenía esta novedad + El nuevo valor
+					if ((currentDays + (registradas - originalDays)) > balance) {
 						isValid = false;
-						showEditFieldError('quantityDays', `El empleado solo tiene ${balance.toFixed(2)} días de vacaciones disponibles.`);
+						const disponibleOtros = balance - (registradas - originalDays);
+						showEditFieldError('quantityDays', `El empleado tiene ${balance.toFixed(2)} días en total. Considerando otras novedades registradas (${(registradas - originalDays).toFixed(2)} días), el máximo permitido para esta novedad es ${disponibleOtros.toFixed(2)} días.`);
 						markInvalid(editQuantityDaysInput);
 					}
 				}

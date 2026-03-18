@@ -145,11 +145,13 @@
             <div class="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8 mt-12 lg:mt-0">
                 <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">@yield('page-title')</h1>
 
-                @if(isset($adminUnreadAdjustmentNotesCount) && $adminUnreadAdjustmentNotesCount > 0)
+                @if(isset($adminUnreadAdjustmentNotesCount) && (int)(Auth::user()->id_rol ?? 0) !== 3)
                 <div x-data="{ open: false }" class="relative" @click.away="open = false">
                     <button @click="open = !open" class="relative p-2 rounded-full hover:bg-gray-100 transition focus:outline-none">
-                        <i class="bi bi-bell text-xl text-gray-600"></i>
-                        <span class="absolute -top-0.5 -right-0.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full shadow">{{ $adminUnreadAdjustmentNotesCount }}</span>
+                        <i class="bi bi-bell text-xl {{ $adminUnreadAdjustmentNotesCount > 0 ? 'text-[#1565C0]' : 'text-gray-400' }}"></i>
+                        @if($adminUnreadAdjustmentNotesCount > 0)
+                        <span class="absolute -top-0.5 -right-0.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full shadow animate-pulse">{{ $adminUnreadAdjustmentNotesCount }}</span>
+                        @endif
                     </button>
 
                     <div x-show="open" x-cloak x-transition

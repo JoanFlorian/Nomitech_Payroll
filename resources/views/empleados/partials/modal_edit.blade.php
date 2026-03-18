@@ -297,7 +297,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salario Base</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="salario" id="editSalario" disabled  inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000,00">
+                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="salario" id="editSalario" disabled inputmode="decimal" autocomplete="off" placeholder="Ej: 2.000.000">
                             <p class="error-message text-red-500 text-sm hidden" data-error="salario"></p>
                         </div>
 
@@ -562,7 +562,15 @@
             return NaN;
         }
 
-        // Remove thousands dots, replace comma with dot
+        // Plain numeric value from server (e.g., "2000000" or "2000000.00").
+        // The dot here is a decimal separator, NOT a thousands separator.
+        // We must NOT strip it — otherwise "2000000.00" becomes 200000000.
+        if (/^\d+(\.\d+)?$/.test(value)) {
+            return parseFloat(value);
+        }
+
+        // Spanish/Colombian locale format: thousands=dot, decimal=comma
+        // e.g., "2.000.000" or "2.000.000,50"
         const sanitized = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
         const parsed = parseFloat(sanitized);
         return Number.isFinite(parsed) ? parsed : NaN;
@@ -665,6 +673,23 @@
         return optionText.includes('indefinid');
     }
 
+    function isEditFixedTermContractSelected(tipoContratoInput) {
+        if (!tipoContratoInput) {
+            return false;
+        }
+
+        const selectedOption = tipoContratoInput.selectedOptions && tipoContratoInput.selectedOptions[0]
+            ? tipoContratoInput.selectedOptions[0]
+            : null;
+
+        if (!selectedOption) {
+            return false;
+        }
+
+        const optionText = (selectedOption.textContent ?? '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        return optionText.includes('fijo');
+    }
+
     function syncEditFechaFinByContractType() {
         const fechaFinInput = document.getElementById('editFechaFin');
         const fechaFinHint = document.getElementById('editFechaFinHint');
@@ -693,7 +718,9 @@
         fechaFinInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
 
         if (fechaFinHint) {
-            fechaFinHint.textContent = 'Debe ser posterior a la fecha de inicio.';
+            fechaFinHint.textContent = isEditFixedTermContractSelected(tipoContratoInput)
+                ? 'Obligatoria para contrato a término fijo. Debe ser posterior a la fecha de inicio.'
+                : 'Debe ser posterior a la fecha de inicio.';
         }
 
         updateEditFechaFinMin();
@@ -1008,16 +1035,20 @@
                         if (isEditIndefiniteContractSelected(tipoContratoInput)) {
                             return validateEditInput(input, value === '', 'Para contrato indefinido no debe registrar fecha de fin.', showError);
                         }
-                    }
 
-                    if (value === '') {
-                        if (showError) clearEditFieldError(input);
-                        return true;
+                        if (value === '') {
+                            if (isEditFixedTermContractSelected(tipoContratoInput)) {
+                                return validateEditInput(input, false, 'La fecha de fin es obligatoria para contratos a término fijo.', showError);
+                            }
+                            if (showError) clearEditFieldError(input);
+                            return true;
+                        }
+
+                        if (!fechaInicioValue) {
+                            return validateEditInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
+                        }
+                        return validateEditInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
                     }
-                    if (!fechaInicioValue) {
-                        return validateEditInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
-                    }
-                    return validateEditInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
                 case 'horas_diarias':
                     return validateEditInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
                 case 'salario':
@@ -1288,26 +1319,29 @@
                     document.getElementById('editIdArl').value = contrato.id_arl || '';
                     if (isRenewal && contrato.fecha_fin) {
                         try {
-                            const lastDate = new Date(contrato.fecha_fin + 'T00:00:00');
+                            // Normalize to YYYY-MM-DD in case server returns full ISO string
+                            const rawFechaFin = String(contrato.fecha_fin).substring(0, 10);
+                            const lastDate = new Date(rawFechaFin + 'T00:00:00');
                             if (!isNaN(lastDate.getTime())) {
                                 lastDate.setDate(lastDate.getDate() + 1);
                                 document.getElementById('editFechaInicio').value = lastDate.toISOString().split('T')[0];
                                 document.getElementById('editFechaFin').value = ''; 
                             } else {
-                                document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
-                                document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                                document.getElementById('editFechaInicio').value = contrato.fecha_inicio ? String(contrato.fecha_inicio).substring(0, 10) : '';
+                                document.getElementById('editFechaFin').value = contrato.fecha_fin ? String(contrato.fecha_fin).substring(0, 10) : '';
                             }
                         } catch (e) {
                             console.warn('Error al procesar fecha de fin:', e);
-                            document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
-                            document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                            document.getElementById('editFechaInicio').value = contrato.fecha_inicio ? String(contrato.fecha_inicio).substring(0, 10) : '';
+                            document.getElementById('editFechaFin').value = contrato.fecha_fin ? String(contrato.fecha_fin).substring(0, 10) : '';
                         }
                     } else {
-                        document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
-                        document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                        // Normalize ISO datetime to YYYY-MM-DD for input[type="date"]
+                        document.getElementById('editFechaInicio').value = contrato.fecha_inicio ? String(contrato.fecha_inicio).substring(0, 10) : '';
+                        document.getElementById('editFechaFin').value = contrato.fecha_fin ? String(contrato.fecha_fin).substring(0, 10) : '';
                     }
                     syncEditFechaFinByContractType();
-                    document.getElementById('editHorasDiarias').value = contrato.horas_diarias || '';
+                    document.getElementById('editHorasDiarias').value = contrato.horas_diarias != null ? contrato.horas_diarias : '';
                     document.getElementById('editSalario').value = formatEditLocalizedNumber(contrato.salario_base || '');
                     document.getElementById('editCodigoInterno').value = contrato.codigo_interno || '';
                     document.getElementById('editNivelRiesgo').value = contrato.nivel_riesgo || '';
@@ -1408,6 +1442,31 @@
 
 
     document.addEventListener('DOMContentLoaded', function () {
+        // Salary input: show raw number on focus, formatted on blur
+        const editSalarioInput = document.getElementById('editSalario');
+        if (editSalarioInput) {
+            editSalarioInput.addEventListener('focus', function () {
+                const parsed = parseEditLocalizedNumber(this.value);
+                if (Number.isFinite(parsed)) {
+                    this.value = parsed % 1 === 0 ? String(Math.round(parsed)) : String(parsed);
+                }
+            });
+            editSalarioInput.addEventListener('blur', function () {
+                const parsed = parseEditLocalizedNumber(this.value);
+                if (Number.isFinite(parsed)) {
+                    this.value = EDIT_SALARY_FORMATTER.format(parsed);
+                }
+            });
+        }
+
+        // Trigger date/validation sync when contract type changes
+        const editIdTipoContratoEl = document.getElementById('editIdTipoContrato');
+        if (editIdTipoContratoEl) {
+            editIdTipoContratoEl.addEventListener('change', function () {
+                syncEditFechaFinByContractType();
+            });
+        }
+
         const editEmployeeForm = document.getElementById('editEmployeeForm');
         if (editEmployeeForm) {
             editEmployeeForm.addEventListener('submit', function (e) {

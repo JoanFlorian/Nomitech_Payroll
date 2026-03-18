@@ -85,6 +85,7 @@ Route::middleware(['auth', 'prevent_back_history'])->group(function () {
 Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'prevent_back_history'])->group(function () {
     // Empleados
     Route::get('/empleados', [App\Http\Controllers\EmployeesController::class, 'index'])->name('empleados.index');
+    Route::get('/empleados/{doc}', [App\Http\Controllers\EmployeesController::class, 'show'])->name('employees.show')->middleware('permission:view_employees');
     Route::get('/employees/export', [App\Http\Controllers\EmployeesController::class, 'export'])->name('employees.export')->middleware('permission:export_employees');
     Route::get('/employees/export/excel', [App\Http\Controllers\EmployeesController::class, 'exportarEmpleadosExcel'])->name('employees.export.excel')->middleware('permission:export_employees');
     Route::get('/employees/export/pdf', [App\Http\Controllers\EmployeesController::class, 'exportarEmpleadosPdf'])->name('employees.export.pdf')->middleware('permission:export_employees');
@@ -260,7 +261,10 @@ Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history', 'mus
     Route::get('/desprendibles', [TrabajadorController::class, 'desprendibles'])->name('desprendibles');
     Route::get('/desprendible/{id}', [TrabajadorController::class, 'verDesprendible'])->name('desprendible.ver');
     Route::get('/desprendible/{id}/pdf', [TrabajadorController::class, 'descargarDesprendible'])->name('desprendible.pdf');
-    Route::get('/notas-ajuste', [TrabajadorController::class, 'notasAjuste'])->name('notas');
+    Route::get('/notas-ajuste', [NotaAjusteController::class, 'trabajadorIndex'])->name('notas');
+    Route::get('/notas-ajuste/crear/{idSalario}', [NotaAjusteController::class, 'createForDesprendible'])->name('notas.create');
+    Route::post('/notas-ajuste', [NotaAjusteController::class, 'store'])->name('notas.store');
+    Route::delete('/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'destroy'])->name('notas.destroy');
     Route::get('/perfil', [TrabajadorController::class, 'perfil'])->name('perfil');
     Route::post('/perfil', [TrabajadorController::class, 'actualizarPerfil'])->name('perfil.actualizar');
 });

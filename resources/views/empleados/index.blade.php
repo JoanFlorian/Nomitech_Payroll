@@ -178,6 +178,15 @@
                         {{-- ACCIONES --}}
                         <td class="py-4 px-6 text-center">
                             <div class="flex items-center justify-center gap-2">
+                                @can('view_employees')
+                                <a 
+                                    href="{{ route('employees.show', $usuario->doc) }}"
+                                    class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-3 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
+                                    title="Ver detalles"
+                                >
+                                    <i class="fas fa-eye"></i>Ver
+                                </a>
+                                @endcan
                                 @can('edit_employee')
                                 <button 
                                     @click="openEditModal('{{ $usuario->doc }}')"
@@ -230,14 +239,25 @@
                         </td>
                         {{-- ACCIONES --}}
                         <td class="py-4 px-6 text-center">
-                            @can('edit_employee')
-                            <button 
-                                @click="openEditModal('{{ $usuario->doc }}')"
-                                class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
-                            >
-                                <i class="fas fa-edit"></i>Editar
-                            </button>
-                            @endcan
+                            <div class="flex items-center justify-center gap-2">
+                                @can('view_employees')
+                                <a 
+                                    href="{{ route('employees.show', $usuario->doc) }}"
+                                    class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-3 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
+                                    title="Ver detalles"
+                                >
+                                    <i class="fas fa-eye"></i>Ver
+                                </a>
+                                @endcan
+                                @can('edit_employee')
+                                <button 
+                                    @click="openEditModal('{{ $usuario->doc }}')"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-xs font-semibold transition duration-200 inline-flex items-center gap-1"
+                                >
+                                    <i class="fas fa-edit"></i>Editar
+                                </button>
+                                @endcan
+                            </div>
                         </td>
                     </tr>
                     @endif
@@ -474,7 +494,12 @@
             }
 
             field.value = value ?? '';
-            field.dispatchEvent(new Event('input', { bubbles: true }));
+            // Solo disparar 'input' si el campo tiene un valor real para restaurar.
+            // Dispararlo en campos vacíos haría que la validación showError=true
+            // marcara como erróneos campos que el usuario nunca ha tocado.
+            if (field.value !== '') {
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+            }
             field.dispatchEvent(new Event('change', { bubbles: true }));
         });
     }

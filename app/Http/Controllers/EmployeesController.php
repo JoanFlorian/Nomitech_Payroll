@@ -203,6 +203,26 @@ class EmployeesController extends Controller
     }
 
     /**
+     * Mostrar detalles de un empleado (solo lectura).
+     */
+    public function show($doc)
+    {
+        $usuario = Empleado::with([
+            'contratos' => function ($q) {
+                $q->orderByDesc('id_contrato')
+                  ->with(['tipoContrato', 'tipoTrabajador', 'arl', 'eps', 'afp', 'formaPago', 'metodoPago']);
+            },
+            'ciudad',
+            'rol',
+        ])->findOrFail($doc);
+
+        $contrato = $usuario->contratos->first();
+        $tipoDoc = TipoDoc::find($usuario->id_tipo_doc);
+
+        return view('empleados.show', compact('usuario', 'contrato', 'tipoDoc'));
+    }
+
+    /**
      * Exportar empleados activos a Excel/CSV
      */
     public function export(Request $request)

@@ -2,13 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Contrato;
-use App\Models\Empleado;
 use App\Models\Empresa;
 use App\Models\PeriodoLiquidacion;
-use App\Services\NominaParameterService;
 use App\Services\PilaFileGeneratorService;
-use App\Services\SecuritySocialCalculator;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,33 +16,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PilaController extends Controller
 {
-    private const TASA_SALUD = 0.04;
-    private const TASA_PENSION = 0.04;
-    private const TASA_CAJA = 0.04;
-
-    private object|null $nominaParams;
-    private SecuritySocialCalculator $securitySocialCalculator;
     private PilaFileGeneratorService $pilaFileGeneratorService;
 
-    /**
-     * Tasas ARL por nivel de riesgo.
-     */
-    private const TASA_ARL = [
-        1 => 0.00522,
-        2 => 0.01044,
-        3 => 0.02436,
-        4 => 0.04350,
-        5 => 0.06960,
-    ];
-
     public function __construct(
-        NominaParameterService $nominaParameterService,
-        SecuritySocialCalculator $securitySocialCalculator,
         PilaFileGeneratorService $pilaFileGeneratorService
     )
     {
-        $this->nominaParams = $nominaParameterService->get();
-        $this->securitySocialCalculator = $securitySocialCalculator;
         $this->pilaFileGeneratorService = $pilaFileGeneratorService;
     }
 
@@ -430,11 +405,6 @@ class PilaController extends Controller
         ]);
     }
 
-    private function construirArchivoPlano(?Empresa $empresa, object $periodo, array $detalles, array $totales): string
-    {
-        return $this->pilaFileGeneratorService->generate($empresa, $periodo, $detalles);
-    }
-
     private function sincronizarHistorialDesdePlanilla(int $empresaId = 0, int $periodoId = 0): void
     {
         if (!Schema::hasTable('planilla_pila')) {
@@ -570,41 +540,5 @@ class PilaController extends Controller
     private function calcularDetalleEmpleados(int $empresaId, int $periodoId): array
     {
         return $this->pilaFileGeneratorService->buildDetallesDesdeNomina($empresaId, $periodoId);
-    }
-
-    private function parsearNivelRiesgo(mixed $valor): int
-    {
-        if (is_numeric($valor)) {
-            $n = (int) $valor;
-            return $n >= 1 && $n <= 5 ? $n : 1;
-        }
-
-        $mapa = [
-            'nivel i'   => 1, 'nivel 1' => 1, 'i'   => 1,
-            'nivel ii'  => 2, 'nivel 2' => 2, 'ii'  => 2,
-            'nivel iii' => 3, 'nivel 3' => 3, 'iii' => 3,
-            'nivel iv'  => 4, 'nivel 4' => 4, 'iv'  => 4,
-            'nivel v'   => 5, 'nivel 5' => 5, 'v'   => 5,
-        ];
-
-        return $mapa[strtolower(trim((string) $valor))] ?? 1;
-    }
-
-    private function calcularAportesSeguridadSocial(float $ibc, int $nivelRiesgo): array
-    {
-        $ibc = round(max(0, $ibc), 2);
-        $epsEmpleado = (float) ($this->nominaParams->eps_employee ?? self::TASA_SALUD);
-        $pensionEmpleado = (float) ($this->nominaParams->pension_employee ?? self::TASA_PENSION);
-        $aportesEmpresa = $this->securitySocialCalculator->calculate($ibc, $this->nominaParams ?? [], $nivelRiesgo);
-
-        return [
-            'ibc' => $ibc,
-            'aporte_salud_empleado' => round($ibc * $epsEmpleado, 2),
-            'aporte_salud_empresa' => (float) $aportesEmpresa['aporte_salud'],
-            'aporte_pension_empleado' => round($ibc * $pensionEmpleado, 2),
-            'aporte_pension_empresa' => (float) $aportesEmpresa['aporte_pension'],
-            'aporte_arl' => (float) $aportesEmpresa['aporte_arl'],
-            'aporte_caja' => (float) $aportesEmpresa['aporte_caja'],
-        ];
     }
 }

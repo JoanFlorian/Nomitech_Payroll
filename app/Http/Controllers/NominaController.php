@@ -36,69 +36,6 @@ class NominaController extends Controller
     ========================== */
 
 
-    private function parseNumber($value): float
-    {
-        if ($value === null || $value === '') {
-            return 0.0;
-        }
-
-        // Keep native numeric types fast; strings are normalized below to support locale formats.
-        if (is_int($value) || is_float($value)) {
-            return (float) $value;
-        }
-
-        $normalized = preg_replace('/[^\d,.-]/', '', (string) $value);
-
-        $hasComma = str_contains($normalized, ',');
-        $hasDot = str_contains($normalized, '.');
-
-        if ($hasComma && $hasDot) {
-            $lastComma = strrpos($normalized, ',');
-            $lastDot = strrpos($normalized, '.');
-
-            if ($lastComma !== false && $lastDot !== false && $lastComma > $lastDot) {
-                $normalized = str_replace('.', '', $normalized);
-                $normalized = str_replace(',', '.', $normalized);
-            } else {
-                $normalized = str_replace(',', '', $normalized);
-            }
-        } elseif ($hasDot && !$hasComma) {
-            $dotCount = substr_count($normalized, '.');
-
-            if ($dotCount > 1) {
-                $normalized = str_replace('.', '', $normalized);
-            } else {
-                $parts = explode('.', $normalized);
-                if (
-                    count($parts) === 2 &&
-                    strlen($parts[1]) === 3 &&
-                    strlen($parts[0]) >= 1
-                ) {
-                    $normalized = str_replace('.', '', $normalized);
-                }
-            }
-        } elseif ($hasComma && !$hasDot) {
-            $commaCount = substr_count($normalized, ',');
-
-            if ($commaCount > 1) {
-                $normalized = str_replace(',', '', $normalized);
-            } else {
-                $parts = explode(',', $normalized);
-                if (
-                    count($parts) === 2 &&
-                    strlen($parts[1]) === 3 &&
-                    strlen($parts[0]) >= 1
-                ) {
-                    $normalized = str_replace(',', '', $normalized);
-                } else {
-                    $normalized = str_replace(',', '.', $normalized);
-                }
-            }
-        }
-
-        return is_numeric($normalized) ? (float) $normalized : 0.0;
-    }
-
     private function parsePeriodoRango(string $periodo): array
     {
         $periodo = trim($periodo);
@@ -544,13 +481,22 @@ class NominaController extends Controller
             ->get();
 
         $data = $request->validate([
-            'horas_extra' => 'nullable|string|max:30',
-            'recargos' => 'nullable|string|max:30',
-            'total_horas_extra' => 'nullable|string|max:30',
-            'total_recargos' => 'nullable|string|max:30',
-            'total_devengos_parcial' => 'nullable|string|max:30',
+            'horas_extra' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+            'recargos' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+            'total_horas_extra' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+            'total_recargos' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+            'total_devengos_parcial' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
             'detalle_recargos' => 'nullable|array',
             'detalle_recargos.*' => 'nullable|numeric|min:0|max:744',
+        ], [
+            'horas_extra.regex' => 'Horas extra solo permite números.',
+            'recargos.regex' => 'Recargos solo permite números.',
+            'total_horas_extra.regex' => 'Total horas extra solo permite números.',
+            'total_recargos.regex' => 'Total recargos solo permite números.',
+            'total_devengos_parcial.regex' => 'Total devengos parcial solo permite números.',
+            'detalle_recargos.*.numeric' => 'Las cantidades de horas y recargos solo permiten números.',
+            'detalle_recargos.*.min' => 'Las cantidades de horas y recargos no pueden ser negativas.',
+            'detalle_recargos.*.max' => 'Las cantidades de horas y recargos no pueden superar 744.',
         ]);
 
         $detalleRecargos = [];
@@ -768,11 +714,16 @@ class NominaController extends Controller
     public function postStep2Ingresos(Request $request)
     {
         $data = $request->validate([
-            'bonificaciones' => 'nullable|string|max:30',
-            'comisiones' => 'nullable|string|max:30',
-            'otros_devengos' => 'nullable|string|max:30',
+            'bonificaciones' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+            'comisiones' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+            'otros_devengos' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
             'aplica_auxilio_transporte' => 'required|in:0,1',
-            'auxilio_transporte' => 'nullable|string|max:30',
+            'auxilio_transporte' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+        ], [
+            'bonificaciones.regex' => 'Bonificaciones solo permite números.',
+            'comisiones.regex' => 'Comisiones solo permite números.',
+            'otros_devengos.regex' => 'Otros devengos solo permite números.',
+            'auxilio_transporte.regex' => 'Auxilio de transporte solo permite números.',
         ]);
 
         $bonificaciones = $this->parseMoneyInput($data['bonificaciones'] ?? 0);
@@ -879,10 +830,14 @@ class NominaController extends Controller
         }
 
         $request->validate([
-            'retencion_fuente' => 'nullable|string|max:30',
-            'embargo_fiscal' => 'nullable|string|max:30',
-            'pension_voluntaria' => 'nullable|string|max:30',
+            'retencion_fuente' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+            'embargo_fiscal' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
+            'pension_voluntaria' => ['nullable', 'string', 'max:30', 'regex:/^\d[\d.,]*$/'],
             'confirm_edit' => 'nullable|string|in:editar',
+        ], [
+            'retencion_fuente.regex' => 'Retención en la fuente solo permite números.',
+            'embargo_fiscal.regex' => 'Embargo fiscal solo permite números.',
+            'pension_voluntaria.regex' => 'Pensión voluntaria solo permite números.',
         ]);
 
         $editingId = session('nomina.editing_id');
@@ -1496,9 +1451,12 @@ class NominaController extends Controller
         $salarios = $this->adjuntarResumenNovedades($salarios);
 
         $busquedaLabel = 'Todos los empleados';
-        $periodoLabel = $periodoActivo
-            ? $periodoActivo->fecha_inicio->format('d/m/Y') . ' - ' . $periodoActivo->fecha_fin->format('d/m/Y')
-            : 'Sin periodo activo';
+        $periodoLabel = 'Sin periodo activo';
+        if ($periodoActivo) {
+            $periodoLabel = Carbon::parse((string) $periodoActivo->fecha_inicio)->format('d/m/Y')
+                . ' - ' .
+                Carbon::parse((string) $periodoActivo->fecha_fin)->format('d/m/Y');
+        }
 
         $pdf = Pdf::loadView('nomina.reporte-pdf', [
             'salarios' => $salarios,

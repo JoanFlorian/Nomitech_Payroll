@@ -145,6 +145,32 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const inputs = Array.from(document.querySelectorAll('.devengo-input'));
+        const allowedControlKeys = new Set(['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
+
+        const getInlineErrorNode = (input) => {
+            let node = input.parentElement.querySelector('.numeric-inline-error');
+            if (!node) {
+                node = document.createElement('p');
+                node.className = 'numeric-inline-error hidden text-xs text-red-600 mt-1 font-medium';
+                input.parentElement.appendChild(node);
+            }
+            return node;
+        };
+
+        const showInlineError = (input, message) => {
+            input.classList.add('border-red-500');
+            const node = getInlineErrorNode(input);
+            node.textContent = message;
+            node.classList.remove('hidden');
+        };
+
+        const clearInlineError = (input) => {
+            input.classList.remove('border-red-500');
+            const node = input.parentElement.querySelector('.numeric-inline-error');
+            if (node) {
+                node.classList.add('hidden');
+            }
+        };
         const parseLocalizedNumber = (raw) => {
             if (raw === '' || raw === null || raw === undefined) return 0;
 
@@ -287,11 +313,49 @@
         }
 
         inputs.forEach((input) => {
+            input.addEventListener('keydown', (event) => {
+                if (event.ctrlKey || event.metaKey || event.altKey || allowedControlKeys.has(event.key)) {
+                    return;
+                }
+
+                if (!/^[0-9]$/.test(event.key)) {
+                    event.preventDefault();
+                    showInlineError(input, 'Solo se permiten números enteros.');
+                }
+            });
+
+            input.addEventListener('beforeinput', (event) => {
+                if (!event.data) {
+                    return;
+                }
+
+                if (!/^[0-9]+$/.test(event.data)) {
+                    event.preventDefault();
+                    showInlineError(input, 'Solo se permiten números enteros.');
+                }
+            });
+
+            input.addEventListener('paste', (event) => {
+                event.preventDefault();
+                const text = (event.clipboardData || window.clipboardData).getData('text') || '';
+                const onlyDigits = text.replace(/\D/g, '');
+                if (text.trim() !== '' && onlyDigits !== text) {
+                    showInlineError(input, 'El pegado contenía caracteres no numéricos.');
+                } else {
+                    clearInlineError(input);
+                }
+                input.value = onlyDigits;
+                userEditedDetalle = true;
+                calcular();
+            });
+
             input.addEventListener('input', () => {
+                clearInlineError(input);
                 userEditedDetalle = true;
                 calcular();
             });
             input.addEventListener('blur', () => {
+                clearInlineError(input);
                 userEditedDetalle = true;
                 calcular();
             });

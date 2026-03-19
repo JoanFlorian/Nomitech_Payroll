@@ -462,10 +462,36 @@
     }
 
     if (diasInput) {
+        const allowedControlKeys = new Set(['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
+
+        diasInput.addEventListener('keydown', (event) => {
+            if (event.ctrlKey || event.metaKey || event.altKey || allowedControlKeys.has(event.key)) {
+                return;
+            }
+
+            if (!/^[0-9]$/.test(event.key)) {
+                event.preventDefault();
+                markError(diasInput);
+                showDiasError('Solo se permiten números enteros.');
+            }
+        });
+
+        diasInput.addEventListener('beforeinput', (event) => {
+            if (!event.data) {
+                return;
+            }
+
+            if (!/^[0-9]+$/.test(event.data)) {
+                event.preventDefault();
+                markError(diasInput);
+                showDiasError('Solo se permiten números enteros.');
+            }
+        });
+
         diasInput.addEventListener('input', () => {
             const maxDiasSln = Number(diasInput.dataset.maxSln || 30);
             enforceNumericInput(diasInput, maxDiasSln);
-            hideErrors();
+            if (diasError) diasError.classList.add('hidden');
             markNeutral(diasInput);
             actualizarResumenProporcional();
         });
@@ -473,11 +499,18 @@
         diasInput.addEventListener('paste', (e) => {
             e.preventDefault();
             const text = (e.clipboardData || window.clipboardData).getData('text');
+            const onlyDigits = String(text || '').replace(/\D/g, '');
+            if (String(text || '').trim() !== '' && onlyDigits !== String(text || '')) {
+                markError(diasInput);
+                showDiasError('Solo se permiten números enteros.');
+            }
             diasInput.value = String(text || '');
             const maxDiasSln = Number(diasInput.dataset.maxSln || 30);
             enforceNumericInput(diasInput, maxDiasSln);
-            hideErrors();
-            markNeutral(diasInput);
+            if (onlyDigits !== '') {
+                if (diasError) diasError.classList.add('hidden');
+                markNeutral(diasInput);
+            }
             actualizarResumenProporcional();
         });
 

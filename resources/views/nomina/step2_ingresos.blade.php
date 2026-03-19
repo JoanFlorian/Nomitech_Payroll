@@ -293,6 +293,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_RESUMEN_VALOR = 999999999999;
 
     const inputs = document.querySelectorAll('.devengo-input');
+    const allowedControlKeys = new Set(['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
+
+    const getInlineErrorNode = (input) => {
+        let node = input.parentElement.querySelector('.numeric-inline-error');
+        if (!node) {
+            node = document.createElement('p');
+            node.className = 'numeric-inline-error hidden text-xs text-red-600 mt-1 font-medium';
+            input.parentElement.appendChild(node);
+        }
+        return node;
+    };
+
+    const showInlineError = (input, message) => {
+        input.classList.add('border-red-500');
+        const node = getInlineErrorNode(input);
+        node.textContent = message;
+        node.classList.remove('hidden');
+    };
+
+    const clearInlineError = (input) => {
+        input.classList.remove('border-red-500');
+        const node = input.parentElement.querySelector('.numeric-inline-error');
+        if (node) {
+            node.classList.add('hidden');
+        }
+    };
 
     const sanitizeCurrencyValue = (raw) => {
         const value = Number(raw || 0);
@@ -432,14 +458,50 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     inputs.forEach(input=>{
-        input.addEventListener('input', ()=>{
-            input.value = sanitizeMoneyText(input.value);
-            if (input.value.includes('-')) input.value = input.value.replace('-', '');
+        input.addEventListener('keydown', (event) => {
+            if (event.ctrlKey || event.metaKey || event.altKey || allowedControlKeys.has(event.key)) {
+                return;
+            }
+
+            if (!/^[0-9.,]$/.test(event.key)) {
+                event.preventDefault();
+                showInlineError(input, 'Solo se permiten números y separadores decimales.');
+            }
+        });
+
+        input.addEventListener('beforeinput', (event) => {
+            if (!event.data) {
+                return;
+            }
+
+            if (!/^[0-9.,]+$/.test(event.data)) {
+                event.preventDefault();
+                showInlineError(input, 'Solo se permiten números y separadores decimales.');
+            }
+        });
+
+        input.addEventListener('paste', (event) => {
+            event.preventDefault();
+            const text = (event.clipboardData || window.clipboardData).getData('text') || '';
+            if (text.trim() !== '' && text !== sanitizeMoneyText(text)) {
+                showInlineError(input, 'El pegado contenía letras o símbolos inválidos.');
+            } else {
+                clearInlineError(input);
+            }
+            input.value = sanitizeMoneyText(text);
             input.classList.remove('border-red-500');
             calcular();
         });
 
+        input.addEventListener('input', ()=>{
+            input.value = sanitizeMoneyText(input.value);
+            if (input.value.includes('-')) input.value = input.value.replace('-', '');
+            clearInlineError(input);
+            calcular();
+        });
+
         input.addEventListener('blur', ()=>{
+            clearInlineError(input);
             input.value = formatInputNumber(Math.min(get(input.name), MAX_OTROS_INGRESOS));
             calcular();
         });

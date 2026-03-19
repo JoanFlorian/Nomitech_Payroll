@@ -99,6 +99,32 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('formDeducciones');
     const manualInputs = Array.from(document.querySelectorAll('.manual-input'));
+    const allowedControlKeys = new Set(['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
+
+    const getInlineErrorNode = (input) => {
+        let node = input.parentElement.querySelector('.numeric-inline-error');
+        if (!node) {
+            node = document.createElement('p');
+            node.className = 'numeric-inline-error hidden text-xs text-red-600 mt-1 font-medium';
+            input.parentElement.appendChild(node);
+        }
+        return node;
+    };
+
+    const showInlineError = (input, message) => {
+        input.classList.add('border-red-500');
+        const node = getInlineErrorNode(input);
+        node.textContent = message;
+        node.classList.remove('hidden');
+    };
+
+    const clearInlineError = (input) => {
+        input.classList.remove('border-red-500');
+        const node = input.parentElement.querySelector('.numeric-inline-error');
+        if (node) {
+            node.classList.add('hidden');
+        }
+    };
     const salarioBase = Number(document.getElementById('salario_base').value || 0);
     const totalDevengos = Number(document.getElementById('total_devengos').value || 0);
     const errorBox = document.getElementById('deduccionesError');
@@ -195,8 +221,52 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     manualInputs.forEach((input) => {
-        input.addEventListener('input', () => { if (input.value.includes('-')) input.value = input.value.replace('-', ''); calc(); });
-        input.addEventListener('blur', () => { sanitize(input); errorBox.classList.add('hidden'); calc(); });
+        input.addEventListener('keydown', (event) => {
+            if (event.ctrlKey || event.metaKey || event.altKey || allowedControlKeys.has(event.key)) {
+                return;
+            }
+
+            if (!/^[0-9.,]$/.test(event.key)) {
+                event.preventDefault();
+                showInlineError(input, 'Solo se permiten números y separadores decimales.');
+            }
+        });
+
+        input.addEventListener('beforeinput', (event) => {
+            if (!event.data) {
+                return;
+            }
+
+            if (!/^[0-9.,]+$/.test(event.data)) {
+                event.preventDefault();
+                showInlineError(input, 'Solo se permiten números y separadores decimales.');
+            }
+        });
+
+        input.addEventListener('paste', (event) => {
+            event.preventDefault();
+            const text = (event.clipboardData || window.clipboardData).getData('text') || '';
+            if (text.trim() !== '' && text !== text.replace(/[^\d.,]/g, '')) {
+                showInlineError(input, 'El pegado contenía letras o símbolos inválidos.');
+            } else {
+                clearInlineError(input);
+            }
+            input.value = text.replace(/[^\d.,]/g, '');
+            input.classList.remove('border-red-500');
+            calc();
+        });
+
+        input.addEventListener('input', () => {
+            if (input.value.includes('-')) input.value = input.value.replace('-', '');
+            clearInlineError(input);
+            calc();
+        });
+        input.addEventListener('blur', () => {
+            sanitize(input);
+            clearInlineError(input);
+            errorBox.classList.add('hidden');
+            calc();
+        });
     });
 
     form.addEventListener('submit', async (e) => {

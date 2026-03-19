@@ -5,6 +5,7 @@
 
 @section('content')
 <div class="max-w-6xl mx-auto space-y-6">
+
 	<div class="relative overflow-hidden rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
 		<div class="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-blue-100/50"></div>
 		<div class="pointer-events-none absolute bottom-6 left-6 h-24 w-24 rotate-45 rounded-xl bg-gray-100/70"></div>

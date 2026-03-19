@@ -1,3 +1,4 @@
+// (moved below into novedades group)
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -122,6 +123,7 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
 
     // Novedades y Reportes
     Route::get('/novedades', [NovedadController::class, 'index'])->name('novedades.index')->middleware('permission:view_novedades');
+
     Route::get('/novedades/historial', [NovedadController::class, 'historialContrato'])->name('novedades.historial')->middleware('permission:view_novedades');
     Route::get('/novedades/historial-novedades', [NovedadController::class, 'historialNovedades'])->name('novedades.historial_novedades')->middleware('permission:view_novedades');
     Route::post('/novedades/calculo/preview', [NovedadCalculoController::class, 'preview'])->name('novedades.calculo.preview')->middleware('permission:create_novedad');
@@ -268,6 +270,8 @@ Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history', 'mus
     Route::get('/perfil', [TrabajadorController::class, 'perfil'])->name('perfil');
     Route::post('/perfil', [TrabajadorController::class, 'actualizarPerfil'])->name('perfil.actualizar');
 });
+
+
 
 // Redirección raíz del portal del trabajador
 Route::middleware(['auth'])->get('/trabajador', function () {

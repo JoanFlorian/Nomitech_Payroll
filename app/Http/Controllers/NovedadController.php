@@ -15,8 +15,11 @@ use App\Models\PeriodoLiquidacion;
 use App\Services\NominaCalculatorService;
 use Illuminate\Support\Facades\DB;
 
+
 class NovedadController extends Controller
 {
+
+
     private const TIPOS_NOVEDAD_LABELS = [
         'TDE' => 'TDE - Traslado desde EPS',
         'TAE' => 'TAE - Traslado a EPS',
@@ -110,6 +113,7 @@ class NovedadController extends Controller
             ])
             ->values();
 
+        $hoy = now()->toDateString();
         $novedades = Novedad::query()
             ->with(['tipoNovedad', 'salario.contrato.usuario'])
             ->when($empresaId > 0, function ($query) use ($empresaId) {
@@ -117,21 +121,23 @@ class NovedadController extends Controller
                     $q->where('id_empresa', $empresaId);
                 });
             })
-            ->when($periodoActivo, function ($query) use ($periodoActivo) {
-                // Incluir novedades del periodo o sin periodo AND novedades que se solapen por fecha.
-                // EXCEPCIÓN: IGE e IRL son periodo-aislados: solo se muestran si pertenecen al
-                // periodo activo (no si su rango de fechas solapa con él).
-                $query->where(function ($q) use ($periodoActivo) {
-                    $q->where('id_periodo', $periodoActivo->id_periodo)
-                      ->orWhereNull('id_periodo')
-                      ->orWhere(function($sub) use ($periodoActivo) {
-                          $sub->whereNotNull('fecha_inicio')
-                              ->whereNotNull('fecha_fin')
-                              ->whereDate('fecha_inicio', '<=', $periodoActivo->fecha_fin->toDateString())
-                              ->whereDate('fecha_fin', '>=', $periodoActivo->fecha_inicio->toDateString())
-                              ->whereNotIn('tipo_novedad_codigo', ['IGE', 'IRL']);
-                      });
-                });
+            ->where(function ($main) use ($periodoActivo, $hoy) {
+                $main
+                    // Novedades del periodo activo o sin periodo
+                    ->where(function ($q) use ($periodoActivo) {
+                        if ($periodoActivo) {
+                            $q->where('id_periodo', $periodoActivo->id_periodo)
+                              ->orWhereNull('id_periodo');
+                        }
+                    })
+                    // O novedades de tipo IGE/IRL (o similares) que sigan vigentes por fecha
+                    ->orWhere(function ($q) use ($hoy) {
+                        $q->whereIn('tipo_novedad_codigo', ['IGE', 'IRL'])
+                          ->whereNotNull('fecha_inicio')
+                          ->whereNotNull('fecha_fin')
+                          ->whereDate('fecha_inicio', '<=', $hoy)
+                          ->whereDate('fecha_fin', '>=', $hoy);
+                    });
             })
             ->where(function ($q) {
                 $q->where('estado', '!=', 'cerrada')->orWhereNull('estado');

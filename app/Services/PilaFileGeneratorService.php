@@ -9,10 +9,6 @@ use Illuminate\Support\Facades\Storage;
 
 class PilaFileGeneratorService
 {
-    private const TASA_SALUD_EMPLEADOR = 0.085;
-    private const TASA_PENSION_EMPLEADOR = 0.12;
-    private const TASA_CAJA_COMPENSACION = 0.04;
-
     private float $salarioMinimo;
     private float $fondoSolidaridadRate;
     private float $epsEmployerRate;
@@ -22,21 +18,20 @@ class PilaFileGeneratorService
     public function __construct(NominaParameterService $nominaParameterService)
     {
         $params = $nominaParameterService->get();
-        $this->salarioMinimo = (float) ($params->smmlv ?? config('pila.salario_minimo', 0));
-        $this->fondoSolidaridadRate = (float) ($params->fondo_solidaridad ?? 0.01);
-        $this->epsEmployerRate = (float) ($params->eps_employer ?? self::TASA_SALUD_EMPLEADOR);
-        $this->pensionEmployerRate = (float) ($params->pension_employer ?? self::TASA_PENSION_EMPLEADOR);
-        $this->cajaRate = (float) ($params->caja_compensacion ?? self::TASA_CAJA_COMPENSACION);
+        $this->salarioMinimo = max(0, (float) ($params->smmlv ?? 0));
+        $this->fondoSolidaridadRate = max(0, (float) ($params->fondo_solidaridad ?? 0));
+        $this->epsEmployerRate = max(0, (float) ($params->eps_employer ?? 0));
+        $this->pensionEmployerRate = max(0, (float) ($params->pension_employer ?? 0));
+        $this->cajaRate = max(0, (float) ($params->caja_compensacion ?? 0));
     }
 
     public function buildDetallesDesdeNomina(int $empresaId, int $periodoId): array
     {
-        $hasIbc = Schema::hasColumn('salario', 'ibc');
-        $hasSalarioBase = Schema::hasColumn('salario', 'salario_base');
         $hasDiasTrabajados = Schema::hasColumn('salario', 'dias_trabajados');
         $diasColumn = $hasDiasTrabajados ? 'n.dias_trabajados' : 'n.dias_a_trabajar';
-        $ibcExpr = $hasIbc ? 'n.ibc' : 'n.total_devengado';
-        $salarioBaseExpr = $hasSalarioBase ? 'n.salario_base' : 'c.salario_base';
+        $salarioBaseExpr = 'c.salario_base';
+        // IBC = salario proporcional del primer modal de nomina.
+        $ibcExpr = "ROUND(({$salarioBaseExpr} / 30) * COALESCE({$diasColumn}, 30), 2)";
 
         $rows = DB::table('salario as n')
             ->join('contrato as c', 'c.id_contrato', '=', 'n.id_contrato')
@@ -44,6 +39,7 @@ class PilaFileGeneratorService
             ->leftJoin('eps as e', 'e.id_eps', '=', 'c.id_eps')
             ->leftJoin('afp as a', 'a.id_afp', '=', 'c.id_afp')
             ->leftJoin('arl as ar', 'ar.id_arl', '=', 'c.id_arl')
+            ->leftJoin('niveles_riesgo as nr', 'nr.id', '=', 'c.nivel_riesgo_id')
             ->leftJoin('cajas_compensacion as cc', 'cc.id_caja', '=', 'c.id_caja')
             ->where('c.id_empresa', $empresaId)
             ->where('n.id_periodo', $periodoId)
@@ -60,11 +56,8 @@ class PilaFileGeneratorService
                 DB::raw("{$salarioBaseExpr} as salario_base"),
                 DB::raw("{$ibcExpr} as ibc"),
                 DB::raw("{$diasColumn} as dias_trabajados"),
-                'n.eps',
-                'n.afp',
-                'n.arl',
-                'n.caja_compensacion',
                 'n.aporte_fp',
+                'nr.porcentaje as porcentaje_arl',
                 'e.codigo_pila as codigo_eps',
                 'a.codigo_pila as codigo_afp',
                 'ar.codigo_pila as codigo_arl',
@@ -80,11 +73,14 @@ class PilaFileGeneratorService
             }
 
             $diasCotizados = $this->validarDiasCotizados((int) ($row->dias_trabajados ?? 0));
-            $aportesPorDefecto = $this->calcularAportesRegistroDos((int) round($ibc));
+            $aportesPorDefecto = $this->calcularAportesRegistroDos($ibc);
             $aporteSalud = round(max(0, (float) ($aportesPorDefecto['salud_empleador'] ?? 0)), 2);
             $aportePension = round(max(0, (float) ($aportesPorDefecto['pension_empleador'] ?? 0)), 2);
-            $aporteArl = round(max(0, (float) ($row->arl ?? 0)), 2);
-            $aporteCaja = round(max(0, (float) ($row->caja_compensacion ?? 0)), 2);
+            // porcentaje_arl proviene de niveles_riesgo (equivalente a $contrato->nivelRiesgo->porcentaje).
+            $porcentajeArl = $this->normalizeArlRate((float) ($row->porcentaje_arl ?? 0));
+            // ARL no se redondea para preservar el valor exacto del calculo.
+            $aporteArl = max(0, $ibc * $porcentajeArl);
+            $aporteCaja = round(max(0, (float) ($aportesPorDefecto['caja_compensacion'] ?? 0)), 2);
             $aporteFondo = round(max(0, (float) ($row->aporte_fp ?? 0)), 2);
 
             $detalles[] = [
@@ -231,8 +227,9 @@ class PilaFileGeneratorService
         ]);
     }
 
-    private function calcularAportesRegistroDos(int $ibc): array
+    private function calcularAportesRegistroDos(float $ibc): array
     {
+        $ibc = max(0, $ibc);
         $saludEmpleador = round($ibc * $this->epsEmployerRate, 2);
         $pensionEmpleador = round($ibc * $this->pensionEmployerRate, 2);
         $cajaCompensacion = round($ibc * $this->cajaRate, 2);
@@ -262,6 +259,21 @@ class PilaFileGeneratorService
         $partes = array_values(array_filter(array_map('trim', $partes), static fn($v) => $v !== ''));
 
         return implode(' ', $partes);
+    }
+
+    /**
+     * Normaliza la tasa ARL para soportar valores guardados como porcentaje humano (2.5)
+     * o como fracción decimal (0.02436).
+     */
+    private function normalizeArlRate(float $rawRate): float
+    {
+        $rawRate = max(0, $rawRate);
+
+        if ($rawRate > 0.1) {
+            return $rawRate / 100;
+        }
+
+        return $rawRate;
     }
 
     private function resolverCodigoPilaEntidad(array $detalle, string $relacionKey, string $flatKey): string

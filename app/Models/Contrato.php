@@ -48,7 +48,7 @@ class Contrato extends Model
         'salario',
         'activo',
         'alto_riesgo',
-        'nivel_riesgo',
+        'nivel_riesgo_id',
         'horas_diarias',
         'codigo_interno',
         'tipo_cuenta',
@@ -280,6 +280,14 @@ class Contrato extends Model
     public function metodoPago()
     {
         return $this->belongsTo(MetodoPago::class, 'id_metodo_pago', 'id_metodo_pago');
+    }
+
+    /**
+     * Relación con Nivel de Riesgo
+     */
+    public function nivelRiesgo()
+    {
+        return $this->belongsTo(NivelRiesgo::class, 'nivel_riesgo_id', 'id');
     }
 }
 

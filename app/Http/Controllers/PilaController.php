@@ -472,7 +472,7 @@ class PilaController extends Controller
             'totales' => [
                 'salud' => round((float) ($totales['salud'] ?? 0), 2),
                 'pension' => round((float) ($totales['pension'] ?? 0), 2),
-                'arl' => round((float) ($totales['arl'] ?? 0), 2),
+                'arl' => (float) ($totales['arl'] ?? 0),
                 'caja' => round((float) ($totales['caja'] ?? 0), 2),
             ],
             'detalles' => array_map(static function (array $detalle): array {
@@ -481,7 +481,7 @@ class PilaController extends Controller
                     'ibc' => round((float) ($detalle['ibc_salud'] ?? 0), 2),
                     'salud' => round((float) ($detalle['aporte_salud'] ?? 0), 2),
                     'pension' => round((float) ($detalle['aporte_pension'] ?? 0), 2),
-                    'arl' => round((float) ($detalle['aporte_arl'] ?? 0), 2),
+                    'arl' => (float) ($detalle['aporte_arl'] ?? 0),
                     'caja' => round((float) ($detalle['aporte_caja'] ?? 0), 2),
                     'dias' => (int) ($detalle['dias_cotizados'] ?? 0),
                 ];

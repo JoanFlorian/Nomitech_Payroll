@@ -45,6 +45,13 @@
         </div>
     @endif
 
+    <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#historialPilaModal">
+            <i class="bi bi-clock-history me-1"></i>
+            Ver historial
+        </button>
+    </div>
+
     <div class="card pila-card pila-filter-card mb-4">
         <div class="card-body p-4">
             <p class="pila-section-title mb-2">Seccion 1</p>
@@ -124,165 +131,27 @@
         </div>
     </div>
 
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-            <p class="pila-section-title mb-1">Seccion 2</p>
-            <h3 class="h5 mb-0 fw-bold text-dark">Resumen de aportes</h3>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card pila-card kpi-card kpi-salud h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="kpi-icon bg-primary-subtle text-primary">
-                        <i class="bi bi-heart-pulse"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Total Salud</p>
-                        <h4 class="mb-0 fw-bold">${{ number_format($totales['salud'] ?? 0, 2, ',', '.') }}</h4>
-                    </div>
+    {{-- RESUMEN COMPACTO DE APORTES --}}
+    <div class="card pila-card mb-4">
+        <div class="card-body p-4">
+            <p class="pila-section-title mb-3">Seccion 2 - RESUMEN DE APORTES</p>
+            
+            <div class="row g-0">
+                <div class="col-6 col-lg-3 px-3 py-2 border-end border-light">
+                    <p class="text-muted small mb-1"><i class="bi bi-heart-pulse text-primary me-1"></i>Salud</p>
+                    <h5 class="fw-bold text-primary mb-0">${{ number_format($totales['salud'] ?? 0, 0, ',', '.') }}</h5>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card pila-card kpi-card kpi-pension h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="kpi-icon bg-info-subtle text-info">
-                        <i class="bi bi-person-vcard"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Total Pension</p>
-                        <h4 class="mb-0 fw-bold">${{ number_format($totales['pension'] ?? 0, 2, ',', '.') }}</h4>
-                    </div>
+                <div class="col-6 col-lg-3 px-3 py-2 border-end border-light">
+                    <p class="text-muted small mb-1"><i class="bi bi-person-vcard text-info me-1"></i>Pensión</p>
+                    <h5 class="fw-bold text-info mb-0">${{ number_format($totales['pension'] ?? 0, 0, ',', '.') }}</h5>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card pila-card kpi-card kpi-arl h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="kpi-icon bg-warning-subtle text-warning">
-                        <i class="bi bi-shield-fill-check"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Total ARL</p>
-                        <h4 class="mb-0 fw-bold">${{ number_format($totales['arl'] ?? 0, 2, ',', '.') }}</h4>
-                    </div>
+                <div class="col-6 col-lg-3 px-3 py-2 border-end border-light">
+                    <p class="text-muted small mb-1"><i class="bi bi-shield-fill-check text-warning me-1"></i>ARL</p>
+                    <h5 class="fw-bold text-warning mb-0">${{ number_format($totales['arl'] ?? 0, 0, ',', '.') }}</h5>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card pila-card kpi-card kpi-caja h-100">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="kpi-icon bg-success-subtle text-success">
-                        <i class="bi bi-bank"></i>
-                    </div>
-                    <div>
-                        <p class="text-muted mb-1 small">Total Caja Compensacion</p>
-                        <h4 class="mb-0 fw-bold">${{ number_format($totales['caja'] ?? 0, 2, ',', '.') }}</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-xl-7">
-            <div class="card pila-card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <div>
-                            <p class="pila-section-title mb-1">Analitica</p>
-                            <h4 class="h6 fw-bold mb-0">Composicion de aportes</h4>
-                        </div>
-                        @if($hasCalculo)
-                            <span class="badge bg-primary-subtle text-primary">Total: ${{ number_format($granTotal, 2, ',', '.') }}</span>
-                        @else
-                            <span class="badge bg-secondary-subtle text-secondary">Sin calculo</span>
-                        @endif
-                    </div>
-
-                    @if(!$hasCalculo)
-                        <div class="alert alert-light border mb-3 py-2 px-3 small text-muted">
-                            Seleccione un periodo y presione Calcular Seguridad Social para visualizar la composicion de aportes.
-                        </div>
-                    @endif
-
-                    <div class="row g-3 align-items-center">
-                        <div class="col-12 col-md-5">
-                            <div
-                                class="ring-chart"
-                                style="background: {{ $hasCalculo ? 'conic-gradient(#0d6efd 0 ' . $pctSalud . '%, #0dcaf0 ' . $pctSalud . '% ' . ($pctSalud + $pctPension) . '%, #fd7e14 ' . ($pctSalud + $pctPension) . '% ' . ($pctSalud + $pctPension + $pctArl) . '%, #198754 ' . ($pctSalud + $pctPension + $pctArl) . '% 100%)' : 'conic-gradient(#e9ecef 0% 100%)' }};"
-                            >
-                                <div class="ring-center">
-                                    <div class="small text-muted">Total aportes</div>
-                                    <div class="fw-bold">{{ $hasCalculo ? '100%' : '0%' }}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-7">
-                            <div class="metric-row">
-                                <span class="small fw-semibold"><span class="legend-chip me-1" style="background:#0d6efd;"></span>Salud</span>
-                                <div class="metric-track"><div class="metric-fill" style="width: {{ $pctSalud }}%; background:#0d6efd;"></div></div>
-                                <span class="small text-end fw-semibold">{{ $pctSalud }}%</span>
-                            </div>
-                            <div class="metric-row">
-                                <span class="small fw-semibold"><span class="legend-chip me-1" style="background:#0dcaf0;"></span>Pension</span>
-                                <div class="metric-track"><div class="metric-fill" style="width: {{ $pctPension }}%; background:#0dcaf0;"></div></div>
-                                <span class="small text-end fw-semibold">{{ $pctPension }}%</span>
-                            </div>
-                            <div class="metric-row">
-                                <span class="small fw-semibold"><span class="legend-chip me-1" style="background:#fd7e14;"></span>ARL</span>
-                                <div class="metric-track"><div class="metric-fill" style="width: {{ $pctArl }}%; background:#fd7e14;"></div></div>
-                                <span class="small text-end fw-semibold">{{ $pctArl }}%</span>
-                            </div>
-                            <div class="metric-row mb-0">
-                                <span class="small fw-semibold"><span class="legend-chip me-1" style="background:#198754;"></span>Caja</span>
-                                <div class="metric-track"><div class="metric-fill" style="width: {{ $pctCaja }}%; background:#198754;"></div></div>
-                                <span class="small text-end fw-semibold">{{ $pctCaja }}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-xl-5">
-            <div class="card pila-card h-100">
-                <div class="card-body p-4 d-flex flex-column">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <div>
-                            <p class="pila-section-title mb-1">Workflow</p>
-                            <h4 class="h6 fw-bold mb-0">Estado de la planilla</h4>
-                        </div>
-                        <span class="badge bg-success-subtle text-success">{{ $progress }}%</span>
-                    </div>
-
-                    <div class="plan-progress-wrap mb-3">
-                        <div class="plan-progress-bar mb-2">
-                            <div class="plan-progress-fill" style="width: {{ $progress }}%;"></div>
-                        </div>
-                        <small class="text-muted">Flujo: seleccion de filtros, calculo y generacion de planilla.</small>
-                    </div>
-
-                    <div class="d-grid gap-2 mt-auto">
-                        <div class="d-flex align-items-center justify-content-between small">
-                            <span><i class="bi {{ $stepPeriodoEmpresa ? 'bi-check-circle-fill text-success' : 'bi-circle text-secondary' }} me-2"></i>Filtros seleccionados</span>
-                            <span class="fw-semibold">{{ $stepPeriodoEmpresa ? 'OK' : 'Pendiente' }}</span>
-                        </div>
-                        <div class="d-flex align-items-center justify-content-between small">
-                            <span><i class="bi {{ $stepCalculo ? 'bi-check-circle-fill text-success' : 'bi-circle text-secondary' }} me-2"></i>Calculo de aportes</span>
-                            <span class="fw-semibold">{{ $stepCalculo ? 'OK' : 'Pendiente' }}</span>
-                        </div>
-                        <div class="d-flex align-items-center justify-content-between small">
-                            <span><i class="bi {{ $stepGenerada ? 'bi-check-circle-fill text-success' : 'bi-circle text-secondary' }} me-2"></i>Planilla generada</span>
-                            <span class="fw-semibold">{{ $stepGenerada ? 'OK' : 'Pendiente' }}</span>
-                        </div>
-                    </div>
+                <div class="col-6 col-lg-3 px-3 py-2">
+                    <p class="text-muted small mb-1"><i class="bi bi-bank text-success me-1"></i>Caja Comp.</p>
+                    <h5 class="fw-bold text-success mb-0">${{ number_format($totales['caja'] ?? 0, 0, ',', '.') }}</h5>
                 </div>
             </div>
         </div>
@@ -290,61 +159,46 @@
 
     <div class="card pila-card">
         <div class="card-body p-4">
-            <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 mb-4">
                 <div>
                     <p class="pila-section-title mb-1">Seccion 3</p>
-                    <h3 class="h5 mb-0 fw-bold text-dark">Tabla de empleados</h3>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Detalle de empleados</h3>
+                    <span class="badge rounded-pill badge-soft mt-2" id="employeesCountBadge">0 empleados</span>
                 </div>
             </div>
 
-            <div class="d-flex flex-column flex-xl-row justify-content-between gap-3 mb-3">
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <h3 class="h6 fw-bold text-primary mb-0 me-2">Detalle de empleados</h3>
-                    <span class="badge rounded-pill badge-soft" id="employeesCountBadge">0 empleados</span>
-                </div>
-
-                <div class="d-flex flex-column flex-md-row gap-2 align-items-stretch align-items-md-center">
-                    <div class="input-group pila-search" style="min-width: 260px;">
+            <div class="d-flex flex-column flex-md-row gap-3 align-items-stretch align-items-md-center">
+                    <div class="input-group pila-search">
                         <span class="input-group-text bg-white">
                             <i class="bi bi-search"></i>
                         </span>
                         <input type="text" id="employeeSearch" class="form-control" placeholder="Buscar por documento o nombre">
                     </div>
 
-                    <form method="POST" action="{{ route('pila.generar') }}" id="generatePilaForm">
-                        @csrf
-                        <input type="hidden" name="id_empresa" value="{{ $selectedEmpresaId }}">
-                        <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">
-
-                        @can('export_pila')
-                        <button type="submit" class="btn btn-success btn-lg btn-pila-generate" {{ $canGenerate ? '' : 'disabled' }}>
-                            <i class="bi bi-file-earmark-check-fill me-2"></i>
-                            Generar Planilla PILA
-                        </button>
-                        @endcan
-                    </form>
+                    <button type="button" class="btn btn-success btn-pila-generate flex-grow-1" 
+                        id="btnGenerarConfirm" {{ $canGenerate ? '' : 'disabled' }}
+                        data-bs-toggle="modal" data-bs-target="#confirmGenerateModal">
+                        <i class="bi bi-file-earmark-check-fill me-2"></i>
+                        Generar PILA
+                    </button>
 
                     @if($stepGenerada)
-                        <form method="GET" action="{{ route('pila.descargar') }}" id="downloadPilaForm">
+                        <form method="GET" action="{{ route('pila.descargar') }}" id="downloadPilaForm" style="flex: 1;">
                             <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">
-
-                            @can('export_pila')
-                            <button type="submit" class="btn btn-outline-primary btn-lg" {{ $hasCalculo && $detalles->isNotEmpty() ? '' : 'disabled' }}>
+                            <button type="submit" class="btn btn-outline-primary btn-pila-generate w-100" {{ $hasCalculo && $detalles->isNotEmpty() ? '' : 'disabled' }}>
                                 <i class="bi bi-download me-2"></i>
-                                Descargar Planilla PILA
+                                Descargar
                             </button>
-                            @endcan
                         </form>
                     @endif
                 </div>
-            </div>
 
             @if($hasCalculo && !$canGenerate && $stepGenerada)
                 <div class="alert alert-info border-0 py-2 px-3 small mb-3">
-                    Esta planilla ya fue generada para el periodo seleccionado y no se detectaron cambios en los datos.
+                    <i class="bi bi-info-circle me-2"></i>
+                    Esta planilla ya fue generada para el periodo seleccionado.
                     @if($archivoGenerado !== '')
-                        <br>
-                        Archivo generado: {{ $archivoGenerado }}
+                        Archivo: <strong>{{ $archivoGenerado }}</strong>
                     @endif
                 </div>
             @endif
@@ -355,12 +209,12 @@
                         <tr>
                             <th>Documento</th>
                             <th>Empleado</th>
-                            <th class="text-end">IBC</th>
+                            <th class="text-end" style="background: linear-gradient(135deg, #0b5ed7 0%, #084298 100%); color: #fff;">IBC</th>
                             <th class="text-end">Salud Empresa</th>
-                            <th class="text-end">Pension Empresa</th>
+                            <th class="text-end">Pensión Empresa</th>
                             <th class="text-end">ARL</th>
-                            <th class="text-end">Caja Compensacion</th>
-                            <th class="text-center">Dias Cotizados</th>
+                            <th class="text-end">Caja Comp.</th>
+                            <th class="text-center">Días</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -373,13 +227,13 @@
                                 $caja = (float) ($detalle['aporte_caja'] ?? 0);
                             @endphp
                             <tr>
-                                <td>{{ $detalle['doc_empleado'] }}</td>
-                                <td class="fw-semibold">{{ $detalle['empleado_nombre'] }}</td>
-                                <td class="text-end fw-semibold">${{ number_format($ibc, 2, ',', '.') }}</td>
-                                <td class="text-end">${{ number_format($saludEmpresa, 2, ',', '.') }}</td>
-                                <td class="text-end">${{ number_format($pensionEmpresa, 2, ',', '.') }}</td>
-                                <td class="text-end">${{ number_format($arl, 2, ',', '.') }}</td>
-                                <td class="text-end">${{ number_format($caja, 2, ',', '.') }}</td>
+                                <td class="fw-semibold text-primary">{{ $detalle['doc_empleado'] }}</td>
+                                <td class="fw-semibold" style="text-transform: uppercase;">{{ $detalle['empleado_nombre'] }}</td>
+                                <td class="text-end fw-bold text-primary" style="background: rgba(13, 110, 253, 0.08); border-left: 3px solid #0d6efd;">${{ number_format($ibc, 0, ',', '.') }}</td>
+                                <td class="text-end">${{ number_format($saludEmpresa, 0, ',', '.') }}</td>
+                                <td class="text-end">${{ number_format($pensionEmpresa, 0, ',', '.') }}</td>
+                                <td class="text-end">${{ number_format($arl, 0, ',', '.') }}</td>
+                                <td class="text-end">${{ number_format($caja, 0, ',', '.') }}</td>
                                 <td class="text-center">{{ $detalle['dias_cotizados'] }}</td>
                             </tr>
                         @empty
@@ -387,7 +241,7 @@
                                 <td colspan="8" class="text-center py-5 text-muted">
                                     <i class="bi bi-people fs-3 d-block mb-2"></i>
                                     {{ $hasCalculo
-                                        ? 'No hay empleados con nomina registrada para los filtros seleccionados.'
+                                        ? 'No hay empleados con nómina registrada para los filtros seleccionados.'
                                         : 'Seleccione un periodo y presione Calcular Seguridad Social.' }}
                                 </td>
                             </tr>
@@ -405,67 +259,90 @@
         </div>
     </div>
 
-    <div class="card pila-card mt-4">
-        <div class="card-body p-4">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <div>
-                    <p class="pila-section-title mb-1">Seccion 4</p>
-                    <h3 class="h5 mb-0 fw-bold text-dark">Historial de archivos PILA</h3>
-                    <small class="text-muted d-block mt-1">Archivos generados por periodo para la empresa activa.</small>
-                </div>
-                <span class="badge rounded-pill badge-soft">{{ ($historialPila ?? collect())->count() }} registros</span>
-            </div>
+</div>
 
-            <div class="table-responsive border rounded-3">
-                <table class="table pila-table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Periodo</th>
-                            <th>Archivo</th>
-                            <th class="text-center">Empleados</th>
-                            <th>Fecha generacion</th>
-                            <th class="text-center">Estado archivo</th>
-                            <th class="text-center">Accion</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse(($historialPila ?? collect()) as $item)
-                            <tr>
-                                <td>{{ $item->id }}</td>
-                                <td>
-                                    @if(!empty($item->fecha_inicio) && !empty($item->fecha_fin))
-                                        {{ \Carbon\Carbon::parse($item->fecha_inicio)->format('Y-m-d') }} a {{ \Carbon\Carbon::parse($item->fecha_fin)->format('Y-m-d') }}
-                                    @else
-                                        #{{ $item->periodo_id }}
-                                    @endif
-                                </td>
-                                <td class="fw-semibold">{{ $item->nombre_archivo }}</td>
-                                <td class="text-center">{{ (int) $item->total_empleados }}</td>
-                                <td>{{ \Carbon\Carbon::parse($item->created_at)->format('Y-m-d H:i') }}</td>
-                                <td class="text-center"><span class="badge bg-success-subtle text-success border">Disponible</span></td>
-                                <td class="text-center">
-                                    <a href="{{ route('pila.historial.descargar', ['id' => $item->id]) }}" class="btn btn-sm btn-outline-primary history-download-btn">
-                                        <i class="bi bi-download me-1"></i>
-                                        Descargar TXT
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    No hay historial de archivos PILA para la empresa y periodo seleccionados.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+@include('pila.partials.historial-pila-modal')
+
+{{-- MODAL DE CONFIRMACIÓN PARA GENERAR PILA --}}
+<div class="modal fade" id="confirmGenerateModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Generar Planilla PILA</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info border-0 mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <span>Se generará el archivo PILA con los siguientes datos:</span>
+                </div>
+                
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Período:</span>
+                            <span class="fw-semibold">{{ date('M Y') }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Empleados:</span>
+                            <span class="fw-semibold" id="confirmEmployeeCount">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-top pt-2">
+                            <span class="text-muted fw-bold">Total a Pagar:</span>
+                            <span class="fw-bold text-success h5 mb-0">${{ number_format($granTotal, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmAccept" required>
+                    <label class="form-check-label" for="confirmAccept">
+                        Confirmo que los datos son correctos y autorizo la generación de la planilla
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{{ route('pila.generar') }}" id="confirmGenerateForm" class="d-inline">
+                    @csrf
+                    <input type="hidden" name="id_empresa" value="{{ $selectedEmpresaId }}">
+                    <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">
+                    <button type="submit" class="btn btn-success btn-lg" id="btnConfirmGenerate" disabled>
+                        <i class="bi bi-check-circle me-2"></i>
+                        Confirmar y Generar
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 @vite('resources/js/pila.js')
+
+<script>
+    // Actualizar conteo de empleados en el modal de confirmación
+    function updateEmployeeCount() {
+        const tableRows = document.querySelectorAll('#pilaTable tbody tr');
+        const count = tableRows.length > 0 && !tableRows[0].querySelector('[colspan]') ? tableRows.length : 0;
+        document.getElementById('confirmEmployeeCount').textContent = count;
+    }
+
+    // Ejecutar al cargar
+    document.addEventListener('DOMContentLoaded', updateEmployeeCount);
+
+    // Habilitar/deshabilitar botón según checkbox
+    document.getElementById('confirmAccept').addEventListener('change', function() {
+        document.getElementById('btnConfirmGenerate').disabled = !this.checked;
+    });
+
+    // Reset modal cuando se cierra (limpiar checkbox)
+    document.getElementById('confirmGenerateModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('confirmAccept').checked = false;
+        document.getElementById('btnConfirmGenerate').disabled = true;
+    });
+</script>
 @endpush

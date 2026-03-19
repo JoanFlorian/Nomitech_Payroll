@@ -66,7 +66,7 @@ class NominaCalculatorService
 
     public function calcularNominaEmpleado(int $idContrato, int $idPeriodo, array $input = []): array
     {
-        $contrato = Contrato::query()->findOrFail($idContrato);
+        $contrato = Contrato::query()->with('nivelRiesgo')->findOrFail($idContrato);
         $periodo = PeriodoLiquidacion::query()->findOrFail($idPeriodo);
 
         if ((int) $contrato->id_empresa !== (int) $periodo->id_empresa) {
@@ -115,12 +115,16 @@ class NominaCalculatorService
         $eps = $totalDevengado * $epsRate;
         $afp = $totalDevengado * $afpRate;
         $seguridadSocial = $eps + $afp;
+
+        // IBC para ARL: salario base del contrato.
+        $ibcArl = max(0, (float) ($contrato->salario_base ?? 0));
+        $arlRate = $this->resolveArlRateFromContrato($contrato);
+        $arl = round($ibcArl * $arlRate, 2);
+
         $aportesEmpresa = $this->securitySocialCalculator->calculate(
             $totalDevengado,
-            $this->params,
-            (int) ($contrato->nivel_riesgo ?? 1)
+            $this->params
         );
-        $arl = (float) ($aportesEmpresa['aporte_arl'] ?? 0);
 
         $totalDeducciones =
             $seguridadSocial
@@ -166,6 +170,26 @@ class NominaCalculatorService
             'valor_hora' => $valorHora,
             'salario_base' => $salarioBase,
         ];
+    }
+
+    private function resolveArlRateFromContrato(Contrato $contrato): float
+    {
+        $porcentaje = $contrato->nivelRiesgo?->porcentaje;
+
+        if ($porcentaje === null) {
+            return 0.0;
+        }
+
+        $rate = max(0, (float) $porcentaje);
+
+        // Soporta ambos formatos de almacenamiento:
+        // - Fracción decimal: 0.02436
+        // - Porcentaje humano: 2.436
+        if ($rate > 0.1) {
+            $rate = $rate / 100;
+        }
+
+        return $rate;
     }
 
     public function guardarNominaEmpleado(int $idContrato, int $idPeriodo, array $input = []): Salario

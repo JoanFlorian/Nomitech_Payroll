@@ -41,6 +41,7 @@ class DatabaseSeeder extends Seeder
             CajaCompensacionSeeder::class,
             PermissionSeeder::class,
             PermissionProfileSeeder::class,
+            NivelesRiesgoSeeder::class,
         ]);
     }
 }

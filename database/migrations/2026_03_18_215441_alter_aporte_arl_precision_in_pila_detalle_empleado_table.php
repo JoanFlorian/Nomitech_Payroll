@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (Schema::hasTable('pila_detalle_empleado') && Schema::hasColumn('pila_detalle_empleado', 'aporte_arl')) {
             DB::statement('ALTER TABLE pila_detalle_empleado MODIFY aporte_arl DECIMAL(14,6) NOT NULL DEFAULT 0');
         }

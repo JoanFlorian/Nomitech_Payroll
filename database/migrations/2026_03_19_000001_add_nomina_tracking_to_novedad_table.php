@@ -18,25 +18,26 @@ return new class extends Migration
 
             // Periodo en el que esta novedad fue efectivamente aplicada en nómina.
             // Para IGE/IRL esto garantiza que solo afecten el periodo de registro.
-            // Debe coincidir exactamente con el tipo de periodo_liquidacion.id_periodo.
             if (!Schema::hasColumn('novedad', 'periodo_aplicado_id')) {
+                // Debe ser INT firmado para coincidir con periodo_liquidacion.id_periodo
                 $table->integer('periodo_aplicado_id')->nullable()->after('afecta_nomina');
             }
         });
 
-        // La tabla periodo_liquidacion.id_periodo es INT firmado; forzamos el mismo tipo aquí.
-        DB::statement('ALTER TABLE novedad MODIFY periodo_aplicado_id INT NULL');
-
+        // Aseguramos que sea INT firmado y añadimos la relación si no existe
         if (!$this->foreignKeyExists('novedad', 'novedad_periodo_aplicado_id_foreign')) {
             Schema::table('novedad', function (Blueprint $table) {
-            $table->foreign('periodo_aplicado_id')
-                ->references('id_periodo')
-                ->on('periodo_liquidacion')
-                ->onDelete('set null');
+                $table->foreign('periodo_aplicado_id')
+                    ->references('id_periodo')
+                    ->on('periodo_liquidacion')
+                    ->onDelete('set null');
             });
         }
     }
 
+    /**
+     * Verifica si una llave foránea existe en la tabla dada.
+     */
     private function foreignKeyExists(string $table, string $constraintName): bool
     {
         $database = DB::getDatabaseName();

@@ -43,8 +43,9 @@ class BenefitAccrualService
             $employeeId = $contrato->doc;
             $contractId = (int) $contrato->id_contrato;
 
-            // dias_trabajados: field from colleague's push (fallback to dias_a_trabajar)
-            $diasTrabajados = (int) ($salario->dias_trabajados ?? $salario->dias_a_trabajar ?? 30);
+            // Priorizar dias_trabajados_prestacional (incluye incapacidades/licencias como laborados)
+            // Fallback a dias_a_trabajar o 30 si no existe.
+            $diasTrabajados = (int) ($salario->dias_trabajados_prestacional ?? $salario->dias_a_trabajar ?? 30);
 
             // Calculate each benefit
             $prima = $this->calculatePrima($salarioBase, $diasTrabajados);

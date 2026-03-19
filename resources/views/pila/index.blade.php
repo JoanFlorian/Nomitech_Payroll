@@ -45,6 +45,27 @@
         </div>
     @endif
 
+    @php $advertencias = $advertencias ?? []; @endphp
+    @if(count($advertencias) > 0)
+        <div class="alert alert-warning shadow-sm border-0 mb-3" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                <strong>{{ count($advertencias) }} advertencia(s) — revise antes de generar</strong>
+                <button class="btn btn-sm btn-link p-0 ms-auto text-warning" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#collapseAdvertencias" aria-expanded="false">
+                    Ver detalle <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse mt-2" id="collapseAdvertencias">
+                <ul class="mb-0 small ps-3">
+                    @foreach($advertencias as $adv)
+                        <li>{{ $adv }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    @endif
+
     <div class="d-flex justify-content-end mb-3">
         <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#historialPilaModal">
             <i class="bi bi-clock-history me-1"></i>
@@ -175,31 +196,28 @@
                         <input type="text" id="employeeSearch" class="form-control" placeholder="Buscar por documento o nombre">
                     </div>
 
-                    <button type="button" class="btn btn-success btn-pila-generate flex-grow-1" 
-                        id="btnGenerarConfirm" {{ $canGenerate ? '' : 'disabled' }}
-                        data-bs-toggle="modal" data-bs-target="#confirmGenerateModal">
-                        <i class="bi bi-file-earmark-check-fill me-2"></i>
-                        Generar PILA
-                    </button>
-
                     @if($stepGenerada)
                         <form method="GET" action="{{ route('pila.descargar') }}" id="downloadPilaForm" style="flex: 1;">
                             <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">
-                            <button type="submit" class="btn btn-outline-primary btn-pila-generate w-100" {{ $hasCalculo && $detalles->isNotEmpty() ? '' : 'disabled' }}>
+                            <button type="submit" class="btn btn-primary btn-pila-generate w-100">
                                 <i class="bi bi-download me-2"></i>
-                                Descargar
+                                Descargar PILA
                             </button>
                         </form>
+                    @else
+                        <button type="button" class="btn btn-success btn-pila-generate flex-grow-1"
+                            id="btnGenerarConfirm" {{ $canGenerate ? '' : 'disabled' }}
+                            data-bs-toggle="modal" data-bs-target="#confirmGenerateModal">
+                            <i class="bi bi-file-earmark-check-fill me-2"></i>
+                            Generar PILA
+                        </button>
                     @endif
                 </div>
 
-            @if($hasCalculo && !$canGenerate && $stepGenerada)
-                <div class="alert alert-info border-0 py-2 px-3 small mb-3">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Esta planilla ya fue generada para el periodo seleccionado.
-                    @if($archivoGenerado !== '')
-                        Archivo: <strong>{{ $archivoGenerado }}</strong>
-                    @endif
+            @if($stepGenerada)
+                <div class="alert alert-success border-0 py-2 px-3 small mb-3 mt-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-lock-fill"></i>
+                    <span>Planilla generada y bloqueada. No se puede volver a generar para este periodo.</span>
                 </div>
             @endif
 
@@ -210,9 +228,10 @@
                             <th>Documento</th>
                             <th>Empleado</th>
                             <th class="text-end" style="background: linear-gradient(135deg, #0b5ed7 0%, #084298 100%); color: #fff;">IBC</th>
+                            <th class="text-center text-nowrap">Niv. Riesgo</th>
                             <th class="text-end">Salud Empresa</th>
                             <th class="text-end">Pensión Empresa</th>
-                            <th class="text-end">ARL</th>
+                            <th class="text-end text-nowrap">Valor ARL</th>
                             <th class="text-end">Caja Comp.</th>
                             <th class="text-center">Días</th>
                         </tr>
@@ -220,25 +239,31 @@
                     <tbody>
                         @forelse($detalles as $detalle)
                             @php
-                                $ibc = (float) ($detalle['ibc_salud'] ?? 0);
-                                $saludEmpresa = round($ibc * 0.085, 2);
-                                $pensionEmpresa = round($ibc * 0.12, 2);
-                                $arl = (float) ($detalle['aporte_arl'] ?? 0);
-                                $caja = (float) ($detalle['aporte_caja'] ?? 0);
+                                $ibc         = (float) ($detalle['ibc'] ?? $detalle['ibc_salud'] ?? 0);
+                                $nivelRiesgo = (int)   ($detalle['nivel_riesgo_arl'] ?? 1);
+                                $saludEmpresa   = (float) ($detalle['aporte_salud']   ?? 0);
+                                $pensionEmpresa = (float) ($detalle['aporte_pension'] ?? 0);
+                                $valorArl    = (float) ($detalle['valor_arl']    ?? $detalle['aporte_arl'] ?? 0);
+                                $caja        = (float) ($detalle['aporte_caja']  ?? 0);
                             @endphp
                             <tr>
                                 <td class="fw-semibold text-primary">{{ $detalle['doc_empleado'] }}</td>
                                 <td class="fw-semibold" style="text-transform: uppercase;">{{ $detalle['empleado_nombre'] }}</td>
                                 <td class="text-end fw-bold text-primary" style="background: rgba(13, 110, 253, 0.08); border-left: 3px solid #0d6efd;">${{ number_format($ibc, 0, ',', '.') }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                        {{ $nivelRiesgo }}
+                                    </span>
+                                </td>
                                 <td class="text-end">${{ number_format($saludEmpresa, 0, ',', '.') }}</td>
                                 <td class="text-end">${{ number_format($pensionEmpresa, 0, ',', '.') }}</td>
-                                <td class="text-end">${{ number_format($arl, 0, ',', '.') }}</td>
+                                <td class="text-end text-warning fw-semibold">${{ number_format($valorArl, 0, ',', '.') }}</td>
                                 <td class="text-end">${{ number_format($caja, 0, ',', '.') }}</td>
                                 <td class="text-center">{{ $detalle['dias_cotizados'] }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
+                                <td colspan="9" class="text-center py-5 text-muted">
                                     <i class="bi bi-people fs-3 d-block mb-2"></i>
                                     {{ $hasCalculo
                                         ? 'No hay empleados con nómina registrada para los filtros seleccionados.'
@@ -331,18 +356,59 @@
         document.getElementById('confirmEmployeeCount').textContent = count;
     }
 
-    // Ejecutar al cargar
-    document.addEventListener('DOMContentLoaded', updateEmployeeCount);
+    document.addEventListener('DOMContentLoaded', function () {
+        updateEmployeeCount();
 
-    // Habilitar/deshabilitar botón según checkbox
-    document.getElementById('confirmAccept').addEventListener('change', function() {
-        document.getElementById('btnConfirmGenerate').disabled = !this.checked;
-    });
+        const modalEl = document.getElementById('confirmGenerateModal');
+        const historialModalEl = document.getElementById('historialPilaModal');
+        const confirmAccept = document.getElementById('confirmAccept');
+        const btnConfirmGenerate = document.getElementById('btnConfirmGenerate');
 
-    // Reset modal cuando se cierra (limpiar checkbox)
-    document.getElementById('confirmGenerateModal').addEventListener('hidden.bs.modal', function() {
-        document.getElementById('confirmAccept').checked = false;
-        document.getElementById('btnConfirmGenerate').disabled = true;
+        if (historialModalEl && historialModalEl.parentElement !== document.body) {
+            document.body.appendChild(historialModalEl);
+        }
+
+        if (historialModalEl) {
+            historialModalEl.addEventListener('shown.bs.modal', function() {
+                historialModalEl.style.zIndex = '2005';
+
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                const lastBackdrop = backdrops.length ? backdrops[backdrops.length - 1] : null;
+                if (lastBackdrop) {
+                    lastBackdrop.style.zIndex = '2000';
+                }
+            });
+        }
+
+        if (!modalEl || !confirmAccept || !btnConfirmGenerate) {
+            return;
+        }
+
+        if (modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+
+        // Habilitar/deshabilitar botón según checkbox
+        confirmAccept.addEventListener('change', function() {
+            btnConfirmGenerate.disabled = !this.checked;
+        });
+
+        // Forzar capas: backdrop debajo, modal arriba.
+        modalEl.addEventListener('shown.bs.modal', function() {
+            modalEl.style.zIndex = '2005';
+
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            const lastBackdrop = backdrops.length ? backdrops[backdrops.length - 1] : null;
+            if (lastBackdrop) {
+                lastBackdrop.style.zIndex = '2000';
+            }
+        });
+
+        // Reset modal cuando se cierra (limpiar checkbox)
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            confirmAccept.checked = false;
+            btnConfirmGenerate.disabled = true;
+        });
     });
 </script>
 @endpush

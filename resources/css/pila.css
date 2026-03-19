@@ -25,31 +25,28 @@
 .kpi-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 16px 32px rgba(13, 110, 253, 0.13);
-}
 
 .kpi-salud {
     border-top-color: #0d6efd;
 }
 
-.kpi-pension {
-    border-top-color: #0dcaf0;
+.pila-custom-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
 }
 
-.kpi-arl {
-    border-top-color: #fd7e14;
+body.pila-modal-open {
+    overflow: hidden;
 }
 
-.kpi-caja {
-    border-top-color: #198754;
+.pila-custom-modal[hidden] {
+    display: none !important;
 }
-
-.kpi-icon {
-    width: 2.9rem;
-    height: 2.9rem;
-    border-radius: 0.95rem;
-    display: grid;
-    place-items: center;
-    font-size: 1.28rem;
 }
 
 .pila-table thead th {
@@ -358,6 +355,27 @@
 }
 
 /* MODAL MEJORADO */
+.modal-backdrop {
+    z-index: 1050 !important;
+    pointer-events: none !important;
+}
+
+#confirmGenerateModal {
+    z-index: 1060 !important;
+}
+
+#historialPilaModal {
+    z-index: 1060 !important;
+}
+
+#confirmGenerateModal .modal-dialog,
+#confirmGenerateModal .modal-content,
+#historialPilaModal .modal-dialog,
+#historialPilaModal .modal-content {
+    position: relative;
+    z-index: 1061;
+}
+
 .modal-content {
     border-radius: 1rem;
 }

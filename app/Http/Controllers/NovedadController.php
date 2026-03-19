@@ -118,7 +118,9 @@ class NovedadController extends Controller
                 });
             })
             ->when($periodoActivo, function ($query) use ($periodoActivo) {
-                // Incluir novedades del periodo o sin periodo AND novedades que se solapen por fecha
+                // Incluir novedades del periodo o sin periodo AND novedades que se solapen por fecha.
+                // EXCEPCIÓN: IGE e IRL son periodo-aislados: solo se muestran si pertenecen al
+                // periodo activo (no si su rango de fechas solapa con él).
                 $query->where(function ($q) use ($periodoActivo) {
                     $q->where('id_periodo', $periodoActivo->id_periodo)
                       ->orWhereNull('id_periodo')
@@ -126,7 +128,8 @@ class NovedadController extends Controller
                           $sub->whereNotNull('fecha_inicio')
                               ->whereNotNull('fecha_fin')
                               ->whereDate('fecha_inicio', '<=', $periodoActivo->fecha_fin->toDateString())
-                              ->whereDate('fecha_fin', '>=', $periodoActivo->fecha_inicio->toDateString());
+                              ->whereDate('fecha_fin', '>=', $periodoActivo->fecha_inicio->toDateString())
+                              ->whereNotIn('tipo_novedad_codigo', ['IGE', 'IRL']);
                       });
                 });
             })
@@ -281,6 +284,15 @@ class NovedadController extends Controller
             return $this->buildEmpleadoSalarioErrorResponse(true);
         }
 
+        // IGE e IRL requieren periodo activo para garantizar el aislamiento por periodo.
+        $tipoNov = strtoupper((string) ($data['tipo_novedad'] ?? ''));
+        $periodo = PeriodoLiquidacion::getActivePeriod();
+        if (in_array($tipoNov, ['IGE', 'IRL'], true) && !$periodo) {
+            $msg = 'No se puede registrar una incapacidad sin un periodo de liquidación activo. Active un periodo primero.';
+            session()->flash('error', $msg);
+            return back()->withErrors(['tipo_novedad' => $msg])->withInput()->with('open_novedad_modal', true);
+        }
+
         // Validar coexistencia de novedades exclusivas
         $coexistenciaError = $this->verificarCoexistencia(
             (string) $data['empleado_id'],
@@ -294,7 +306,6 @@ class NovedadController extends Controller
         }
 
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
-        $periodo = PeriodoLiquidacion::getActivePeriod();
         $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, $periodo);
 
         $novedad = Novedad::create($payload);
@@ -518,6 +529,8 @@ class NovedadController extends Controller
             'tipo_incapacidad' => $data['tipo_incapacidad'] ?? null,
             'certificado_medico' => (bool) ($data['certificado_medico'] ?? false),
             'observaciones' => $data['observaciones'] ?? null,
+            'afecta_nomina' => true,
+            'periodo_aplicado_id' => $periodo?->id_periodo ?? $salario->id_periodo ?? null,
         ];
     }
 

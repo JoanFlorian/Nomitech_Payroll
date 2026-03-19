@@ -904,19 +904,23 @@ class NominaController extends Controller
         $embargoFiscal = $this->parseMoneyInput($request->input('embargo_fiscal'));
         $pensionVoluntaria = $this->parseMoneyInput($request->input('pension_voluntaria'));
 
-        $calculo = $this->calculator->calcularNominaEmpleado((int) $s1['id_contrato'], $periodoId, [
-            'fecha_pago' => $s1['fecha_pago'],
-            'dias_trabajados' => (int) ($s1['dias_trabajados'] ?? 30),
-            'horas_extra' => $this->parseMoneyInput($s2['horas_extra'] ?? 0),
-            'recargos' => $this->parseMoneyInput($s2['recargos'] ?? 0),
-            'bonificaciones' => $this->parseMoneyInput($s3['bonificaciones'] ?? 0),
-            'comisiones' => $this->parseMoneyInput($s3['comisiones'] ?? 0),
-            'otros_devengos' => $this->parseMoneyInput($s3['otros_devengos'] ?? 0),
-            'auxilio_transporte' => $this->parseMoneyInput($s3['auxilio_transporte'] ?? 0),
-            'retencion_fuente' => $retencionFuente,
-            'embargo_fiscal' => $embargoFiscal,
-            'pension_voluntaria' => $pensionVoluntaria,
-        ]);
+        try {
+            $calculo = $this->calculator->calcularNominaEmpleado((int) $s1['id_contrato'], $periodoId, [
+                'fecha_pago' => $s1['fecha_pago'],
+                'dias_trabajados' => (int) ($s1['dias_trabajados'] ?? 30),
+                'horas_extra' => $this->parseMoneyInput($s2['horas_extra'] ?? 0),
+                'recargos' => $this->parseMoneyInput($s2['recargos'] ?? 0),
+                'bonificaciones' => $this->parseMoneyInput($s3['bonificaciones'] ?? 0),
+                'comisiones' => $this->parseMoneyInput($s3['comisiones'] ?? 0),
+                'otros_devengos' => $this->parseMoneyInput($s3['otros_devengos'] ?? 0),
+                'auxilio_transporte' => $this->parseMoneyInput($s3['auxilio_transporte'] ?? 0),
+                'retencion_fuente' => $retencionFuente,
+                'embargo_fiscal' => $embargoFiscal,
+                'pension_voluntaria' => $pensionVoluntaria,
+            ]);
+        } catch (\App\Exceptions\EmpleadoIncapacitadoException $e) {
+            return back()->with('error', $e->getMessage());
+        }
  
          $payload = [
              'id_contrato' => $s1['id_contrato'],
@@ -1023,17 +1027,28 @@ class NominaController extends Controller
         }
 
         $procesados = 0;
-        DB::transaction(function () use ($contratos, $periodoActivo, $fechaPago, &$procesados) {
+        $omitidos   = 0;
+        DB::transaction(function () use ($contratos, $periodoActivo, $fechaPago, &$procesados, &$omitidos) {
             foreach ($contratos as $idContrato) {
-                $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, [
-                    'fecha_pago' => $fechaPago,
-                ]);
-                $procesados++;
+                try {
+                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, [
+                        'fecha_pago' => $fechaPago,
+                    ]);
+                    $procesados++;
+                } catch (\App\Exceptions\EmpleadoIncapacitadoException $e) {
+                    // Empleado con incapacidad activa: se omite sin romper el proceso masivo.
+                    $omitidos++;
+                }
             }
         });
 
+        $mensaje = "Nómina masiva realizada correctamente para {$procesados} empleado(s).";
+        if ($omitidos > 0) {
+            $mensaje .= " {$omitidos} empleado(s) omitido(s) por tener incapacidad activa en este periodo.";
+        }
+
         return redirect()->route('nomina.index')
-            ->with('success', "Nómina masiva realizada correctamente para {$procesados} empleados.");
+            ->with('success', $mensaje);
     }
 
     private function obtenerResumenNovedadesPorContratoPeriodo(int $idContrato, int $idPeriodo): array

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class StoreNovedadEmpleadoRequest extends FormRequest
@@ -261,6 +262,29 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             
             if ($fechaInicio && $fechaFin && strtotime($fechaFin) < strtotime($fechaInicio)) {
                 $validator->errors()->add('fecha_fin', 'La fecha fin debe ser igual o posterior a la fecha de inicio.');
+            }
+
+            // Validación: la novedad no puede ser anterior a la fecha de ingreso del empleado.
+            $empleadoDoc = $this->input('empleado_id');
+            if ($fechaInicio && $empleadoDoc) {
+                $contrato = DB::table('contrato')
+                    ->where('doc', $empleadoDoc)
+                    ->whereNotNull('fecha_inicio')
+                    ->orderByDesc('id_contrato')
+                    ->first(['fecha_inicio']);
+
+                if ($contrato && $contrato->fecha_inicio) {
+                    $fechaIngreso = \Carbon\Carbon::parse($contrato->fecha_inicio);
+                    $fechaNov    = \Carbon\Carbon::parse($fechaInicio);
+
+                    if ($fechaNov->lt($fechaIngreso)) {
+                        $validator->errors()->add(
+                            'fecha_inicio',
+                            'La fecha de inicio de la novedad no puede ser anterior a la fecha de ingreso del empleado ('
+                            . $fechaIngreso->format('d/m/Y') . ').'
+                        );
+                    }
+                }
             }
 
         });

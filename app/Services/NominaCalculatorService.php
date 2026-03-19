@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Contrato;
+use App\Models\Novedad;
 use App\Models\PeriodoLiquidacion;
 use App\Models\Salario;
 use Illuminate\Support\Collection;
@@ -72,6 +73,22 @@ class NominaCalculatorService
         if ((int) $contrato->id_empresa !== (int) $periodo->id_empresa) {
             throw new \InvalidArgumentException('El contrato no pertenece a la empresa del periodo de nómina.');
         }
+
+        // ── Bloqueo por incapacidad activa ────────────────────────────────────────
+        // Si el contrato tiene una IGE o IRL registrada en un periodo anterior que
+        // aún cubre este periodo, el empleado NO puede ser liquidado:
+        //   · IGE: la empresa solo paga los primeros 2 días (ya cubiertos en el
+        //     periodo original). Los días restantes son responsabilidad de la EPS.
+        //   · IRL: la ARL cubre desde el día 1; no corresponde liquidar al empleado
+        //     en periodos en los que la incapacidad aún está vigente.
+        $fechaInicioP = optional($periodo->fecha_inicio)->toDateString() ?? '';
+        $fechaFinP    = optional($periodo->fecha_fin)->toDateString()    ?? '';
+        if (Novedad::tieneIncapacidadActivaEnPeriodo($idContrato, $idPeriodo, $fechaInicioP, $fechaFinP)) {
+            throw new \App\Exceptions\EmpleadoIncapacitadoException(
+                'El empleado no puede ser liquidado porque tiene una incapacidad activa en este periodo.'
+            );
+        }
+        // ─────────────────────────────────────────────────────────────────────────
 
         $salarioBase = (float) ($contrato->salario_base ?? 0);
         $valorHora = $salarioBase > 0 ? ($salarioBase / 240) : 0;
@@ -281,10 +298,13 @@ class NominaCalculatorService
                             ->where('s.id_periodo', $idPeriodo);
                     })
                     ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
+                        // IGE e IRL son restringidos al periodo de registro exacto.
+                        // Solo se incluyen aqui novedades que NO son de tipo periodo-aislado.
                         $q->whereNotNull('n.fecha_inicio')
                             ->whereNotNull('n.fecha_fin')
                             ->whereDate('n.fecha_inicio', '<=', $fechaFin)
-                            ->whereDate('n.fecha_fin', '>=', $fechaInicio);
+                            ->whereDate('n.fecha_fin', '>=', $fechaInicio)
+                            ->whereNotIn('n.tipo_novedad_codigo', ['IGE', 'IRL']);
                     })
                     ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
                         $q->whereNotNull('n.fecha')
@@ -299,6 +319,7 @@ class NominaCalculatorService
                 'n.unidad_cantidad',
                 'n.tipo_novedad_codigo',
                 'n.tipo_novedad_nombre',
+                'n.tipo_incapacidad',
                 'n.fecha_inicio',
                 'n.fecha_fin',
             ])
@@ -316,6 +337,8 @@ class NominaCalculatorService
                 $pInicio = \Carbon\Carbon::parse($fechaInicio);
                 $pFin = \Carbon\Carbon::parse($fechaFin);
 
+                $diasEnPeriodo = 0;
+
                 if ($novInicio && $novFin) {
                     $efectivoInicio = $novInicio->greaterThan($pInicio) ? $novInicio : $pInicio;
                     $efectivoFin = $novFin->lessThan($pFin) ? $novFin : $pFin;
@@ -323,12 +346,29 @@ class NominaCalculatorService
                     $resumen['dias_sln'] += (int) $diasEnPeriodo;
                 } else {
                     // Fallback: usar campo dias directamente
-                    $resumen['dias_sln'] += (int) ($novedad->dias ?? $novedad->cantidad ?? 0);
+                    $diasEnPeriodo = (int) ($novedad->dias ?? $novedad->cantidad ?? 0);
+                    $resumen['dias_sln'] += $diasEnPeriodo;
                 }
-                
-                // Si es SLN, no se suma a otros devengos/deducciones (ya manejado por reducción de días)
-                // Para los otros tipos (IGE, VAC, etc.), el pago se manejará después en el loop
+
+                // SLN: solo reduce dias trabajados, sin devengo monetario.
                 if ($codigo === 'SLN') {
+                    continue;
+                }
+
+                // IGE: empleador paga SOLO los primeros 2 días al 66.67%.
+                // Los días restantes son responsabilidad de la EPS (no generan devengo aquí).
+                if ($codigo === 'IGE') {
+                    $valorDia = $valorHora * 8;
+                    $diasPagadosIge = min(2, $diasEnPeriodo);
+                    $resumen['otros_devengos'] += round($valorDia * $diasPagadosIge * 0.6667, 2);
+                    continue;
+                }
+
+                // IRL: ARL cubre desde el día 1 al 100%. Se registra el devengo completo
+                // del periodo de registro únicamente (no afecta periodos futuros).
+                if ($codigo === 'IRL') {
+                    $valorDia = $valorHora * 8;
+                    $resumen['otros_devengos'] += round($valorDia * $diasEnPeriodo, 2);
                     continue;
                 }
             }

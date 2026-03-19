@@ -152,10 +152,16 @@ class CalculoNovedadService
                 return $resultado;
 
             case 'IGE':
-                $resultado['valor_calculado'] = ($valorDia * $dias * 0.6667) + ($valorHora * $horas * 0.6667);
+                // Normativa colombiana: solo los primeros 2 días son responsabilidad del
+                // empleador (al 66.67%). Los días restantes los paga la EPS directamente.
+                $diasPagados = min(2.0, max(0.0, $dias));
+                // En modo horas: 2 días = 16 horas máximo pagadas por el empleador.
+                $horasPagadas = ($dias > 0 || $horas <= 0) ? 0.0 : min(16.0, max(0.0, $horas));
+                $resultado['valor_calculado'] = ($valorDia * $diasPagados * 0.6667) + ($valorHora * $horasPagadas * 0.6667);
                 $resultado['tipo_movimiento'] = self::OPERACION_DEVENGADO;
                 $resultado['afecta_ibc'] = true;
                 $resultado['descuento_salario'] = ($valorDia * $dias) + ($valorHora * $horas);
+                $resultado['dias_pagados_empleador'] = $diasPagados;
                 return $resultado;
 
             case 'IRL':
@@ -174,10 +180,15 @@ class CalculoNovedadService
 
             case 'INC':
                 if (in_array($tipoIncapacidad, ['irl', 'riesgo_laboral'], true)) {
+                    // INC tipo ARL: 100% de los días registrados (igual que IRL).
                     $resultado['valor_calculado'] = ($valorDia * $dias) + ($valorHora * $horas);
                 } else {
-                    $resultado['valor_calculado'] = ($valorDia * $dias * 0.6667) + ($valorHora * $horas * 0.6667);
+                    // INC tipo EG: mismo tratamiento que IGE — solo 2 días al 66.67%.
+                    $diasPagadosInc = min(2.0, max(0.0, $dias));
+                    $horasPagadasInc = ($dias > 0 || $horas <= 0) ? 0.0 : min(16.0, max(0.0, $horas));
+                    $resultado['valor_calculado'] = ($valorDia * $diasPagadosInc * 0.6667) + ($valorHora * $horasPagadasInc * 0.6667);
                     $resultado['descuento_salario'] = ($valorDia * $dias) + ($valorHora * $horas);
+                    $resultado['dias_pagados_empleador'] = $diasPagadosInc;
                 }
                 $resultado['tipo_movimiento'] = self::OPERACION_DEVENGADO;
                 $resultado['afecta_ibc'] = true;

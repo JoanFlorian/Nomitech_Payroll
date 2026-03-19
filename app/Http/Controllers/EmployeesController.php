@@ -109,7 +109,9 @@ class EmployeesController extends Controller
      */
     public function index(Request $request)
     {
-        $canView = auth()->user()->hasPermission('view_employees');
+        /** @var \App\Models\Usuario $authUser */
+        $authUser = auth()->user();
+        $canView = $authUser->hasPermission('view_employees');
         
         if (!$canView) {
             $empleados = collect();
@@ -121,29 +123,6 @@ class EmployeesController extends Controller
         } else {
             $query = $this->construirConsultaEmpleados($request);
             $empleados = $query->paginate(4)->appends($request->query());
-
-            // Obtener conteos para los filtros usando Empleado para aislamiento
-            $totalEmpleados = Empleado::with('contratos')->count();
-            $activosCount = Empleado::whereHas('contratos', function ($q) {
-                $q->whereIn('estado', [
-                    Contrato::ESTADO_ACTIVO,
-                    Contrato::ESTADO_POR_VENCER,
-                    Contrato::ESTADO_PROGRAMADO,
-                ]);
-            })->count();
-            $inactivosCount = Empleado::whereHas('contratos', function ($q) {
-                $q->whereIn('estado', [
-                    Contrato::ESTADO_VENCIDO,
-                    Contrato::ESTADO_TERMINADO,
-                ]);
-            })->count();
-            $sinContratoCount = Empleado::doesntHave('contratos')->count();
-
-            // Alertas de contratos
-            $empresaId = (int) session('empresa_id');
-            $contractAlerts = $empresaId > 0
-                ? app(ContractAlertService::class)->getAlertSummary($empresaId)
-                : ['expiring' => ['count' => 0], 'pending_liquidation' => ['count' => 0]];
         }
 
         // Datos comunes para modales (aunque no los vea, se cargan por compatibilidad de vista)
@@ -161,18 +140,20 @@ class EmployeesController extends Controller
         $Afp = Afp::all();
         $roles = Rol::whereIn('nombre', ['Auxiliar de Nómina', 'Empleado'])->get();
 
-        // Obtener conteos para los filtros usando Empleado para aislamiento
-        // Usamos los callbacks que ya manejan la existencia de columnas
-        $totalEmpleados = Empleado::with('contratos')->count();
-        $activosCount = Empleado::whereHas('contratos', $this->contratoActivoCallback())->count();
-        $inactivosCount = Empleado::whereHas('contratos', $this->contratoInactivoCallback())->count();
-        $sinContratoCount = Empleado::doesntHave('contratos')->count();
+        if ($canView) {
+            // Obtener conteos para los filtros usando Empleado para aislamiento
+            // Usamos los callbacks que ya manejan la existencia de columnas
+            $totalEmpleados = Empleado::with('contratos')->count();
+            $activosCount = Empleado::whereHas('contratos', $this->contratoActivoCallback())->count();
+            $inactivosCount = Empleado::whereHas('contratos', $this->contratoInactivoCallback())->count();
+            $sinContratoCount = Empleado::doesntHave('contratos')->count();
 
-        // Alertas de contratos
-        $empresaId = (int) session('empresa_id');
-        $contractAlerts = $empresaId > 0
-            ? app(ContractAlertService::class)->getAlertSummary($empresaId)
-            : ['expiring' => ['count' => 0], 'pending_liquidation' => ['count' => 0]];
+            // Alertas de contratos
+            $empresaId = (int) session('empresa_id');
+            $contractAlerts = $empresaId > 0
+                ? app(ContractAlertService::class)->getAlertSummary($empresaId)
+                : ['expiring' => ['count' => 0], 'pending_liquidation' => ['count' => 0]];
+        }
 
         // Define the step variable for the view
         $step = $request->input('step', 1);

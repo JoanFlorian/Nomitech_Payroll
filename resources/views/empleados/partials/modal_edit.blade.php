@@ -264,7 +264,7 @@
                             <p class="error-message text-red-500 text-sm hidden" data-error="fecha_inicio"></p>
                         </div>
 
-                        <div>
+                        <div id="editFechaFinContainer">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin</label>
                             <input type="date"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
@@ -722,9 +722,15 @@
         return optionText.includes('fijo');
     }
 
+    function toDateInputValue(value) {
+        if (!value) return '';
+        return String(value).slice(0, 10);
+    }
+
     function syncEditFechaFinByContractType() {
         const fechaFinInput = document.getElementById('editFechaFin');
         const fechaFinHint = document.getElementById('editFechaFinHint');
+        const fechaFinContainer = document.getElementById('editFechaFinContainer');
         const tipoContratoInput = document.getElementById('editIdTipoContrato');
 
         if (!fechaFinInput) {
@@ -738,14 +744,15 @@
             fechaFinInput.setAttribute('disabled', 'disabled');
             fechaFinInput.classList.add('bg-gray-100', 'cursor-not-allowed');
             clearEditFieldError(fechaFinInput);
-
-            if (fechaFinHint) {
-                fechaFinHint.textContent = 'Contrato indefinido: no debe registrar fecha de fin.';
+            if (fechaFinContainer) {
+                fechaFinContainer.style.display = 'none';
             }
-
             return;
         }
 
+        if (fechaFinContainer) {
+            fechaFinContainer.style.display = '';
+        }
         fechaFinInput.removeAttribute('disabled');
         fechaFinInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
 
@@ -1377,23 +1384,24 @@
                     document.getElementById('editIdArl').value = contrato.id_arl || '';
                     if (isRenewal && contrato.fecha_fin) {
                         try {
-                            const lastDate = new Date(contrato.fecha_fin + 'T00:00:00');
+                            const fechaFinNorm = toDateInputValue(contrato.fecha_fin);
+                            const lastDate = new Date(fechaFinNorm + 'T00:00:00');
                             if (!isNaN(lastDate.getTime())) {
                                 lastDate.setDate(lastDate.getDate() + 1);
                                 document.getElementById('editFechaInicio').value = lastDate.toISOString().split('T')[0];
                                 document.getElementById('editFechaFin').value = ''; 
                             } else {
-                                document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
-                                document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                                document.getElementById('editFechaInicio').value = toDateInputValue(contrato.fecha_inicio);
+                                document.getElementById('editFechaFin').value = toDateInputValue(contrato.fecha_fin);
                             }
                         } catch (e) {
                             console.warn('Error al procesar fecha de fin:', e);
-                            document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
-                            document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                            document.getElementById('editFechaInicio').value = toDateInputValue(contrato.fecha_inicio);
+                            document.getElementById('editFechaFin').value = toDateInputValue(contrato.fecha_fin);
                         }
                     } else {
-                        document.getElementById('editFechaInicio').value = contrato.fecha_inicio || '';
-                        document.getElementById('editFechaFin').value = contrato.fecha_fin || '';
+                        document.getElementById('editFechaInicio').value = toDateInputValue(contrato.fecha_inicio);
+                        document.getElementById('editFechaFin').value = toDateInputValue(contrato.fecha_fin);
                     }
                     syncEditFechaFinByContractType();
                     document.getElementById('editHorasDiarias').value = contrato.horas_diarias != null ? contrato.horas_diarias : '';

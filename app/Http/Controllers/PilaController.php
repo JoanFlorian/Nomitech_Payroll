@@ -106,7 +106,6 @@ class PilaController extends Controller
         $archivoGenerado = null;
 
         if ($hasCalculo) {
-            $hashActual = $this->generarHashPlanilla($selectedEmpresaId, $selectedPeriodoId, $detalles->all(), $totales);
             $periodoInicio = optional($periodos->firstWhere('id_periodo', $selectedPeriodoId))->fecha_inicio;
             $planilla = $this->buscarPlanillaExistente($selectedEmpresaId, $selectedPeriodoId, $periodoInicio);
 
@@ -114,21 +113,12 @@ class PilaController extends Controller
                 $planillaEstado = strtolower((string) ($planilla->estado ?? 'pendiente'));
                 $archivoGenerado = $planilla->archivo_generado;
 
-                if (
-                    $planillaEstado === 'generada'
-                    && $this->hasPlanillaHashColumn()
-                    && (string) ($planilla->datos_hash ?? '') !== $hashActual
-                ) {
-                    DB::table('planilla_pila')
-                        ->where('id', $planilla->id)
-                        ->update([
-                            'estado' => 'pendiente',
-                            'updated_at' => now(),
-                        ]);
-                    $planillaEstado = 'pendiente';
+                // Una vez generada queda bloqueada permanentemente.
+                if ($planillaEstado === 'generada') {
+                    $canGenerate = false;
+                } else {
+                    $canGenerate = $detalles->isNotEmpty();
                 }
-
-                $canGenerate = $planillaEstado !== 'generada' && $detalles->isNotEmpty();
             }
         }
 
@@ -167,6 +157,9 @@ class PilaController extends Controller
             'detalles' => $detalles,
             'totales' => $totales,
             'historialPila' => $historialPila,
+            'advertencias' => ($hasCalculo && $detalles->isNotEmpty() && $planillaEstado !== 'generada')
+                ? $this->pilaFileGeneratorService->buildAdvertencias($detalles->all())
+                : [],
         ]);
     }
 
@@ -210,23 +203,38 @@ class PilaController extends Controller
         $datosHash = $this->generarHashPlanilla($empresaId, $periodoId, $detalles, $totales);
         $planillaExistente = $this->buscarPlanillaExistente($empresaId, $periodoId, $periodo->fecha_inicio);
 
-        $sinCambios = $this->hasPlanillaHashColumn()
-            ? (string) ($planillaExistente->datos_hash ?? '') === $datosHash
-            : false;
-
-        if (
-            $planillaExistente
-            && strtolower((string) ($planillaExistente->estado ?? '')) === 'generada'
-            && $sinCambios
-        ) {
+        // Bloqueo permanente: si ya fue generada no se puede volver a generar.
+        if ($planillaExistente && strtolower((string) ($planillaExistente->estado ?? '')) === 'generada') {
             return back()->withErrors([
-                'pila' => 'Ya existe una planilla generada para este periodo y no se detectaron cambios en los datos.',
+                'pila' => 'Esta planilla ya fue generada y está bloqueada. Solo puede descargarse.',
             ])->withInput();
         }
 
         $empresa = Empresa::query()
             ->select(['id_empresa', 'razon_social', 'nit'])
             ->find($empresaId);
+
+        // --- Validaciones de empresa ---
+        $nitNumerico = preg_replace('/\D+/', '', (string) ($empresa->nit ?? ''));
+        if (!$empresa || $nitNumerico === '') {
+            return back()->withErrors([
+                'pila' => 'La empresa no tiene NIT configurado. Configure el NIT antes de generar la planilla PILA.',
+            ])->withInput();
+        }
+
+        if (trim((string) ($empresa->razon_social ?? '')) === '') {
+            return back()->withErrors([
+                'pila' => 'La empresa no tiene razón social configurada.',
+            ])->withInput();
+        }
+
+        // --- Validaciones de empleados ---
+        $sinDocumento = array_values(array_filter($detalles, fn($d) => trim((string) ($d['doc_empleado'] ?? '')) === ''));
+        if (count($sinDocumento) > 0) {
+            return back()->withErrors([
+                'pila' => count($sinDocumento) . ' empleado(s) no tienen número de documento registrado. Corrija los datos antes de generar.',
+            ])->withInput();
+        }
 
         DB::transaction(function () use ($empresaId, $periodoId, $periodo, $detalles, $totales, $datosHash, $planillaExistente, $empresa): void {
             $now = now();
@@ -281,6 +289,9 @@ class PilaController extends Controller
                     'ibc_salud' => $detalle['ibc_salud'],
                     'ibc_pension' => $detalle['ibc_pension'],
                     'ibc_arl' => $detalle['ibc_arl'],
+                    'ibc_caja' => $detalle['ibc_caja'] ?? $detalle['ibc_salud'],
+                    'nivel_riesgo_arl' => $detalle['nivel_riesgo_arl'] ?? 1,
+                    'valor_arl' => $detalle['valor_arl'] ?? $detalle['aporte_arl'],
                     'aporte_salud' => $detalle['aporte_salud'],
                     'aporte_pension' => $detalle['aporte_pension'],
                     'aporte_arl' => $detalle['aporte_arl'],
@@ -320,29 +331,48 @@ class PilaController extends Controller
         $periodo = PeriodoLiquidacion::query()
             ->where('id_periodo', $periodoId)
             ->where('id_empresa', $empresaId)
-            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
             ->first();
 
         if (!$periodo) {
             return back()->withErrors([
-                'pila' => 'El periodo seleccionado no es valido para la empresa activa o ya fue cerrado.',
+                'pila' => 'El periodo seleccionado no es válido para la empresa activa.',
+            ]);
+        }
+
+        $empresa = Empresa::query()
+            ->select(['id_empresa', 'razon_social', 'nit'])
+            ->find($empresaId);
+
+        // Prioridad 1: servir el archivo ya generado y almacenado.
+        $planillaGuardada = $this->buscarPlanillaExistente($empresaId, $periodoId, $periodo->fecha_inicio);
+        $rutaGuardada = (string) ($planillaGuardada->archivo_generado ?? '');
+
+        if ($rutaGuardada !== '' && Storage::disk('local')->exists($rutaGuardada)) {
+            $contenidoTxt  = Storage::disk('local')->get($rutaGuardada);
+            $nombreArchivo = basename($rutaGuardada);
+
+            return response()->streamDownload(function () use ($contenidoTxt): void {
+                echo $contenidoTxt;
+            }, $nombreArchivo, [
+                'Content-Type' => 'text/plain; charset=UTF-8',
+            ]);
+        }
+
+        // Prioridad 2 (fallback): recalcular y generar al vuelo.
+        if (!in_array($periodo->estado, [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO], true)) {
+            return back()->withErrors([
+                'pila' => 'El periodo ya está cerrado y no existe archivo generado para descargar.',
             ]);
         }
 
         $detalles = $this->calcularDetalleEmpleados($empresaId, $periodoId);
         if (count($detalles) === 0) {
             return back()->withErrors([
-                'pila' => 'No hay empleados con nomina registrada para descargar la planilla PILA del periodo seleccionado.',
+                'pila' => 'No hay empleados con nómina registrada para descargar la planilla PILA del periodo seleccionado.',
             ]);
         }
 
-        $totales = $this->pilaFileGeneratorService->calcularTotales($detalles);
-
-        $empresa = Empresa::query()
-            ->select(['id_empresa', 'razon_social', 'nit'])
-            ->find($empresaId);
-
-        $contenidoTxt = $this->construirArchivoPlano($empresa, $periodo, $detalles, $totales);
+        $contenidoTxt = $this->pilaFileGeneratorService->generate($empresa, $periodo, $detalles);
         $empresaToken = preg_replace('/\D+/', '', (string) ($empresa->nit ?? '')) ?: (string) $empresaId;
         $periodoToken = Carbon::parse($periodo->fecha_inicio)->format('Y-m');
         $fileName = sprintf('pila_%s_%s.txt', $empresaToken, $periodoToken);

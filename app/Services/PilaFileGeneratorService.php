@@ -9,6 +9,14 @@ use Illuminate\Support\Facades\Storage;
 
 class PilaFileGeneratorService
 {
+    private const TASA_ARL = [
+        1 => 0.00522,
+        2 => 0.01044,
+        3 => 0.02436,
+        4 => 0.04350,
+        5 => 0.06960,
+    ];
+
     private float $salarioMinimo;
     private float $fondoSolidaridadRate;
     private float $epsEmployerRate;
@@ -30,8 +38,6 @@ class PilaFileGeneratorService
         $hasDiasTrabajados = Schema::hasColumn('salario', 'dias_trabajados');
         $diasColumn = $hasDiasTrabajados ? 'n.dias_trabajados' : 'n.dias_a_trabajar';
         $salarioBaseExpr = 'c.salario_base';
-        // IBC = salario proporcional del primer modal de nomina.
-        $ibcExpr = "ROUND(({$salarioBaseExpr} / 30) * COALESCE({$diasColumn}, 30), 2)";
 
         $rows = DB::table('salario as n')
             ->join('contrato as c', 'c.id_contrato', '=', 'n.id_contrato')
@@ -54,10 +60,9 @@ class PilaFileGeneratorService
                 'u.primer_apellido',
                 'u.segundo_apellido',
                 DB::raw("{$salarioBaseExpr} as salario_base"),
-                DB::raw("{$ibcExpr} as ibc"),
                 DB::raw("{$diasColumn} as dias_trabajados"),
                 'n.aporte_fp',
-                'nr.porcentaje as porcentaje_arl',
+                'c.nivel_riesgo_id as nivel_riesgo',
                 'e.codigo_pila as codigo_eps',
                 'a.codigo_pila as codigo_afp',
                 'ar.codigo_pila as codigo_arl',
@@ -67,21 +72,27 @@ class PilaFileGeneratorService
         $detalles = [];
 
         foreach ($rows as $row) {
-            $ibc = round(max(0, (float) ($row->ibc ?? 0)), 2);
+            $salarioBase    = max(0, (float) ($row->salario_base ?? 0));
+            $diasTrabajados = max(0, (int) ($row->dias_trabajados ?? 0));
+            $ibc = (int) round(($salarioBase / 30) * $diasTrabajados);
+
+            // El IBC no puede ser inferior al SMMLV proporcional a los días trabajados.
+            if ($this->salarioMinimo > 0) {
+                $ibcMinimo = (int) round(($this->salarioMinimo / 30) * $diasTrabajados);
+                $ibc = max($ibc, $ibcMinimo);
+            }
+
             if ($ibc <= 0) {
                 continue;
             }
 
-            $diasCotizados = $this->validarDiasCotizados((int) ($row->dias_trabajados ?? 0));
-            $aportesPorDefecto = $this->calcularAportesRegistroDos($ibc);
-            $aporteSalud = round(max(0, (float) ($aportesPorDefecto['salud_empleador'] ?? 0)), 2);
-            $aportePension = round(max(0, (float) ($aportesPorDefecto['pension_empleador'] ?? 0)), 2);
-            // porcentaje_arl proviene de niveles_riesgo (equivalente a $contrato->nivelRiesgo->porcentaje).
-            $porcentajeArl = $this->normalizeArlRate((float) ($row->porcentaje_arl ?? 0));
-            // ARL no se redondea para preservar el valor exacto del calculo.
-            $aporteArl = max(0, $ibc * $porcentajeArl);
-            $aporteCaja = round(max(0, (float) ($aportesPorDefecto['caja_compensacion'] ?? 0)), 2);
-            $aporteFondo = round(max(0, (float) ($row->aporte_fp ?? 0)), 2);
+            $diasCotizados  = $this->validarDiasCotizados($diasTrabajados);
+            $aporteSalud    = (int) round($ibc * 0.085);
+            $aportePension  = (int) round($ibc * 0.12);
+            $aporteCaja     = (int) round($ibc * 0.04);
+            $nivelRiesgo    = max(1, min(5, (int) ($row->nivel_riesgo ?? 1)));
+            $aporteArl      = (int) round($ibc * self::TASA_ARL[$nivelRiesgo]);
+            $aporteFondo    = (int) round(max(0, (float) ($row->aporte_fp ?? 0)));
 
             $detalles[] = [
                 'id_nomina' => (int) ($row->id_salario ?? 0),
@@ -93,11 +104,14 @@ class PilaFileGeneratorService
                 'ibc_salud' => $ibc,
                 'ibc_pension' => $ibc,
                 'ibc_arl' => $ibc,
+                'ibc_caja' => $ibc,
                 'aporte_salud' => $aporteSalud,
                 'aporte_salud_empresa' => $aporteSalud,
                 'aporte_pension' => $aportePension,
                 'aporte_pension_empresa' => $aportePension,
                 'aporte_arl' => $aporteArl,
+                'valor_arl' => $aporteArl,
+                'nivel_riesgo_arl' => $nivelRiesgo,
                 'aporte_caja' => $aporteCaja,
                 'aporte_fp' => $aporteFondo,
                 'dias_cotizados' => $diasCotizados,
@@ -120,6 +134,44 @@ class PilaFileGeneratorService
             'arl' => (float) array_sum(array_column($detalles, 'aporte_arl')),
             'caja' => (float) array_sum(array_column($detalles, 'aporte_caja')),
         ];
+    }
+
+    /**
+     * Retorna advertencias por empleado: entidades sin código PILA, documento vacío.
+     * No bloquean la generación pero deben mostrarse al usuario.
+     */
+    public function buildAdvertencias(array $detalles): array
+    {
+        $advertencias = [];
+
+        foreach ($detalles as $d) {
+            $nombre = trim((string) ($d['empleado_nombre'] ?? ''));
+            $doc    = trim((string) ($d['doc_empleado']    ?? ''));
+            $label  = $nombre !== '' ? $nombre : ($doc !== '' ? $doc : 'empleado desconocido');
+
+            if ($doc === '') {
+                $advertencias[] = "{$label}: no tiene número de documento registrado.";
+            }
+
+            $entidades = [
+                'EPS'                   => (string) ($d['codigo_eps'] ?? ''),
+                'AFP (pensión)'         => (string) ($d['codigo_afp'] ?? ''),
+                'ARL'                   => (string) ($d['codigo_arl'] ?? ''),
+                'Caja de Compensación'  => (string) ($d['codigo_caja'] ?? ''),
+            ];
+
+            foreach ($entidades as $nombre_entidad => $codigo) {
+                if ($codigo === '' || $codigo === '00') {
+                    $advertencias[] = "{$label}: sin código PILA de {$nombre_entidad}.";
+                }
+            }
+
+            if ((int) ($d['dias_cotizados'] ?? 0) === 0) {
+                $advertencias[] = "{$label}: días cotizados es 0.";
+            }
+        }
+
+        return $advertencias;
     }
 
     public function guardarArchivoYHistorial(
@@ -184,6 +236,11 @@ class PilaFileGeneratorService
         $lineas = [];
         $periodoTexto = Carbon::parse($periodo->fecha_inicio)->format('Y-m');
         $empresaNit = preg_replace('/\D+/', '', (string) ($empresa->nit ?? '')) ?: (string) ($empresa->id_empresa ?? '');
+        $empresaNombre = $this->formatNombreEmpleado((string) ($empresa->razon_social ?? ''));
+        $totalEmpleados = count($detalles);
+
+        // Línea tipo 01 - encabezado del archivo PILA
+        $lineas[] = implode('|', ['01', $empresaNit, $empresaNombre, 'NI', $periodoTexto, (string) $totalEmpleados]);
 
         foreach ($detalles as $detalle) {
             $lineas[] = $this->generateLineaEmpleado($empresaNit, $periodoTexto, $detalle);
@@ -259,21 +316,6 @@ class PilaFileGeneratorService
         $partes = array_values(array_filter(array_map('trim', $partes), static fn($v) => $v !== ''));
 
         return implode(' ', $partes);
-    }
-
-    /**
-     * Normaliza la tasa ARL para soportar valores guardados como porcentaje humano (2.5)
-     * o como fracción decimal (0.02436).
-     */
-    private function normalizeArlRate(float $rawRate): float
-    {
-        $rawRate = max(0, $rawRate);
-
-        if ($rawRate > 0.1) {
-            return $rawRate / 100;
-        }
-
-        return $rawRate;
     }
 
     private function resolverCodigoPilaEntidad(array $detalle, string $relacionKey, string $flatKey): string

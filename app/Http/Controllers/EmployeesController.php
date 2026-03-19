@@ -15,6 +15,7 @@ use App\Models\MetodoPago;
 use App\Models\TipoCuenta;
 use App\Models\Eps;
 use App\Models\Afp;
+use App\Models\NivelRiesgo;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -138,6 +139,7 @@ class EmployeesController extends Controller
         $tipocuenta = TipoCuenta::all();
         $Eps = Eps::all();
         $Afp = Afp::all();
+        $niveles = NivelRiesgo::orderBy('porcentaje')->get();
         $roles = Rol::whereIn('nombre', ['Auxiliar de Nómina', 'Empleado'])->get();
 
         if ($canView) {
@@ -159,27 +161,28 @@ class EmployeesController extends Controller
         $step = $request->input('step', 1);
 
         return view('empleados.index', compact(
-            'canView',
-            'empleados',
-            'tipodoc',
-            'departamento',
-            'ciudad',
-            'tipotrabajadores',
-            'suptrabajadores',
-            'contratos',
-            'Arl',
-            'formapagos',
-            'metodopago',
-            'tipocuenta',
-            'Eps',
-            'Afp',
-            'roles',
-            'totalEmpleados',
-            'activosCount',
-            'inactivosCount',
-            'sinContratoCount',
-            'contractAlerts',
-            'step'
+              'canView',
+              'empleados',
+              'tipodoc',
+              'departamento',
+              'ciudad',
+              'tipotrabajadores',
+              'suptrabajadores',
+              'contratos',
+              'Arl',
+              'formapagos',
+              'metodopago',
+              'tipocuenta',
+              'Eps',
+              'Afp',
+              'niveles',
+              'roles',
+              'totalEmpleados',
+              'activosCount',
+              'inactivosCount',
+              'sinContratoCount',
+              'contractAlerts',
+              'step'
         ));
     }
 
@@ -191,7 +194,7 @@ class EmployeesController extends Controller
         $usuario = Empleado::with([
             'contratos' => function ($q) {
                 $q->orderByDesc('id_contrato')
-                  ->with(['tipoContrato', 'tipoTrabajador', 'arl', 'eps', 'afp', 'formaPago', 'metodoPago']);
+                  ->with(['tipoContrato', 'tipoTrabajador', 'arl', 'eps', 'afp', 'formaPago', 'metodoPago', 'nivelRiesgo']);
             },
             'ciudad',
             'rol',

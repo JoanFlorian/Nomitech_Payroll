@@ -104,8 +104,8 @@ class UpdateEmployeePartialRequest extends FormRequest
             $rules['id_arl'] = 'bail|required|integer|exists:arl,id_arl';
         }
 
-        if ($this->has('nivel_riesgo')) {
-            $rules['nivel_riesgo'] = 'bail|required|in:Nivel I,Nivel II,Nivel III,Nivel IV,Nivel V';
+        if ($this->has('nivel_riesgo_id')) {
+            $rules['nivel_riesgo_id'] = 'bail|required|integer|exists:niveles_riesgo,id';
         }
 
         if ($this->has('alto_riesgo')) {
@@ -259,8 +259,8 @@ class UpdateEmployeePartialRequest extends FormRequest
             'salario.min' => 'El salario no puede ser negativo.',
             'salario.max' => 'El salario es demasiado alto.',
 
-            'nivel_riesgo.required' => 'Debe seleccionar el nivel de riesgo.',
-            'nivel_riesgo.in' => 'El nivel de riesgo seleccionado no es válido.',
+            'nivel_riesgo_id.required' => 'Debe seleccionar el nivel de riesgo.',
+            'nivel_riesgo_id.exists' => 'El nivel de riesgo seleccionado no es válido.',
 
             'codigo_interno.min' => 'El código interno debe tener mínimo 3 caracteres.',
             'codigo_interno.max' => 'El código interno no puede superar 20 caracteres.',
@@ -579,10 +579,10 @@ class UpdateEmployeePartialRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Derivar alto_riesgo desde nivel_riesgo para mantener consistencia.
-        $nivelRiesgo = (string) $this->input('nivel_riesgo', '');
-        $altoRiesgoFromNivel = $this->resolveHighRiskFromNivel($nivelRiesgo);
+        $nivelRiesgoId = (int) $this->input('nivel_riesgo_id', 0);
+        $altoRiesgoFromNivel = $this->resolveHighRiskFromNivelId($nivelRiesgoId);
 
-        if ($altoRiesgoFromNivel !== null && $this->has('nivel_riesgo')) {
+        if ($altoRiesgoFromNivel !== null && $this->has('nivel_riesgo_id')) {
             $this->merge(['alto_riesgo' => $altoRiesgoFromNivel]);
         } elseif ($this->has('alto_riesgo')) {
             if (is_null($this->input('alto_riesgo')) || $this->input('alto_riesgo') === '') {
@@ -650,6 +650,24 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         return null;
+    }
+
+    private function resolveHighRiskFromNivelId(int $nivelRiesgoId): ?int
+    {
+        if ($nivelRiesgoId === 0) {
+            return null;
+        }
+
+        // Buscar nivel de riesgo y determinar si es alto riesgo basado en porcentaje
+        // Considerar alto riesgo si porcentaje > 2% o si es nivel III+
+        $nivelRiesgo = \App\Models\NivelRiesgo::find($nivelRiesgoId);
+        
+        if (!$nivelRiesgo) {
+            return null;
+        }
+
+        // Si el porcentaje es mayor o igual al 2.5%, considerarlo alto riesgo
+        return $nivelRiesgo->porcentaje >= 2.5 ? 1 : 0;
     }
 
     private function normalizeLocalizedNumber(mixed $value): ?float

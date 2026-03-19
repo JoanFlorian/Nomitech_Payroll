@@ -140,7 +140,7 @@
                     </div>
                     <div class="flex justify-between gap-4">
                         <dt class="text-gray-500 font-medium shrink-0">Nivel de Riesgo</dt>
-                        <dd class="text-gray-800 text-right">{{ $contrato->nivel_riesgo ?? '—' }}</dd>
+                        <dd class="text-gray-800 text-right">{{ $contrato->nivelRiesgo->nombre ?? '—' }}</dd>
                     </div>
                     <div class="flex justify-between gap-4">
                         <dt class="text-gray-500 font-medium shrink-0">Alto Riesgo</dt>

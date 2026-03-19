@@ -334,15 +334,13 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Nivel de Riesgo</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                                name="nivel_riesgo" id="editNivelRiesgo">
+                                name="nivel_riesgo_id" id="editNivelRiesgo">
                                 <option value="">Seleccionar...</option>
-                                <option value="Nivel I">Nivel I</option>
-                                <option value="Nivel II">Nivel II</option>
-                                <option value="Nivel III">Nivel III</option>
-                                <option value="Nivel IV">Nivel IV</option>
-                                <option value="Nivel V">Nivel V</option>
+                                @foreach($niveles as $nivel)
+                                    <option value="{{ $nivel->id }}">{{ $nivel->nombre }}</option>
+                                @endforeach
                             </select>
-                            <p class="error-message text-red-500 text-sm hidden" data-error="nivel_riesgo"></p>
+                            <p class="error-message text-red-500 text-sm hidden" data-error="nivel_riesgo_id"></p>
                         </div>
 
                         <div class="flex items-center">
@@ -1150,8 +1148,8 @@
                     }
 
                     return validateEditInput(input, EDIT_NUMBERS_REGEX.test(value) && value.length >= 3 && value.length <= 20, 'El código interno debe tener entre 3 y 20 dígitos numéricos.', showError);
-                case 'nivel_riesgo':
-                    return validateEditInput(input, ['Nivel I', 'Nivel II', 'Nivel III', 'Nivel IV', 'Nivel V'].includes(value), 'Debe seleccionar un nivel de riesgo válido.', showError);
+                case 'nivel_riesgo_id':
+                    return validateEditInput(input, value !== '' && !Number.isNaN(Number(value)), 'Debe seleccionar un nivel de riesgo válido.', showError);
                 default:
                     return true;
             }
@@ -1280,7 +1278,7 @@
 
         const fieldsByStep = {
             1: ['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion', 'email', 'telefono'],
-            2: ['id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_tipo_contrato', 'id_arl', 'fecha_inicio', 'fecha_fin', 'horas_diarias', 'salario', 'codigo_interno', 'nivel_riesgo'],
+            2: ['id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_tipo_contrato', 'id_arl', 'fecha_inicio', 'fecha_fin', 'horas_diarias', 'salario', 'codigo_interno', 'nivel_riesgo_id'],
             3: ['id_forma_pago', 'id_metodo_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'id_caja', 'fondo_cesantias', 'prima_inicial', 'cesantias_inicial', 'intereses_inicial', 'vacaciones_inicial'],
         };
 
@@ -1401,7 +1399,7 @@
                     document.getElementById('editHorasDiarias').value = contrato.horas_diarias != null ? contrato.horas_diarias : '';
                     document.getElementById('editSalario').value = formatEditLocalizedNumber(contrato.salario_base || '');
                     document.getElementById('editCodigoInterno').value = contrato.codigo_interno || '';
-                    document.getElementById('editNivelRiesgo').value = contrato.nivel_riesgo || '';
+                    document.getElementById('editNivelRiesgo').value = contrato.nivel_riesgo_id || '';
                     document.getElementById('editAltoRiesgo').checked = contrato.alto_riesgo == 1;
                     document.getElementById('editBajoRiesgo').checked = contrato.alto_riesgo != 1;
 
@@ -1569,7 +1567,7 @@
                                 id_tipo_doc: 1, primer_nombre: 1, otros_nombres: 1, primer_apellido: 1, segundo_apellido: 1,
                                 id_ciudad: 1, direccion: 1, id_tipo_trabajador: 2, id_sub_tipo_trabajador: 2,
                                 id_tipo_contrato: 2, id_arl: 2, fecha_inicio: 2, fecha_fin: 2, horas_diarias: 2,
-                                salario: 2, salario_base: 2, codigo_interno: 2, nivel_riesgo: 2,
+                                salario: 2, salario_base: 2, codigo_interno: 2, nivel_riesgo_id: 2,
                                 id_forma_pago: 3, id_metodo_pago: 3, tipo_cuenta: 3, numero_cuenta: 3,
                                 id_eps: 3, id_afp: 3,
                             };

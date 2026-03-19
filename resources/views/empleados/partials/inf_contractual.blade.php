@@ -172,15 +172,15 @@
             <label class="block text-sm font-medium text-gray-700 mb-1" for="nivel-riesgo">
                 Nivel de riesgo
             </label>
-            <select id="nivel_riesgo" name="nivel_riesgo" class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" required>
+            <select id="nivel_riesgo" name="nivel_riesgo_id" class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" required>
                 <option value="">Seleccionar...</option>
-                <option value="Nivel I">Nivel I</option>
-                <option value="Nivel II">Nivel II</option>
-                <option value="Nivel III">Nivel III</option>
-                <option value="Nivel IV">Nivel IV</option>
-                <option value="Nivel V">Nivel V</option>
+                @foreach($niveles as $nivel)
+                    <option value="{{ $nivel->id }}" {{ isset($contrato->nivel_riesgo_id) && $contrato->nivel_riesgo_id == $nivel->id ? 'selected' : '' }}>
+                        {{ $nivel->nombre }}
+                    </option>
+                @endforeach
             </select>
-            <div class="error-message invalid-feedback" data-error="nivel_riesgo"></div>
+            <div class="error-message invalid-feedback" data-error="nivel_riesgo_id"></div>
         </div>
 
         <div>

@@ -15,6 +15,7 @@ use App\Models\Empresa;
 use App\Models\Cuenta;
 use App\Models\TipoContrato;
 use App\Models\Rol;
+use App\Models\NivelRiesgo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -249,7 +250,7 @@ class RegistroUsuarios extends Controller
                     'id_afp' => $allData['id_afp'] ?? null,
                     'id_caja' => $allData['id_caja'] ?? null,
                     'alto_riesgo' => (int) ($allData['alto_riesgo'] ?? 0),
-                    'nivel_riesgo' => $allData['nivel_riesgo'] ?? null,
+                    'nivel_riesgo_id' => $allData['nivel_riesgo_id'] ?? null,
                     'fecha_inicio' => $allData['fecha_inicio'],
                     'fecha_fin' => $fechaFin,
                     'salario_base' => $allData['salario'] ?? 0,
@@ -432,7 +433,7 @@ class RegistroUsuarios extends Controller
             if (isset($data['id_eps'])) $nuevoContrato->id_eps = $data['id_eps'];
             if (isset($data['id_afp'])) $nuevoContrato->id_afp = $data['id_afp'];
             if (isset($data['alto_riesgo'])) $nuevoContrato->alto_riesgo = (int) $data['alto_riesgo'];
-            if (isset($data['nivel_riesgo'])) $nuevoContrato->nivel_riesgo = $data['nivel_riesgo'];
+            if (isset($data['nivel_riesgo_id'])) $nuevoContrato->nivel_riesgo_id = $data['nivel_riesgo_id'];
             if (isset($data['fecha_inicio'])) $nuevoContrato->fecha_inicio = $data['fecha_inicio'];
             if (isset($data['fecha_fin'])) $nuevoContrato->fecha_fin = $data['fecha_fin'];
             if (isset($data['salario'])) $nuevoContrato->salario_base = $data['salario'];
@@ -610,8 +611,8 @@ class RegistroUsuarios extends Controller
                 $contratoData['id_caja'] = $data['id_caja'];
             if (isset($data['alto_riesgo']))
                 $contratoData['alto_riesgo'] = (int) $data['alto_riesgo'];
-            if (isset($data['nivel_riesgo']))
-                $contratoData['nivel_riesgo'] = $data['nivel_riesgo'];
+            if (isset($data['nivel_riesgo_id']))
+                $contratoData['nivel_riesgo_id'] = $data['nivel_riesgo_id'];
             if (isset($data['fecha_inicio']))
                 $contratoData['fecha_inicio'] = $data['fecha_inicio'];
             if (isset($data['fecha_fin']))

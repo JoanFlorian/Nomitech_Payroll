@@ -37,7 +37,7 @@ class Step2Request extends FormRequest
             'salario' => 'bail|required|numeric|min:0|max:999999999',
 
             // NIVEL RIESGO
-            'nivel_riesgo' => 'bail|required|in:Nivel I,Nivel II,Nivel III,Nivel IV,Nivel V',
+            'nivel_riesgo_id' => 'bail|required|integer|exists:niveles_riesgo,id',
 
             // CODIGO INTERNO
             'codigo_interno' => 'bail|nullable|string|min:3|max:20|regex:/^[0-9]+$/',
@@ -130,8 +130,8 @@ class Step2Request extends FormRequest
             | NIVEL DE RIESGO
             |--------------------------------------------------------------------------
             */
-            'nivel_riesgo.required' => 'Debe seleccionar el nivel de riesgo.',
-            'nivel_riesgo.in'       => 'El nivel de riesgo seleccionado no es válido.',
+            'nivel_riesgo_id.required' => 'Debe seleccionar el nivel de riesgo.',
+            'nivel_riesgo_id.exists'   => 'El nivel de riesgo seleccionado no es válido.',
 
             /*
             |--------------------------------------------------------------------------
@@ -338,8 +338,8 @@ class Step2Request extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $nivelRiesgo = (string) $this->input('nivel_riesgo', '');
-        $altoRiesgoFromNivel = $this->resolveHighRiskFromNivel($nivelRiesgo);
+        $nivelRiesgoId = (int) $this->input('nivel_riesgo_id', 0);
+        $altoRiesgoFromNivel = $this->resolveHighRiskFromNivelId($nivelRiesgoId);
 
         $payload = [
             'alto_riesgo' => $altoRiesgoFromNivel ?? ($this->has('alto_riesgo') ? 1 : 0),
@@ -385,6 +385,23 @@ class Step2Request extends FormRequest
         }
 
         return null;
+    }
+
+    private function resolveHighRiskFromNivelId(int $nivelRiesgoId): ?int
+    {
+        if ($nivelRiesgoId === 0) {
+            return null;
+        }
+
+        // Buscar nivel de riesgo y determinar si es alto riesgo basado en porcentaje
+        $nivelRiesgo = \App\Models\NivelRiesgo::find($nivelRiesgoId);
+        
+        if (!$nivelRiesgo) {
+            return null;
+        }
+
+        // Si el porcentaje es mayor o igual al 2.5%, considerarlo alto riesgo
+        return $nivelRiesgo->porcentaje >= 2.5 ? 1 : 0;
     }
 
     private function normalizeLocalizedNumber(mixed $value): ?float

@@ -23,7 +23,7 @@
             </div>
             @php
                 $authUser = Auth::user();
-                if (strtolower($authUser->rol?->nombre ?? '') === 'trabajador') {
+                if (strtolower($authUser->rol?->nombre ?? '') === 'empleado') {
                     $empresaNombre = optional(
                         $authUser->contratos()
                             ->where('activo', 1)
@@ -53,7 +53,7 @@
     <!-- MENU -->
     <nav class="flex-1 p-4 flex flex-col gap-1 overflow-y-auto overflow-x-hidden">
 
-        @if(strtolower(Auth::user()->rol?->nombre ?? '') === 'trabajador')
+        @if(strtolower(Auth::user()->rol?->nombre ?? '') === 'empleado')
             {{-- ── Portal del Trabajador ── --}}
             <p class="sidebar-section-title px-4 pt-2 pb-1 text-xs font-semibold uppercase tracking-widest text-blue-300 whitespace-nowrap">Mi Portal</p>
 

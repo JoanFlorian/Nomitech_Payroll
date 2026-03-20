@@ -543,15 +543,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const value = Math.min(get(input.name), MAX_OTROS_INGRESOS);
-                input.value = formatInputNumber(value);
 
                 if (!Number.isFinite(value) || value < 0 || value > MAX_OTROS_INGRESOS) {
                     hasErrors = true;
                     input.classList.add('border-red-500');
+                    input.value = formatInputNumber(value);
                 } else {
                     input.classList.remove('border-red-500');
+                    // Set to unformatted number right before submit
+                    input.value = value;
                 }
             });
+            
+            if (inputAuxilio && typeof obtenerAuxilioActual === 'function') {
+                inputAuxilio.value = obtenerAuxilioActual();
+            }
 
             if (hasErrors) {
                 event.preventDefault();

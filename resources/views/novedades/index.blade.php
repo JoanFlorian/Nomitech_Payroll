@@ -75,6 +75,24 @@
 		</div>
 	@endif
 
+	@if (session('error'))
+		<div class="relative overflow-hidden rounded-xl bg-blue-50 p-5 border border-blue-100 shadow-sm">
+			{{-- Decorative shapes (matching header style) --}}
+			<div class="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-blue-100/60"></div>
+			<div class="pointer-events-none absolute -bottom-8 -left-8 h-20 w-20 rotate-45 rounded-xl bg-gray-100/60"></div>
+
+			<div class="relative z-10 flex items-center gap-4 text-blue-800">
+				<div class="flex-shrink-0 w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shadow-sm">
+					<span class="material-icons text-[22px]">info</span>
+				</div>
+				<div class="flex-1">
+					<p class="text-sm font-bold tracking-tight uppercase text-blue-600/80 mb-0.5">Atención del Sistema</p>
+					<p class="text-sm font-semibold leading-relaxed">{{ session('error') }}</p>
+				</div>
+			</div>
+		</div>
+	@endif
+
 	<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 		<div class="bg-white border border-gray-100 rounded-xl p-4">
 			<p class="text-xs uppercase tracking-wide text-gray-500">Total novedades</p>
@@ -306,6 +324,7 @@
 		const previewCalculationUrl = @json(route('novedades.calculo.preview'));
 		const empleadosApiUrl = @json(url('/api/empleados'));
 		const closedPeriods = @json($periodosCerrados ?? []);
+		const activePeriodStart = @json($periodoActivo ? $periodoActivo->fecha_inicio->format('Y-m-d') : null);
 
 		console.log('Delete URL Template:', deleteUrlTemplate);
 		

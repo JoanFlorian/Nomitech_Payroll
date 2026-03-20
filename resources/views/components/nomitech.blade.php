@@ -2,8 +2,8 @@
 
     <!-- HEADER -->
     <div class="flex items-center gap-3 p-6 border-b border-blue-800">
-        <div class="bg-blue-600 text-white p-3 rounded-lg flex items-center justify-center">
-            <i class="bi bi-grid-fill text-xl"></i>
+        <div class="bg-white rounded-lg flex items-center justify-center overflow-hidden w-12 h-12">
+            <img src="{{ asset('images/logo nomitech.jpeg') }}" alt="Nomitech" class="object-contain w-full h-full" />
         </div>
         <div>
             <h1 class="text-lg font-bold text-white">Nomitech</h1>
@@ -48,7 +48,7 @@
             </a>
         @endif
 
-        @if(in_array((int) (Auth::user()->id_rol ?? 0), [1, 4], true))
+        @if((int) (Auth::user()->id_rol ?? 0) === 1)
             <a href="{{ route('admin.catalogos.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition
                 {{ request()->routeIs('admin.catalogos.*') ? 'bg-blue-800 text-white font-semibold' : '' }}">
                 <i class="bi bi-collection text-lg"></i>

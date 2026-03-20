@@ -376,7 +376,7 @@
 
                 {{-- PASO 2 --}}
                 <div x-show="wizardStep === 2" x-cloak class="space-y-4">
-                    @include('empleados.partials.inf_contractual')
+                    @include('empleados.partials.inf_contractual', ['activePeriod' => $activePeriod])
                 </div>
 
                 {{-- PASO 3 --}}
@@ -797,7 +797,8 @@
     });
 
     window.employeeValidationRules = {
-        smmlv: Number(@json((float) config('nomina.salario_minimo', config('nomina.smmlv', 0))))
+        smmlv: Number(@json((float) config('nomina.salario_minimo', config('nomina.smmlv', 0)))),
+        activePeriodStart: @json($activePeriod ? $activePeriod->fecha_inicio->format('Y-m-d') : null)
     };
 </script>
 @endsection

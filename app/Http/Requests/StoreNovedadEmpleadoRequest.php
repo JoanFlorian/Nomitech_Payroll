@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\PeriodoLiquidacion;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -282,6 +283,22 @@ class StoreNovedadEmpleadoRequest extends FormRequest
                             'fecha_inicio',
                             'La fecha de inicio de la novedad no puede ser anterior a la fecha de ingreso del empleado ('
                             . $fechaIngreso->format('d/m/Y') . ').'
+                        );
+                    }
+                }
+            }
+
+            // Nueva validación: La fecha_fin no puede ser anterior al inicio del periodo activo
+            // para novedades de tipo VAC o SLN (según requerimiento).
+            if (in_array($tipo, ['VAC', 'SLN'], true) && $fechaFin) {
+                $periodoActivo = PeriodoLiquidacion::getActivePeriod();
+                if ($periodoActivo) {
+                    $fechaInicioPeriodo = $periodoActivo->fecha_inicio;
+                    if (\Carbon\Carbon::parse($fechaFin)->lt($fechaInicioPeriodo)) {
+                        $validator->errors()->add(
+                            'fecha_fin',
+                            'La fecha de fin de la novedad debe estar dentro o después del periodo de liquidación actual ('
+                            . $fechaInicioPeriodo->format('d/m/Y') . ').'
                         );
                     }
                 }

@@ -160,6 +160,9 @@ class EmployeesController extends Controller
         // Define the step variable for the view
         $step = $request->input('step', 1);
 
+        // Get active period to pass to the view for validations
+        $activePeriod = \App\Models\PeriodoLiquidacion::getActivePeriod();
+
         return view('empleados.index', compact(
               'canView',
               'empleados',
@@ -182,7 +185,8 @@ class EmployeesController extends Controller
               'inactivosCount',
               'sinContratoCount',
               'contractAlerts',
-              'step'
+              'step',
+              'activePeriod'
         ));
     }
 

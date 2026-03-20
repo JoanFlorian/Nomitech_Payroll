@@ -287,7 +287,7 @@
                                     <td class="text-right {{ $novedades >= 0 ? 'text-success' : 'text-danger' }}">
                                         {{ $novedades >= 0 ? '+' : '-' }}${{ number_format(abs($novedades), 0, ',', '.') }}
                                     </td>
-                                    <td class="text-right text-success">${{ number_format((float) $salario->total_devengado, 0, ',', '.') }}</td>
+                                    <td class="text-right text-success">${{ number_format((float) ($salario->total_devengado - $salario->total_novedades_devengado), 0, ',', '.') }}</td>
                                     <td class="text-right text-danger">${{ number_format((float) $salario->getRawOriginal('total_deducciones'), 0, ',', '.') }}</td>
                                     <td class="text-right text-strong">${{ number_format((float) $salario->neto_pagar, 0, ',', '.') }}</td>
                                 </tr>

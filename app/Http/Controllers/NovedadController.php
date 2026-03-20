@@ -680,6 +680,7 @@ class NovedadController extends Controller
             'retencion_fuente' => (float) ($salarioRaw->retencion_fuente ?? 0),
             'embargo_fiscal' => (float) ($salarioRaw->embargo_fiscal ?? 0),
             'pension_voluntaria' => (float) ($salarioRaw->pension_voluntaria ?? 0),
+            'limpiar_novedades' => true, // Limpiar contaminación de valores de novedades antiguos
         ];
 
         // Forzar el guardado usando el servicio de recálculo

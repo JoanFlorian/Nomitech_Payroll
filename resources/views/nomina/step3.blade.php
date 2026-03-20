@@ -269,6 +269,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const unformatForSubmit = () => {
+        manualInputs.forEach(i => i.value = toNumber(i.value));
+        ['eps', 'afp', 'seguridad_social'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = toNumber(el.value);
+        });
+    };
+
     form.addEventListener('submit', async (e) => {
         let valid = true;
         manualInputs.forEach((input) => { if (!sanitize(input)) valid = false; });
@@ -292,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 document.getElementById('confirm_edit').value = 'editar';
+                unformatForSubmit();
                 form.submit();
                 return;
             }
@@ -322,11 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             document.getElementById('confirm_edit').value = 'editar';
+            unformatForSubmit();
             form.submit();
             return;
         }
 
         calc();
+        unformatForSubmit();
     });
 
     manualInputs.forEach((input) => {

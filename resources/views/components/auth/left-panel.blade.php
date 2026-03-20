@@ -1,12 +1,7 @@
 @props(['backUrl' => '/', 'backText' => 'Volver al inicio'])
 
 <div class="bg-[#1565C0] text-white p-6 sm:p-8 md:p-12 flex flex-col justify-center items-start left-column relative min-h-[300px] md:min-h-[600px]">
-    <!-- Botón Volver -->
-    <a href="{{ $backUrl }}"
-        class="absolute top-4 left-4 sm:top-6 sm:left-6 md:top-8 md:left-8 flex items-center text-xs sm:text-sm font-semibold text-white/80 hover:text-white transition-all group z-20">
-        <span class="material-icons text-lg sm:text-xl mr-1 sm:mr-2 group-hover:-translate-x-1 transition-transform">arrow_back</span>
-        {{ $backText }}
-    </a>
+    <!-- Botón Volver eliminado -->
 
     <div class="shape shape-1"></div>
     <div class="shape shape-2"></div>

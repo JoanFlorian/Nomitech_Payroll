@@ -33,13 +33,16 @@ class RegistroUsuarios extends Controller
 
     private \App\Services\PlanService $planService;
     private \App\Services\Benefits\BenefitPaymentService $benefitService;
+    private \App\Services\ContractTerminationService $terminationService;
 
     public function __construct(
         \App\Services\PlanService $planService,
-        \App\Services\Benefits\BenefitPaymentService $benefitService
+        \App\Services\Benefits\BenefitPaymentService $benefitService,
+        \App\Services\ContractTerminationService $terminationService
     ) {
         $this->planService = $planService;
         $this->benefitService = $benefitService;
+        $this->terminationService = $terminationService;
     }
 
     private function resolveCompanyId(): ?int
@@ -309,6 +312,9 @@ class RegistroUsuarios extends Controller
                         $initialBalances
                     );
                 }
+
+                // ── LABOR CONTINUITY CHECK ──
+                $this->terminationService->handleLaborContinuity($contrato);
             });
 
             session()->forget(['employee.step1', 'employee.step2']);
@@ -444,6 +450,14 @@ class RegistroUsuarios extends Controller
                 $nuevoContrato->fecha_fin = null;
             }
 
+            // Finalizar el contrato anterior para que no siga saliendo en la nómina masiva
+            if (!$contratoAnterior->fecha_fin && isset($data['fecha_inicio'])) {
+                $contratoAnterior->fecha_fin = \Carbon\Carbon::parse($data['fecha_inicio'])->subDay()->toDateString();
+            }
+            $contratoAnterior->activo = false;
+            $contratoAnterior->estado = Contrato::ESTADO_TERMINADO;
+            $contratoAnterior->save();
+
             $nuevoContrato->activo = true;
             $nuevoContrato->estado = Contrato::ESTADO_ACTIVO; 
             $nuevoContrato->save();
@@ -484,6 +498,9 @@ class RegistroUsuarios extends Controller
                     $initialBalances
                 );
             }
+
+            // ── LABOR CONTINUITY CHECK ──
+            $this->terminationService->handleLaborContinuity($nuevoContrato);
 
             DB::commit();
 

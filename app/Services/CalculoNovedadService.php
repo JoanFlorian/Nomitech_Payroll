@@ -34,52 +34,18 @@ class CalculoNovedadService
     {
         $empresaId = (int) session('empresa_id');
         $activePeriod = PeriodoLiquidacion::getActivePeriod();
-        $activePeriodId = $activePeriod ? $activePeriod->id_periodo : 0;
+        
+        if (!$activePeriod) {
+            return null;
+        }
 
-        $baseQuery = Salario::query()
+        return Salario::query()
             ->join('contrato', 'contrato.id_contrato', '=', 'salario.id_contrato')
             ->where('contrato.doc', $empleadoId)
-            ->where(function ($query) {
-                $query
-                    ->where('contrato.activo', true)
-                    ->orWhereIn('contrato.estado', [
-                        Contrato::ESTADO_ACTIVO,
-                        Contrato::ESTADO_POR_VENCER,
-                    ]);
-            })
-            ->when($empresaId > 0, function ($query) use ($empresaId) {
-                $query->where('contrato.id_empresa', $empresaId);
-            })
-            ->orderByDesc('salario.id_salario')
-            ->select('salario.*', 'contrato.salario_base as contrato_salario_base');
-
-        // Intentar primero con el período activo; si no hay salario para ese período,
-        // usar el salario más reciente disponible del empleado.
-        $salario = null;
-        if ($activePeriodId > 0) {
-            $salario = (clone $baseQuery)->where('salario.id_periodo', $activePeriodId)->first();
-        }
-
-        if (!$salario) {
-            $salario = $baseQuery->first();
-        }
-
-        // Fallback: si no hay absolutamente ningún registro en la tabla 'salario',
-        // buscamos al menos el contrato para obtener el salario_base.
-        if (!$salario) {
-            $contrato = Contrato::query()
-                ->where('doc', $empleadoId)
-                ->where('id_empresa', $empresaId)
-                ->first();
-            
-            if ($contrato) {
-                // Devolvemos un objeto Salario "fake" o simplemente nos aseguramos que resolverSalarioBase lo entienda
-                // Mejor aún: devolvemos el contrato o null y ajustamos resolverSalarioBase.
-                return null; 
-            }
-        }
-
-        return $salario;
+            ->where('contrato.id_empresa', $empresaId)
+            ->where('salario.id_periodo', $activePeriod->id_periodo)
+            ->select('salario.*', 'contrato.salario_base as contrato_salario_base')
+            ->first();
     }
 
     public function resolverDias(array $data): float

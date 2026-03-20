@@ -14,21 +14,26 @@ use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use App\Models\Contrato;
+use App\Services\ContractTerminationService;
 
 class NominaController extends Controller
 {
     private NominaCalculatorService $calculator;
     private NominaEmployeeService $employeeService;
     private \App\Services\PlanService $planService;
+    private ContractTerminationService $terminationService;
 
     public function __construct(
         NominaCalculatorService $calculator,
         NominaEmployeeService $employeeService,
-        \App\Services\PlanService $planService
+        \App\Services\PlanService $planService,
+        ContractTerminationService $terminationService
     ) {
         $this->calculator = $calculator;
         $this->employeeService = $employeeService;
         $this->planService = $planService;
+        $this->terminationService = $terminationService;
     }
 
     /* ==========================
@@ -268,6 +273,12 @@ class NominaController extends Controller
             : 0;
         $maxDias = max(0, 30 - $diasSln);
 
+        $valorHora = $salarioBaseMensual > 0 ? ($salarioBaseMensual / 240) : 0;
+        $resumenNov = $this->calculator->resumirNovedadesContratoPeriodo((int) $registro->id_contrato, (int) $registro->id_periodo, $valorHora);
+
+        $horasExtraManual = max(0, $horasExtra - (float) ($resumenNov['horas_extra'] ?? 0));
+        $recargosManual = max(0, $recargos - (float) ($resumenNov['recargos'] ?? 0));
+
         session(['nomina.editing_id' => (int) $registro->id_salario]);
         session([
             'nomina.step1' => [
@@ -288,20 +299,20 @@ class NominaController extends Controller
         ]);
         session([
             'nomina.step2' => [
-                'horas_extra' => $horasExtra,
-                'recargos' => $recargos,
-                'total_horas_extra' => $horasExtra,
-                'total_recargos' => $recargos,
-                'total_devengos_parcial' => $salarioBaseProporcional + $horasExtra + $recargos,
+                'horas_extra' => $horasExtraManual,
+                'recargos' => $recargosManual,
+                'total_horas_extra' => $horasExtraManual,
+                'total_recargos' => $recargosManual,
+                'total_devengos_parcial' => $salarioBaseProporcional + $horasExtraManual + $recargosManual,
                 'detalle_recargos' => $detalleHoras,
                 'detalle_recargos_estimado' => $detalleEstimado,
             ]
         ]);
         session([
             'nomina.step2_ingresos' => [
-                'bonificaciones' => (float) ($registro->bonificaciones ?? 0),
+                'bonificaciones' => max(0, (float) ($registro->bonificaciones ?? 0) - (float) ($resumenNov['bonificaciones'] ?? 0)),
                 'comisiones' => (float) ($registro->comisiones ?? 0),
-                'otros_devengos' => (float) ($registro->otros_devengos ?? 0),
+                'otros_devengos' => max(0, (float) ($registro->otros_devengos ?? 0) - (float) ($resumenNov['otros_devengos'] ?? 0)),
                 'aplica_auxilio_transporte' => ((float) ($registro->auxilio_transporte ?? 0)) > 0 ? 1 : 0,
                 'auxilio_transporte' => (float) ($registro->auxilio_transporte ?? 0),
             ]
@@ -687,6 +698,20 @@ class NominaController extends Controller
             ->limit(10)
             ->get();
 
+        // ── AUTO-SCHEDULE BENEFITS ON TERMINATION ──
+        if ($periodoActivo && !empty($s1['id_contrato'])) {
+            $contratoObj = Contrato::find($s1['id_contrato']);
+            if ($contratoObj) {
+                $termResult = $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
+                
+                // If suggested days were returned (contract ends in period), update session
+                if ($termResult['is_terminating'] && $termResult['suggested_days'] !== null) {
+                    $s1['dias_trabajados'] = $termResult['suggested_days'];
+                    session(['nomina.step1' => $s1]);
+                }
+            }
+        }
+
         // Scheduled benefit payments for this employee/period (informational)
         $benefitPayments = collect();
         $employeeDoc = $s1['doc'] ?? null;
@@ -789,8 +814,16 @@ class NominaController extends Controller
 
         $salarioBase = (float) ($step1['salario_base_proporcional'] ?? $step1['salario_base'] ?? 0);
 
+        $idTipoContrato = null;
+        if (isset($step1['id_contrato'])) {
+            $contratoSession = \DB::table('contrato')->where('id_contrato', $step1['id_contrato'])->first(['id_tipo_contrato']);
+            if ($contratoSession) {
+                $idTipoContrato = (int) $contratoSession->id_tipo_contrato;
+            }
+        }
+
         $contribuciones = $this->calculator
-            ->calcularContribuciones($salarioBase);
+            ->calcularContribuciones($salarioBase, $idTipoContrato);
 
         $totalDevengos =
             $salarioBase +
@@ -986,9 +1019,18 @@ class NominaController extends Controller
         DB::transaction(function () use ($contratos, $periodoActivo, $fechaPago, &$procesados, &$omitidos) {
             foreach ($contratos as $idContrato) {
                 try {
-                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, [
-                        'fecha_pago' => $fechaPago,
-                    ]);
+                    $contratoObj = Contrato::find($idContrato);
+                    $inputCalculo = ['fecha_pago' => $fechaPago];
+
+                    if ($contratoObj) {
+                        // SUGGEST DAYS based on active period ALWAYS
+                        $inputCalculo['dias_trabajados'] = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
+
+                        // Also process termination for benefits if applicable
+                        $termResult = $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
+                    }
+
+                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo);
                     $procesados++;
                 } catch (\App\Exceptions\EmpleadoIncapacitadoException $e) {
                     // Empleado con incapacidad activa: se omite sin romper el proceso masivo.
@@ -1254,8 +1296,20 @@ class NominaController extends Controller
     {
         $empresaId = session('empresa_id');
 
-        return $this->employeeService
+        $empleado = $this->employeeService
             ->buscarEmpleado($doc, $empresaId);
+
+        if ($empleado) {
+            $periodoActivo = \App\Models\PeriodoLiquidacion::getActivePeriod();
+            if ($periodoActivo) {
+                $contratoObj = \App\Models\Contrato::find($empleado->id_contrato);
+                if ($contratoObj) {
+                    $empleado->dias_sugeridos = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
+                }
+            }
+        }
+
+        return $empleado;
     }
 
     public function buscarEmpleados(Request $request)
@@ -1401,7 +1455,7 @@ class NominaController extends Controller
 
             $sheet->setCellValue(
                 'H' . $row,
-                $salario->total_devengado
+                $salario->total_devengado - $salario->total_novedades_devengado
             );
 
             $sheet->setCellValue(

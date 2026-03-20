@@ -15,15 +15,43 @@ class PermissionProfileSeeder extends Seeder
     public function run(): void
     {
         $auxiliarPermissions = [
+            // Empleados
             'view_employees',
+            'create_employee',
+            'edit_employee',
+            'export_employees',
+            
+            // Nómina
             'view_payroll',
+            'calculate_payroll',
+            'export_payroll',
+            
+            // Periodos
             'view_periods',
+            'create_period',
+            'export_period',
+            
+            // Novedades
             'view_novedades',
             'create_novedad',
             'edit_novedad',
+            'delete_novedad',
+            'approve_novedad',
+            
+            // Provisiones
             'view_provisions',
+            'view_provision_history',
+            
+            // Reportes
+            'view_reports',
+            'export_reports',
+            
+            // Nómina Electrónica
             'view_electronic_payroll',
+            
+            // PILA
             'view_pila',
+            'export_pila',
         ];
 
         $auditorPermissions = [

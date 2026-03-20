@@ -29,7 +29,9 @@ return new class extends Migration
             ->where('estado', 'leido')
             ->update(['estado' => 'resuelto']);
 
-        DB::statement("ALTER TABLE nota_ajustes MODIFY estado VARCHAR(20) NOT NULL DEFAULT 'pendiente'");
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE nota_ajustes MODIFY estado VARCHAR(20) NOT NULL DEFAULT 'pendiente'");
+        }
     }
 
     public function down(): void

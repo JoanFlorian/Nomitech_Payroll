@@ -28,8 +28,21 @@ class NominaCalculatorService
         return $salarioBase / $this->params->horas_mes;
     }
 
-    public function calcularContribuciones(float $salarioBase): array
+    public function calcularContribuciones(float $salarioBase, ?int $idTipoContrato = null): array
     {
+        if ($idTipoContrato === \App\Models\TipoContrato::TIPO_PRESTACION_SERVICIOS) {
+            return [
+                'eps' => 0,
+                'afp' => 0,
+                'arl' => 0,
+                'caja_compensacion' => 0,
+                'aporte_salud_empresa' => 0,
+                'aporte_pension_empresa' => 0,
+                'seguridad_social' => 0,
+                'aporte_fp' => 0,
+            ];
+        }
+
         $eps = $salarioBase * $this->params->eps_employee;
         $afp = $salarioBase * $this->params->pension_employee;
         $aportesEmpresa = $this->securitySocialCalculator->calculate($salarioBase, $this->params);
@@ -161,21 +174,29 @@ class NominaCalculatorService
         $integratedTotal = abs((float) $integratedBenefits);
         $totalDevengado += $integratedTotal;
 
-        $epsRate = (float) ($this->params->eps_employee ?? 0.04);
-        $afpRate = (float) ($this->params->pension_employee ?? 0.04);
-        $eps = $totalDevengado * $epsRate;
-        $afp = $totalDevengado * $afpRate;
-        $seguridadSocial = $eps + $afp;
+        $eps = 0;
+        $afp = 0;
+        $seguridadSocial = 0;
+        $arl = 0;
+        $aportesEmpresa = [];
 
-        // IBC para ARL: salario base del contrato.
-        $ibcArl = max(0, (float) ($contrato->salario_base ?? 0));
-        $arlRate = $this->resolveArlRateFromContrato($contrato);
-        $arl = round($ibcArl * $arlRate, 2);
+        if ((int) $contrato->id_tipo_contrato !== \App\Models\TipoContrato::TIPO_PRESTACION_SERVICIOS) {
+            $epsRate = (float) ($this->params->eps_employee ?? 0.04);
+            $afpRate = (float) ($this->params->pension_employee ?? 0.04);
+            $eps = $totalDevengado * $epsRate;
+            $afp = $totalDevengado * $afpRate;
+            $seguridadSocial = $eps + $afp;
 
-        $aportesEmpresa = $this->securitySocialCalculator->calculate(
-            $totalDevengado,
-            $this->params
-        );
+            // IBC para ARL: salario base del contrato.
+            $ibcArl = max(0, (float) ($contrato->salario_base ?? 0));
+            $arlRate = $this->resolveArlRateFromContrato($contrato);
+            $arl = round($ibcArl * $arlRate, 2);
+
+            $aportesEmpresa = $this->securitySocialCalculator->calculate(
+                $totalDevengado,
+                $this->params
+            );
+        }
 
         $totalDeducciones =
             $seguridadSocial

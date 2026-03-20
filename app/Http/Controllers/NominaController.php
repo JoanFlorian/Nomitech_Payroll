@@ -814,8 +814,16 @@ class NominaController extends Controller
 
         $salarioBase = (float) ($step1['salario_base_proporcional'] ?? $step1['salario_base'] ?? 0);
 
+        $idTipoContrato = null;
+        if (isset($step1['id_contrato'])) {
+            $contratoSession = \DB::table('contrato')->where('id_contrato', $step1['id_contrato'])->first(['id_tipo_contrato']);
+            if ($contratoSession) {
+                $idTipoContrato = (int) $contratoSession->id_tipo_contrato;
+            }
+        }
+
         $contribuciones = $this->calculator
-            ->calcularContribuciones($salarioBase);
+            ->calcularContribuciones($salarioBase, $idTipoContrato);
 
         $totalDevengos =
             $salarioBase +

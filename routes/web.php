@@ -1,4 +1,4 @@
-// (moved below into novedades group)
+
 <?php
 
 use Illuminate\Support\Facades\Route;

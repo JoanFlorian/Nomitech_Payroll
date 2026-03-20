@@ -287,7 +287,7 @@
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right font-semibold text-emerald-700">
-                                ${{ number_format((float) $salario->total_devengado, 0, ',', '.') }}
+                                ${{ number_format((float) ($salario->total_devengado - $salario->total_novedades_devengado), 0, ',', '.') }}
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right font-semibold text-red-600">

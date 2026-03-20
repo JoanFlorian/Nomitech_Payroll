@@ -469,6 +469,22 @@ class UpdateEmployeePartialRequest extends FormRequest
                     }
                 }
             }
+
+            // Validación de fecha_fin vs periodo activo
+            if (!empty($fechaFin)) {
+                $activePeriod = \App\Models\PeriodoLiquidacion::getActivePeriod();
+                if ($activePeriod) {
+                    $fechaFinDate = \Carbon\Carbon::parse($fechaFin)->startOfDay();
+                    $periodStart = $activePeriod->fecha_inicio->startOfDay();
+                    
+                    if ($fechaFinDate->lessThan($periodStart)) {
+                        $validator->errors()->add(
+                            'fecha_fin',
+                            'La fecha de fin debe estar dentro del periodo de liquidación actual (' . $activePeriod->fecha_inicio->format('d/m/Y') . ') o ser posterior a este.'
+                        );
+                    }
+                }
+            }
         });
     }
 

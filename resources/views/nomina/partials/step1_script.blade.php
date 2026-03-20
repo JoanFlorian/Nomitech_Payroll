@@ -210,6 +210,19 @@
 
         if (spinner) spinner.classList.remove('hidden');
         try {
+            // Obtener el detalle del empleado para extraer dias_sugeridos
+            try {
+                const detalladoResp = await fetch(`${buscarEmpleadoBaseUrl}/${encodeURIComponent(emp.doc)}`);
+                if (detalladoResp.ok) {
+                    const detallado = await detalladoResp.json();
+                    if (detallado) {
+                        emp = Object.assign({}, emp, detallado);
+                    }
+                }
+            } catch (e) {
+                console.warn('No se pudo obtener el detalle del empleado para prorrateo');
+            }
+
             const resp = await fetch(`${validarDuplicadoBaseUrl}/${emp.id_contrato}`);
             const data = await resp.json();
 
@@ -235,6 +248,10 @@
             if ($('nombre')) $('nombre').value = emp.nombre || '';
             if ($('telefono')) $('telefono').value = emp.telefono || '';
             if ($('salario_base')) $('salario_base').value = emp.salario_base ? formatCOP(emp.salario_base) : '';
+
+            if (emp.dias_sugeridos !== undefined && emp.dias_sugeridos !== null && diasInput) {
+                diasInput.value = emp.dias_sugeridos;
+            }
 
             if (fechaInput && !fechaInput.value) fechaInput.value = new Date().toISOString().split('T')[0];
 
@@ -327,6 +344,11 @@
             if ($('nombre')) $('nombre').value = emp.nombre || '';
             if ($('telefono')) $('telefono').value = emp.telefono || '';
             if ($('salario_base')) $('salario_base').value = emp.salario_base ? formatCOP(emp.salario_base) : '';
+            
+            if (emp.dias_sugeridos !== undefined && emp.dias_sugeridos !== null && diasInput) {
+                diasInput.value = emp.dias_sugeridos;
+            }
+
             if (empleadoInput) markOk(empleadoInput);
             actualizarResumenProporcional();
 

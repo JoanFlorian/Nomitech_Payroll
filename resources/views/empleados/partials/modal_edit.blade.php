@@ -270,8 +270,13 @@
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 :class="isRenewal ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/30' : ''"
                                 name="fecha_fin" id="editFechaFin">
-                            <p id="editFechaFinHint" class="text-xs text-gray-500 mt-1">Debe ser posterior a la fecha de
-                                inicio.</p>
+                            <p id="editFechaFinHint" class="text-xs text-gray-500 mt-1">
+                                @if($activePeriod)
+                                    Debe ser posterior a la fecha de inicio y no anterior al periodo actual ({{ $activePeriod->fecha_inicio->format('d/m/Y') }}).
+                                @else
+                                    Debe ser posterior a la fecha de inicio.
+                                @endif
+                            </p>
                             <p class="error-message text-red-500 text-sm hidden" data-error="fecha_fin"></p>
                         </div>
 
@@ -678,7 +683,16 @@
 
         const nextDate = new Date(`${fechaInicioValue}T00:00:00`);
         nextDate.setDate(nextDate.getDate() + 1);
-        const minFechaFin = nextDate.toISOString().split('T')[0];
+        let minFechaFin = nextDate.toISOString().split('T')[0];
+
+        // Nueva validación: No puede ser anterior al periodo activo
+        if (window.employeeValidationRules && window.employeeValidationRules.activePeriodStart) {
+            const periodStart = window.employeeValidationRules.activePeriodStart;
+            if (periodStart > minFechaFin) {
+                minFechaFin = periodStart;
+            }
+        }
+
         fechaFinInput.setAttribute('min', minFechaFin);
 
         const fechaFinValue = (fechaFinInput.value ?? '').toString().trim();
@@ -879,9 +893,9 @@
             return field.checked ? '1' : '0';
         }
 
-        if (field.name === 'salario') {
-            const parsedSalary = parseEditLocalizedNumber(field.value);
-            return Number.isFinite(parsedSalary) ? String(parsedSalary) : '';
+        if (['salario', 'cesantias_inicial', 'prima_inicial', 'intereses_inicial', 'vacaciones_inicial'].includes(field.name)) {
+            const parsedValue = parseEditLocalizedNumber(field.value);
+            return Number.isFinite(parsedValue) ? String(parsedValue) : '';
         }
 
         return (field.value ?? '').toString().trim();

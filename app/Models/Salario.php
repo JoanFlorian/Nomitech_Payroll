@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Salario extends Model
 {
@@ -51,13 +52,21 @@ class Salario extends Model
 
         $novedades = $this->resolveNovedadesTotals();
 
+        $integratedBenefits = DB::table('benefit_ledger')
+            ->where('contract_id', $this->id_contrato)
+            ->where('payroll_period_id', $this->id_periodo)
+            ->where('movement_type', 'scheduled_payment')
+            ->where('status', 'pending_payroll')
+            ->sum('amount');
+
         return $salarioBase
             + ($this->auxilio_transporte ?? 0)
             + ($this->valor_horas_extras_recargos ?? ($this->horas_extra ?? 0))
             + ($this->bonificaciones ?? 0)
             + ($this->comisiones ?? 0)
             + ($this->otros_devengos ?? 0)
-            + ($novedades['devengado'] ?? 0);
+            + ($novedades['devengado'] ?? 0)
+            + abs((float) $integratedBenefits);
     }
 
     public function getTotalDeduccionesAttribute()

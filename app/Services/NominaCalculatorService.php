@@ -113,26 +113,53 @@ class NominaCalculatorService
         $baseOtrosDevengos = max(0, (float) ($input['otros_devengos'] ?? 0));
         $auxilioTransporte = max(0, (float) ($input['auxilio_transporte'] ?? 0));
 
+        // Valores calculados de novedades
+        $novHorasExtra = (float) ($resumenNovedades['horas_extra'] ?? 0);
+        $novRecargos = (float) ($resumenNovedades['recargos'] ?? 0);
+        $novBonificaciones = (float) ($resumenNovedades['bonificaciones'] ?? 0);
+        $novOtrosDevengos = (float) ($resumenNovedades['otros_devengos'] ?? 0);
+        $novDeducciones = (float) ($resumenNovedades['deducciones'] ?? 0);
+
+        // Si el input viene de un origen persistido que puede estar "contaminado" con 
+        // valores de novedades previos (debido al bug antiguo), intentamos limpiarlo.
+        if (!empty($input['limpiar_novedades'])) {
+            $baseHorasExtra = max(0, $baseHorasExtra - $novHorasExtra);
+            $baseRecargos = max(0, $baseRecargos - $novRecargos);
+            $baseBonificaciones = max(0, $baseBonificaciones - $novBonificaciones);
+            $baseOtrosDevengos = max(0, $baseOtrosDevengos - $novOtrosDevengos);
+        }
+
         $retencionFuente = max(0, (float) ($input['retencion_fuente'] ?? 0));
         $embargoFiscal = max(0, (float) ($input['embargo_fiscal'] ?? 0));
         $pensionVoluntaria = max(0, (float) ($input['pension_voluntaria'] ?? 0));
 
-
-
-        $horasExtra = $baseHorasExtra + (float) ($resumenNovedades['horas_extra'] ?? 0);
-        $recargos = $baseRecargos + (float) ($resumenNovedades['recargos'] ?? 0);
-        $bonificaciones = $baseBonificaciones + (float) ($resumenNovedades['bonificaciones'] ?? 0);
-        $comisiones = $baseComisiones;
-        $otrosDevengos = $baseOtrosDevengos + (float) ($resumenNovedades['otros_devengos'] ?? 0);
+        // Totales combinados para el cálculo de seguridad social y neto
+        // PERO mantenemos las variables individuales como "manuales" para el retorno/guardado
+        $horasExtraTotal = $baseHorasExtra + $novHorasExtra;
+        $recargosTotal = $baseRecargos + $novRecargos;
+        $bonificacionesTotal = $baseBonificaciones + $novBonificaciones;
+        $otrosDevengosTotal = $baseOtrosDevengos + $novOtrosDevengos;
 
         $devengosSinRecargos = $this->calcularDevengos(
             $salarioDevengado,
-            $horasExtra,
-            $bonificaciones,
-            $comisiones
+            $horasExtraTotal,
+            $bonificacionesTotal,
+            $baseComisiones
         );
 
-        $totalDevengado = $devengosSinRecargos + $recargos + $otrosDevengos + $auxilioTransporte;
+        $totalDevengado = $devengosSinRecargos + $recargosTotal + $otrosDevengosTotal + $auxilioTransporte;
+
+        // ── INTEGRATED BENEFITS (BenefitLedger) ──
+        $integratedBenefits = DB::table('benefit_ledger')
+            ->where('contract_id', $idContrato)
+            ->where('payroll_period_id', $idPeriodo)
+            ->where('movement_type', 'scheduled_payment')
+            ->where('status', 'pending_payroll')
+            ->sum('amount');
+
+        // Note: amount is stored as negative in ledger for payments/payouts, so we take absolute
+        $integratedTotal = abs((float) $integratedBenefits);
+        $totalDevengado += $integratedTotal;
 
         $epsRate = (float) ($this->params->eps_employee ?? 0.04);
         $afpRate = (float) ($this->params->pension_employee ?? 0.04);
@@ -155,7 +182,7 @@ class NominaCalculatorService
             + $retencionFuente
             + $embargoFiscal
             + $pensionVoluntaria
-            + (float) ($resumenNovedades['deducciones'] ?? 0);
+            + $novDeducciones;
 
         $netoPagar = $this->calcularNeto($totalDevengado, $totalDeducciones);
 
@@ -165,12 +192,16 @@ class NominaCalculatorService
             'fecha_pago' => $input['fecha_pago'] ?? now()->toDateString(),
             'dias_a_trabajar' => $diasTrabajados,
             'dias_trabajados_prestacional' => $diasPrestacionales,
-            'horas_extra' => $horasExtra,
-            'valor_horas_extras_recargos' => $horasExtra + $recargos,
+            // IMPORTANTE: Estas variables 'horas_extra', 'otros_devengos', etc. 
+            // ahora representan solo el componente MANUAL/BASE que se guardará en la tabla 'salario'.
+            // El componente de NOVEDADES se suma dinámicamente en el modelo Salario (vía accessors) 
+            // a partir de la tabla 'novedad', evitando duplicidad y acumulación infinita.
+            'horas_extra' => $baseHorasExtra,
+            'valor_horas_extras_recargos' => $baseHorasExtra + $baseRecargos,
             'auxilio_transporte' => $auxilioTransporte,
-            'bonificaciones' => $bonificaciones,
-            'comisiones' => $comisiones,
-            'otros_devengos' => $otrosDevengos,
+            'bonificaciones' => $baseBonificaciones,
+            'comisiones' => $baseComisiones,
+            'otros_devengos' => $baseOtrosDevengos,
             'eps' => $eps,
             'afp' => $afp,
             'arl' => $arl,
@@ -185,12 +216,8 @@ class NominaCalculatorService
             'total_devengado' => $totalDevengado,
             'total_deducciones' => $totalDeducciones,
             'neto_pagar' => $netoPagar,
-            'total_novedades_devengado' =>
-                (float) ($resumenNovedades['horas_extra'] ?? 0)
-                + (float) ($resumenNovedades['recargos'] ?? 0)
-                + (float) ($resumenNovedades['bonificaciones'] ?? 0)
-                + (float) ($resumenNovedades['otros_devengos'] ?? 0),
-            'total_novedades_deduccion' => (float) ($resumenNovedades['deducciones'] ?? 0),
+            'total_novedades_devengado' => $novHorasExtra + $novRecargos + $novBonificaciones + $novOtrosDevengos,
+            'total_novedades_deduccion' => $novDeducciones,
             'resumen_novedades' => $resumenNovedades,
             'valor_hora' => $valorHora,
             'salario_base' => $salarioBase,
@@ -274,7 +301,7 @@ class NominaCalculatorService
         });
     }
 
-    private function resumirNovedadesContratoPeriodo(int $idContrato, int $idPeriodo, float $valorHora): array
+    public function resumirNovedadesContratoPeriodo(int $idContrato, int $idPeriodo, float $valorHora): array
     {
         $resumen = [
             'horas_extra' => 0.0,

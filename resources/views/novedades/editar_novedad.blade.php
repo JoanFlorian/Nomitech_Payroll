@@ -181,7 +181,16 @@
 
                     <div>
                         <label for="edit-end-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
-                        <input id="edit-end-date" name="fecha_fin" type="date" value="{{ old('fecha_fin') }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                        <input id="edit-end-date" name="fecha_fin" type="date" value="{{ old('fecha_fin') }}" required 
+                            @if(isset($periodoActivo) && $periodoActivo) min="{{ $periodoActivo->fecha_inicio->format('Y-m-d') }}" @endif
+                            class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                        <p id="edit-end-date-hint" class="text-[10px] text-gray-500 mt-1">
+                            @if(isset($periodoActivo) && $periodoActivo)
+                                Para VAC/SLN debe ser igual o posterior al periodo actual ({{ $periodoActivo->fecha_inicio->format('d/m/Y') }}).
+                            @else
+                                Debe ser posterior a la fecha de inicio.
+                            @endif
+                        </p>
                         <p id="edit-end-date-error" class="mt-1 text-xs text-red-600 hidden"></p>
                         @error('fecha_fin')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>

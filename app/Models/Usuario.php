@@ -191,11 +191,11 @@ class Usuario extends Authenticatable
         }
 
         // Si no tiene ningún permiso de módulo, pero es trabajador
-        if ($this->id_rol == 3) {
-            return '/trabajador';
+        if ((int)$this->id_rol == 3) {
+            return 'trabajador.dashboard';
         }
 
-        return 'index'; // Default a la landing o dashboard principal
+        return 'index'; // Nombraremos la ruta raíz como 'index' en web.php
     }
 
     public function clearPermissionCache()

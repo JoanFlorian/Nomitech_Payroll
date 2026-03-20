@@ -27,7 +27,7 @@ use App\Http\Controllers\Auth\CambiarPasswordController;
 
 use Illuminate\Http\Request;
 
-Route::get('/', [PricingController::class, 'index']);
+Route::get('/', [PricingController::class, 'index'])->name('index');
 
 Route::get('/login', function () {
     return view('auth.login');
@@ -83,7 +83,7 @@ Route::middleware(['auth', 'prevent_back_history'])->group(function () {
 });
 
 // Protected App Routes (Auth + Active License + Contractual Access)
-Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'prevent_back_history'])->group(function () {
+Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'prevent_back_history', 'must_change_password'])->group(function () {
     // Empleados
     Route::get('/empleados', [App\Http\Controllers\EmployeesController::class, 'index'])->name('empleados.index');
     Route::get('/empleados/{doc}', [App\Http\Controllers\EmployeesController::class, 'show'])->name('employees.show')->middleware('permission:view_employees');
@@ -182,7 +182,7 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/pila/historial/{id}/descargar', [PilaController::class, 'descargarHistorial'])->name('pila.historial.descargar')->middleware('permission:view_pila');
 });
 
-Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin_empresa', 'permission:manage_catalogos', 'prevent_back_history'])
+Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin_empresa', 'permission:manage_catalogos', 'prevent_back_history', 'must_change_password'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -210,7 +210,7 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin
     });
 
 // Superadmin routes protected by auth and role
-Route::middleware(['auth', 'is_superadmin', 'prevent_back_history'])->prefix('superadmin')->name('superadmin.')->group(function () {
+Route::middleware(['auth', 'is_superadmin', 'prevent_back_history', 'must_change_password'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/', [facturacioncontroller::class, 'dashboard'])->name('index');
     Route::get('/facturacion', [facturacioncontroller::class, 'facturacion'])->name('facturacion');
     Route::get('/facturacion/exportar/pdf', [facturacioncontroller::class, 'exportarFacturacionPdf'])->name('facturacion.exportar.pdf');

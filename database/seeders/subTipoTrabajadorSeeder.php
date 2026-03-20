@@ -11,7 +11,7 @@ class SubTipoTrabajadorSeeder extends Seeder
     public function run(): void
     {
         $datos = [
-            ['id_sub_tipo_trabajador' => 0, 'nombre' => 'ninguno'],
+            ['id_sub_tipo_trabajador' => 0, 'nombre' => 'Ninguno'],
             ['id_sub_tipo_trabajador' => 1, 'nombre' => 'Dependiente pensionado por vejez activo'],
         ];
 

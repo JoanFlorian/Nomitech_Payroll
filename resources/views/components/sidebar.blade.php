@@ -6,21 +6,19 @@
 
     <!-- HEADER -->
     <div class="sidebar-header flex items-center gap-3 p-4 border-b border-[#0D47A1] overflow-hidden">
-        {{-- Logo compacto: solo visible cuando está colapsado --}}
-        <div class="sidebar-brand-compact sidebar-icon-container rounded-xl overflow-hidden bg-white/10 flex-shrink-0">
+        <div class="sidebar-brand-compact sidebar-icon-container rounded-xl overflow-hidden bg-white flex-shrink-0 w-12 h-12">
             <img
                 src="{{ asset('images/logo nomitech.jpeg') }}"
                 alt="Nomitech"
-                class="block h-full w-full object-contain"
+                class="object-contain w-full h-full"
             >
         </div>
-        {{-- Logo pequeño + info de usuario: solo visible cuando está expandido --}}
         <div class="sidebar-brand-full flex items-center gap-3 min-w-0">
-            <div class="w-11 h-11 flex-shrink-0 rounded-xl overflow-hidden bg-white/10">
+            <div class="w-11 h-11 flex-shrink-0 rounded-xl overflow-hidden bg-white">
                 <img
                     src="{{ asset('images/logo nomitech.jpeg') }}"
                     alt="Nomitech"
-                    class="block w-full h-full object-contain"
+                    class="object-contain w-full h-full"
                 >
             </div>
             @php
@@ -154,13 +152,13 @@
                     <i class="menu-icon bi bi-bell text-lg flex-shrink-0"></i>
                     <span class="menu-text whitespace-nowrap">Notas de Ajuste</span>
                 </a>
-
+                @if(in_array(strtolower(Auth::user()->rol?->nombre ?? ''), ['admin', 'representante legal']))
                 <a href="{{ route('admin.catalogos.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
                     {{ request()->routeIs('admin.catalogos.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
                     <i class="menu-icon bi bi-collection text-lg flex-shrink-0"></i>
                     <span class="menu-text whitespace-nowrap">Catálogos de Empresa</span>
                 </a>
-                
+                @endif
                 <a href="{{ route('admin.roles.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
                     {{ request()->routeIs('admin.roles.*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
                     <i class="menu-icon bi bi-shield-check text-lg flex-shrink-0"></i>

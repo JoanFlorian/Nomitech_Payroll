@@ -26,9 +26,11 @@ return new class extends Migration
         $table->unsignedBigInteger('id_afp')->nullable();
 
         $table->boolean('alto_riesgo')->default(false);
+        $table->string('nivel_riesgo')->nullable(); // Legacy col used for migration to ID
 
-       
-        $table->unsignedBigInteger('nivel_riesgo_id')->nullable();
+        $table->decimal('salario', 12, 2)->nullable(); // Used for current wage tracking
+        $table->integer('horas_diarias')->nullable(); 
+        $table->string('codigo_interno', 20)->nullable();
 
         $table->date('fecha_inicio');
         $table->date('fecha_fin')->nullable();
@@ -49,13 +51,6 @@ return new class extends Migration
         $table->foreign('id_eps')->references('id_eps')->on('eps');
         $table->foreign('id_afp')->references('id_afp')->on('afp');
         $table->foreign('id_arl')->references('id_arl')->on('arl');
-
-     
-        $table->foreign('nivel_riesgo_id')
-            ->references('id')
-            ->on('niveles_riesgo')
-            ->nullOnDelete()
-            ->cascadeOnUpdate();
 
         $table->timestamps();
     });

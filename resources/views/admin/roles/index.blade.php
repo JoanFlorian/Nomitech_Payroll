@@ -309,14 +309,15 @@ function roleManager() {
         translations: {
             modules: {
                 empleados: { name: 'Empleados', desc: 'Gestión de personal y contratos.', icon: 'bi-people' },
-                nomina: { name: 'Nómina', desc: 'Procesamiento de pagos y cálculos.', icon: 'bi-receipt' },
-                novedades: { name: 'Novedades', desc: 'Horas extras e incapacidades.', icon: 'bi-journal-text' },
+                nomina: { name: 'Nómina', desc: 'Procesamiento de cálculos y pagos de salarios.', icon: 'bi-receipt' },
+                novedades: { name: 'Novedades', desc: 'Configuración de novedades para el cálculo de salario y pila.', icon: 'bi-journal-text' },
                 reportes: { name: 'Reportes', desc: 'Informes y exportaciones de datos.', icon: 'bi-bar-chart' },
                 permisos: { name: 'Roles y Permisos', desc: 'Control de accesos y seguridad.', icon: 'bi-shield-check' },
-                periodos: { name: 'Periodos', desc: 'Ciclos de liquidación y cierres.', icon: 'bi-calendar3' },
+                periodos: { name: 'Periodos de Liquidación', desc: 'Ciclos de liquidación y cierres.', icon: 'bi-calendar3' },
                 provisiones: { name: 'Provisiones', desc: 'Cálculo de prestaciones sociales.', icon: 'bi-box-seam' },
                 pila: { name: 'PILA', desc: 'Seguridad social y parafiscales.', icon: 'bi-file-earmark-text' },
-                catalogos: { name: 'Catálogos', desc: 'Tablas maestras y configuración.', icon: 'bi-collection' }
+                catalogos: { name: 'Catálogos', desc: 'Tablas maestras y configuración.', icon: 'bi-collection' },
+                'nomina electronica': { name: 'Nómina Electrónica', desc: 'Soporte de pago y envíos a la DIAN.', icon: 'bi-send-check' }
             },
             perms: {
                 view: { name: 'Visualizar', desc: 'Permite consultar la información.' },
@@ -331,7 +332,8 @@ function roleManager() {
         },
 
         getTranslation(module, field) {
-            const mod = module.toLowerCase();
+            if (!module) return '';
+            const mod = module.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
             if (this.translations.modules[mod]) {
                 return this.translations.modules[mod][field];
             }
@@ -339,7 +341,8 @@ function roleManager() {
         },
 
         getModuleIcon(module) {
-            const mod = module.toLowerCase();
+            if (!module) return 'bi-folder';
+            const mod = module.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
             return this.translations.modules[mod]?.icon || 'bi-folder';
         },
 

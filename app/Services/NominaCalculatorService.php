@@ -95,8 +95,15 @@ class NominaCalculatorService
 
         $resumenNovedades = $this->resumirNovedadesContratoPeriodo($idContrato, $idPeriodo, $valorHora);
 
-        $diasSln = (int) ($resumenNovedades['dias_sln'] ?? 0);
-        $diasTrabajados = max(0, min(30, (int) ($input['dias_trabajados'] ?? 30) - $diasSln));
+        $diasAusenciaTotal = (int) ($resumenNovedades['dias_ausencia_total'] ?? 0);
+        $diasAusenciaPrestacional = (int) ($resumenNovedades['dias_ausencia_prestacional'] ?? 0);
+
+        // Días a trabajar para el PAGO de nómina (resta todas las ausencias)
+        $diasTrabajados = max(0, min(30, (int) ($input['dias_trabajados'] ?? 30) - $diasAusenciaTotal));
+        
+        // Días para PRESTACIONES sociales (solo resta SLN)
+        $diasPrestacionales = max(0, min(30, (int) ($input['dias_trabajados'] ?? 30) - $diasAusenciaPrestacional));
+
         $salarioDevengado = ($salarioBase / 30) * $diasTrabajados;
 
         $baseHorasExtra = max(0, (float) ($input['horas_extra'] ?? 0));
@@ -157,6 +164,7 @@ class NominaCalculatorService
             'id_periodo' => $idPeriodo,
             'fecha_pago' => $input['fecha_pago'] ?? now()->toDateString(),
             'dias_a_trabajar' => $diasTrabajados,
+            'dias_trabajados_prestacional' => $diasPrestacionales,
             'horas_extra' => $horasExtra,
             'valor_horas_extras_recargos' => $horasExtra + $recargos,
             'auxilio_transporte' => $auxilioTransporte,
@@ -231,6 +239,7 @@ class NominaCalculatorService
             'pension_voluntaria' => $calculo['pension_voluntaria'],
             'caja_compensacion' => $calculo['caja_compensacion'],
             'dias_a_trabajar' => $calculo['dias_a_trabajar'],
+            'dias_trabajados_prestacional' => $calculo['dias_trabajados_prestacional'],
             'total_devengado' => $calculo['total_devengado'],
             'total_deducciones' => $calculo['total_deducciones'],
             'neto_pagar' => $calculo['neto_pagar'],
@@ -273,7 +282,8 @@ class NominaCalculatorService
             'bonificaciones' => 0.0,
             'otros_devengos' => 0.0,
             'deducciones' => 0.0,
-            'dias_sln' => 0,
+            'dias_ausencia_total' => 0,
+            'dias_ausencia_prestacional' => 0,
         ];
 
         $periodo = PeriodoLiquidacion::query()->find($idPeriodo);
@@ -343,11 +353,22 @@ class NominaCalculatorService
                     $efectivoInicio = $novInicio->greaterThan($pInicio) ? $novInicio : $pInicio;
                     $efectivoFin = $novFin->lessThan($pFin) ? $novFin : $pFin;
                     $diasEnPeriodo = max(0, $efectivoInicio->diffInDays($efectivoFin) + 1);
-                    $resumen['dias_sln'] += (int) $diasEnPeriodo;
+                    
+                    // Suma a ausencias totales que afectan el pago de nómina
+                    $resumen['dias_ausencia_total'] += (int) $diasEnPeriodo;
+                    
+                    // Solo suma a ausencias prestacionales si es SLN
+                    if ($codigo === 'SLN') {
+                        $resumen['dias_ausencia_prestacional'] += (int) $diasEnPeriodo;
+                    }
                 } else {
                     // Fallback: usar campo dias directamente
                     $diasEnPeriodo = (int) ($novedad->dias ?? $novedad->cantidad ?? 0);
-                    $resumen['dias_sln'] += $diasEnPeriodo;
+                    $resumen['dias_ausencia_total'] += $diasEnPeriodo;
+                    
+                    if ($codigo === 'SLN') {
+                        $resumen['dias_ausencia_prestacional'] += $diasEnPeriodo;
+                    }
                 }
 
                 // SLN: solo reduce dias trabajados, sin devengo monetario.

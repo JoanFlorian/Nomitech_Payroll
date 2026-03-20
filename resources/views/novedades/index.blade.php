@@ -440,6 +440,11 @@
 		const editAfpIdInput = document.getElementById('edit-afp-id');
 		const editArlWrap = document.getElementById('edit-arl-wrap');
 		const editArlIdInput = document.getElementById('edit-arl-id');
+		const editVacacionesBalanceInput = document.getElementById('edit-vacaciones-balance');
+		const editVacacionesBalanceDisplay = document.getElementById('edit-vacaciones-balance-display');
+		const editVacacionesBalanceInfo = document.getElementById('edit-vacaciones-balance-info');
+		const editStartDateLock = document.getElementById('edit-start-date-lock');
+		const editStartDateWarning = document.getElementById('edit-start-date-warning');
 
 		const editErrorElements = {
 			noveltyType: document.getElementById('edit-novelty-type-error'),

@@ -126,7 +126,7 @@
         /* Swiper Carousel Customization */
         .pricing-swiper {
             padding: 60px 15px;
-            overflow: visible !important; /* Allow scale/shadows to show */
+            overflow: hidden !important; 
         }
 
         .pricing-swiper .swiper-slide {

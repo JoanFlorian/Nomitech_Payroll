@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('salario', function (Blueprint $table) {
-            $table->integer('dias_trabajados_prestacional')->default(30)->after('dias_a_trabajar');
+            if (!Schema::hasColumn('salario', 'dias_trabajados_prestacional')) {
+                $table->integer('dias_trabajados_prestacional')->default(30)->after('dias_a_trabajar');
+            }
         });
     }
 

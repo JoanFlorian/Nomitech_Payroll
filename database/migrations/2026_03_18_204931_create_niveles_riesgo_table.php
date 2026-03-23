@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasTable('niveles_riesgo')) {
+            return;
+        }
+
         Schema::create('niveles_riesgo', function (Blueprint $table) {
             $table->id();
             $table->string('nombre'); // Nivel I, II, III...

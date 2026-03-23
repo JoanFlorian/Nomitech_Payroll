@@ -22,24 +22,24 @@ class TestDataSeeder extends Seeder
     {
         $this->command->info('Starting test data seeding...');
 
-        // 1. Ensure master data exists
-        $seeders = [
-            RolSeeder::class, PaisSeeder::class, DepartamentoSeeder::class,
-            CiudadSeeder::class, TipoDocSeeder::class, PlanSeeder::class,
-            TipoContratoSeeder::class, TipoTrabajadorSeeder::class,
-            SubTipoTrabajadorSeeder::class, ARLSeeder::class, EPSSeeder::class,
-            AFPSeeder::class, CajaCompensacionSeeder::class, FormaPagoSeeder::class,
-            MetodoPagoSeeder::class, BancoSeeder::class, TipoCuentaSeeder::class,
-            NivelRiesgoSeeder::class,
-        ];
+        // // 1. Ensure master data exists (COMMENTED OUT TO SPEED UP REMOTE SEEDING)
+        // $seeders = [
+        //     RolSeeder::class, PaisSeeder::class, DepartamentoSeeder::class,
+        //     CiudadSeeder::class, TipoDocSeeder::class, PlanSeeder::class,
+        //     TipoContratoSeeder::class, TipoTrabajadorSeeder::class,
+        //     SubTipoTrabajadorSeeder::class, ARLSeeder::class, EPSSeeder::class,
+        //     AFPSeeder::class, CajaCompensacionSeeder::class, FormaPagoSeeder::class,
+        //     MetodoPagoSeeder::class, BancoSeeder::class, TipoCuentaSeeder::class,
+        //     NivelRiesgoSeeder::class,
+        // ];
 
-        foreach ($seeders as $seeder) {
-            try {
-                $this->call($seeder);
-            } catch (\Exception $e) {
-                $this->command->warn("Seeder $seeder failed or already run: " . $e->getMessage());
-            }
-        }
+        // foreach ($seeders as $seeder) {
+        //     try {
+        //         $this->call($seeder);
+        //     } catch (\Exception $e) {
+        //         $this->command->warn("Seeder $seeder failed or already run: " . $e->getMessage());
+        //     }
+        // }
 
         // 2. Get Dynamic IDs
         $this->command->info('2. Getting dynamic IDs...');
@@ -188,14 +188,25 @@ class TestDataSeeder extends Seeder
             }
         }
 
-        // 8. Create Employees and Contracts
-        $this->command->info('8. Creating Employees and Contracts (30)...');
+        // 8. Create Employees and Contracts (BATCHED)
+        $this->command->info('8. Creating Employees and Contracts (BATCHED)...');
         
         $firstNames = ['Juan', 'Maria', 'Carlos', 'Sandra', 'Luis', 'Diana', 'Jose', 'Paula', 'Andres', 'Natalia', 'Diego', 'Laura', 'Fernando', 'Valentina', 'Javier', 'Sofia', 'Ricardo', 'Isabella', 'Gustavo', 'Camila', 'Jorge', 'Angela', 'Mauricio', 'Daniela', 'Roberto', 'Claudia', 'Sergio', 'Monica', 'Gabriel', 'Vanessa'];
         $lastNames = ['Rodriguez', 'Martinez', 'Garcia', 'Gomez', 'Lopez', 'Gonzalez', 'Hernandez', 'Diaz', 'Perez', 'Sanchez', 'Romero', 'Torres', 'Alvarez', 'Ruiz', 'Ramirez', 'Flores', 'Acosta', 'Morales', 'Vargas', 'Castillo', 'Jimenez', 'Mendoza', 'Reyes', 'Salazar', 'Castro', 'Ortiz', 'Silva', 'Rojas', 'Duarte', 'Castro'];
         $salaries = [2000000, 3000000, 4000000];
 
         $numEmpl = 30;
+        $usersBatch = [];
+        $contractsBatch = [];
+        $userEmpBatch = [];
+
+        $idNivelRiesgo = DB::table('niveles_riesgo')->where('nombre', 'Nivel I')->value('id') ?? 1;
+        $idArl = DB::table('arl')->value('id_arl') ?? 800088702;
+        $idEps = DB::table('eps')->value('id_eps') ?? 9001562642;
+        $idAfp = DB::table('afp')->value('id_afp') ?? 1;
+        $idCaja = DB::table('cajas_compensacion')->value('id_caja') ?? 860066942;
+        $password = Hash::make('password');
+
         for ($i = 0; $i < $numEmpl; $i++) {
             $realIndex = $i + 1;
             $docEmpl = "30000000" . str_pad($realIndex, 2, '0', STR_PAD_LEFT);
@@ -203,7 +214,7 @@ class TestDataSeeder extends Seeder
             $lastName = $lastNames[$i % count($lastNames)];
             $salary = $salaries[$i % count($salaries)];
 
-            $emplData = [
+            $usersBatch[] = [
                 'doc' => $docEmpl,
                 'id_tipo_doc' => $idTipoDoc,
                 'primer_nombre' => $firstName,
@@ -214,39 +225,25 @@ class TestDataSeeder extends Seeder
                 'activo' => true,
                 'direccion' => 'Calle Empleado ' . $realIndex,
                 'telefono' => '300' . str_pad($realIndex, 7, '0', STR_PAD_LEFT),
-                'contrasena' => Hash::make('password'),
+                'contrasena' => $password,
                 'updated_at' => now(),
                 'created_at' => now(),
             ];
-            
-            if (DB::table('usuario')->where('doc', $docEmpl)->exists()) {
-                DB::table('usuario')->where('doc', $docEmpl)->update($emplData);
-            } else {
-                DB::table('usuario')->insert($emplData);
-            }
-            
-            $empleado = Usuario::where('doc', $docEmpl)->first();
 
-            if (DB::table('usuario_empresa')->where(['doc' => $empleado->doc, 'id_empresa' => $empresa->id_empresa])->doesntExist()) {
-                DB::table('usuario_empresa')->insert(['doc' => $empleado->doc, 'id_empresa' => $empresa->id_empresa]);
-            }
+            $userEmpBatch[] = [
+                'doc' => $docEmpl,
+                'id_empresa' => $empresa->id_empresa
+            ];
 
             // Create Contract
-            $idTipoContrato = ($i % 6) + 1; // 1: Indefinido, 2: Fijo, 3: Obra o Labor, 4: Aprendizaje, 5: Prácticas, 6: Prestación
+            $idTipoContrato = ($i % 6) + 1; 
             $fechaFin = null;
             if ($idTipoContrato > 1) {
-                // Para tipos 2, 3, 4, 5, 6 alternamos fecha fin
                 $fechaFin = ($i % 2 === 0) ? '2026-04-15' : '2026-04-30';
             }
 
-            $idNivelRiesgo = DB::table('niveles_riesgo')->where('nombre', 'Nivel I')->value('id') ?? 1;
-            $idArl = DB::table('arl')->value('id_arl') ?? 800088702;
-            $idEps = DB::table('eps')->value('id_eps') ?? 9001562642;
-            $idAfp = DB::table('afp')->value('id_afp') ?? 1;
-            $idCaja = DB::table('cajas_compensacion')->value('id_caja') ?? 860066942;
-            
-            $contratoData = [
-                'doc' => $empleado->doc,
+            $contractsBatch[] = [
+                'doc' => $docEmpl,
                 'id_empresa' => $empresa->id_empresa,
                 'id_tipo_contrato' => $idTipoContrato,
                 'id_tipo_trabajador' => 1,
@@ -268,13 +265,13 @@ class TestDataSeeder extends Seeder
                 'updated_at' => now(),
                 'created_at' => now(),
             ];
-            
-            if (DB::table('contrato')->where(['doc' => $empleado->doc, 'id_empresa' => $empresa->id_empresa])->exists()) {
-                DB::table('contrato')->where(['doc' => $empleado->doc, 'id_empresa' => $empresa->id_empresa])->update($contratoData);
-            } else {
-                DB::table('contrato')->insert($contratoData);
-            }
         }
+
+        // Ejecutar los batches
+        DB::table('usuario')->upsert($usersBatch, ['doc'], ['correo', 'id_rol', 'activo', 'updated_at']);
+        DB::table('usuario_empresa')->upsert($userEmpBatch, ['doc', 'id_empresa'], []);
+        DB::table('contrato')->upsert($contractsBatch, ['doc', 'id_empresa'], ['id_tipo_contrato', 'salario_base', 'salario', 'estado', 'updated_at']);
+
 
         // 9. Create Liquidation Period
         $this->command->info('9. Creating Liquidation Period...');

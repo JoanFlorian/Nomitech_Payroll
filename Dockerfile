@@ -33,7 +33,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
 # Install JS dependencies and build assets
-RUN npm install && npm run build
+RUN npm install && npm run build && rm -f public/hot
 
 # Ensure storage and bootstrap/cache are writable
 RUN chmod -R 775 storage bootstrap/cache \

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Models\Arl;
 
 class ARLSeeder extends Seeder
@@ -84,7 +85,7 @@ class ARLSeeder extends Seeder
         ];
 
         foreach ($arlList as $arl) {
-            Arl::updateOrCreate(
+            DB::table('arl')->updateOrInsert(
                 ['id_arl' => $arl['id_arl']],
                 $arl
             );

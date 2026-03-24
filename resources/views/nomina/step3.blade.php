@@ -51,6 +51,7 @@
                             <input type="hidden" id="confirm_edit" name="confirm_edit" value="">
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                @if(($idTipoContrato ?? 0) != \App\Models\TipoContrato::TIPO_PRESTACION_SERVICIOS)
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">EPS (salud) <span id="eps_rate_label" class="text-blue-700">(0%)</span></label>
                                     <input id="eps" name="eps" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
@@ -63,6 +64,11 @@
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Total seguridad social <span id="seguridad_rate_label" class="text-blue-700">(0%)</span></label>
                                     <input id="seguridad_social" name="seguridad_social" type="text" inputmode="decimal" readonly class="w-full border-2 border-gray-200 px-3 py-2 rounded-lg text-xs bg-gray-50 text-gray-700" value="0">
                                 </div>
+                                @else
+                                    <input type="hidden" id="eps" name="eps" value="0">
+                                    <input type="hidden" id="afp" name="afp" value="0">
+                                    <input type="hidden" id="seguridad_social" name="seguridad_social" value="0">
+                                @endif
 
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Retención en la fuente</label>
@@ -137,6 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const afpRateLabel = document.getElementById('afp_rate_label');
     const seguridadRateLabel = document.getElementById('seguridad_rate_label');
 
+    const idTipoContrato = @json((int)($idTipoContrato ?? 0));
+    const TIPO_PRESTACION = @json(\App\Models\TipoContrato::TIPO_PRESTACION_SERVICIOS);
+
     if (epsRateLabel) epsRateLabel.textContent = `(${percentLabel(EPS_RATE)})`;
     if (afpRateLabel) afpRateLabel.textContent = `(${percentLabel(AFP_RATE)})`;
     if (seguridadRateLabel) seguridadRateLabel.textContent = `(${percentLabel(EPS_RATE + AFP_RATE)})`;
@@ -199,8 +208,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const calc = () => {
-        const eps = totalDevengos * EPS_RATE;
-        const afp = totalDevengos * AFP_RATE;
+        let eps = 0;
+        let afp = 0;
+
+        if (idTipoContrato !== TIPO_PRESTACION) {
+            eps = totalDevengos * EPS_RATE;
+            afp = totalDevengos * AFP_RATE;
+        }
+
         const seguridadSocial = eps + afp;
 
         const retencion = toNumber(document.getElementById('retencion_fuente').value) || 0;

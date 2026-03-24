@@ -844,7 +844,8 @@ class NominaController extends Controller
             'contribuciones',
             'totalDevengos',
             'step3',
-            'isEditing'
+            'isEditing',
+            'idTipoContrato'
         ));
     }
 
@@ -951,14 +952,38 @@ class NominaController extends Controller
                     ->with('error', 'No tienes permisos para editar esta nómina o no existe.');
             }
         } else {
-            $duplicado = DB::table('salario')
-                ->where('id_contrato', (int) $s1['id_contrato'])
-                ->where('id_periodo', (int) $periodoId)
-                ->exists();
+            $periodoActivo = \App\Models\PeriodoLiquidacion::find($periodoId);
+            $salarioExistente = DB::table('salario as s')
+                ->join('contrato as c', 'c.id_contrato', '=', 's.id_contrato')
+                ->where('c.doc', $s1['doc'])
+                ->where('s.id_periodo', (int) $periodoId)
+                ->select('s.id_salario', 's.id_contrato')
+                ->first();
 
-            if ($duplicado) {
-                return redirect()->route('nomina.index')
-                    ->with('error', 'Ya existe una nómina registrada para este empleado en el periodo activo.');
+            if ($salarioExistente) {
+                $existente = (object) $salarioExistente;
+                if ((int) $existente->id_contrato !== (int) $s1['id_contrato']) {
+                    // Se detectó una renovación (cambio de contrato en el mismo periodo).
+                    // Consolidamos editando el registro existente en lugar de crear uno nuevo.
+                    $editingId = $existente->id_salario;
+
+                    // Al consolidar manualmente, intentamos sumar los días del anterior si es posible
+                    $contratoAnterior = \App\Models\Contrato::find($existente->id_contrato);
+                    if ($contratoAnterior && isset($s1['dias_trabajados'])) {
+                        $diasAnterior = $this->terminationService->calculateWorkedDaysInPeriod($contratoAnterior, $periodoActivo);
+                        // El usuario ya ingresó unos días para el nuevo contrato en Step 1
+                        $s1['dias_trabajados'] = min(30, (int)$diasAnterior + (int)$s1['dias_trabajados']);
+                        
+                        // Actualizar el payload con los nuevos días consolidados
+                        $payload['dias_a_trabajar'] = $s1['dias_trabajados'];
+                        // Nota: El cálculo de valores (eps, afp, etc) ya se hizo en Step 2 
+                        // pero aquí los estamos "forzando" al guardar. 
+                        // Lo ideal es que el sistema sume los días dándole feedback al usuario.
+                    }
+                } else {
+                    return redirect()->route('nomina.index')
+                        ->with('error', 'Ya existe una nómina registrada para este empleado en el periodo activo.');
+                }
             }
         }
 
@@ -1023,11 +1048,36 @@ class NominaController extends Controller
                     $inputCalculo = ['fecha_pago' => $fechaPago];
 
                     if ($contratoObj) {
-                        // SUGGEST DAYS based on active period ALWAYS
-                        $inputCalculo['dias_trabajados'] = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
+                        // Consolidación de Renovación: Evitar duplicados para el mismo empleado en el mismo periodo
+                        $idPeriodo = (int) $periodoActivo->id_periodo;
+                        $doc = $contratoObj->doc;
+
+                        // Buscar si ya existe una liquidación para este empleado en este periodo (bajo cualquier contrato)
+                        $salarioExistente = \App\Models\Salario::whereHas('contrato', function ($q) use ($doc) {
+                                $q->where('doc', $doc);
+                            })
+                            ->where('id_periodo', $idPeriodo)
+                            ->first();
+
+                        if ($salarioExistente && $salarioExistente->id_contrato != $idContrato) {
+                            // Se detectó una renovación en el mismo mes. 
+                            // Consolidamos: Movemos el registro existente al nuevo contrato para que solo quede uno.
+                            $salarioExistente->id_contrato = $idContrato;
+                            $salarioExistente->save();
+                            
+                            // Calculamos la suma de días de ambos contratos en este periodo
+                            $contratoAnterior = \App\Models\Contrato::find($salarioExistente->getOriginal('id_contrato'));
+                            $diasAnterior = $contratoAnterior ? $this->terminationService->calculateWorkedDaysInPeriod($contratoAnterior, $periodoActivo) : 0;
+                            $diasNuevo = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
+                            
+                            $inputCalculo['dias_trabajados'] = min(30, $diasAnterior + $diasNuevo);
+                        } else {
+                            // SUGGEST DAYS based on active period normally
+                            $inputCalculo['dias_trabajados'] = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
+                        }
 
                         // Also process termination for benefits if applicable
-                        $termResult = $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
+                        $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
                     }
 
                     $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo);
@@ -1350,6 +1400,8 @@ class NominaController extends Controller
         }
 
         return $query
+            ->orderByDesc('contrato.activo')
+            ->orderByDesc('contrato.fecha_inicio')
             ->orderBy('usuario.primer_nombre')
             ->limit(30)
             ->get();

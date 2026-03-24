@@ -265,7 +265,7 @@ class NominaCalculatorService
         return $rate;
     }
 
-    public function guardarNominaEmpleado(int $idContrato, int $idPeriodo, array $input = []): Salario
+    public function guardarNominaEmpleado(int $idContrato, int $idPeriodo, array $input = [], bool $force = false): Salario
     {
         $calculo = $this->calcularNominaEmpleado($idContrato, $idPeriodo, $input);
 
@@ -294,7 +294,7 @@ class NominaCalculatorService
             'estado' => Salario::ESTADO_PENDIENTE,
         ];
 
-        return DB::transaction(function () use ($idContrato, $idPeriodo, $payload) {
+        return DB::transaction(function () use ($idContrato, $idPeriodo, $payload, $force) {
             $salario = Salario::query()
                 ->where('id_contrato', $idContrato)
                 ->where('id_periodo', $idPeriodo)
@@ -304,9 +304,11 @@ class NominaCalculatorService
                 $salario = new Salario();
                 $salario->id_contrato = $idContrato;
                 $salario->id_periodo = $idPeriodo;
+                $salario->exists = false; // Ensure it's treated as new
             }
 
             if (
+                !$force &&
                 $salario->exists &&
                 in_array((string) $salario->estado, [Salario::ESTADO_LIQUIDADO, Salario::ESTADO_PAGADO], true)
             ) {

@@ -19,7 +19,9 @@ class PilaFileGeneratorService
 
     private float $salarioMinimo;
     private float $fondoSolidaridadRate;
+    private float $epsEmployeeRate;
     private float $epsEmployerRate;
+    private float $pensionEmployeeRate;
     private float $pensionEmployerRate;
     private float $cajaRate;
 
@@ -28,9 +30,11 @@ class PilaFileGeneratorService
         $params = $nominaParameterService->get();
         $this->salarioMinimo = max(0, (float) ($params->smmlv ?? 0));
         $this->fondoSolidaridadRate = max(0, (float) ($params->fondo_solidaridad ?? 0));
-        $this->epsEmployerRate = max(0, (float) ($params->eps_employer ?? 0));
-        $this->pensionEmployerRate = max(0, (float) ($params->pension_employer ?? 0));
-        $this->cajaRate = max(0, (float) ($params->caja_compensacion ?? 0));
+        $this->epsEmployeeRate = max(0, (float) ($params->eps_employee ?? 0.04));
+        $this->epsEmployerRate = max(0, (float) ($params->eps_employer ?? 0.085));
+        $this->pensionEmployeeRate = max(0, (float) ($params->pension_employee ?? 0.04));
+        $this->pensionEmployerRate = max(0, (float) ($params->pension_employer ?? 0.08));
+        $this->cajaRate = max(0, (float) ($params->caja_compensacion ?? 0.04));
     }
 
     public function buildDetallesDesdeNomina(int $empresaId, int $periodoId): array
@@ -47,8 +51,13 @@ class PilaFileGeneratorService
             ->leftJoin('arl as ar', 'ar.id_arl', '=', 'c.id_arl')
             ->leftJoin('niveles_riesgo as nr', 'nr.id', '=', 'c.nivel_riesgo_id')
             ->leftJoin('cajas_compensacion as cc', 'cc.id_caja', '=', 'c.id_caja')
+            ->leftJoin('pila_detalle_empleado as pde', function($join) {
+                $join->on('pde.planilla_id', '=', 'n.id_periodo')
+                     ->on('pde.doc_empleado', '=', 'u.doc');
+            })
             ->where('c.id_empresa', $empresaId)
             ->where('n.id_periodo', $periodoId)
+            ->whereIn('c.id_tipo_contrato', [1, 2, 3, 4, 5])
             ->orderBy('u.primer_apellido')
             ->orderBy('u.primer_nombre')
             ->get([
@@ -59,6 +68,7 @@ class PilaFileGeneratorService
                 'u.otros_nombres',
                 'u.primer_apellido',
                 'u.segundo_apellido',
+                'c.id_tipo_contrato',
                 DB::raw("{$salarioBaseExpr} as salario_base"),
                 DB::raw("{$diasColumn} as dias_trabajados"),
                 'n.aporte_fp',
@@ -67,6 +77,7 @@ class PilaFileGeneratorService
                 'a.codigo_pila as codigo_afp',
                 'ar.codigo_pila as codigo_arl',
                 'cc.codigo_pila as codigo_caja',
+                'pde.valor_arl',
             ]);
 
         $detalles = [];
@@ -74,25 +85,37 @@ class PilaFileGeneratorService
         foreach ($rows as $row) {
             $salarioBase    = max(0, (float) ($row->salario_base ?? 0));
             $diasTrabajados = max(0, (int) ($row->dias_trabajados ?? 0));
+            $idTipoContrato = (int) ($row->id_tipo_contrato ?? 0);
+            
+            // IBC proporcional a los días trabajados, sin mínimo forzado
             $ibc = (int) round(($salarioBase / 30) * $diasTrabajados);
-
-            // El IBC no puede ser inferior al SMMLV proporcional a los días trabajados.
-            if ($this->salarioMinimo > 0) {
-                $ibcMinimo = (int) round(($this->salarioMinimo / 30) * $diasTrabajados);
-                $ibc = max($ibc, $ibcMinimo);
-            }
 
             if ($ibc <= 0) {
                 continue;
             }
 
             $diasCotizados  = $this->validarDiasCotizados($diasTrabajados);
-            $aporteSalud    = (int) round($ibc * 0.085);
-            $aportePension  = (int) round($ibc * 0.12);
-            $aporteCaja     = (int) round($ibc * 0.04);
             $nivelRiesgo    = max(1, min(5, (int) ($row->nivel_riesgo ?? 1)));
-            $aporteArl      = (int) round($ibc * self::TASA_ARL[$nivelRiesgo]);
             $aporteFondo    = (int) round(max(0, (float) ($row->aporte_fp ?? 0)));
+
+            // Cálculo de aportes desde la BD (todos los porcentajes parametrizados)
+            // Salud: empleado + empleador (presente en todos los tipos de contrato)
+            $salud_total_rate = $this->epsEmployeeRate + $this->epsEmployerRate;
+            $aporteSalud = (int) round($ibc * $salud_total_rate);
+            
+            // Pensión: solo para contratos laborales (1, 2, 3)
+            // Para aprendices (4) y practicantes (5), la pensión es 0
+            $pension_total_rate = $this->pensionEmployeeRate + $this->pensionEmployerRate;
+            $aportePension = in_array($idTipoContrato, [4, 5]) ? 0 : (int) round($ibc * $pension_total_rate);
+            
+            // Caja de compensación: solo para contratos laborales (1, 2, 3)
+            // Para aprendices (4) y practicantes (5), la caja es 0
+            $aporteCaja = in_array($idTipoContrato, [4, 5]) ? 0 : (int) round($ibc * $this->cajaRate);
+            
+            // ARL: presente en todos los tipos de contrato (1, 2, 3, 4, 5)
+            // usar valor real de BD, o calcular con tasa si no existe
+            $valorArlBd = (float) ($row->valor_arl ?? 0);
+            $aporteArl = $valorArlBd > 0 ? (int) round($valorArlBd) : (int) round($ibc * self::TASA_ARL[$nivelRiesgo]);
 
             $detalles[] = [
                 'id_nomina' => (int) ($row->id_salario ?? 0),
@@ -242,6 +265,7 @@ class PilaFileGeneratorService
         // Línea tipo 01 - encabezado del archivo PILA
         $lineas[] = implode('|', ['01', $empresaNit, $empresaNombre, 'NI', $periodoTexto, (string) $totalEmpleados]);
 
+        // Líneas tipo 02 - registros de empleados (sin encabezado de columnas)
         foreach ($detalles as $detalle) {
             $lineas[] = $this->generateLineaEmpleado($empresaNit, $periodoTexto, $detalle);
         }
@@ -253,11 +277,11 @@ class PilaFileGeneratorService
     {
         $ibc = $this->validarIBC((float) ($detalle['ibc'] ?? 0));
         $diasCotizados = $this->validarDiasCotizados((int) ($detalle['dias_cotizados'] ?? 0));
-        $aportes = $this->calcularAportesRegistroDos($ibc);
-        $aporteSalud = (float) ($detalle['aporte_salud'] ?? $detalle['aporte_salud_empresa'] ?? $aportes['salud_empleador']);
-        $aportePension = (float) ($detalle['aporte_pension'] ?? $detalle['aporte_pension_empresa'] ?? $aportes['pension_empleador']);
-        $aporteFondo = (float) ($detalle['aporte_fp'] ?? $aportes['fondo_solidaridad']);
-        $aporteCaja = (float) ($detalle['aporte_caja'] ?? $aportes['caja_compensacion']);
+        $aporteSalud = (float) ($detalle['aporte_salud'] ?? 0);
+        $aportePension = (float) ($detalle['aporte_pension'] ?? 0);
+        $valorArl = (float) ($detalle['valor_arl'] ?? 0);
+        $aporteFondo = (float) ($detalle['aporte_fp'] ?? 0);
+        $aporteCaja = (float) ($detalle['aporte_caja'] ?? 0);
 
         $codigoEps = $this->resolverCodigoPilaEntidad($detalle, 'eps', 'codigo_eps');
         $codigoAfp = $this->resolverCodigoPilaEntidad($detalle, 'afp', 'codigo_afp');
@@ -265,7 +289,7 @@ class PilaFileGeneratorService
         $codigoCaja = $this->resolverCodigoPilaEntidad($detalle, 'cajaCompensacion', 'codigo_caja');
 
         return implode('|', [
-            '02',
+            '02', // Tipo de registro empleado PILA
             $empresaNit,
             $periodo,
             $this->mapTipoDocumentoPila($detalle['id_tipo_doc'] ?? null),
@@ -278,6 +302,7 @@ class PilaFileGeneratorService
             $this->formatInteger($ibc),
             $this->formatInteger($aporteSalud),
             $this->formatInteger($aportePension),
+            $this->formatInteger($valorArl), // valor real de la base de datos
             $this->formatInteger($aporteFondo),
             $this->formatInteger($aporteCaja),
             (string) $diasCotizados,
@@ -312,6 +337,7 @@ class PilaFileGeneratorService
             (string) ($row->primer_apellido ?? ''),
             (string) ($row->segundo_apellido ?? ''),
         ];
+
 
         $partes = array_values(array_filter(array_map('trim', $partes), static fn($v) => $v !== ''));
 

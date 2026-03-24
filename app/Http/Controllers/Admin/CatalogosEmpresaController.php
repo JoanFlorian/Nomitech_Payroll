@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CatalogoRequest;
 use App\Services\CatalogoEmpresaService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 
 class CatalogosEmpresaController extends Controller
@@ -14,11 +15,27 @@ class CatalogosEmpresaController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $catalogos = $this->service->getCatalogos();
+        $catalogos = collect($this->service->getCatalogos());
+        $perPage = 8;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
 
-        return view('admin.catalogos.index', compact('catalogos'));
+        $paginatedCatalogos = new LengthAwarePaginator(
+            $catalogos->forPage($currentPage, $perPage),
+            $catalogos->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+                'pageName' => 'page',
+            ]
+        );
+
+        return view('admin.catalogos.index', [
+            'catalogos' => $paginatedCatalogos,
+        ]);
     }
 
     public function show(string $catalogo)
@@ -41,7 +58,7 @@ class CatalogosEmpresaController extends Controller
         $this->service->getCatalogoConfig($catalogo);
 
         $search = trim((string) $request->query('q', ''));
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage = (int) $request->query('per_page', 8);
         $perPage = max(5, min($perPage, 50));
 
         $items = $this->service->paginate($catalogo, $search, $perPage);

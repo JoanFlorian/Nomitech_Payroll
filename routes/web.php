@@ -175,11 +175,15 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
         ->name('periodos.exportar.descargar')->middleware('permission:view_periods');
 
     // Plantilla PILA
-    // Plantilla PILA
     Route::get('/pila', [PilaController::class, 'index'])->name('pila.index')->middleware('permission:view_pila');
     Route::post('/pila/generar', [PilaController::class, 'generar'])->name('pila.generar')->middleware('permission:export_pila');
     Route::get('/pila/descargar', [PilaController::class, 'descargarPila'])->name('pila.descargar')->middleware('permission:export_pila');
     Route::get('/pila/historial/{id}/descargar', [PilaController::class, 'descargarHistorial'])->name('pila.historial.descargar')->middleware('permission:view_pila');
+    
+    // Rutas de exportación de PILA (controlador especializado)
+    Route::get('/pila/historial/excel/descargar', [\App\Http\Controllers\PilaExportController::class, 'descargarHistorialExcel'])->name('pila.historial.excel')->middleware('permission:export_pila');
+    Route::get('/pila/export/registro/{id}', [\App\Http\Controllers\PilaExportController::class, 'descargarRegistroExcel'])->name('pila.export.registro')->middleware('permission:export_pila');
+    Route::get('/pila/export/preview', [\App\Http\Controllers\PilaExportController::class, 'previewHistorial'])->name('pila.export.preview')->middleware('permission:view_pila');
 });
 
 Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin_empresa', 'permission:manage_catalogos', 'prevent_back_history', 'must_change_password'])

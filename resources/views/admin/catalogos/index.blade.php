@@ -26,6 +26,7 @@
         $toneBySlug = [
             'afp' => 'catalog-tone-blue',
             'banco' => 'catalog-tone-gray',
+            'caja_compensacion' => 'catalog-tone-amber',
             'eps' => 'catalog-tone-red',
             'arl' => 'catalog-tone-green',
             'forma_pago' => 'catalog-tone-sky',
@@ -46,6 +47,32 @@
                 />
             </div>
         @endforeach
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
+        <small class="text-secondary">
+            Mostrando {{ $catalogos->firstItem() ?? 0 }} a {{ $catalogos->lastItem() ?? 0 }} de {{ $catalogos->total() }} catalogos
+        </small>
+
+        @if($catalogos->hasPages())
+            <nav aria-label="Paginacion de catalogos">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item {{ $catalogos->onFirstPage() ? 'disabled' : '' }}">
+                        <a class="page-link" href="{{ $catalogos->previousPageUrl() ?? '#' }}" aria-label="Anterior">Anterior</a>
+                    </li>
+
+                    @foreach($catalogos->getUrlRange(1, $catalogos->lastPage()) as $page => $url)
+                        <li class="page-item {{ $page === $catalogos->currentPage() ? 'active' : '' }}">
+                            <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                        </li>
+                    @endforeach
+
+                    <li class="page-item {{ $catalogos->hasMorePages() ? '' : 'disabled' }}">
+                        <a class="page-link" href="{{ $catalogos->nextPageUrl() ?? '#' }}" aria-label="Siguiente">Siguiente</a>
+                    </li>
+                </ul>
+            </nav>
+        @endif
     </div>
 </div>
 @endsection

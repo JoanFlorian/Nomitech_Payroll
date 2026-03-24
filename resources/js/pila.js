@@ -11,7 +11,7 @@
     const employeesCountBadge = document.getElementById('employeesCountBadge');
 
     const allRows = Array.from(tbody.querySelectorAll('tr')).filter((row) => row.children.length > 1);
-    const pageSize = 6;
+    const pageSize = 500;
     let currentPage = 1;
     let filteredRows = [...allRows];
 

@@ -167,6 +167,11 @@
     color: #334155;
 }
 
+.catalog-grid-card.catalog-caja_compensacion .icon-wrap {
+    background: #fef3c7;
+    color: #d97706;
+}
+
 .catalog-grid-card.catalog-eps .icon-wrap {
     background: #fee2e2;
     color: #dc2626;

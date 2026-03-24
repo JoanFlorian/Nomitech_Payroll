@@ -42,17 +42,37 @@ return new class extends Migration
                     'estado' => true,
                 ]);
 
-            Schema::table($table, function (Blueprint $blueprint) use ($table) {
-                try {
-                    $blueprint->dropUnique($table . '_nombre_unique');
-                } catch (\Throwable $exception) {
-                    // Keep migration idempotent when the unique index does not exist.
+            // Check if index exists before dropping
+            $indexName = $table . '_nombre_unique';
+            $indexes = Schema::getIndexes($table);
+            $hasIndex = false;
+            foreach ($indexes as $index) {
+                if ($index['name'] === $indexName) {
+                    $hasIndex = true;
+                    break;
+                }
+            }
+
+            Schema::table($table, function (Blueprint $blueprint) use ($table, $hasIndex, $indexName) {
+                if ($hasIndex) {
+                    $blueprint->dropUnique($indexName);
                 }
 
-                $blueprint->index('empresa_nit', $table . '_empresa_nit_index');
-                $blueprint->index('origen', $table . '_origen_index');
-                $blueprint->index('estado', $table . '_estado_index');
-                $blueprint->index('nombre', $table . '_nombre_index');
+                // Check if new indexes already exist before creating
+                $newIndexes = [
+                    $table . '_empresa_nit_index' => 'empresa_nit',
+                    $table . '_origen_index' => 'origen',
+                    $table . '_estado_index' => 'estado',
+                    $table . '_nombre_index' => 'nombre',
+                ];
+
+                $currentIndexes = collect(Schema::getIndexes($table))->pluck('name')->toArray();
+
+                foreach ($newIndexes as $name => $column) {
+                    if (!in_array($name, $currentIndexes)) {
+                        $blueprint->index($column, $name);
+                    }
+                }
             });
         }
     }

@@ -27,7 +27,7 @@
         }
     }" class="relative -m-6 md:-m-8">
         {{-- Replicamos el main del snippet dentro del content del layout --}}
-        <div class="bg-white p-6 md:p-8 lg:p-12 relative overflow-y-auto min-h-screen">
+        <div class="bg-white p-6 md:p-8 lg:p-12 relative overflow-x-hidden">
 
             {{-- Figuras Decorativas Exactas --}}
             <div
@@ -78,7 +78,7 @@
 
                 {{-- FILTERS SECTION --}}
                 <div class="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-8">
-                    <form action="{{ route('nomina-electronica.index') }}" method="GET" class="flex flex-col md:flex-row items-end gap-4">
+                    <form action="{{ route('nomina-electronica.index') }}" method="GET" class="flex flex-col md:flex-row items-end gap-4" data-loader data-loader-text="Filtrando nómina electrónica...">
                         <div class="flex-1 min-w-[150px]">
                             <label for="year" class="block text-sm font-bold text-gray-700 mb-2">Año</label>
                             <select name="year" id="year" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:border-[#1565C0] transition-colors">
@@ -255,7 +255,7 @@
                         </div>
                     </div>
 
-                    <div class="relative z-10 flex flex-col h-full">
+                    <div class="relative z-10 flex flex-col min-h-0 h-full">
                         <div class="p-6 border-b border-gray-200">
                             <h3 class="text-2xl font-bold text-[#1565C0]">Seleccionar periodo de liquidación</h3>
                         </div>
@@ -358,7 +358,7 @@
                         </div>
                     </div>
 
-                    <div class="relative z-10 flex flex-col h-full">
+                    <div class="relative z-10 flex flex-col min-h-0 h-full">
                         <div class="p-6 border-b border-gray-200">
                             <h3 class="text-2xl font-bold text-gray-800">Nóminas Electrónicas Reportadas</h3>
                             <p class="text-gray-500 mt-1">Consulta el estado de las nóminas electrónicas enviadas a la DIAN

@@ -4,8 +4,8 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/jpeg" href="{{ asset('images/logo nomitech.jpeg') }}">
-    <link rel="shortcut icon" type="image/jpeg" href="{{ asset('images/logo nomitech.jpeg') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo_nomitech.svg') }}">
+    <link rel="shortcut icon" type="image/svg+xml" href="{{ asset('images/logo_nomitech.svg') }}">
     <title>@yield('title') - Nomitech</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -125,7 +125,7 @@
     <x-sidebar />
 
     {{-- Main content --}}
-    <main class="flex-1 min-h-screen bg-white relative overflow-hidden rounded-l-3xl shadow-2xl w-full lg:w-auto">
+    <main class="flex-1 min-h-screen bg-white relative overflow-x-hidden rounded-l-3xl shadow-2xl w-full lg:w-auto">
         <x-shapes /> {{-- las figuras decorativas --}}
         
         {{-- Botón hamburguesa para móviles --}}
@@ -140,7 +140,7 @@
             </svg>
         </button>
         
-        <div class="h-full w-full flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative">
+        <div class="min-h-full w-full flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative">
             {{-- Header con título + campana --}}
             <div class="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8 mt-12 lg:mt-0">
                 <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">@yield('page-title')</h1>
@@ -220,6 +220,8 @@ window.addEventListener('resize', function() {
 @stack('modals')
 
 @stack('scripts')
+
+<x-loader />
 
 </body>
 </html>

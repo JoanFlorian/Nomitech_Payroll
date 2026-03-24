@@ -1230,31 +1230,49 @@ class CiudadSeeder extends Seeder
 
         $ciudades = array_merge($ciudades, $batch2, $batch3, $batch4, $batch5, $batch6);
 
+        $this->command->info("🚀 Iniciando carga optimizada de " . count($ciudades) . " ciudades...");
+
+        // 1. Pre-cargar todos los departamentos para evitar consultas en el bucle
+        $departamentos = Departamento::all()->pluck('id_departamento', 'codigo')->toArray();
+
+        $insertData = [];
         $cargadas = 0;
         $errores = 0;
-        
-        foreach ($ciudades as $data) {
-            $departamento = Departamento::where('codigo', $data['cod_dep'])->first();
+        $batchSize = 100; // Insertar de 100 en 100 para balancear velocidad y límites de red
 
-            if (!$departamento) {
-                $this->command->warn("⚠️ No existe el departamento con código {$data['cod_dep']} para la ciudad {$data['nombre']}");
+        foreach ($ciudades as $data) {
+            $idDepartamento = $departamentos[$data['cod_dep']] ?? null;
+
+            if (!$idDepartamento) {
                 $errores++;
                 continue;
             }
 
-            Ciudad::updateOrCreate(
-                ['codigo' => $data['codigo']],
-                [
-                    'id_departamento' => $departamento->id_departamento,
-                    'nombre' => $data['nombre'],
-                ]
-            );
-            $cargadas++;
+            $insertData[] = [
+                'codigo' => $data['codigo'],
+                'id_departamento' => $idDepartamento,
+                'nombre' => $data['nombre'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            if (count($insertData) >= $batchSize) {
+                Ciudad::upsert($insertData, ['codigo'], ['id_departamento', 'nombre', 'updated_at']);
+                $cargadas += count($insertData);
+                $this->command->comment("... cargadas $cargadas ciudades");
+                $insertData = [];
+            }
         }
 
-        $this->command->info("✅ Ciudades cargadas: $cargadas de " . count($ciudades) . " registros");
+        // Insertar el resto
+        if (count($insertData) > 0) {
+            Ciudad::upsert($insertData, ['codigo'], ['id_departamento', 'nombre', 'updated_at']);
+            $cargadas += count($insertData);
+        }
+
+        $this->command->info("✅ Proceso terminado. Total cargadas: $cargadas");
         if ($errores > 0) {
-            $this->command->warn("⚠️ Errores encontrados: $errores");
+            $this->command->warn("⚠️ $errores registros saltados por falta de departamento.");
         }
     }
 

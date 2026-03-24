@@ -390,7 +390,7 @@
                                 <i class="bi bi-x-lg text-xl"></i>
                             </button>
                         </div>
-                        <form method="POST" action="{{ route('provisiones.pagar-prestacion') }}" class="p-6 space-y-5">
+                        <form method="POST" action="{{ route('provisiones.pagar-prestacion') }}" class="p-6 space-y-5" data-loader data-loader-text="Procesando pago...">
                             @csrf
                             <input type="hidden" name="employee_id" :value="selectedEmployee">
 
@@ -611,7 +611,7 @@
                                 <i class="bi bi-x-lg text-xl"></i>
                             </button>
                         </div>
-                        <form method="POST" action="{{ route('provisiones.liquidar.masivo') }}" class="p-6 space-y-5">
+                        <form method="POST" action="{{ route('provisiones.liquidar.masivo') }}" class="p-6 space-y-5" data-loader data-loader-text="Procesando liquidación masiva...">
                             @csrf
                             <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                                 <div class="flex items-start gap-3">
@@ -728,7 +728,7 @@
                             </button>
                         </div>
                         <form method="POST" action="{{ route('provisiones.cesantias.consignacion-anual') }}"
-                            class="p-6 space-y-5">
+                            class="p-6 space-y-5" data-loader data-loader-text="Generando archivos de cesantías...">
                             @csrf
                             <div class="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
                                 <div class="flex items-start gap-3">

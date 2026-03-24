@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Models\Afp;
 
 class AFPSeeder extends Seeder
@@ -58,7 +59,7 @@ class AFPSeeder extends Seeder
         ];
 
         foreach ($afpList as $afp) {
-            Afp::updateOrCreate(
+            DB::table('afp')->updateOrInsert(
                 ['id_afp' => $afp['id_afp']],
                 $afp
             );

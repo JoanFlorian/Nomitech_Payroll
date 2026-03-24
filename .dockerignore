@@ -1,0 +1,16 @@
+.git
+.env
+node_modules
+vendor
+public/build
+storage/*.key
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+.DS_Store
+Nomitech_Payroll.zip
+Nomitech_Payroll_Production.zip
+artisan.zip
+temp_deploy

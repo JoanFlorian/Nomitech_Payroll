@@ -27,7 +27,7 @@
                         @endforeach
                     </select>
                     <button type="button"
-                        onclick="window.location.href = document.getElementById('exportSelect').value"
+                        onclick="window.NomitechLoader.show('Generando archivo...'); window.location.href = document.getElementById('exportSelect').value; setTimeout(() => window.NomitechLoader.hide(), 5000);"
                         class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition">
                         Exportar
                     </button>
@@ -40,14 +40,14 @@
             </div>
         </div>
 
-        <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-4">
+        <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-4" data-loader data-loader-text="Buscando...">
             <input type="text" name="q" value="{{ request('q') }}" placeholder="Buscar empresa, referencia o proveedor..."
                 class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </form>
     </div>
 
     <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-3 items-end">
+        <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-3 items-end" data-loader data-loader-text="Filtrando...">
             <div class="flex-1">
                 <label class="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wide">Estado</label>
                 <select name="estado"

@@ -130,7 +130,7 @@
         </section>
     @endif
 
-    <form method="GET" action="{{ route('nomina.index') }}" class="mb-6 rounded-3xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
+    <form method="GET" action="{{ route('nomina.index') }}" class="mb-6 rounded-3xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm" data-loader data-loader-text="Exportando reporte...">
         <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">Buscar</button>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
@@ -201,7 +201,7 @@
         </a>
 
         @if($periodoActivo && $periodoActivo->estado !== \App\Models\PeriodoLiquidacion::ESTADO_CERRADO)
-            <form id="realizar-nomina-form" method="POST" action="{{ route('nomina.realizar') }}">
+            <form id="realizar-nomina-form" method="POST" action="{{ route('nomina.realizar') }}" data-loader data-loader-text="Calculando nómina masiva...">
                 @csrf
                 <button type="submit"
                     title="Nómina masiva"

@@ -1,22 +1,22 @@
 <aside
     id="sidebar"
-    class="sidebar bg-[#1565C0] border-r border-[#0D47A1] h-screen sticky top-0 self-start flex-shrink-0 flex flex-col shadow-lg transition-all duration-300 ease-in-out fixed lg:sticky z-40"
+    class="sidebar bg-[#1565C0] border-r border-[#0D47A1] h-screen sticky top-0 self-start flex-shrink-0 flex flex-col shadow-lg transition-all duration-300 ease-in-out fixed lg:sticky z-40 group"
     onmouseenter="expandSidebar()"
     onmouseleave="collapseSidebar()">
 
     <!-- HEADER -->
     <div class="sidebar-header flex items-center gap-3 p-4 border-b border-[#0D47A1] overflow-hidden">
-        <div class="sidebar-brand-compact sidebar-icon-container rounded-xl overflow-hidden bg-white flex-shrink-0 w-12 h-12">
+        <div class="sidebar-brand-compact sidebar-icon-container rounded-xl group-hover:rounded-none transition-all duration-300 overflow-hidden bg-transparent flex-shrink-0 w-12 h-12">
             <img
-                src="{{ asset('images/logo nomitech.jpeg') }}"
+                src="{{ asset('images/logo_nomitech_blanco.svg') }}"
                 alt="Nomitech"
                 class="object-contain w-full h-full"
             >
         </div>
         <div class="sidebar-brand-full flex items-center gap-3 min-w-0">
-            <div class="w-11 h-11 flex-shrink-0 rounded-xl overflow-hidden bg-white">
+            <div class="w-11 h-11 flex-shrink-0 rounded-xl group-hover:rounded-none transition-all duration-300 overflow-hidden bg-transparent">
                 <img
-                    src="{{ asset('images/logo nomitech.jpeg') }}"
+                    src="{{ asset('images/logo_nomitech_blanco.svg') }}"
                     alt="Nomitech"
                     class="object-contain w-full h-full"
                 >

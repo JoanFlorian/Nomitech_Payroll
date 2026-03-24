@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Models\CajaCompensacion;
 
 class CajaCompensacionSeeder extends Seeder
@@ -94,7 +95,7 @@ class CajaCompensacionSeeder extends Seeder
         ];
 
         foreach ($cajas as $caja) {
-            CajaCompensacion::updateOrCreate(
+            DB::table('cajas_compensacion')->updateOrInsert(
                 ['id_caja' => $caja['id_caja']],
                 $caja
             );

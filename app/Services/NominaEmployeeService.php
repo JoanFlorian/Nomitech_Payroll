@@ -24,6 +24,9 @@ class NominaEmployeeService
                 'contrato.salario_base',
                 'contrato.id_contrato'
             )
+            ->orderByDesc('contrato.activo')
+            ->orderByDesc('contrato.fecha_inicio')
+            ->orderByDesc('contrato.id_contrato')
             ->first();
     }
 }

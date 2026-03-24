@@ -198,41 +198,50 @@ class ContractTerminationService
             $fechaFinPrevio = Carbon::parse($contratoPrevio->fecha_fin);
             $diasDiferencia = $fechaFinPrevio->diffInDays($fechaInicio);
 
-            if ($diasDiferencia <= 15) {
+            if ($diasDiferencia <= Contrato::CONTINUIDAD_DIAS_TOLERANCIA) {
                 // Labor continuity found!
-                // We need to find the period where the previous contract ended to remove benefits.
-                $periodoPrevio = PeriodoLiquidacion::where('id_empresa', $idEmpresa)
-                    ->whereDate('fecha_inicio', '<=', $fechaFinPrevio)
-                    ->whereDate('fecha_fin', '>=', $fechaFinPrevio)
+                // Search for an active or pending period to consolidate payroll
+                $periodoActivo = PeriodoLiquidacion::where('id_empresa', $idEmpresa)
+                    ->whereIn('estado', [PeriodoLiquidacion::ESTADO_ABIERTO, PeriodoLiquidacion::ESTADO_PENDIENTE])
+                    ->orderByDesc('fecha_inicio')
                     ->first();
 
-                if ($periodoPrevio) {
-                    $deleted = $this->removeScheduledTerminationBenefits($doc, $periodoPrevio->id_periodo);
+                if ($periodoActivo) {
+                    // 1. Remove auto-scheduled termination benefits
+                    $deleted = $this->removeScheduledTerminationBenefits($doc, $periodoActivo->id_periodo);
                     if ($deleted > 0) {
-                        Log::info("Removed {$deleted} auto-scheduled benefits for {$doc} due to labor continuity (Gap: {$diasDiferencia} days).");
+                        Log::info("Removed {$deleted} auto-scheduled benefits for {$doc} due to labor continuity.");
+                    }
 
-                        // Also sync the Salario record if it exists
-                        $salario = \App\Models\Salario::where('id_contrato', $contratoPrevio->id_contrato)
-                            ->where('id_periodo', $periodoPrevio->id_periodo)
-                            ->first();
+                    // 2. CONSOLIDATION AND RECALCULATION
+                    // Search if a payroll record exists for the OLD contract in this period
+                    $salario = \App\Models\Salario::where('id_contrato', $contratoPrevio->id_contrato)
+                        ->where('id_periodo', $periodoActivo->id_periodo)
+                        ->first();
+
+                    if ($salario) {
+                        // Transfer existing record to the new contract
+                        $salario->id_contrato = $nuevoContrato->id_contrato;
+                        $salario->save();
+                        Log::info("Transferred salary record #{$salario->id_salario} from contract #{$contratoPrevio->id_contrato} to #{$nuevoContrato->id_contrato} due to renewal.");
+                    }
+
+                    // 3. TRIGGER RECALCULATION WITH SUMMED DAYS
+                    try {
+                        $calculator = app(\App\Services\NominaCalculatorService::class);
                         
-                        if ($salario) {
-                            // This will trigger the NominaCalculatorService if we want a full sync, 
-                            // but for a quick fix we can just use the Model's logic.
-                            // However, Salario model doesn't have a 'recalculate' method.
-                            // We'll use the NominaCalculatorService to ensure all deductions (EPS/AFP) are also updated if they depended on total_devengado.
-                            try {
-                                $calculator = app(\App\Services\NominaCalculatorService::class);
-                                $calculator->guardarNominaEmpleado($salario->id_contrato, $salario->id_periodo, [
-                                    'fecha_pago' => $salario->fecha_pago,
-                                    // Use original days to avoid resetting to 30 if it was manually adjusted
-                                    'dias_trabajados' => $salario->dias_a_trabajar, 
-                                ]);
-                                Log::info("Recalculated salary #{$salario->id_salario} for {$doc} after benefit removal.");
-                            } catch (\Exception $e) {
-                                Log::error("Failed to recalculate salary after benefit removal: " . $e->getMessage());
-                            }
-                        }
+                        // Calculate days for both parts of the month
+                        $diasAnterior = $this->calculateWorkedDaysInPeriod($contratoPrevio, $periodoActivo);
+                        $diasNuevo = $this->calculateWorkedDaysInPeriod($nuevoContrato, $periodoActivo);
+                        $totalDias = min(30, $diasAnterior + $diasNuevo);
+
+                        $calculator->guardarNominaEmpleado($nuevoContrato->id_contrato, $periodoActivo->id_periodo, [
+                            'dias_trabajados' => $totalDias,
+                        ], true);
+                        
+                        Log::info("Automatic payroll update for {$doc} on renewal. Total days: {$totalDias} (Gap: {$diasDiferencia} days).");
+                    } catch (\Exception $e) {
+                        Log::error("Failed to auto-recalculate payroll on renewal for {$doc}: " . $e->getMessage());
                     }
                 }
             }

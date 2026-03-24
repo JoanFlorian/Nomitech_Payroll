@@ -78,7 +78,7 @@
             <p class="pila-section-title mb-2">Seccion 1</p>
             <h3 class="h5 fw-bold mb-3 text-primary">Filtros de liquidacion</h3>
 
-            <form method="GET" action="{{ route('pila.index') }}" class="row g-4 align-items-end">
+            <form method="GET" action="{{ route('pila.index') }}" class="row g-4 align-items-end" data-loader data-loader-text="Calculando seguridad social...">
 
     {{-- PERIODO --}}
     <div class="col-12 col-lg-4">
@@ -328,7 +328,7 @@
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <form method="POST" action="{{ route('pila.generar') }}" id="confirmGenerateForm" class="d-inline">
+                <form method="POST" action="{{ route('pila.generar') }}" id="confirmGenerateForm" class="d-inline" data-loader data-loader-text="Generando archivo PILA...">
                     @csrf
                     <input type="hidden" name="id_empresa" value="{{ $selectedEmpresaId }}">
                     <input type="hidden" name="id_periodo" value="{{ $selectedPeriodoId }}">

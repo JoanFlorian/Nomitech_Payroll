@@ -33,7 +33,7 @@
 
     {{-- FILTROS --}}
     <div class="mb-8 border-b border-gray-100 pb-6">
-        <form action="{{ route('periodos.index') }}" method="GET" class="space-y-6">
+        <form action="{{ route('periodos.index') }}" method="GET" class="space-y-6" data-loader data-loader-text="Filtrando periodos...">
             <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                 {{-- Filtros por Estado (Tabs) --}}
                 <div class="flex-1">
@@ -257,7 +257,7 @@
                 </button>
             </div>
 
-            <form action="{{ route('periodos.store') }}" method="POST">
+            <form action="{{ route('periodos.store') }}" method="POST" data-loader data-loader-text="Creando periodo...">
                 @csrf
                 <div class="px-6 py-6 space-y-5">
                     {{-- Empresa (Hidden since multi-company is not supported yet) --}}

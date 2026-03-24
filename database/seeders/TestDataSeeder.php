@@ -106,6 +106,42 @@ class TestDataSeeder extends Seeder
         
         $empresa = Empresa::where('nit', $empNit)->first();
 
+        // 5.1 Cleanup existing data for this company to allow re-testing
+        $this->command->info('5.1 Cleaning up existing payroll data for test company...');
+        
+        $periodIds = DB::table('periodo_liquidacion')
+            ->where('id_empresa', $empresa->id_empresa)
+            ->pluck('id_periodo');
+
+        if ($periodIds->isNotEmpty()) {
+            // Delete in order to respect potential foreign keys
+            DB::table('benefit_ledger')->whereIn('period_id', $periodIds)->orWhereIn('payroll_period_id', $periodIds)->delete();
+            DB::table('provision')->whereIn('id_periodo', $periodIds)->delete();
+            
+            $salarioIds = DB::table('salario')->whereIn('id_periodo', $periodIds)->pluck('id_salario');
+            if ($salarioIds->isNotEmpty()) {
+                DB::table('novedad')->whereIn('id_salario', $salarioIds)->delete();
+                DB::table('salario')->whereIn('id_salario', $salarioIds)->delete();
+            }
+            
+            DB::table('periodo_liquidacion')->where('id_empresa', $empresa->id_empresa)->delete();
+        }
+
+        // 5.2 Cleanup existing employees and contracts for this company to avoid duplicate errors
+        $this->command->info('5.2 Cleaning up existing employees and contracts...');
+        
+        $employeeDocs = [];
+        for ($i = 1; $i <= 30; $i++) {
+            $employeeDocs[] = (string)(3000000000 + $i);
+        }
+
+        // Clean up contracts and employee relationships for this company
+        DB::table('contrato')->where('id_empresa', $empresa->id_empresa)->delete();
+        DB::table('usuario_empresa')->where('id_empresa', $empresa->id_empresa)->whereIn('doc', $employeeDocs)->delete();
+        
+        // Cleanup the users themselves if they are only test users
+        DB::table('usuario')->whereIn('doc', $employeeDocs)->delete();
+
         if (DB::table('usuario_empresa')->where(['doc' => $representante->doc, 'id_empresa' => $empresa->id_empresa])->doesntExist()) {
             DB::table('usuario_empresa')->insert(['doc' => $representante->doc, 'id_empresa' => $empresa->id_empresa]);
         }
@@ -269,7 +305,7 @@ class TestDataSeeder extends Seeder
 
         // Ejecutar los batches
         DB::table('usuario')->upsert($usersBatch, ['doc'], ['correo', 'id_rol', 'activo', 'updated_at']);
-        DB::table('usuario_empresa')->upsert($userEmpBatch, ['doc', 'id_empresa'], []);
+        DB::table('usuario_empresa')->insert($userEmpBatch);
         DB::table('contrato')->upsert($contractsBatch, ['doc', 'id_empresa'], ['id_tipo_contrato', 'salario_base', 'salario', 'estado', 'updated_at']);
 
 

@@ -17,7 +17,7 @@
                 Reporte de empresas
             </a>
 
-            <form method="GET" class="flex gap-2">
+            <form method="GET" class="flex gap-2" data-loader data-loader-text="Buscando empresas...">
                 <div class="relative">
                     <input type="text" name="buscar" placeholder="Buscar por nombre o NIT"
                         class="pl-10 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

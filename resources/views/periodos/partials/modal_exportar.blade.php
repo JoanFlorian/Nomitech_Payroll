@@ -139,9 +139,12 @@
         form.classList.remove('hidden');
         success.classList.add('hidden');
 
+        window.NomitechLoader.show('Obteniendo vista previa...');
+        window.NomitechLoader.show('Obteniendo vista previa...');
         fetch(`${exportBaseUrl}/${id}/export-preview`)
             .then(res => res.json())
             .then(data => {
+                window.NomitechLoader.hide();
                 if (data.success) {
                     document.getElementById('exp_periodo').textContent = data.periodo;
                     document.getElementById('exp_empleados').textContent = data.empleados;
@@ -155,6 +158,7 @@
                 }
             })
             .catch(err => {
+                window.NomitechLoader.hide();
                 alert('Error de conexión');
                 cerrarModalExportar();
             });
@@ -173,6 +177,8 @@
         btn.disabled = true;
         btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Procesando...';
 
+        window.NomitechLoader.show('Generando archivo de exportación...');
+        window.NomitechLoader.show('Generando archivo de exportación...');
         fetch(`${exportBaseUrl}/${currentPeriodoId}/exportar`, {
             method: 'POST',
             headers: {
@@ -182,6 +188,7 @@
         })
             .then(res => res.json())
             .then(data => {
+                window.NomitechLoader.hide();
                 if (data.success) {
                     document.getElementById('formExportarBanco').classList.add('hidden');
                     document.getElementById('success_export').classList.remove('hidden');
@@ -193,6 +200,7 @@
                 }
             })
             .catch(err => {
+                window.NomitechLoader.hide();
                 alert('Error al procesar la exportación');
                 btn.disabled = false;
                 btn.innerHTML = 'Generar Archivo';

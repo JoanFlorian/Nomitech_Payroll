@@ -21,7 +21,7 @@
 
 <div class="reportes-shell soft-grid-bg rounded-3xl p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
 
-    <form id="form-filtros-reportes" method="GET" action="{{ route('reportes.index') }}" class="filters-panel glass-card rounded-2xl p-3 sm:p-4 md:p-5 rise-in flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <form id="form-filtros-reportes" method="GET" action="{{ route('reportes.index') }}" class="filters-panel glass-card rounded-2xl p-3 sm:p-4 md:p-5 rise-in flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between" data-loader data-loader-text="Generando reporte...">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full lg:max-w-3xl">
             <div class="filter-field">
                 <label for="periodo" class="filter-label">Periodo</label>

@@ -30,12 +30,14 @@ class PeriodoLiquidacion extends Model
         'fecha_inicio',
         'fecha_fin',
         'tipo_frecuencia',
-        'estado'
+        'estado',
+        'fecha_cierre_automatico'
     ];
 
     protected $casts = [
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
+        'fecha_cierre_automatico' => 'date',
     ];
 
     public function empresa()

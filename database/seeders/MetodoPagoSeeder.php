@@ -13,6 +13,11 @@ class MetodoPagoSeeder extends Seeder
             ['nombre' => 'Tarjeta Débito'],
             ['nombre' => 'Transferencia Bancaria'],
             ['nombre' => 'Efectivo'],
+            ['nombre' => 'Consignación bancaria'],
+            ['nombre' => 'Transferencia Crédito Bancario'],
+            ['nombre' => 'Transferencia Crédito'],
+            ['nombre' => 'CATS (Nequi, Daviplata, etc.)'],
+
         ];
         
         foreach ($metodoPagos as $metodo) {

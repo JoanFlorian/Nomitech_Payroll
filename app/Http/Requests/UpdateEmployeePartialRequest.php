@@ -112,10 +112,6 @@ class UpdateEmployeePartialRequest extends FormRequest
             $rules['alto_riesgo'] = 'nullable|boolean';
         }
 
-        if ($this->has('horas_diarias')) {
-            $rules['horas_diarias'] = 'bail|required|integer|min:1|max:12';
-        }
-
         // PASO 3 - Datos financieros
         if ($this->has('id_forma_pago')) {
             $rules['id_forma_pago'] = 'bail|required|integer|exists:forma_pago,id_forma_pago';
@@ -126,11 +122,11 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         if ($this->has('tipo_cuenta')) {
-            $rules['tipo_cuenta'] = 'bail|required|integer|exists:tipo_cuenta,id_tipo_cuenta';
+            $rules['tipo_cuenta'] = 'bail|nullable|integer|exists:tipo_cuenta,id_tipo_cuenta';
         }
 
         if ($this->has('numero_cuenta')) {
-            $rules['numero_cuenta'] = 'bail|required|string|max:20|regex:/^[0-9]{6,20}$/';
+            $rules['numero_cuenta'] = 'bail|nullable|string|max:20|regex:/^[0-9]{6,20}$/';
         }
 
         if ($this->has('id_eps')) {
@@ -232,11 +228,6 @@ class UpdateEmployeePartialRequest extends FormRequest
 
             'fecha_fin.date' => 'Debe ingresar una fecha válida.',
             'fecha_fin.after' => 'La fecha fin debe ser posterior a la fecha de inicio.',
-
-            'horas_diarias.required' => 'Las horas diarias son obligatorias.',
-            'horas_diarias.integer' => 'Las horas diarias deben ser un número entero.',
-            'horas_diarias.min' => 'Debe trabajar mínimo 1 hora diaria.',
-            'horas_diarias.max' => 'No puede superar 12 horas diarias.',
 
             'id_tipo_trabajador.required' => 'Debe seleccionar el tipo de trabajador.',
             'id_tipo_trabajador.integer' => 'Debe seleccionar un tipo de trabajador válido.',
@@ -445,31 +436,6 @@ class UpdateEmployeePartialRequest extends FormRequest
                     'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.'
                 );
             }
-            $idFormaPago = (int) ($this->input('id_forma_pago') ?? ($contratoActual?->id_forma_pago ?? 0));
-            $isCash = false;
-            
-            if ($idFormaPago > 0) {
-                $nombreForma = \App\Models\FormaPago::query()->where('id_forma_pago', $idFormaPago)->value('nombre');
-                if ($nombreForma) {
-                    $normalized = Str::of($nombreForma)->ascii()->lower()->toString();
-                    $isCash = Str::contains($normalized, ['efectivo', 'contado']);
-                }
-            }
-
-            if (!$isCash) {
-                if ($this->has('tipo_cuenta') && empty($this->input('tipo_cuenta'))) {
-                    $validator->errors()->add('tipo_cuenta', 'Debe seleccionar el tipo de cuenta.');
-                }
-                if ($this->has('numero_cuenta')) {
-                    $numero = $this->input('numero_cuenta');
-                    if (empty($numero)) {
-                        $validator->errors()->add('numero_cuenta', 'Debe ingresar el número de cuenta.');
-                    } elseif (!preg_match('/^[0-9]{6,20}$/', (string)$numero)) {
-                        $validator->errors()->add('numero_cuenta', 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.');
-                    }
-                }
-            }
-
             // Validación de fecha_fin vs periodo activo
             if (!empty($fechaFin)) {
                 $activePeriod = \App\Models\PeriodoLiquidacion::getActivePeriod();
@@ -632,6 +598,15 @@ class UpdateEmployeePartialRequest extends FormRequest
             if ($salarioNormalizado !== null) {
                 $this->merge(['salario' => $salarioNormalizado]);
             }
+        }
+
+        if ($this->has('tipo_cuenta') && $this->input('tipo_cuenta') === '') {
+            $this->merge(['tipo_cuenta' => null]);
+        }
+
+        if ($this->has('numero_cuenta')) {
+            $numeroCuenta = trim((string) $this->input('numero_cuenta'));
+            $this->merge(['numero_cuenta' => $numeroCuenta === '' ? null : $numeroCuenta]);
         }
 
         // Normalize Migration Fields

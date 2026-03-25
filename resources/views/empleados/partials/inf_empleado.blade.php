@@ -44,12 +44,8 @@
                 Tipo de documento
             </label>
             <select
-<<<<<<< HEAD
-                class="form-select mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"  name="id_tipo_doc" required>
-=======
                 class="form-select mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                name="id_tipo_doc">
->>>>>>> 71fe8f6be60cf0a3b17751d9d9f4f3024b370de8
+                name="id_tipo_doc" required>
                 <option value="">Seleccionar...</option>
                 @foreach ($tipodoc as $tipodo)
                     <option value="{{ $tipodo->id_tipo_doc }}">{{ $tipodo->nombre }}</option>

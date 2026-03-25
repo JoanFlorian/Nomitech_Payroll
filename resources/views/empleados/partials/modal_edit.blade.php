@@ -293,14 +293,6 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Horas Diarias</label>
-                            <input type="number" min="1" max="12"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                                name="horas_diarias" id="editHorasDiarias">
-                            <p class="error-message text-red-500 text-sm hidden" data-error="horas_diarias"></p>
-                        </div>
-
-                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salario Base</label>
                             <input type="text"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
@@ -836,30 +828,6 @@
         bajoRiesgo.checked = true;
     }
 
-    function isEditCashFormaPagoSelected() {
-        const formaPagoInput = document.getElementById('editIdFormaPago');
-        if (!formaPagoInput) {
-            return false;
-        }
-
-        const selectedOption = formaPagoInput.selectedOptions && formaPagoInput.selectedOptions[0]
-            ? formaPagoInput.selectedOptions[0]
-            : null;
-
-        if (!selectedOption) {
-            return false;
-        }
-
-        const optionText = (selectedOption.textContent ?? '')
-            .toString()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase();
-
-        // Considerar 'efectivo' o 'contado' como pago en efectivo (paridad con registro)
-        return optionText.includes('efectivo') || optionText.includes('contado');
-    }
-
     function syncEditBankFieldsByPaymentMethod() {
         const fields = [
             document.getElementById('editBanco'),
@@ -868,21 +836,7 @@
             document.getElementById('editNumeroCuenta'),
         ].filter(Boolean);
 
-        if (fields.length === 0) {
-            return;
-        }
-
-        const isCash = isEditCashFormaPagoSelected();
-
         fields.forEach((field) => {
-            if (isCash) {
-                field.value = '';
-                field.setAttribute('disabled', 'disabled');
-                field.classList.add('bg-gray-100', 'cursor-not-allowed');
-                clearEditFieldError(field);
-                return;
-            }
-
             field.removeAttribute('disabled');
             field.classList.remove('bg-gray-100', 'cursor-not-allowed');
         });
@@ -1117,8 +1071,6 @@
                         }
                         return validateEditInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
                     }
-                case 'horas_diarias':
-                    return validateEditInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
                 case 'salario':
                     if (value === '') {
                         return validateEditInput(input, false, 'El salario es obligatorio.', showError);
@@ -1177,26 +1129,20 @@
         }
 
         if (stepNumber === 3) {
-            const isCashPayment = isEditCashFormaPagoSelected();
-
             switch (fieldName) {
                 case 'id_forma_pago':
                     return validateEditInput(input, value !== '', 'Debe seleccionar la forma de pago.', showError);
                 case 'id_metodo_pago':
                     return validateEditInput(input, value !== '', 'Debe seleccionar el método de pago.', showError);
                 case 'tipo_cuenta':
-                    if (isCashPayment) {
-                        if (showError) {
-                            clearEditFieldError(input);
-                        }
+                    if (value === '') {
+                        if (showError) clearEditFieldError(input);
                         return true;
                     }
                     return validateEditInput(input, value !== '', 'Debe seleccionar el tipo de cuenta.', showError);
                 case 'numero_cuenta':
-                    if (isCashPayment) {
-                        if (showError) {
-                            clearEditFieldError(input);
-                        }
+                    if (value === '') {
+                        if (showError) clearEditFieldError(input);
                         return true;
                     }
                     return validateEditInput(input, EDIT_ACCOUNT_REGEX.test(value), 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.', showError);
@@ -1299,7 +1245,7 @@
 
         const fieldsByStep = {
             1: ['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion', 'email', 'telefono'],
-            2: ['id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_tipo_contrato', 'id_arl', 'fecha_inicio', 'fecha_fin', 'horas_diarias', 'salario', 'codigo_interno', 'nivel_riesgo_id'],
+            2: ['id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_tipo_contrato', 'id_arl', 'fecha_inicio', 'fecha_fin', 'salario', 'codigo_interno', 'nivel_riesgo_id'],
             3: ['id_forma_pago', 'id_metodo_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'id_caja', 'fondo_cesantias', 'prima_inicial', 'cesantias_inicial', 'intereses_inicial', 'vacaciones_inicial'],
         };
 
@@ -1319,7 +1265,7 @@
             ? normalizeEditFieldValue(metodoPagoField) !== (metodoPagoField.dataset.initialValue ?? '').toString()
             : false;
         const forceValidateSalary = stepNumber === 2 && (tipoContratoChanged || tipoTrabajadorChanged);
-        const forceValidateBankFields = stepNumber === 3 && metodoPagoChanged && !isEditCashPaymentMethodSelected();
+        const forceValidateBankFields = stepNumber === 3 && metodoPagoChanged;
 
         fields.forEach((fieldName) => {
             const field = form.querySelector(`[name="${fieldName}"]`);
@@ -1418,7 +1364,6 @@
                         document.getElementById('editFechaFin').value = toDateInputValue(contrato.fecha_fin);
                     }
                     syncEditFechaFinByContractType();
-                    document.getElementById('editHorasDiarias').value = contrato.horas_diarias != null ? contrato.horas_diarias : '';
                     document.getElementById('editSalario').value = formatEditLocalizedNumber(contrato.salario_base || '');
                     document.getElementById('editCodigoInterno').value = contrato.codigo_interno || '';
                     document.getElementById('editNivelRiesgo').value = contrato.nivel_riesgo_id || '';
@@ -1448,7 +1393,6 @@
                     document.getElementById('editFechaInicio').value = '';
                     document.getElementById('editFechaFin').value = '';
                     syncEditFechaFinByContractType();
-                    document.getElementById('editHorasDiarias').value = '';
                     document.getElementById('editSalario').value = '';
                     document.getElementById('editCodigoInterno').value = '';
                     document.getElementById('editNivelRiesgo').value = '';
@@ -1588,7 +1532,7 @@
                             const fieldStepMap = {
                                 id_tipo_doc: 1, primer_nombre: 1, otros_nombres: 1, primer_apellido: 1, segundo_apellido: 1,
                                 id_ciudad: 1, direccion: 1, id_tipo_trabajador: 2, id_sub_tipo_trabajador: 2,
-                                id_tipo_contrato: 2, id_arl: 2, fecha_inicio: 2, fecha_fin: 2, horas_diarias: 2,
+                                id_tipo_contrato: 2, id_arl: 2, fecha_inicio: 2, fecha_fin: 2,
                                 salario: 2, salario_base: 2, codigo_interno: 2, nivel_riesgo_id: 2,
                                 id_forma_pago: 3, id_metodo_pago: 3, tipo_cuenta: 3, numero_cuenta: 3,
                                 id_eps: 3, id_afp: 3,

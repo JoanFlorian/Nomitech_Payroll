@@ -2,11 +2,9 @@
 
 namespace App\Http\Requests;
 
-use App\Models\FormaPago;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Support\Str;
 
 class Step3Request extends FormRequest
 {
@@ -37,13 +35,10 @@ class Step3Request extends FormRequest
 
     public function rules(): array
     {
-        $formaPagoId = (int) $this->input('id_forma_pago');
-        $isCashFormaPago = $this->isCashFormaPago($formaPagoId);
-
         return [
             'id_forma_pago' => 'required|integer|exists:forma_pago,id_forma_pago',
-            'tipo_cuenta' => ($isCashFormaPago ? 'nullable' : 'required') . '|integer|exists:tipo_cuenta,id_tipo_cuenta',
-            'numero_cuenta' => ($isCashFormaPago ? 'nullable' : 'required') . '|string|max:20|regex:/^[0-9]{6,20}$/',
+            'tipo_cuenta' => 'nullable|integer|exists:tipo_cuenta,id_tipo_cuenta',
+            'numero_cuenta' => 'nullable|string|max:20|regex:/^[0-9]{6,20}$/',
             'id_eps' => 'required|integer|exists:eps,id_eps',
             'id_afp' => 'required|integer|exists:afp,id_afp',
             'id_caja' => 'required|integer|exists:cajas_compensacion,id_caja',
@@ -55,28 +50,6 @@ class Step3Request extends FormRequest
             'intereses_inicial' => 'nullable|numeric|min:0',
             'vacaciones_inicial' => 'nullable|numeric|min:0|max:180',
         ];
-    }
-
-    private function isCashFormaPago(int $formaPagoId): bool
-    {
-        if ($formaPagoId <= 0) {
-            return false;
-        }
-
-        $formaPagoName = FormaPago::query()
-            ->where('id_forma_pago', $formaPagoId)
-            ->value('nombre');
-
-        if (!$formaPagoName) {
-            return false;
-        }
-
-        $normalized = Str::of($formaPagoName)
-            ->ascii()
-            ->lower()
-            ->toString();
-
-        return Str::contains($normalized, ['efectivo', 'contado']);
     }
 
     public function messages(): array

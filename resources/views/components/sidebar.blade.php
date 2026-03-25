@@ -23,6 +23,9 @@
             </div>
             @php
                 $authUser = Auth::user();
+                $nombresUsuario = trim((string) (($authUser->primer_nombre ?? '') . ' ' . ($authUser->otros_nombres ?? '')));
+                $apellidosUsuario = trim((string) (($authUser->primer_apellido ?? '') . ' ' . ($authUser->segundo_apellido ?? '')));
+                $nombreCompletoUsuario = trim((string) ($nombresUsuario . ' ' . $apellidosUsuario));
                 if (strtolower($authUser->rol?->nombre ?? '') === 'empleado') {
                     $empresaNombre = optional(
                         $authUser->contratos()
@@ -43,7 +46,14 @@
                 }
             @endphp
             <div class="min-w-0">
-                <p class="text-sm font-bold text-white truncate">{{ Auth::user()->primer_nombre ?? Auth::user()->nombre ?? 'Usuario' }} {{ Auth::user()->primer_apellido ?? '' }}</p>
+                @if($nombresUsuario !== '' && $apellidosUsuario !== '')
+                    <p class="text-sm font-bold text-white leading-tight truncate" title="{{ $nombreCompletoUsuario }}">{{ $nombresUsuario }}</p>
+                    <p class="text-xs text-blue-100 leading-tight truncate" title="{{ $nombreCompletoUsuario }}">{{ $apellidosUsuario }}</p>
+                @else
+                    <p class="text-sm font-bold text-white leading-tight truncate" title="{{ $nombreCompletoUsuario !== '' ? $nombreCompletoUsuario : ($authUser->nombre ?? 'Usuario') }}">
+                        {{ $nombreCompletoUsuario !== '' ? $nombreCompletoUsuario : ($authUser->nombre ?? 'Usuario') }}
+                    </p>
+                @endif
                 <p class="text-xs text-blue-200 truncate">{{ Auth::user()->rol->nombre ?? 'Sin rol' }}</p>
                 <p class="text-xs text-blue-100 truncate">{{ $empresaNombre }}</p>
             </div>

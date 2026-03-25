@@ -10,9 +10,7 @@ class FormaPagoSeeder extends Seeder
     public function run(): void
     {
         $formasPago = [
-            ['id_forma_pago' => 1, 'nombre' => 'Efectivo'],
-            ['id_forma_pago' => 2, 'nombre' => 'Cheque'],
-            ['id_forma_pago' => 3, 'nombre' => 'Transferencia'],
+            ['id_forma_pago' => 1, 'nombre' => 'Contado'],
         ];
 
         foreach ($formasPago as $forma) {

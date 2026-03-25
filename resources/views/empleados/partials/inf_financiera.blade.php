@@ -46,7 +46,11 @@
                 required>
                 <option value="">Seleccionar...</option>
                 @foreach ($formapagos as $formapago)
-                    <option value="{{ $formapago->id_forma_pago }}">{{ $formapago->nombre }}</option>
+                    @php
+                        $formaNombre = strtolower(trim($formapago->nombre ?? ''));
+                        $esContado = str_contains($formaNombre, 'contado');
+                    @endphp
+                    <option value="{{ $formapago->id_forma_pago }}" {{ ($loop->count === 1 || $esContado) ? 'selected' : '' }}>{{ $formapago->nombre }}</option>
                 @endforeach
             </select>
             <div class="error-message invalid-feedback" data-error="id_forma_pago"></div>

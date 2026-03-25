@@ -241,7 +241,7 @@
     }
 
     function syncRiskClassification(form) {
-        const nivelRiesgoInput = getField(form, 'nivel_riesgo');
+        const nivelRiesgoInput = getField(form, 'nivel_riesgo_id');
         const altoRiesgoInput = getField(form, 'alto_riesgo');
         const bajoRiesgoInput = getField(form, 'bajo_riesgo');
 
@@ -249,7 +249,10 @@
             return;
         }
 
-        const riskLevel = getRiskLevelNumber(nivelRiesgoInput.value);
+        const selectedOption = nivelRiesgoInput.selectedOptions && nivelRiesgoInput.selectedOptions[0]
+            ? nivelRiesgoInput.selectedOptions[0]
+            : null;
+        const riskLevel = getRiskLevelNumber(selectedOption ? selectedOption.textContent : nivelRiesgoInput.value);
 
         if (riskLevel === null) {
             altoRiesgoInput.checked = false;
@@ -267,51 +270,11 @@
         bajoRiesgoInput.checked = true;
     }
 
-    function isCashFormaPagoSelected(formaInput) {
-        if (!formaInput) {
-            return false;
-        }
-
-        const selectedOption = formaInput.selectedOptions && formaInput.selectedOptions[0]
-            ? formaInput.selectedOptions[0]
-            : null;
-
-        if (!selectedOption) {
-            return false;
-        }
-
-        const optionText = (selectedOption.textContent || '')
-            .toString()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase();
-
-        // Considera 'efectivo' o 'contado' como pago en efectivo
-        return optionText.includes('efectivo') || optionText.includes('contado');
-    }
-
     function syncFieldsByFormaPago(form) {
-        const formaPagoInput = getField(form, 'id_forma_pago');
         const tipoCuentaInput = getField(form, 'tipo_cuenta');
         const numeroCuentaInput = getField(form, 'numero_cuenta');
 
-        const paymentFields = [tipoCuentaInput, numeroCuentaInput].filter(Boolean);
-
-        if (!formaPagoInput || paymentFields.length === 0) {
-            return;
-        }
-
-        const isCash = isCashFormaPagoSelected(formaPagoInput);
-
-        paymentFields.forEach((field) => {
-            if (isCash) {
-                field.value = '';
-                field.setAttribute('disabled', 'disabled');
-                field.classList.add('bg-gray-100', 'cursor-not-allowed');
-                clearFieldError(field);
-                return;
-            }
-
+        [tipoCuentaInput, numeroCuentaInput].filter(Boolean).forEach((field) => {
             field.removeAttribute('disabled');
             field.classList.remove('bg-gray-100', 'cursor-not-allowed');
         });
@@ -414,7 +377,7 @@
                 return validarInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
             case 'id_tipo_contrato':
                 return validarInput(input, value !== '', 'El tipo de contrato es obligatorio.', showError);
-            case 'nivel_riesgo':
+            case 'nivel_riesgo_id':
                 return validarInput(input, value !== '', 'El nivel de riesgo es obligatorio.', showError);
             case 'salario':
                 if (value === '') {
@@ -464,8 +427,6 @@
                 return validarInput(input, value !== '', 'El subtipo de trabajador es obligatorio.', showError);
             case 'id_arl':
                 return validarInput(input, value !== '', 'La ARL es obligatoria.', showError);
-            case 'horas_diarias':
-                return validarInput(input, value !== '' && Number(value) >= 1 && Number(value) <= 12, 'Las horas diarias deben estar entre 1 y 12.', showError);
             case 'codigo_interno':
                 if (value === '') {
                     if (showError) {
@@ -483,30 +444,22 @@
     function validateStep3Field(form, fieldName, showError = true) {
         const input = getField(form, fieldName);
         const value = input ? (input.value || '').trim() : '';
-        const formaPagoInput = getField(form, 'id_forma_pago');
-        const isCashFormaPago = isCashFormaPagoSelected(formaPagoInput);
 
         switch (fieldName) {
             case 'id_forma_pago':
                 return validarInput(input, value !== '', 'La forma de pago es obligatoria.', showError);
             case 'tipo_cuenta':
-                // Si forma de pago es efectivo, tipo de cuenta no es requerido
-                if (isCashFormaPago) {
-                    if (showError) {
-                        clearFieldError(input);
-                    }
+                if (value === '') {
+                    if (showError) clearFieldError(input);
                     return true;
                 }
                 return validarInput(input, value !== '', 'El tipo de cuenta es obligatorio.', showError);
             case 'numero_cuenta':
-                // Si forma de pago es efectivo, número de cuenta no es requerido
-                if (isCashFormaPago) {
-                    if (showError) {
-                        clearFieldError(input);
-                    }
+                if (value === '') {
+                    if (showError) clearFieldError(input);
                     return true;
                 }
-                return validarInput(input, value !== '' && ACCOUNT_REGEX.test(value), 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.', showError);
+                return validarInput(input, ACCOUNT_REGEX.test(value), 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.', showError);
             case 'id_eps':
                 return validarInput(input, value !== '', 'La EPS es obligatoria.', showError);
             case 'id_afp':
@@ -548,7 +501,7 @@
         }
 
         if (form.id === 'step2') {
-            return ['fecha_inicio', 'fecha_fin', 'id_tipo_contrato', 'nivel_riesgo', 'salario', 'id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_arl', 'horas_diarias', 'codigo_interno'];
+            return ['fecha_inicio', 'fecha_fin', 'id_tipo_contrato', 'nivel_riesgo_id', 'salario', 'id_tipo_trabajador', 'id_sub_tipo_trabajador', 'id_arl', 'codigo_interno'];
         }
 
         if (form.id === 'step3') {
@@ -829,7 +782,7 @@
         const tipoTrabajadorInput = getField(form, 'id_tipo_trabajador');
         const salarioInput = getField(form, 'salario');
         const codigoInternoInput = getField(form, 'codigo_interno');
-        const nivelRiesgoInput = getField(form, 'nivel_riesgo');
+        const nivelRiesgoInput = getField(form, 'nivel_riesgo_id');
         const altoRiesgoInput = getField(form, 'alto_riesgo');
         const bajoRiesgoInput = getField(form, 'bajo_riesgo');
 
@@ -906,18 +859,29 @@
         const numeroCuentaInput = getField(form, 'numero_cuenta');
         const formaPagoInput = getField(form, 'id_forma_pago');
 
+        if (formaPagoInput && !formaPagoInput.value) {
+            const options = Array.from(formaPagoInput.options || []);
+            const contadoOption = options.find((option) => {
+                const label = (option.textContent || '')
+                    .toString()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase();
+
+                return option.value !== '' && label.includes('contado');
+            });
+
+            const firstValidOption = options.find((option) => option.value !== '');
+            const defaultOption = contadoOption || firstValidOption;
+
+            if (defaultOption) {
+                formaPagoInput.value = defaultOption.value;
+            }
+        }
+
         if (numeroCuentaInput) {
             numeroCuentaInput.addEventListener('input', function () {
                 numeroCuentaInput.value = (numeroCuentaInput.value || '').replace(/\D/g, '').slice(0, 20);
-            });
-        }
-
-        // Listener para forma de pago - bloquea campos cuando es efectivo
-        if (formaPagoInput) {
-            formaPagoInput.addEventListener('change', function () {
-                syncFieldsByFormaPago(form);
-                validateStep3Field(form, 'tipo_cuenta', true);
-                validateStep3Field(form, 'numero_cuenta', true);
             });
         }
 

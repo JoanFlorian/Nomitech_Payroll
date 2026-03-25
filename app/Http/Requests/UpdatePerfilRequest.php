@@ -26,7 +26,7 @@ class UpdatePerfilRequest extends FormRequest
             'otros_nombres'    => 'nullable|string|max:100|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
             'primer_apellido'  => 'required|string|max:100|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
             'segundo_apellido' => 'nullable|string|max:100|regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/',
-            'id_tipo_doc'      => 'required|integer|exists:tipo_documento,id_tipo_doc',
+            'id_tipo_doc'      => 'required|integer|exists:tipo_doc,id_tipo_doc',
             'telefono'         => 'required|numeric|digits_between:7,15',
             'correo'           => 'required|email|max:255',
             'direccion'        => 'required|string|max:255',

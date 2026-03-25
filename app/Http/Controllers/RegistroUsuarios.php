@@ -257,7 +257,7 @@ class RegistroUsuarios extends Controller
                     'fecha_inicio' => $allData['fecha_inicio'],
                     'fecha_fin' => $fechaFin,
                     'salario_base' => $allData['salario'] ?? 0,
-                    'horas_diarias' => $allData['horas_diarias'] ?? null,
+                    'horas_diarias' => $allData['horas_diarias'] ?? 0,
                     'codigo_interno' => $allData['codigo_interno'] ?? null,
                     'activo' => true,
                     'estado' => Contrato::ESTADO_ACTIVO,

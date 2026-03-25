@@ -25,7 +25,7 @@ class Step2Request extends FormRequest
             'fecha_fin' => 'bail|nullable|date|after:fecha_inicio',
 
             // HORAS
-            'horas_diarias' => 'bail|required|integer|min:1|max:12',
+            'horas_diarias' => 'bail|nullable|integer|min:0|max:12',
 
             // SELECTS
             'id_tipo_trabajador'      => 'bail|required|integer|exists:tipo_trabajador,id_tipo_trabajador',
@@ -74,9 +74,8 @@ class Step2Request extends FormRequest
             | HORAS DIARIAS
             |--------------------------------------------------------------------------
             */
-            'horas_diarias.required' => 'Las horas diarias son obligatorias.',
             'horas_diarias.integer'  => 'Las horas diarias deben ser un número entero.',
-            'horas_diarias.min'      => 'Debe trabajar mínimo 1 hora diaria.',
+            'horas_diarias.min'      => 'Las horas diarias no pueden ser negativas.',
             'horas_diarias.max'      => 'No puede superar 12 horas diarias.',
 
             /*
@@ -376,6 +375,10 @@ class Step2Request extends FormRequest
         if ($this->has('codigo_interno')) {
             $codigoInterno = trim((string) $this->input('codigo_interno'));
             $payload['codigo_interno'] = $codigoInterno === '' ? null : $codigoInterno;
+        }
+
+        if (!$this->has('horas_diarias') || $this->input('horas_diarias') === '') {
+            $payload['horas_diarias'] = 0;
         }
 
         $this->merge($payload);

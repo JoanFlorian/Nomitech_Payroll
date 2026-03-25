@@ -161,14 +161,41 @@
 						? 'bg-red-50 text-red-700 border border-red-200'
 						: 'bg-gray-50 text-gray-700 border border-gray-200');
 
-				// Calcular valor informativo para novedades que descuentan días (SLN, IGE, IRL, etc.)
+				// Cálculos de referencia para visualización.
 				$salarioBase = (float) ($novedad->salario_base ?? $novedad->salario?->contrato?->salario_base ?? 0);
 				$diasNovedad = (float) ($novedad->dias ?? ($novedad->unidad_cantidad === 'dias' ? $novedad->cantidad : 0));
-				$esInformativo = in_array($tipo, ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'INC', 'LIC']);
-				$valorInformativo = $esInformativo && $salarioBase > 0 ? round(($salarioBase / 30) * $diasNovedad) : 0;
-				$pagoDisplay = ((float) $novedad->pago > 0) ? (float) $novedad->pago : $valorInformativo;
+				$valorDia = $salarioBase > 0 ? ($salarioBase / 30) : 0;
+
+				// Para incapacidades, si por datos antiguos pago llega en 0,
+				// mostramos un estimado del pago de EMPRESA (no del total de días).
+				$valorEmpresaIncapacidad = 0;
+				if ($valorDia > 0 && $diasNovedad > 0) {
+					if ($tipo === 'IGE') {
+						$valorEmpresaIncapacidad = round($valorDia * min(2, $diasNovedad) * 0.6667);
+					} elseif ($tipo === 'IRL') {
+						$valorEmpresaIncapacidad = round($valorDia * min(1, $diasNovedad));
+					} elseif ($tipo === 'INC') {
+						$tipoIncap = strtolower((string) ($novedad->tipo_incapacidad ?? ''));
+						if (in_array($tipoIncap, ['irl', 'riesgo_laboral'], true)) {
+							$valorEmpresaIncapacidad = round($valorDia * min(1, $diasNovedad));
+						} else {
+							$valorEmpresaIncapacidad = round($valorDia * min(2, $diasNovedad) * 0.6667);
+						}
+					}
+				}
+
+				$esInformativo = in_array($tipo, ['SLN'], true) || ($tipo === 'LIC' && $naturaleza !== 'DEVENGADO');
+				$valorInformativo = $esInformativo && $valorDia > 0 ? round($valorDia * $diasNovedad) : 0;
+
+				$valorFallback = in_array($tipo, ['IGE', 'IRL', 'INC'], true)
+					? $valorEmpresaIncapacidad
+					: $valorInformativo;
+
+				$pagoDisplay = ((float) $novedad->pago > 0) ? (float) $novedad->pago : $valorFallback;
 				$pagoColorClass = $naturaleza === 'DEVENGADO' ? 'text-emerald-700' : ($naturaleza === 'DEDUCCION' || $esInformativo ? 'text-red-600' : 'text-gray-800');
-				$pagoLabel = $esInformativo && (float) $novedad->pago <= 0 ? 'Deducción informativa' : 'Pago';
+				$pagoLabel = (in_array($tipo, ['IGE', 'IRL', 'INC'], true) && (float) $novedad->pago <= 0)
+					? 'Pago empresa (estimado)'
+					: (($esInformativo && (float) $novedad->pago <= 0) ? 'Deducción informativa' : 'Pago');
 			@endphp
 
 			<article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden hover:shadow-md transition-all duration-300">
@@ -262,6 +289,8 @@
 							<p class="font-semibold {{ $pagoColorClass }}">$ {{ number_format($pagoDisplay, 0, ',', '.') }}</p>
 							@if($esInformativo && (float) $novedad->pago <= 0)
 								<p class="text-[10px] text-amber-600 mt-0.5">Reduce días trabajados</p>
+							@elseif(in_array($tipo, ['IGE', 'IRL', 'INC'], true) && (float) $novedad->pago <= 0)
+								<p class="text-[10px] text-emerald-600 mt-0.5">Tope empresa aplicado (EPS/ARL cubre restante)</p>
 							@endif
 						</div>
 					</div>
@@ -615,6 +644,7 @@
 			const tipoNormalizado = normalizeNoveltyType(tipo);
 			if (tipoNormalizado === 'LMAT') return 126;
 			if (tipoNormalizado === 'LPAT') return 14;
+			if (['IGE', 'IRL', 'INC'].includes(tipoNormalizado)) return 126;
 			return 30;
 		};
 
@@ -729,7 +759,7 @@
 			const tipoNormalizado = normalizeNoveltyType(tipo);
 			const esAutomatica = isAutomaticNoveltyType(tipoNormalizado);
 			const esRemunerada = Boolean(licenciaRemuneradaInput?.checked);
-			const esInformativo = ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC', 'LIC'].includes(tipoNormalizado) && !esRemunerada;
+			const esInformativo = ['SLN', 'LIC'].includes(tipoNormalizado) && !esRemunerada;
 			const tipoLicencia = tipoLicenciaInput?.value || '';
 			const tipoIncapacidad = tipoIncapacidadInput?.value || '';
 			const certificadoMedico = Boolean(certificadoMedicoInput?.checked);
@@ -825,7 +855,7 @@
 			const tipoNormalizado = normalizeNoveltyType(tipo);
 			const esAutomatica = isAutomaticNoveltyType(tipoNormalizado);
 			const esRemunerada = Boolean(editLicenciaRemuneradaInput?.checked);
-			const esInformativo = ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC', 'LIC'].includes(tipoNormalizado) && !esRemunerada;
+			const esInformativo = ['SLN', 'LIC'].includes(tipoNormalizado) && !esRemunerada;
 			const tipoLicencia = editTipoLicenciaInput?.value || '';
 			const tipoIncapacidad = editTipoIncapacidadInput?.value || '';
 			const certificadoMedico = Boolean(editCertificadoMedicoInput?.checked);
@@ -2183,7 +2213,7 @@
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
 						: (tipo === 'LPAT'
 							? 'Para licencia de paternidad la cantidad máxima es 14 días.'
-							: 'La cantidad de días no puede superar 30.'));
+							: `La cantidad de días no puede superar ${maxDays}.`));
 					markInvalid(quantityDaysInput);
 				}
 			}
@@ -2329,7 +2359,7 @@
 						? 'Para licencia de maternidad la cantidad debe ser exactamente 126 días.'
 						: (tipo === 'LPAT'
 							? 'Para licencia de paternidad la cantidad máxima es 14 días.'
-						: 'La cantidad de días no puede superar 30.'));
+							: `La cantidad de días no puede superar ${maxDays}.`));
 					markInvalid(editQuantityDaysInput);
 				}
 			}

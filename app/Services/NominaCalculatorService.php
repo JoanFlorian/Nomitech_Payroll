@@ -520,11 +520,12 @@ class NominaCalculatorService
                     continue;
                 }
 
-                // IRL: ARL cubre desde el día 1 al 100%. Se registra el devengo completo
-                // del periodo de registro únicamente (no afecta periodos futuros).
+                // IRL: la empresa cubre solo 1 día. El resto lo cubre la ARL.
+                // Además, solo aplica en el periodo de registro (no en periodos futuros).
                 if ($codigo === 'IRL') {
                     $valorDia = $valorHora * 8;
-                    $resumen['otros_devengos'] += round($valorDia * $diasEnPeriodo, 2);
+                    $diasPagadosIrl = min(1, $diasEnPeriodo);
+                    $resumen['otros_devengos'] += round($valorDia * $diasPagadosIrl, 2);
                     continue;
                 }
 

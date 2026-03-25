@@ -1138,78 +1138,10 @@ class NominaController extends Controller
             ];
         }
 
-        $periodo = DB::table('periodo_liquidacion')
-            ->where('id_periodo', $idPeriodo)
-            ->first(['fecha_inicio', 'fecha_fin']);
+        $contrato = Contrato::query()->find($idContrato);
+        $valorHora = $contrato ? max(0, (float) ($contrato->salario_base ?? 0) / 240) : 0.0;
 
-        if (!$periodo) {
-            return [
-                'horas_extra' => 0.0,
-                'recargos' => 0.0,
-                'bonificaciones' => 0.0,
-                'otros_devengos' => 0.0,
-                'deducciones' => 0.0,
-            ];
-        }
-
-        $fechaInicio = Carbon::parse((string) $periodo->fecha_inicio)->toDateString();
-        $fechaFin = Carbon::parse((string) $periodo->fecha_fin)->toDateString();
-
-        $novedades = DB::table('novedad as n')
-            ->join('salario as s', 's.id_salario', '=', 'n.id_salario')
-            ->where('s.id_contrato', $idContrato)
-            ->where(function ($query) use ($idPeriodo, $fechaInicio, $fechaFin) {
-                $query->where('n.id_periodo', $idPeriodo)
-                    ->orWhere(function ($q) use ($idPeriodo) {
-                        $q->whereNull('n.id_periodo')
-                            ->where('s.id_periodo', $idPeriodo);
-                    })
-                    ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
-                        $q->whereNotNull('n.fecha_inicio')
-                            ->whereNotNull('n.fecha_fin')
-                            ->whereDate('n.fecha_inicio', '<=', $fechaFin)
-                            ->whereDate('n.fecha_fin', '>=', $fechaInicio);
-                    })
-                    ->orWhere(function ($q) use ($fechaInicio, $fechaFin) {
-                        $q->whereNotNull('n.fecha')
-                            ->whereBetween(DB::raw('DATE(n.fecha)'), [$fechaInicio, $fechaFin]);
-                    });
-            })
-            ->select([
-                'n.pago',
-                'n.tipo_novedad_codigo',
-                'n.tipo_novedad_nombre',
-            ])
-            ->get();
-
-        $resumen = [
-            'horas_extra' => 0.0,
-            'recargos' => 0.0,
-            'bonificaciones' => 0.0,
-            'otros_devengos' => 0.0,
-            'deducciones' => 0.0,
-        ];
-
-        foreach ($novedades as $novedad) {
-            $valor = (float) ($novedad->pago ?? 0);
-            if ($valor === 0.0) {
-                continue;
-            }
-
-            if ($valor < 0) {
-                $resumen['deducciones'] += abs($valor);
-                continue;
-            }
-
-            $categoria = $this->clasificarNovedadDevengado(
-                (string) ($novedad->tipo_novedad_codigo ?? ''),
-                (string) ($novedad->tipo_novedad_nombre ?? '')
-            );
-
-            $resumen[$categoria] += $valor;
-        }
-
-        return $resumen;
+        return $this->calculator->resumirNovedadesContratoPeriodo($idContrato, $idPeriodo, $valorHora);
     }
 
     private function clasificarNovedadDevengado(string $codigo, string $nombre): string

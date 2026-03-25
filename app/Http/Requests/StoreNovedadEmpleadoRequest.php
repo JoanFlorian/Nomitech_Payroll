@@ -185,8 +185,15 @@ class StoreNovedadEmpleadoRequest extends FormRequest
                 }
             }
 
-            // Validación: máximo días según tipo
-            if ($requiereCantidad && $unidad === 'dias' && $dias > self::DIAS_MAXIMO_GENERAL && !in_array($tipo, ['LMAT', 'LPAT'], true)) {
+            // Validación: máximo días según tipo.
+            // IGE/IRL/INC pueden abarcar más de un periodo (hasta 126),
+            // pero el pago del empleador se limita por regla de negocio en el cálculo.
+            if (
+                $requiereCantidad
+                && $unidad === 'dias'
+                && $dias > self::DIAS_MAXIMO_GENERAL
+                && !in_array($tipo, ['LMAT', 'LPAT', 'IGE', 'IRL', 'INC'], true)
+            ) {
                 $validator->errors()->add('dias', 'Los días no pueden superar 30 por periodo.');
                 $validator->errors()->add('cantidad_dias', 'Los días no pueden superar 30 por periodo.');
             }

@@ -15,13 +15,16 @@ Route::get('/cron/run-schedule', function (\Illuminate\Http\Request $request) {
         return response()->json(['error' => 'Unauthorized'], 401);
     }
     
-    // Ejecuta TODAS las tareas programadas en bootstrap/app.php
+    // Ejecutamos el scheduler
     \Illuminate\Support\Facades\Artisan::call('schedule:run');
+    
+    // Capturamos el resultado para depuración
     $output = \Illuminate\Support\Facades\Artisan::output();
     
     return response()->json([
         'success' => true,
-        'message' => 'Schedule executed successfully',
-        'output' => $output
+        'message' => 'Scheduler executed',
+        'server_time' => now('America/Bogota')->toDateTimeString(),
+        'output' => $output // Aquí verás si el comando dijo "No hay periodos", "Cerrando periodo...", etc.
     ]);
 });

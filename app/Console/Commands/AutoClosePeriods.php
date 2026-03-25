@@ -29,7 +29,7 @@ class AutoClosePeriods extends Command
         \App\Services\Benefits\BenefitPaymentService $paymentService,
         \App\Services\Payroll\TransitoriaSalarioDetectionService $vstDetectionService
     ) {
-        $today = now()->toDateString();
+        $today = now('America/Bogota')->toDateString();
         
         $periodos = \App\Models\PeriodoLiquidacion::whereIn('estado', [
                 \App\Models\PeriodoLiquidacion::ESTADO_ABIERTO, 

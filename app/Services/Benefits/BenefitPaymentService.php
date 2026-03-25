@@ -13,6 +13,7 @@ use App\Models\Salario;
 use App\Models\SeveranceBatch;
 use App\Models\Usuario;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class BenefitPaymentService
 {
@@ -307,7 +308,7 @@ class BenefitPaymentService
             'reasonLabel' => CesantiasWithdrawal::reasonLabel($withdrawal->reason),
         ])->render();
 
-        \Storage::disk('local')->put($path, $htmlContent);
+        Storage::disk('local')->put($path, $htmlContent);
         $withdrawal->update(['certificate_path' => $path]);
 
         return $path;
@@ -475,13 +476,23 @@ class BenefitPaymentService
 
                 // Validation for Payroll mode: employee must have a salary record in the period
                 if ($paymentMode === BenefitLedger::PAYMENT_PAYROLL) {
-                    $hasSalario = Salario::whereHas('contrato', function ($q) use ($balance) {
+                    // Exclude Cesantias and Vacations from regular payroll integrations
+                    if (in_array($benefitType, [BenefitLedger::TYPE_CESANTIAS, BenefitLedger::TYPE_VACACIONES])) {
+                        $skipped[] = [
+                            'doc' => $balance->employee_id,
+                            'name' => $balance->usuario ? $balance->usuario->nombre_completo : $balance->employee_id,
+                            'reason' => "{$benefitType}_not_allowed_in_payroll"
+                        ];
+                        continue;
+                    }
+
+                    $salario = Salario::whereHas('contrato', function ($q) use ($balance) {
                         $q->where('doc', $balance->employee_id);
                     })
                         ->where('id_periodo', $periodId)
-                        ->exists();
+                        ->first();
 
-                    if (!$hasSalario) {
+                    if (!$salario) {
                         $skipped[] = [
                             'doc' => $balance->employee_id,
                             'name' => $balance->usuario ? $balance->usuario->nombre_completo : $balance->employee_id,
@@ -501,6 +512,14 @@ class BenefitPaymentService
                 }
 
                 if ($paymentMode === BenefitLedger::PAYMENT_DIRECT) {
+                    if ($benefitType === BenefitLedger::TYPE_CESANTIAS) {
+                        // Las Cesantías en pago directo NUNCA se pagan en efectivo al empleado,
+                        // sino que se consignan al Fondo de Cesantías.
+                        // Saltamos el descuento aquí; "generarConsignacionAnual" se encargará.
+                        $count++;
+                        continue;
+                    }
+
                     BenefitLedger::create([
                         'tenant_id' => $tenantId,
                         'employee_id' => $balance->employee_id,
@@ -519,6 +538,24 @@ class BenefitPaymentService
                     $balance->applyMovement($benefitType, -$currentAmount);
                 } else {
                     // PAYMENT_PAYROLL
+
+                    // Prevent duplicates if already scheduled for this period
+                    $exists = BenefitLedger::where('employee_id', $balance->employee_id)
+                        ->where('payroll_period_id', $periodId)
+                        ->where('benefit_type', $benefitType)
+                        ->where('movement_type', BenefitLedger::MOVEMENT_SCHEDULED)
+                        ->where('status', BenefitLedger::STATUS_PENDING_PAYROLL)
+                        ->exists();
+
+                    if ($exists) {
+                        $skipped[] = [
+                            'doc' => $balance->employee_id,
+                            'name' => $balance->usuario ? $balance->usuario->nombre_completo : $balance->employee_id,
+                            'reason' => 'already_scheduled'
+                        ];
+                        continue;
+                    }
+
                     BenefitLedger::create([
                         'tenant_id' => $tenantId,
                         'employee_id' => $balance->employee_id,
@@ -534,6 +571,29 @@ class BenefitPaymentService
                         'source' => BenefitLedger::SOURCE_LIQUIDATION,
                         'reference' => "Liquidación masiva {$label} integrada a nómina",
                     ]);
+
+                    // Instantly update the employee's salary total so the UI reflects the added benefit
+                    $input = [
+                        'fecha_pago' => $salario->fecha_pago ?? now()->toDateString(),
+                        'horas_extra' => (float) ($salario->horas_extra ?? 0),
+                        'recargos' => max(0, (float) ($salario->valor_horas_extras_recargos ?? 0) - (float) ($salario->horas_extra ?? 0)),
+                        'bonificaciones' => (float) ($salario->bonificaciones ?? 0),
+                        'comisiones' => (float) ($salario->comisiones ?? 0),
+                        'otros_devengos' => (float) ($salario->otros_devengos ?? 0),
+                        'auxilio_transporte' => (float) ($salario->auxilio_transporte ?? 0),
+                        'retencion_fuente' => (float) ($salario->retencion_fuente ?? 0),
+                        'embargo_fiscal' => (float) ($salario->embargo_fiscal ?? 0),
+                        'pension_voluntaria' => (float) ($salario->pension_voluntaria ?? 0),
+                        'dias_trabajados' => (int) ($salario->dias_a_trabajar ?? 30),
+                        'limpiar_novedades' => true,
+                    ];
+
+                    app(\App\Services\NominaCalculatorService::class)->guardarNominaEmpleado(
+                        $salario->id_contrato,
+                        $periodId,
+                        $input,
+                        true // Force save even if estado is liquidado
+                    );
                 }
 
                 $count++;
@@ -692,5 +752,72 @@ class BenefitPaymentService
         }
 
         return $balance;
+    }
+
+    /**
+     * Generates a ZIP file containing CSVs for each severance fund for a given batch of data.
+     * Returns the temporary file path.
+     */
+    public function generateConsignmentZip(array $batchesData, int $year): ?string
+    {
+        if (empty($batchesData)) {
+            return null;
+        }
+
+        $files = [];
+        foreach ($batchesData as $batch) {
+            $fundSlug = strtolower(str_replace(' ', '_', preg_replace('/[^a-zA-Z0-9\s]/', '', $batch['fund'])));
+            $fileName = "cesantias_{$fundSlug}_{$year}.csv";
+            $files[$fileName] = $this->formatConsignmentCsv($batch['employees'], $year);
+        }
+
+        if (count($files) === 1) {
+            $fileName = array_key_first($files);
+            $tempPath = tempnam(sys_get_temp_dir(), 'ces_') . '.csv';
+            file_put_contents($tempPath, $files[$fileName]);
+            return $tempPath;
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'ces_') . '.zip';
+        $zip = new \ZipArchive();
+        if ($zip->open($tempPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
+            foreach ($files as $name => $content) {
+                $zip->addFromString($name, $content);
+            }
+            $zip->close();
+        }
+
+        return $tempPath;
+    }
+
+    /**
+     * Replicates the exact CSV formatting logic from ProvisionesController.
+     */
+    private function formatConsignmentCsv(array $employees, int $year): string
+    {
+        $csvContent = "\xEF\xBB\xBF";
+        $csvContent .= "Tipo de documento;Número de documento;Primer apellido;Segundo apellido;Primer nombre;Segundo nombre;Fecha de ingreso del trabajador;Fecha de retiro;Tipo de trabajador;Salario base de liquidación;Días trabajados en el período;Período de liquidación;Fondo de Cesantías;Valor de cesantías a consignar;Tipo de liquidación\n";
+
+        foreach ($employees as $emp) {
+            $tipoDoc = str_replace(';', '', $emp['tipo_doc'] ?? '');
+            $document = '="' . str_replace(['"', ';'], '', $emp['document_number'] ?? '') . '"';
+            $primerApellido = str_replace(';', '', $emp['primer_apellido'] ?? '');
+            $segundoApellido = str_replace(';', '', $emp['segundo_apellido'] ?? '');
+            $primerNombre = str_replace(';', '', $emp['primer_nombre'] ?? '');
+            $otrosNombres = str_replace(';', '', $emp['otros_nombres'] ?? '');
+            $fechaIngreso = str_replace(';', '', $emp['fecha_ingreso'] ?? '');
+            $fechaRetiro = str_replace(';', '', $emp['fecha_retiro'] ?? '');
+            $tipoTrabajador = str_replace(';', '', $emp['tipo_trabajador'] ?? '');
+            $salarioBase = number_format((float) ($emp['salario_base'] ?? 0), 2, '.', '');
+            $diasTrabajados = $emp['dias_trabajados'] ?? 0;
+            $periodo = str_replace(';', '', $emp['periodo_liquidacion'] ?? '');
+            $fondo = str_replace(';', '', $emp['fund'] ?? '');
+            $amount = number_format((float) ($emp['amount'] ?? 0), 2, '.', '');
+            $tipoLiquidacion = 'anual';
+
+            $csvContent .= "{$tipoDoc};{$document};{$primerApellido};{$segundoApellido};{$primerNombre};{$otrosNombres};{$fechaIngreso};{$fechaRetiro};{$tipoTrabajador};{$salarioBase};{$diasTrabajados};{$periodo};{$fondo};{$amount};{$tipoLiquidacion}\n";
+        }
+
+        return $csvContent;
     }
 }

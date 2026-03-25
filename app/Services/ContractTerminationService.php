@@ -159,6 +159,42 @@ class ContractTerminationService
             }
         }
 
+        // Trigger salary recalculation so the integrated benefits reflect in the final total
+        if ($scheduledAny) {
+            try {
+                $salario = \App\Models\Salario::where('id_contrato', $contrato->id_contrato)
+                    ->where('id_periodo', $periodo->id_periodo)
+                    ->first();
+
+                if ($salario) {
+                    $input = [
+                        'fecha_pago' => $salario->fecha_pago ?? now()->toDateString(),
+                        'horas_extra' => (float) ($salario->horas_extra ?? 0),
+                        'recargos' => max(0, (float) ($salario->valor_horas_extras_recargos ?? 0) - (float) ($salario->horas_extra ?? 0)),
+                        'bonificaciones' => (float) ($salario->bonificaciones ?? 0),
+                        'comisiones' => (float) ($salario->comisiones ?? 0),
+                        'otros_devengos' => (float) ($salario->otros_devengos ?? 0),
+                        'auxilio_transporte' => (float) ($salario->auxilio_transporte ?? 0),
+                        'retencion_fuente' => (float) ($salario->retencion_fuente ?? 0),
+                        'embargo_fiscal' => (float) ($salario->embargo_fiscal ?? 0),
+                        'pension_voluntaria' => (float) ($salario->pension_voluntaria ?? 0),
+                        'dias_trabajados' => (int) ($salario->dias_a_trabajar ?? 30),
+                        'limpiar_novedades' => true,
+                        'recalculate_transport_allowance' => true,
+                    ];
+
+                    app(\App\Services\NominaCalculatorService::class)->guardarNominaEmpleado(
+                        $contrato->id_contrato,
+                        $periodo->id_periodo,
+                        $input,
+                        true // Force save even if already liquidado
+                    );
+                }
+            } catch (\Exception $e) {
+                Log::error("Error recalculating salary after termination benefits for {$contrato->doc}: " . $e->getMessage());
+            }
+        }
+
         return $scheduledAny;
     }
 

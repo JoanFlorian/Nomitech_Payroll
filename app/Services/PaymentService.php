@@ -65,8 +65,8 @@ class PaymentService
                         'fecha_fin' => $endDate,
                     ]);
 
-                    // 2b. Auto-generar periodo de liquidación inicial/siguiente
-                    $this->periodoAutomationService->handleLicenseActivation($pago->empresa);
+                    // 2b. Auto-generar periodo de liquidación inicial/siguiente (DESHABILITADO: Ahora lo elige el usuario con un modal)
+                    // $this->periodoAutomationService->handleLicenseActivation($pago->empresa);
 
                     Log::info("PaymentService: License activated proactively/webhook.", [
                         'pago_id' => $pago->id,

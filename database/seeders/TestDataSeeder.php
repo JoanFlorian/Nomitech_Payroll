@@ -116,6 +116,9 @@ class TestDataSeeder extends Seeder
         if ($periodIds->isNotEmpty()) {
             // Delete in order to respect potential foreign keys
             DB::table('benefit_ledger')->whereIn('period_id', $periodIds)->orWhereIn('payroll_period_id', $periodIds)->delete();
+            // Also clean any benefit_ledger entries by tenant (covers entries without period_id)
+            DB::table('benefit_ledger')->where('tenant_id', $empresa->id_empresa)->delete();
+            DB::table('benefit_balance')->where('tenant_id', $empresa->id_empresa)->delete();
             DB::table('provision')->whereIn('id_periodo', $periodIds)->delete();
             
             $salarioIds = DB::table('salario')->whereIn('id_periodo', $periodIds)->pluck('id_salario');
@@ -131,7 +134,7 @@ class TestDataSeeder extends Seeder
         $this->command->info('5.2 Cleaning up existing employees and contracts...');
         
         $employeeDocs = [];
-        for ($i = 1; $i <= 30; $i++) {
+        for ($i = 1; $i <= 29; $i++) {
             $employeeDocs[] = (string)(3000000000 + $i);
         }
 
@@ -231,7 +234,7 @@ class TestDataSeeder extends Seeder
         $lastNames = ['Rodriguez', 'Martinez', 'Garcia', 'Gomez', 'Lopez', 'Gonzalez', 'Hernandez', 'Diaz', 'Perez', 'Sanchez', 'Romero', 'Torres', 'Alvarez', 'Ruiz', 'Ramirez', 'Flores', 'Acosta', 'Morales', 'Vargas', 'Castillo', 'Jimenez', 'Mendoza', 'Reyes', 'Salazar', 'Castro', 'Ortiz', 'Silva', 'Rojas', 'Duarte', 'Castro'];
         $salaries = [2000000, 3000000, 4000000];
 
-        $numEmpl = 30;
+        $numEmpl = 29;
         $usersBatch = [];
         $contractsBatch = [];
         $userEmpBatch = [];
@@ -275,7 +278,9 @@ class TestDataSeeder extends Seeder
             $idTipoContrato = ($i % 6) + 1; 
             $fechaFin = null;
             if ($idTipoContrato > 1) {
-                $fechaFin = ($i % 2 === 0) ? '2026-04-15' : '2026-04-30';
+                // Even index → ends April 15 (termination in April period)
+                // Odd index  → ends June 30 (no termination in April period)
+                $fechaFin = ($i % 2 === 0) ? '2026-04-15' : '2026-06-30';
             }
 
             $contractsBatch[] = [
@@ -312,7 +317,10 @@ class TestDataSeeder extends Seeder
         // 9. Create Liquidation Period
         $this->command->info('9. Creating Liquidation Period...');
         $automationService = app(PeriodoAutomationService::class);
-        $automationService->handleLicenseActivation($empresa);
+        
+        // Forzamos que sea en Marzo para las pruebas de auto-cierre
+        $fechaPruebas = \Carbon\Carbon::create(2026, 3, 1);
+        $automationService->handleLicenseActivation($empresa, $fechaPruebas);
 
         $this->command->info('Test data seeded successfully!');
     }

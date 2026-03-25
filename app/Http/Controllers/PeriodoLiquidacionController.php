@@ -366,9 +366,12 @@ class PeriodoLiquidacionController extends Controller
             }
 
             return redirect()->route('periodos.index')->with('success', $mensaje);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error al cerrar periodo: " . $e->getMessage());
-            return back()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Error Fatal al cerrar periodo: " . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Error del sistema: ' . $e->getMessage());
         }
     }
 

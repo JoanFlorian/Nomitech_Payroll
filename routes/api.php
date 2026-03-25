@@ -7,7 +7,7 @@ Route::middleware(['web', 'auth'])->get('/empleados', EmpleadoAutocompleteContro
     ->name('api.empleados.autocomplete');
 
 // Webhook para Cron Externo (Render Free Tier)
-Route::get('/cron/auto-close', function (\Illuminate\Http\Request $request) {
+Route::get('/cron/run-schedule', function (\Illuminate\Http\Request $request) {
     // Token de seguridad simple
     $token = 'nomitech-cron-safe-789'; 
     
@@ -15,12 +15,13 @@ Route::get('/cron/auto-close', function (\Illuminate\Http\Request $request) {
         return response()->json(['error' => 'Unauthorized'], 401);
     }
     
-    \Illuminate\Support\Facades\Artisan::call('periods:auto-close');
+    // Ejecuta TODAS las tareas programadas en bootstrap/app.php
+    \Illuminate\Support\Facades\Artisan::call('schedule:run');
     $output = \Illuminate\Support\Facades\Artisan::output();
     
     return response()->json([
         'success' => true,
-        'message' => 'Auto-close command executed',
+        'message' => 'Schedule executed successfully',
         'output' => $output
     ]);
 });

@@ -25,7 +25,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission'            => \App\Http\Middleware\AuthorizePermission::class,
             'role'                  => \App\Http\Middleware\CheckRole::class,
             'must_change_password'  => \App\Http\Middleware\MustChangePassword::class,
+            'check_first_period'    => \App\Http\Middleware\CheckFirstPeriod::class,
         ]);
+    })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->command('periods:auto-close')->everyThreeMinutes();
+        $schedule->command('provisions:auto-liquidate')->everyThreeMinutes();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Permitimos que todos los campos se flasheen a la sesión, incluyendo contraseñas

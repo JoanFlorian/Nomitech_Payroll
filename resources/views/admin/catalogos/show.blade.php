@@ -50,6 +50,7 @@
         </div>
         <div class="d-flex align-items-center gap-2">
             <select id="perPage" class="form-select form-select-sm" style="width: auto;">
+                <option value="8" selected>8</option>
                 <option value="10">10</option>
                 <option value="20">20</option>
                 <option value="30">30</option>

@@ -67,7 +67,7 @@
     @endif
 
     <div class="d-flex justify-content-end mb-3">
-        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#historialPilaModal">
+        <button type="button" class="btn btn-outline-primary" onclick="mostrarHistorialPila()">
             <i class="bi bi-clock-history me-1"></i>
             Ver historial
         </button>
@@ -364,21 +364,8 @@
         const confirmAccept = document.getElementById('confirmAccept');
         const btnConfirmGenerate = document.getElementById('btnConfirmGenerate');
 
-        if (historialModalEl && historialModalEl.parentElement !== document.body) {
-            document.body.appendChild(historialModalEl);
-        }
-
-        if (historialModalEl) {
-            historialModalEl.addEventListener('shown.bs.modal', function() {
-                historialModalEl.style.zIndex = '2005';
-
-                const backdrops = document.querySelectorAll('.modal-backdrop');
-                const lastBackdrop = backdrops.length ? backdrops[backdrops.length - 1] : null;
-                if (lastBackdrop) {
-                    lastBackdrop.style.zIndex = '2000';
-                }
-            });
-        }
+        // Modal PILA history is now handled with native JavaScript
+        // No need for Bootstrap Modal event listeners
 
         if (!modalEl || !confirmAccept || !btnConfirmGenerate) {
             return;

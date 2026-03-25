@@ -17,6 +17,23 @@
                                             masivoBenefit: '',
                                             masivoPaymentMode: 'direct',
                                             resultadoModal: {{ session('mass_liquidation_results') ? 'true' : 'false' }},
+                                            automationModal: false,
+                                            demoUnlock: false,
+                                            config: {
+                                                automations: {
+                                                    @foreach(['prima_1', 'prima_2', 'cesantias', 'intereses_cesantias'] as $t)
+                                                        @php
+                                                            $auto = $automations->get($t);
+                                                            $defMonth = match($t){'prima_1'=>6, 'prima_2'=>12, 'cesantias'=>2, 'intereses_cesantias'=>1, default=>1};
+                                                            $defDay = match($t){'prima_1'=>30, 'prima_2'=>20, 'cesantias'=>14, 'intereses_cesantias'=>31, default=>1};
+                                                        @endphp
+                                                        {{ $t }}: { 
+                                                            month: {{ $auto->execution_month ?? $defMonth }},
+                                                            day: {{ $auto->execution_day ?? $defDay }}
+                                                        },
+                                                    @endforeach
+                                                }
+                                            }
                                         }">
         {{-- Flash Messages --}}
         @if(session('success'))
@@ -71,10 +88,15 @@
             </div>
             <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto mt-4 md:mt-0">
                 @can('manage_provisions')
-                <button type="button" @click.prevent="consignacionModal = true"
+                {{-- <button type="button" @click.prevent="consignacionModal = true"
                     class="bg-emerald-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-md hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                     <i class="bi bi-file-earmark-arrow-down"></i>
                     Consignación Anual
+                </button> --}}
+                <button type="button" @click.prevent="automationModal = true"
+                    class="bg-gray-800 text-white font-bold py-2.5 px-6 rounded-lg shadow-md hover:bg-black transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
+                    <i class="bi bi-gear-fill"></i>
+                    Automatización
                 </button>
                 <button type="button" @click.prevent="masivoModal = true"
                     class="bg-[#1565C0] text-white font-bold py-2.5 px-6 rounded-lg shadow-md hover:bg-[#0D47A1] transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
@@ -475,7 +497,7 @@
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <span
-                                        x-text="selectedBenefit === 'vacaciones' ? 'Días a Compensar' : (selectedBenefit === 'cesantias' && cesantiasMode === 'autorizacion_fondo' ? 'Monto Autorizado' : 'Monto a Pagar')"></span>
+                                        x-text="selectedBenefit === 'cesantias' && cesantiasMode === 'autorizacion_fondo' ? 'Monto Autorizado' : 'Monto a Pagar'"></span>
                                 </label>
                                 <input type="number" name="amount" x-model="selectedAmount" step="0.01" min="0.01" required
                                     class="w-full border-gray-200 rounded-lg shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-11"
@@ -576,8 +598,8 @@
                                     <i class="bi mr-1" :class="{
                                                                     'bi-building': selectedBenefit === 'cesantias' && cesantiasMode === 'retiro_empresa',
                                                                     'bi-file-earmark-arrow-down': selectedBenefit === 'cesantias' && cesantiasMode === 'autorizacion_fondo',
-                                                                    'bi-calendar-check': paymentMode === 'payroll' && selectedBenefit !== 'cesantias',
-                                                                    'bi-check2-circle': paymentMode === 'direct' && selectedBenefit !== 'cesantias'
+                                                                    'bi-calendar-check': paymentMode === 'payroll',
+                                                                    'bi-check2-circle': paymentMode === 'direct'
                                                                 }"></i>
                                     <span x-text="
                                                                 selectedBenefit === 'cesantias' && cesantiasMode === 'retiro_empresa' ? 'Registrar Retiro' :
@@ -841,6 +863,17 @@
                                         Liquidación integrada exitosamente.
                                     </p>
                                 </div>
+
+                                {{-- Automated Consignment Download for Cesantías --}}
+                                @if(session('recent_consignacion_path'))
+                                    <div class="mt-2 text-center">
+                                        <a href="{{ route('provisiones.cesantias.descargar-consignacion-reciente') }}" 
+                                           class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase rounded-xl transition-all shadow-md">
+                                            <i class="bi bi-download"></i> Descargar Consignación Anual
+                                        </a>
+                                        <p class="text-[8px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Archivos para fondos generados</p>
+                                    </div>
+                                @endif
                             @endif
 
                             {{-- Skipped Employees List --}}
@@ -895,5 +928,189 @@
                 </div>
             </div>
         @endif
+
+        {{-- ═══════════════════════════════════════════════════════════════════ --}}
+            {{-- MODAL: Configurar Automatización --}}
+            {{-- ═══════════════════════════════════════════════════════════════════ --}}
+            <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" x-show="automationModal" x-cloak
+                x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                <div @click.away="automationModal = false"
+                    class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
+                    <div class="absolute inset-0 pointer-events-none opacity-5">
+                        <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gray-800"></div>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="sticky top-0 bg-white p-6 border-b border-gray-100 flex justify-between items-center z-20">
+                            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <i class="bi bi-gear-fill text-gray-700"></i>
+                                <span>Automatización de Pagos Masivos</span>
+                                <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-black uppercase rounded-md border border-gray-200 tracking-tighter">
+                                    AñO {{ date('Y') }}
+                                </span>
+                            </h2>
+                            <button type="button" @click="automationModal = false"
+                                class="text-gray-400 hover:text-gray-600 transition-colors">
+                                <i class="bi bi-x-lg text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <form method="POST" action="{{ route('provisiones.update-automation') }}" class="p-6 space-y-6">
+                            @csrf
+                            <input type="hidden" name="demo_unlock" :value="demoUnlock ? 1 : 0">
+                            <div class="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-start gap-3 text-blue-800">
+                                        <i class="bi bi-info-circle-fill text-lg mt-0.5"></i>
+                                        <div class="text-sm">
+                                            Mira las fechas legales sugeridas al programar cada prestación. El sistema disparará el pago masivo automáticamente a las 8:00 PM del día indicado.
+                                        </div>
+                                    </div>
+                                    <button type="button" @click="demoUnlock = !demoUnlock"
+                                        :class="demoUnlock ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-600'"
+                                        class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap">
+                                        <i class="bi" :class="demoUnlock ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+                                        <span x-text="demoUnlock ? 'Fechas Desbloqueadas' : 'Bloqueo Legal'"></span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            @php
+                                $benefitTypes = [
+                                    'prima_1' => ['label' => 'Prima (Primer Semestre - Jun)', 'icon' => 'bi-gift', 'benefit' => 'prima', 'default_day' => 30, 'default_month' => 6],
+                                    'prima_2' => ['label' => 'Prima (Segundo Semestre - Dic)', 'icon' => 'bi-gift', 'benefit' => 'prima', 'default_day' => 20, 'default_month' => 12],
+                                    'cesantias' => ['label' => 'Cesantías (Consignación - Feb)', 'icon' => 'bi-bank', 'benefit' => 'cesantias', 'default_day' => 14, 'default_month' => 2],
+                                    'intereses_cesantias' => ['label' => 'Intereses de Cesantías (Ene)', 'icon' => 'bi-percent', 'benefit' => 'intereses_cesantias', 'default_day' => 31, 'default_month' => 1],
+                                ];
+                            @endphp
+
+                            <div class="space-y-4">
+                                @foreach($benefitTypes as $type => $info)
+                                    @php
+                                        $auto = $automations->get($type);
+                                        $isActive = $auto ? $auto->is_active : false;
+                                        $mode = $auto ? $auto->payment_mode : 'payroll';
+                                        $day = $auto ? $auto->execution_day : $info['default_day'];
+                                        $month = $auto ? $auto->execution_month : $info['default_month'];
+                                    @endphp
+                                    <div class="p-4 border rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600">
+                                                    <i class="bi {{ $info['icon'] }} text-lg"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 class="font-bold text-gray-800">{{ $info['label'] }}</h3>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 items-end mt-4 pt-4 border-t border-gray-100">
+                                                <input type="hidden" name="automations[{{ $type }}][benefit_type]" value="{{ $type }}">
+                                                
+                                                {{-- Activation Toggle --}}
+                                                <div class="flex flex-col gap-1">
+                                                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Activar</label>
+                                                    <label class="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" name="automations[{{ $type }}][is_active]" value="1" {{ $isActive ? 'checked' : '' }} class="sr-only peer">
+                                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                                                        <span class="ms-2 text-[11px] font-bold text-gray-400 uppercase tracking-tight">Sí/No</span>
+                                                    </label>
+                                                </div>
+
+                                                {{-- Mode --}}
+                                                <div class="flex flex-col gap-1">
+                                                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Modo</label>
+                                                    <select name="automations[{{ $type }}][payment_mode]" class="text-sm border-gray-200 rounded-lg h-9 py-1 focus:ring-blue-500 w-full">
+                                                        <option value="direct" {{ $mode === 'direct' ? 'selected' : '' }}>Pago Directo</option>
+                                                        <option value="payroll" {{ $mode === 'payroll' ? 'selected' : '' }}>En Nómina</option>
+                                                    </select>
+                                                </div>
+
+                                                {{-- Day --}}
+                                                <div class="flex flex-col gap-1">
+                                                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Día</label>
+                                                    <input type="number" 
+                                                        name="automations[{{ $type }}][execution_day]" 
+                                                        x-model="config.automations.{{ $type }}.day"
+                                                        min="1" 
+                                                        :max="(!demoUnlock && '{{ $type }}' === 'cesantias' && config.automations.{{ $type }}.month == 2) ? 14 : 31"
+                                                        @input="if(!demoUnlock && '{{ $type }}' === 'cesantias' && config.automations.{{ $type }}.month == 2 && config.automations.{{ $type }}.day > 14) config.automations.{{ $type }}.day = 14"
+                                                        class="text-sm border-gray-200 rounded-lg h-9 py-1 focus:ring-blue-500 w-full">
+                                                </div>
+
+                                                {{-- Month --}}
+                                                <div class="flex flex-col gap-1">
+                                                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Mes</label>
+                                                    @php
+                                                        $months = [
+                                                            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => 'Mayo', 6 => 'Junio',
+                                                            7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+                                                        ];
+                                                        $allowedMonths = isset($info['benefit']) ? match($type) {
+                                                            'prima_1' => [6],
+                                                            'prima_2' => [12],
+                                                            'cesantias' => [1, 2],
+                                                            'intereses_cesantias' => [1],
+                                                            default => array_keys($months),
+                                                        } : array_keys($months);
+                                                    @endphp
+                                                    <select name="automations[{{ $type }}][execution_month]" 
+                                                        x-model="config.automations.{{ $type }}.month"
+                                                        @change="if(!demoUnlock && '{{ $type }}' === 'cesantias' && config.automations.{{ $type }}.month == 2 && config.automations.{{ $type }}.day > 14) config.automations.{{ $type }}.day = 14"
+                                                        class="text-sm border-gray-200 rounded-lg h-9 py-1 focus:ring-blue-500 w-full">
+                                                        @foreach($months as $mIdx => $mName)
+                                                            @php $isLegal = in_array($mIdx, $allowedMonths); @endphp
+                                                            <option value="{{ $mIdx }}" 
+                                                                    x-show="demoUnlock || @json($isLegal)"
+                                                                    {{ $month == $mIdx ? 'selected' : '' }}>
+                                                                {{ $mName }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                {{-- Demo Reset --}}
+                                                <div class="flex flex-col gap-1">
+                                                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-amber-600">Reset Demo</label>
+                                                    <button type="button" @click="$refs.resetType.value = '{{ $type }}'; $refs.resetForm.submit()" title="Reiniciar para repetir prueba automática"
+                                                        class="h-9 w-full bg-amber-50 text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center">
+                                                        <i class="bi bi-arrow-clockwise mr-1"></i> <span class="text-[10px] uppercase font-bold md:hidden lg:inline">Reiniciar</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div class="flex justify-end gap-3 pt-6 border-t border-gray-100">
+                                <button type="button" @click="automationModal = false"
+                                    class="px-5 py-2.5 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all">
+                                    Cancelar
+                                </button>
+                                <button type="submit"
+                                    class="px-6 py-2.5 text-sm font-bold text-white bg-gray-800 rounded-lg shadow-md hover:bg-black transition-all flex items-center gap-2">
+                                    <i class="bi bi-save"></i> Guardar Configuración
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Hidden Reset Form (Shared) --}}
+            <form x-ref="resetForm" method="POST" action="{{ route('provisiones.reset-automation') }}" style="display:none;">
+                @csrf
+                <input type="hidden" name="benefit_type" x-ref="resetType">
+            </form>
+        </div>
     </div>
+        
+        {{-- Hidden logic to handle the second Prima if needed? 
+             Actually, mapping suggests "prima" is one entry. 
+             Colombian Prima is twice a year. 
+             Maybe I should add "Prima (Junio)" and "Prima (Diciembre)" as separate types or just allow multiple entries.
+             The user specifically mentioned "primera prima... junio 31" and "segunda... 20 de diciembre".
+        --}}
 @endsection

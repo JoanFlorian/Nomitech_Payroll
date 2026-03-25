@@ -221,6 +221,80 @@ window.addEventListener('resize', function() {
 
 @stack('scripts')
 
+@if(session('needs_first_period'))
+<div id="modalFirstPeriod" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-white/20">
+        <div class="p-8 text-center">
+            <div class="mb-6 inline-flex items-center justify-center w-20 h-20 bg-blue-50 text-blue-600 rounded-2xl">
+                <i class="bi bi-calendar-check text-4xl"></i>
+            </div>
+            
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-4">¡Bienvenido a Nomitech!</h2>
+            <p class="text-gray-600 mb-8 leading-relaxed">
+                Para comenzar a gestionar su nómina, por favor seleccione el periodo de liquidación con el que desea iniciar.
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <button onclick="selectFirstPeriod('current')" 
+                    class="group relative p-6 bg-white border-2 border-gray-100 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 shadow-sm hover:shadow-md">
+                    <span class="block text-xs font-bold uppercase text-gray-400 group-hover:text-blue-600 mb-1">Opción 1</span>
+                    <span class="block text-lg font-bold text-gray-800">Mes Actual</span>
+                    <span class="block text-sm text-gray-500 mt-1">{{ now()->translatedFormat('F Y') }}</span>
+                    <i class="bi bi-check-circle-fill absolute top-4 right-4 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                </button>
+
+                <button onclick="selectFirstPeriod('next')" 
+                    class="group relative p-6 bg-white border-2 border-gray-100 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 shadow-sm hover:shadow-md">
+                    <span class="block text-xs font-bold uppercase text-gray-400 group-hover:text-blue-600 mb-1">Opción 2</span>
+                    <span class="block text-lg font-bold text-gray-800">Mes Siguiente</span>
+                    <span class="block text-sm text-gray-500 mt-1">{{ now()->addMonth()->translatedFormat('F Y') }}</span>
+                    <i class="bi bi-check-circle-fill absolute top-4 right-4 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-400">
+                <i class="bi bi-info-circle mr-1"></i> Esta elección solo se realiza una vez para configurar su ciclo inicial.
+            </p>
+        </div>
+        
+        <div id="firstPeriodLoader" class="hidden absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-50">
+            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="mt-4 text-blue-600 font-bold">Configurando periodos...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectFirstPeriod(choice) {
+    const loader = document.getElementById('firstPeriodLoader');
+    loader.classList.remove('hidden');
+
+    fetch("{{ route('periodos.store-first') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ choice: choice })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect;
+        } else {
+            loader.classList.add('hidden');
+            Swal.fire('Error', data.message, 'error');
+        }
+    })
+    .catch(err => {
+        loader.classList.add('hidden');
+        Swal.fire('Error', 'No se pudo configurar el periodo.', 'error');
+    });
+}
+</script>
+@endif
+
 <x-loader />
 
 </body>

@@ -126,6 +126,30 @@ class NominaCalculatorService
         $baseOtrosDevengos = max(0, (float) ($input['otros_devengos'] ?? 0));
         $auxilioTransporte = max(0, (float) ($input['auxilio_transporte'] ?? 0));
 
+        // Centralized logic for Auxilio de Transporte recalculation/validation
+        if (!empty($input['recalculate_transport_allowance'])) {
+            $smmlv = (float) ($this->params->smmlv ?? 0);
+            $topeAuxilio = (float) ($this->params->auxilio_transporte_tope ?? 0);
+            $valorMensualAuxilio = (float) ($this->params->auxilio_transporte ?? 0);
+
+            // Eligibility check ALWAYS uses the full monthly base (not the pro-rated one)
+            $esElegible = ($smmlv > 0 && $topeAuxilio > 0)
+                ? ($salarioBase <= ($smmlv * $topeAuxilio))
+                : true;
+
+            // Manual override: if the user explicitly said NOT to apply it, set to false
+            if (isset($input['aplica_auxilio_transporte']) && (int)$input['aplica_auxilio_transporte'] === 0) {
+                $esElegible = false;
+            }
+
+            if ($esElegible) {
+                // Pro-rate based on worked days: (Monthly Amount / 30) * Days
+                $auxilioTransporte = ($valorMensualAuxilio / 30) * $diasTrabajados;
+            } else {
+                $auxilioTransporte = 0;
+            }
+        }
+
         // Valores calculados de novedades
         $novHorasExtra = (float) ($resumenNovedades['horas_extra'] ?? 0);
         $novRecargos = (float) ($resumenNovedades['recargos'] ?? 0);
@@ -163,15 +187,44 @@ class NominaCalculatorService
         $totalDevengado = $devengosSinRecargos + $recargosTotal + $otrosDevengosTotal + $auxilioTransporte;
 
         // ── INTEGRATED BENEFITS (BenefitLedger) ──
-        $integratedBenefits = DB::table('benefit_ledger')
+        $integratedBenefitsList = DB::table('benefit_ledger')
             ->where('contract_id', $idContrato)
             ->where('payroll_period_id', $idPeriodo)
             ->where('movement_type', 'scheduled_payment')
             ->where('status', 'pending_payroll')
-            ->sum('amount');
+            ->get(['benefit_type', 'amount']);
 
-        // Note: amount is stored as negative in ledger for payments/payouts, so we take absolute
-        $integratedTotal = abs((float) $integratedBenefits);
+        $integratedTotal = 0;
+        foreach ($integratedBenefitsList as $ib) {
+            $absAmount = abs((float) $ib->amount);
+            $type = trim(strtolower($ib->benefit_type));
+            
+            // Skip Cesantías as requested by user - they should not affect payroll total
+            if ($type === 'cesantias') {
+                continue;
+            }
+
+            // Vacaciones are stored in DÍAS in the ledger. Convert to monetary value dynamically.
+            // Formula: (Devenged Salary / 30) * Accumulated Days 
+            // We use $salarioDevengado (pro-rated) to match user expectation for partial months (e.g. 456k vs 540k)
+            if ($type === 'vacaciones') {
+                $fechaFinContrato = $contrato->fecha_fin ? \Carbon\Carbon::parse($contrato->fecha_fin) : null;
+                $fechaInicioPeriodo = \Carbon\Carbon::parse($periodo->fecha_inicio);
+                $fechaFinPeriodo = \Carbon\Carbon::parse($periodo->fecha_fin);
+
+                // USER RULE: Vacations ONLY integrated on termination in this period
+                $isTermination = $fechaFinContrato && 
+                                 $fechaFinContrato->between($fechaInicioPeriodo, $fechaFinPeriodo);
+
+                if ($isTermination) {
+                    $integratedTotal += round(($salarioDevengado / 30) * $absAmount, 2);
+                }
+            } else {
+                // All other benefits (Prima, Intereses) are stored directly in monetary value
+                $integratedTotal += $absAmount;
+            }
+        }
+
         $totalDevengado += $integratedTotal;
 
         $eps = 0;
@@ -237,6 +290,7 @@ class NominaCalculatorService
             'total_devengado' => $totalDevengado,
             'total_deducciones' => $totalDeducciones,
             'neto_pagar' => $netoPagar,
+            'prestaciones_sociales' => $integratedTotal,
             'total_novedades_devengado' => $novHorasExtra + $novRecargos + $novBonificaciones + $novOtrosDevengos,
             'total_novedades_deduccion' => $novDeducciones,
             'resumen_novedades' => $resumenNovedades,
@@ -291,6 +345,7 @@ class NominaCalculatorService
             'total_devengado' => $calculo['total_devengado'],
             'total_deducciones' => $calculo['total_deducciones'],
             'neto_pagar' => $calculo['neto_pagar'],
+            'prestaciones_sociales' => $calculo['prestaciones_sociales'],
             'estado' => Salario::ESTADO_PENDIENTE,
         ];
 

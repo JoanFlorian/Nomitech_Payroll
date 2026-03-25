@@ -28,6 +28,13 @@ return [
         'icon' => 'bi-shield-plus',
         'manual_id' => true,
     ],
+    'caja_compensacion' => [
+        'table' => 'cajas_compensacion',
+        'primary_key' => 'id_caja',
+        'label' => 'Caja de Compensacion',
+        'icon' => 'bi-building-check',
+        'manual_id' => true,
+    ],
     'forma_pago' => [
         'table' => 'forma_pago',
         'primary_key' => 'id_forma_pago',

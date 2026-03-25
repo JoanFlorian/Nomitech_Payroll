@@ -12,7 +12,7 @@ class PeriodoAutomationService
     /**
      * Maneja la activación de la licencia y crea el periodo inicial o siguiente si aplica.
      */
-    public function handleLicenseActivation(Empresa $empresa)
+    public function handleLicenseActivation(Empresa $empresa, ?Carbon $referenceDate = null)
     {
         Log::info("PeriodoAutomationService: Handling license activation for Empresa ID: {$empresa->id_empresa}");
 
@@ -20,7 +20,7 @@ class PeriodoAutomationService
             ->orderByDesc('fecha_inicio')
             ->first();
 
-        $referenceDate = now();
+        $referenceDate = $referenceDate ?? now();
 
         if (!$ultimoPeriodo) {
             // Caso 1: Compra inicial (Sin periodos previos)

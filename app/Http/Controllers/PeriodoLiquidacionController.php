@@ -9,6 +9,7 @@ use App\Models\NominaExportacion;
 use App\Services\Banking\BankExportService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Services\Payroll\MaternityLicenseRolloverService;
 
 class PeriodoLiquidacionController extends Controller
 {
@@ -268,7 +269,8 @@ class PeriodoLiquidacionController extends Controller
         \App\Services\Payroll\NextPeriodoGeneratorService $generator, 
         \App\Services\Benefits\BenefitAccrualService $accrualService, 
         \App\Services\Benefits\BenefitPaymentService $paymentService,
-        \App\Services\Payroll\TransitoriaSalarioDetectionService $vstDetectionService
+        \App\Services\Payroll\TransitoriaSalarioDetectionService $vstDetectionService,
+        MaternityLicenseRolloverService $maternityRollover
     )
     {
         \Illuminate\Support\Facades\Log::info("Iniciando proceso de cierre para Periodo ID: {$id}");
@@ -316,7 +318,7 @@ class PeriodoLiquidacionController extends Controller
 
             \Illuminate\Support\Facades\Log::info("Validaciones superadas o puenteadas. Iniciando transacción de cierre...");
 
-            DB::transaction(function () use ($periodo, $request, $generator, $accrualService, $paymentService, $vstDetectionService) {
+            DB::transaction(function () use ($periodo, $request, $generator, $accrualService, $paymentService, $vstDetectionService, $maternityRollover) {
                 // Actualizar todos los salarios del periodo a estado 'pagado'
                 $periodo->salarios()->update([
                     'estado' => \App\Models\Salario::ESTADO_PAGADO,
@@ -325,10 +327,16 @@ class PeriodoLiquidacionController extends Controller
 
                 $periodo->close();
 
+                // 🔹 NUEVO: Procesar rollover de licencias de maternidad/paternidad
+                // Esto crea novedades continuas en el próximo período si la licencia no ha terminado
+                $maternityRollover->processMaternityRollover($periodo);
+
                 // Cerrar novedades activas del periodo que TERMINAN en este periodo
+                // EXCEPTO: Las novedades LMAT/LPAT que ya fueron procesadas por el rollover
                 // Las novedades que se extienden al futuro (fecha_fin > periodo->fecha_fin) deben seguir activas
                 \App\Models\Novedad::where('id_periodo', $periodo->id_periodo)
                     ->where('estado', \App\Models\Novedad::ESTADO_ACTIVA)
+                    ->whereNotIn('tipo_novedad_codigo', ['LMAT', 'LPAT'])
                     ->where(function($q) use ($periodo) {
                         $q->whereNull('fecha_fin')
                           ->orWhere('fecha_fin', '<=', $periodo->fecha_fin->toDateString());

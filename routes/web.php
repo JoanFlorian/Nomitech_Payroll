@@ -82,8 +82,8 @@ Route::middleware(['auth', 'prevent_back_history'])->group(function () {
     })->name('empresa.select');
 });
 
-// Protected App Routes (Auth + Active License + Contractual Access)
-Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'prevent_back_history', 'must_change_password'])->group(function () {
+// Protected App Routes (Auth + Active License + Contractual Access + First Period Check)
+Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'prevent_back_history', 'must_change_password', 'check_first_period'])->group(function () {
     // Empleados
     Route::get('/empleados', [App\Http\Controllers\EmployeesController::class, 'index'])->name('empleados.index');
     Route::get('/empleados/{doc}', [App\Http\Controllers\EmployeesController::class, 'show'])->name('employees.show')->middleware('permission:view_employees');
@@ -141,10 +141,13 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::post('/provisiones/liquidar-individual', [\App\Http\Controllers\ProvisionesController::class, 'liquidarIndividual'])->name('provisiones.liquidar.individual')->middleware('permission:manage_provisions');
     Route::post('/provisiones/liquidar-masivo', [\App\Http\Controllers\ProvisionesController::class, 'liquidarMasivo'])->name('provisiones.liquidar.masivo')->middleware('permission:manage_provisions');
     Route::post('/provisiones/pagar-prestacion', [\App\Http\Controllers\ProvisionesController::class, 'pagarPrestacion'])->name('provisiones.pagar-prestacion')->middleware('permission:manage_provisions');
+    Route::post('/provisiones/update-automation', [\App\Http\Controllers\ProvisionesController::class, 'updateAutomation'])->name('provisiones.update-automation')->middleware('permission:manage_provisions');
+    Route::post('/provisiones/reset-automation', [\App\Http\Controllers\ProvisionesController::class, 'resetAutomation'])->name('provisiones.reset-automation')->middleware('permission:manage_provisions');
     Route::post('/provisiones/cesantias/retiro-parcial', [\App\Http\Controllers\ProvisionesController::class, 'retiroParcialCesantias'])->name('provisiones.cesantias.retiro-parcial')->middleware('permission:manage_provisions');
     Route::post('/provisiones/cesantias/retiro-empresa', [\App\Http\Controllers\ProvisionesController::class, 'retiroEmpresa'])->name('provisiones.cesantias.retiro-empresa')->middleware('permission:manage_provisions');
     Route::post('/provisiones/cesantias/autorizacion-fondo', [\App\Http\Controllers\ProvisionesController::class, 'autorizacionFondo'])->name('provisiones.cesantias.autorizacion-fondo')->middleware('permission:manage_provisions');
     Route::post('/provisiones/cesantias/consignacion-anual', [\App\Http\Controllers\ProvisionesController::class, 'generarConsignacionAnual'])->name('provisiones.cesantias.consignacion-anual')->middleware('permission:manage_provisions');
+    Route::get('/provisiones/cesantias/descargar-consignacion-reciente', [\App\Http\Controllers\ProvisionesController::class, 'descargarConsignacionReciente'])->name('provisiones.cesantias.descargar-consignacion-reciente')->middleware('permission:manage_provisions');
     Route::get('/provisiones/cesantias/certificado/{withdrawal_id}', [\App\Http\Controllers\ProvisionesController::class, 'descargarCertificado'])->name('provisiones.cesantias.certificado')->middleware('permission:view_provisions');
     Route::get('/provisiones/comprobante/{movement_id}', [\App\Http\Controllers\ProvisionesController::class, 'descargarComprobantePrestacion'])->name('provisiones.comprobante')->middleware('permission:view_provisions');
 
@@ -161,6 +164,8 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
         ->name('periodos.index')->middleware('permission:view_periods');
     Route::post('/periodos', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'store'])
         ->name('periodos.store')->middleware('permission:create_period');
+    Route::post('/periodos/first', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'storeFirstPeriod'])
+        ->name('periodos.store-first')->middleware('permission:create_period');
     Route::get('/periodos/{id}/select', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'select'])
         ->name('periodos.select')->middleware('permission:view_periods');
     Route::get('/periodos/{id}/suggest', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'suggestNext'])
@@ -173,6 +178,8 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
         ->name('periodos.exportar')->middleware('permission:export_period');
     Route::get('/periodos/exportacion/{id}/descargar', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'downloadExport'])
         ->name('periodos.exportar.descargar')->middleware('permission:view_periods');
+    Route::post('/periodos/{id}/auto-close-date', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'updateAutoCloseDate'])
+        ->name('periodos.update-auto-close')->middleware('permission:close_period');
 
     // Plantilla PILA
     Route::get('/pila', [PilaController::class, 'index'])->name('pila.index')->middleware('permission:view_pila');

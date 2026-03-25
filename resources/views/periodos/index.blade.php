@@ -156,13 +156,27 @@
 
                                 {{-- DEBUG: canClose={{ auth()->user()->can('close_period') ? 'true' : 'false' }} status={{ $periodo->estado }} canBeClosed={{ $periodo->canBeClosed() ? 'true' : 'false' }} --}}
                                 @if($periodo->canBeClosed())
-                                    @can('close_period')
-                                    <button type="button"
-                                        onclick="abrirModalCierre({{ $periodo->id_periodo }}, '{{ $periodo->fecha_inicio->format('d/m/Y') }}', '{{ $periodo->fecha_fin->format('d/m/Y') }}')"
-                                        class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
-                                        Cerrar
-                                    </button>
-                                    @endcan
+                                    <div class="flex items-center gap-2">
+                                        @can('close_period')
+                                        <button type="button"
+                                            onclick="abrirModalCierre({{ $periodo->id_periodo }}, '{{ $periodo->fecha_inicio->format('d/m/Y') }}', '{{ $periodo->fecha_fin->format('d/m/Y') }}')"
+                                            class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
+                                            Cerrar
+                                        </button>
+                                        @endcan
+
+                                        {{-- Cierre Automático (Solo después del día 20) --}}
+                                        @if(now()->day >= 20)
+                                            <div class="flex flex-col items-start">
+                                                <label class="text-[9px] uppercase font-bold text-gray-400 leading-none mb-1">Auto-Cierre</label>
+                                                <input type="date" 
+                                                    value="{{ $periodo->fecha_cierre_automatico ? $periodo->fecha_cierre_automatico->format('Y-m-d') : '' }}"
+                                                    onchange="updateAutoClose({{ $periodo->id_periodo }}, this.value)"
+                                                    class="text-[10px] border-gray-200 rounded-lg p-1 w-28 focus:ring-blue-500 focus:border-blue-500"
+                                                    title="Programar cierre automático">
+                                            </div>
+                                        @endif
+                                    </div>
                                 @endif
                             @endif
 
@@ -421,7 +435,47 @@
         updateEndDate();
     });
 
-    });
+    function updateAutoClose(id, fecha) {
+        if (!fecha) {
+            if (!confirm('¿Desea eliminar la programación de cierre automático?')) return;
+        }
+
+        const url = "{{ route('periodos.update-auto-close', ['id' => ':id']) }}".replace(':id', id);
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                fecha_cierre_automatico: fecha
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Programado',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(data.message);
+                }
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Error al actualizar la fecha.');
+        });
+    }
 </script>
 
 @endsection

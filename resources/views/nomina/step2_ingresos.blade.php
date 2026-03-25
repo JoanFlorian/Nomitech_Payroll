@@ -25,9 +25,9 @@
         @include('nomina.partials.modal_figures')
     </div>
 
-    <div class="fixed inset-0 z-50 p-3 md:p-6 flex items-start md:items-center justify-center overflow-y-auto">
+    <div class="fixed inset-0 z-50 p-4 md:p-8 flex justify-center items-center overflow-y-auto">
 
-        <div class="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-200 p-4 md:p-6 modal-enter">
+        <div class="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-200 p-4 md:p-6 modal-enter my-auto">
 
             <a href="{{ route('nomina.step2') }}"
                class="absolute top-4 right-4 h-10 w-10 rounded-full bg-white border border-gray-200 text-gray-600 hover:text-gray-900 flex items-center justify-center shadow-sm transition">
@@ -237,7 +237,7 @@
                                                     </div>
                                                     <input
                                                         type="text"
-                                                        value="${{ number_format(abs($bp->amount), 0, ',', '.') }}"
+                                                        value="${{ number_format($bp->display_amount ?? 0, 0, ',', '.') }}"
                                                         readonly
                                                         class="w-full border-2 border-emerald-300 px-3 py-2 rounded-lg text-xs bg-emerald-50 text-emerald-800 font-semibold cursor-not-allowed"
                                                     >

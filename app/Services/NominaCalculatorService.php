@@ -28,8 +28,22 @@ class NominaCalculatorService
         return $salarioBase / $this->params->horas_mes;
     }
 
-    public function calcularContribuciones(float $salarioBase, ?int $idTipoContrato = null): array
+    public function calcularContribuciones(float $salarioBase, ?int $idTipoContrato = null, bool $tieneMaternidad = false): array
     {
+        // Si está en licencia de maternidad, no se calculan contribuciones de seguridad social
+        if ($tieneMaternidad) {
+            return [
+                'eps' => 0,
+                'afp' => 0,
+                'arl' => 0,
+                'caja_compensacion' => 0,
+                'aporte_salud_empresa' => 0,
+                'aporte_pension_empresa' => 0,
+                'seguridad_social' => 0,
+                'aporte_fp' => 0,
+            ];
+        }
+
         if ($idTipoContrato === \App\Models\TipoContrato::TIPO_PRESTACION_SERVICIOS) {
             return [
                 'eps' => 0,
@@ -110,14 +124,20 @@ class NominaCalculatorService
 
         $diasAusenciaTotal = (int) ($resumenNovedades['dias_ausencia_total'] ?? 0);
         $diasAusenciaPrestacional = (int) ($resumenNovedades['dias_ausencia_prestacional'] ?? 0);
+        $diasLicenciaMaternidad = (int) ($resumenNovedades['dias_licencia_maternidad'] ?? 0);
 
         // Días a trabajar para el PAGO de nómina (resta todas las ausencias)
         $diasTrabajados = max(0, min(30, (int) ($input['dias_trabajados'] ?? 30) - $diasAusenciaTotal));
         
+        // Cuando hay licencia de maternidad en el periodo, no se paga salario base.
+        if ($diasLicenciaMaternidad > 0) {
+            $diasTrabajados = 0;
+        }
+
         // Días para PRESTACIONES sociales (solo resta SLN)
         $diasPrestacionales = max(0, min(30, (int) ($input['dias_trabajados'] ?? 30) - $diasAusenciaPrestacional));
 
-        $salarioDevengado = ($salarioBase / 30) * $diasTrabajados;
+        $salarioDevengado = $diasLicenciaMaternidad > 0 ? 0 : ($salarioBase / 30) * $diasTrabajados;
 
         $baseHorasExtra = max(0, (float) ($input['horas_extra'] ?? 0));
         $baseRecargos = max(0, (float) ($input['recargos'] ?? 0));
@@ -175,7 +195,8 @@ class NominaCalculatorService
         $horasExtraTotal = $baseHorasExtra + $novHorasExtra;
         $recargosTotal = $baseRecargos + $novRecargos;
         $bonificacionesTotal = $baseBonificaciones + $novBonificaciones;
-        $otrosDevengosTotal = $baseOtrosDevengos + $novOtrosDevengos;
+        // Incluir el valor de maternidad/paternidad en otros devengos
+        $otrosDevengosTotal = $baseOtrosDevengos + $novOtrosDevengos + (float) ($resumenNovedades['valor_licencia_maternidad'] ?? 0);
 
         $devengosSinRecargos = $this->calcularDevengos(
             $salarioDevengado,
@@ -233,7 +254,8 @@ class NominaCalculatorService
         $arl = 0;
         $aportesEmpresa = [];
 
-        if ((int) $contrato->id_tipo_contrato !== \App\Models\TipoContrato::TIPO_PRESTACION_SERVICIOS) {
+        // Si el empleado está en licencia de maternidad, NO se calculan aportes de seguridad social
+        if ($diasLicenciaMaternidad === 0 && (int) $contrato->id_tipo_contrato !== \App\Models\TipoContrato::TIPO_PRESTACION_SERVICIOS) {
             $epsRate = (float) ($this->params->eps_employee ?? 0.04);
             $afpRate = (float) ($this->params->pension_employee ?? 0.04);
             $eps = $totalDevengado * $epsRate;
@@ -294,6 +316,8 @@ class NominaCalculatorService
             'total_novedades_devengado' => $novHorasExtra + $novRecargos + $novBonificaciones + $novOtrosDevengos,
             'total_novedades_deduccion' => $novDeducciones,
             'resumen_novedades' => $resumenNovedades,
+            'dias_licencia_maternidad' => $diasLicenciaMaternidad,
+            'valor_licencia_maternidad' => (float) ($resumenNovedades['valor_licencia_maternidad'] ?? 0),
             'valor_hora' => $valorHora,
             'salario_base' => $salarioBase,
         ];
@@ -389,6 +413,8 @@ class NominaCalculatorService
             'deducciones' => 0.0,
             'dias_ausencia_total' => 0,
             'dias_ausencia_prestacional' => 0,
+            'dias_licencia_maternidad' => 0,
+            'valor_licencia_maternidad' => 0.0,
         ];
 
         $periodo = PeriodoLiquidacion::query()->find($idPeriodo);
@@ -398,6 +424,9 @@ class NominaCalculatorService
 
         $fechaInicio = optional($periodo->fecha_inicio)->toDateString();
         $fechaFin = optional($periodo->fecha_fin)->toDateString();
+
+        // 🔹 NUEVO: Procesar rollover de LMAT/LPAT del período anterior
+        $this->procesarRollovertMaternidad($idContrato, $idPeriodo, $periodo, $valorHora, $resumen);
 
         $tiposRecargo = DB::table('tipo_hora_recargo')
             ->select('nombre', 'valor')
@@ -458,25 +487,26 @@ class NominaCalculatorService
                     $efectivoInicio = $novInicio->greaterThan($pInicio) ? $novInicio : $pInicio;
                     $efectivoFin = $novFin->lessThan($pFin) ? $novFin : $pFin;
                     $diasEnPeriodo = max(0, $efectivoInicio->diffInDays($efectivoFin) + 1);
-                    
-                    // Suma a ausencias totales que afectan el pago de nómina
-                    $resumen['dias_ausencia_total'] += (int) $diasEnPeriodo;
-                    
-                    // Solo suma a ausencias prestacionales si es SLN
-                    if ($codigo === 'SLN') {
-                        $resumen['dias_ausencia_prestacional'] += (int) $diasEnPeriodo;
-                    }
+                } elseif ($novInicio && !$novFin && (int) ($novedad->dias ?? 0) > 0) {
+                    // Soporte para novedad de maternidad/parental con fecha_fin no explicitada
+                    $novedadFin = $novInicio->copy()->addDays((int) ($novedad->dias ?? 0) - 1);
+                    $efectivoInicio = $novInicio->greaterThan($pInicio) ? $novInicio : $pInicio;
+                    $efectivoFin = $novedadFin->lessThan($pFin) ? $novedadFin : $pFin;
+                    $diasEnPeriodo = max(0, $efectivoInicio->diffInDays($efectivoFin) + 1);
                 } else {
                     // Fallback: usar campo dias directamente
                     $diasEnPeriodo = (int) ($novedad->dias ?? $novedad->cantidad ?? 0);
-                    $resumen['dias_ausencia_total'] += $diasEnPeriodo;
-                    
-                    if ($codigo === 'SLN') {
-                        $resumen['dias_ausencia_prestacional'] += $diasEnPeriodo;
-                    }
                 }
 
-                // SLN: solo reduce dias trabajados, sin devengo monetario.
+                // Suma a ausencias totales que afectan el pago de nómina
+                $resumen['dias_ausencia_total'] += (int) $diasEnPeriodo;
+
+                // Solo suma a ausencias prestacionales si es SLN
+                if ($codigo === 'SLN') {
+                    $resumen['dias_ausencia_prestacional'] += (int) $diasEnPeriodo;
+                }
+
+                // SLN: solo reduce días trabajados, sin devengo monetario.
                 if ($codigo === 'SLN') {
                     continue;
                 }
@@ -497,6 +527,22 @@ class NominaCalculatorService
                     $resumen['otros_devengos'] += round($valorDia * $diasEnPeriodo, 2);
                     continue;
                 }
+
+                // LMAT / LPAT: paga proporcional dentro del periodo y no suma salario base
+                if (in_array($codigo, ['LMAT', 'LPAT'], true)) {
+                    $valorDia = $valorHora * 8;
+                    $valorLicencia = round($valorDia * $diasEnPeriodo, 2);
+                    $resumen['dias_licencia_maternidad'] += (int) $diasEnPeriodo;
+                    $resumen['valor_licencia_maternidad'] += $valorLicencia;
+                    // NO procesar en el ciclo general abajo - es especial
+                    continue;
+                }
+            }
+
+            // NO procesar LMAT/LPAT en el ciclo general de novedades
+            // (ya fueron procesadas arriba en bloques especiales)
+            if (in_array($codigo, ['LMAT', 'LPAT'], true)) {
+                continue;
             }
 
             $valor = (float) ($novedad->pago ?? 0);
@@ -561,6 +607,9 @@ class NominaCalculatorService
         return $this->normalizarMultiplicador($texto, 0);
     }
 
+        return $this->normalizarMultiplicador($texto, 0);
+    }
+
     private function normalizarMultiplicador(string $nombre, float $valorCrudo): float
     {
         $nombreNormalizado = mb_strtolower(trim($nombre), 'UTF-8');
@@ -602,5 +651,77 @@ class NominaCalculatorService
         }
 
         return $valorCrudo;
+    }
+
+    /**
+     * Procesar rollover de licencias de maternidad/paternidad del período anterior.
+     * Busca novedades de LMAT/LPAT con dias_restantes_rollover y las continúa en este período.
+     */
+    private function procesarRollovertMaternidad(
+        int $idContrato,
+        int $idPeriodo,
+        PeriodoLiquidacion $periodo,
+        float $valorHora,
+        array &$resumen
+    ): void {
+        $fechaInicioPeriodo = \Carbon\Carbon::parse($periodo->fecha_inicio);
+        $fechaFinPeriodo = \Carbon\Carbon::parse($periodo->fecha_fin);
+
+        // Buscar períodos anteriores para este empleado
+        $periodosAnteriores = PeriodoLiquidacion::where('id_empresa', $periodo->id_empresa)
+            ->where('fecha_fin', '<', $periodo->fecha_inicio)
+            ->orderByDesc('fecha_fin')
+            ->get()
+            ->pluck('id_periodo')
+            ->toArray();
+
+        if (empty($periodosAnteriores)) {
+            return;
+        }
+
+        // Buscar novedades LMAT/LPAT con rollover en períodos anteriores
+        $novedadesRollover = DB::table('novedad as n')
+            ->join('salario as s', 's.id_salario', '=', 'n.id_salario')
+            ->where('s.id_contrato', $idContrato)
+            ->whereIn('s.id_periodo', $periodosAnteriores)
+            ->whereIn('n.tipo_novedad_codigo', ['LMAT', 'LPAT'])
+            ->whereNotNull('n.dias_restantes_rollover')
+            ->where('n.dias_restantes_rollover', '>', 0)
+            ->select([
+                'n.id_novedad',
+                'n.dias_restantes_rollover',
+                'n.tipo_novedad_codigo',
+                'n.tipo_novedad_nombre',
+                'n.fecha_fin',
+            ])
+            ->orderByDesc('s.id_periodo')
+            ->first();
+
+        if (!$novedadesRollover) {
+            return;
+        }
+
+        // Procesar el rollover
+        $diasRestantes = (int) ($novedadesRollover->dias_restantes_rollover ?? 0);
+        if ($diasRestantes <= 0) {
+            return;
+        }
+
+        // Los días en este período se limitan a 30 (o menos si es mes parcial)
+        $diasDispuestos = min($diasRestantes, 30);
+
+        // Calcular valor de la licencia continua
+        $valorDia = $valorHora * 8;
+        $valorLicencia = round($valorDia * $diasDispuestos, 2);
+
+        // Agregar al resumen
+        $resumen['dias_licencia_maternidad'] += (int) $diasDispuestos;
+        $resumen['valor_licencia_maternidad'] += $valorLicencia;
+        $resumen['dias_ausencia_total'] += (int) $diasDispuestos;
+
+        \Illuminate\Support\Facades\Log::info(
+            "ROLLOVER MATERNIDAD: Contrato {$idContrato}, Período {$idPeriodo}: "
+            . "{$diasDispuestos} días ({$novedadesRollover->tipo_novedad_codigo}) = ${$valorLicencia}"
+        );
     }
 }

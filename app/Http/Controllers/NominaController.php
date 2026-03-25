@@ -369,14 +369,6 @@ class NominaController extends Controller
         }
 
         if (!$isEditing) {
-            $empresa = Empresa::find($empresaId);
-            if ($empresa) {
-                $check = $this->planService->checkEmployeeLimit($empresa);
-                if (!$check['can']) {
-                    return back()->with('error', $check['reason'])->withInput();
-                }
-            }
-
             $yaRegistrado = DB::table('salario')
                 ->where('id_contrato', (int) $data['id_contrato'])
                 ->where('id_periodo', (int) $periodoActivo->id_periodo)

@@ -40,14 +40,26 @@ return new class extends Migration
      */
     private function foreignKeyExists(string $table, string $constraintName): bool
     {
-        $database = DB::getDatabaseName();
+        $driver = DB::getDriverName();
 
-        return DB::table('information_schema.TABLE_CONSTRAINTS')
-            ->where('TABLE_SCHEMA', $database)
-            ->where('TABLE_NAME', $table)
-            ->where('CONSTRAINT_NAME', $constraintName)
-            ->where('CONSTRAINT_TYPE', 'FOREIGN KEY')
-            ->exists();
+        if ($driver === 'sqlite') {
+            // SQLite no mantiene nombres de constraints en PRAGMA, retornamos false para crear la FK si aún no existía.
+            return false;
+        }
+
+        if ($driver === 'mysql') {
+            $database = DB::getDatabaseName();
+
+            return DB::table('information_schema.TABLE_CONSTRAINTS')
+                ->where('TABLE_SCHEMA', $database)
+                ->where('TABLE_NAME', $table)
+                ->where('CONSTRAINT_NAME', $constraintName)
+                ->where('CONSTRAINT_TYPE', 'FOREIGN KEY')
+                ->exists();
+        }
+
+        // Fallback genérico: intentar cláusula simple
+        return Schema::hasTable($table) && Schema::hasColumn($table, 'periodo_aplicado_id');
     }
 
     public function down(): void

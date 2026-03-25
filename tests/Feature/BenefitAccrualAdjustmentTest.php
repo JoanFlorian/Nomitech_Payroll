@@ -189,6 +189,89 @@ class BenefitAccrualAdjustmentTest extends TestCase
         $this->assertEquals(250000, round((float)$ledger->amount, 0));
     }
 
+    public function test_maternity_leave_sets_base_salary_zero_and_pays_in_maternity_novedad(): void
+    {
+        $salario = Salario::create([
+            'id_contrato' => $this->contrato->id_contrato,
+            'id_periodo' => $this->periodo->id_periodo,
+            'estado' => Salario::ESTADO_PENDIENTE
+        ]);
+
+        Novedad::create([
+            'id_tipo_novedad' => 3,
+            'id_salario' => $salario->id_salario,
+            'id_periodo' => $this->periodo->id_periodo,
+            'empleado_id' => $this->usuario->doc,
+            'tipo_novedad_codigo' => 'LMAT',
+            'tipo_novedad_nombre' => 'Licencia de Maternidad',
+            'fecha_inicio' => '2026-01-10',
+            'fecha_fin' => '2026-01-25',
+            'dias' => 16,
+            'pago' => 0,
+            'afecta_nomina' => true
+        ]);
+
+        $this->calculator->guardarNominaEmpleado($this->contrato->id_contrato, $this->periodo->id_periodo);
+        $salario->refresh();
+
+        $this->assertEquals(0, $salario->dias_a_trabajar);
+        $this->assertEquals(30, $salario->dias_trabajados_prestacional);
+
+        // Salario base no debe pagarse y se paga solo la novedad de maternidad.
+        $this->assertEquals(1600000, (int) $salario->total_devengado);
+    }
+
+    public function test_maternity_leave_rolls_over_to_next_period_and_deducts_days(): void
+    {
+        $periodo2 = PeriodoLiquidacion::create([
+            'id_empresa' => $this->empresa->id_empresa,
+            'nombre' => 'Febrero 2026',
+            'fecha_inicio' => '2026-02-01',
+            'fecha_fin' => '2026-02-28',
+            'estado' => 'abierto'
+        ]);
+
+        $salario1 = Salario::create([
+            'id_contrato' => $this->contrato->id_contrato,
+            'id_periodo' => $this->periodo->id_periodo,
+            'estado' => Salario::ESTADO_PENDIENTE
+        ]);
+
+        Novedad::create([
+            'id_tipo_novedad' => 3,
+            'id_salario' => $salario1->id_salario,
+            'id_periodo' => $this->periodo->id_periodo,
+            'empleado_id' => $this->usuario->doc,
+            'tipo_novedad_codigo' => 'LMAT',
+            'tipo_novedad_nombre' => 'Licencia de Maternidad',
+            'fecha_inicio' => '2026-01-10',
+            'fecha_fin' => '2026-05-15',
+            'dias' => 126,
+            'pago' => 0,
+            'afecta_nomina' => true
+        ]);
+
+        $this->calculator->guardarNominaEmpleado($this->contrato->id_contrato, $this->periodo->id_periodo);
+        $salario1->refresh();
+
+        $this->assertEquals(0, $salario1->dias_a_trabajar);
+        $this->assertEquals(30, $salario1->dias_trabajados_prestacional);
+        $this->assertEquals(2100000, (int) $salario1->total_devengado);
+
+        $salario2 = Salario::create([
+            'id_contrato' => $this->contrato->id_contrato,
+            'id_periodo' => $periodo2->id_periodo,
+            'estado' => Salario::ESTADO_PENDIENTE
+        ]);
+
+        $this->calculator->guardarNominaEmpleado($this->contrato->id_contrato, $periodo2->id_periodo);
+        $salario2->refresh();
+
+        $this->assertEquals(0, $salario2->dias_a_trabajar);
+        $this->assertEquals(30, $salario2->dias_trabajados_prestacional);
+        $this->assertEquals(2800000, (int) $salario2->total_devengado);
+    }
+
     public function test_sln_does_reduce_benefit_days(): void
     {
         // 1. Create Salario stub

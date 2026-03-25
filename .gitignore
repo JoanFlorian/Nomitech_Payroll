@@ -22,3 +22,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Temp debug scripts and data dumps
+/tmp/
+/check.php
+/check_debug.txt
+/camila.json
+/contracts_data.json
+/params_v3.json
+/period_data.json

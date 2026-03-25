@@ -24,14 +24,34 @@ return new class extends Migration
             && Schema::hasColumn('contrato', 'nivel_riesgo')
             && Schema::hasColumn('contrato', 'nivel_riesgo_id')
         ) {
-            DB::statement(
-                "UPDATE contrato c
-                 LEFT JOIN niveles_riesgo n
-                    ON UPPER(TRIM(c.nivel_riesgo)) = UPPER(TRIM(n.nombre))
-                 SET c.nivel_riesgo_id = n.id
-                 WHERE c.nivel_riesgo IS NOT NULL
-                   AND c.nivel_riesgo_id IS NULL"
-            );
+            if (DB::getDriverName() === 'sqlite') {
+                $niveles = DB::table('niveles_riesgo')->get(['id', 'nombre']);
+
+                DB::table('contrato')
+                    ->whereNotNull('nivel_riesgo')
+                    ->whereNull('nivel_riesgo_id')
+                    ->get()
+                    ->each(function ($contrato) use ($niveles) {
+                        $match = $niveles->first(function ($nivel) use ($contrato) {
+                            return strcasecmp(trim((string) $nivel->nombre), trim((string) $contrato->nivel_riesgo)) === 0;
+                        });
+
+                        if ($match) {
+                            DB::table('contrato')
+                                ->where('id_contrato', $contrato->id_contrato)
+                                ->update(['nivel_riesgo_id' => $match->id]);
+                        }
+                    });
+            } else {
+                DB::statement(
+                    "UPDATE contrato c
+                     LEFT JOIN niveles_riesgo n
+                        ON UPPER(TRIM(c.nivel_riesgo)) = UPPER(TRIM(n.nombre))
+                     SET c.nivel_riesgo_id = n.id
+                     WHERE c.nivel_riesgo IS NOT NULL
+                       AND c.nivel_riesgo_id IS NULL"
+                );
+            }
         }
 
         Schema::table('contrato', function (Blueprint $table) {

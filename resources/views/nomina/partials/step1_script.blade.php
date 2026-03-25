@@ -373,7 +373,20 @@
             String(selectedEmployee.id_contrato) === String(idContratoInput.value)
         );
 
-        if (hasValidSelection) {
+        const hasAutoFilledData = Boolean(
+            docInput && docInput.value &&
+            idContratoInput && idContratoInput.value &&
+            $('nombre') && $('nombre').value &&
+            $('salario_base') && $('salario_base').value
+        );
+
+        if (hasValidSelection || hasAutoFilledData) {
+            if (!selectedEmployee && hasAutoFilledData) {
+                selectedEmployee = {
+                    doc: docInput.value,
+                    id_contrato: idContratoInput.value
+                };
+            }
             if (empleadoInput) markOk(empleadoInput);
             return true;
         }
@@ -548,6 +561,17 @@
             const employeeValid = validateEmployee();
             const fechaValid = validateFecha();
             const diasValid = validateDiasTrabajados();
+            
+            console.log('=== FORM SUBMIT DEBUG ===');
+            console.log('employeeValid:', employeeValid);
+            console.log('fechaValid:', fechaValid);
+            console.log('diasValid:', diasValid);
+            console.log('selectedEmployee:', selectedEmployee);
+            console.log('docInput.value:', docInput?.value);
+            console.log('idContratoInput.value:', idContratoInput?.value);
+            console.log('fechaInput.value:', fechaInput?.value);
+            console.log('diasInput.value:', diasInput?.value);
+            
             if (!(employeeValid && fechaValid && diasValid)) {
                 e.preventDefault();
                 if (!employeeValid) {
@@ -558,6 +582,8 @@
                 } else if (!fechaValid) {
                     showAlert('La fecha de pago es obligatoria y no puede ser menor a hoy.', 'Fecha invalida');
                 }
+            } else {
+                console.log('✓ FORM VALIDATION PASSED - SUBMITTING');
             }
         });
     }

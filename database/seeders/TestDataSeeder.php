@@ -15,6 +15,7 @@ use App\Models\TipoDoc;
 use App\Services\Payroll\PeriodoAutomationService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class TestDataSeeder extends Seeder
 {
@@ -170,7 +171,6 @@ class TestDataSeeder extends Seeder
             'licencia_id' => $licencia->id,
             'empresa_id' => $empresa->id_empresa,
             'plan_id' => $plan->id,
-            'referencia' => 'TEST-SEED-' . time(),
             // 'proveedor_pago' => 'Manual', // Column missing in DB
             'valor' => $plan->valor,
             'moneda' => 'COP',
@@ -183,6 +183,7 @@ class TestDataSeeder extends Seeder
         if (DB::table('pago')->where('licencia_id', $licencia->id)->exists()) {
             DB::table('pago')->where('licencia_id', $licencia->id)->update($pagoData);
         } else {
+            $pagoData['referencia'] = 'TEST-SEED-' . Str::uuid()->toString();
             DB::table('pago')->insert($pagoData);
         }
 

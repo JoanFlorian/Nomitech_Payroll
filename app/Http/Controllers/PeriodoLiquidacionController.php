@@ -438,4 +438,103 @@ class PeriodoLiquidacionController extends Controller
             return back()->with('error', 'Error al descargar: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Actualiza la fecha de cierre automático de un periodo.
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateAutoCloseDate(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'fecha_cierre_automatico' => 'nullable|date|after_or_equal:today',
+            ]);
+
+            $empresaId = session('empresa_id');
+            $periodo = PeriodoLiquidacion::where('id_periodo', $id)
+                ->where('id_empresa', $empresaId)
+                ->firstOrFail();
+
+            if ($periodo->estado === PeriodoLiquidacion::ESTADO_CERRADO) {
+                throw new \Exception('No se puede programar el cierre de un periodo ya cerrado.');
+            }
+
+            $nuevaFecha = $request->input('fecha_cierre_automatico');
+            
+            // Validar que la fecha esté en un rango razonable (max 15 días después de fecha_fin)
+            if ($nuevaFecha) {
+                $fechaCierre = \Carbon\Carbon::parse($nuevaFecha);
+                $fechaFin = \Carbon\Carbon::parse($periodo->fecha_fin);
+                
+                if ($fechaCierre->diffInDays($fechaFin, false) > 15) {
+                    throw new \Exception('La fecha de cierre automático no puede ser superior a 15 días después del fin del periodo.');
+                }
+            }
+
+            $periodo->update([
+                'fecha_cierre_automatico' => $nuevaFecha
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Fecha de cierre automático actualizada correctamente.',
+                'fecha' => $nuevaFecha ? \Carbon\Carbon::parse($nuevaFecha)->format('d/m/Y') : 'No programado'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Almacena el primer periodo basado en la elección del usuario (Mes actual o siguiente).
+     */
+    public function storeFirstPeriod(Request $request)
+    {
+        $request->validate([
+            'choice' => 'required|in:current,next',
+        ]);
+
+        try {
+            $empresaId = session('empresa_id');
+            $empresa = \App\Models\Empresa::findOrFail($empresaId);
+            $choice = $request->input('choice');
+
+            $date = now();
+            if ($choice === 'next') {
+                $date = $date->addMonth();
+            }
+
+            $automationService = app(\App\Services\Payroll\PeriodoAutomationService::class);
+            
+            // Forzamos la creación del periodo para el mes solicitado
+            // Usando el primer día del mes de la fecha calculada
+            $referenceDate = $date->startOfMonth();
+            
+            $periodo = $automationService->handleLicenseActivation($empresa, $referenceDate);
+
+            if ($periodo) {
+                session()->forget('needs_first_period');
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Primer periodo configurado correctamente.',
+                    'redirect' => route('nomina.index')
+                ]);
+            }
+
+            throw new \Exception('No se pudo crear el periodo.');
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
 }

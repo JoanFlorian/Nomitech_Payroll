@@ -7,6 +7,7 @@ use App\Models\BenefitLedger;
 use App\Models\CesantiasWithdrawal;
 use App\Models\Contrato;
 use App\Models\PeriodoLiquidacion;
+use App\Models\ProvisionAutomation;
 use App\Services\Benefits\BenefitPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -60,7 +61,10 @@ class ProvisionesController extends Controller
             ->filter()
             ->values();
 
-        return view('provisiones.index', compact('balances', 'totals', 'activePeriod', 'warnings'));
+        // Automation settings
+        $automations = ProvisionAutomation::where('id_empresa', $empresaId)->get()->keyBy('benefit_type');
+
+        return view('provisiones.index', compact('balances', 'totals', 'activePeriod', 'warnings', 'automations'));
     }
 
     /**
@@ -199,6 +203,21 @@ class ProvisionesController extends Controller
 
             $result = $service->liquidateMass($benefitType, $empresaId, $paymentMode, $periodId);
 
+            // AUTO-CONSIGNMENT GENERATION FOR CESANTÍAS (Annual Process)
+            if ($benefitType === BenefitLedger::TYPE_CESANTIAS) {
+                $year = date('m') <= 2 ? date('Y') - 1 : date('Y');
+                $batchesData = $service->generarConsignacionAnual($empresaId, $year);
+                if (!empty($batchesData)) {
+                    $zipPath = $service->generateConsignmentZip($batchesData, $year);
+                    if ($zipPath) {
+                        // Move to a persistent storage location for session download
+                        $persistentPath = 'temp_consignaciones/' . basename($zipPath);
+                        Storage::disk('local')->put($persistentPath, file_get_contents($zipPath));
+                        session(['recent_consignacion_path' => $persistentPath]);
+                    }
+                }
+            }
+
             $label = BenefitLedger::benefitTypeLabel($benefitType);
             $modeLabel = $paymentMode === 'payroll' ? 'programado en nómina' : 'pago inmediato';
 
@@ -299,71 +318,37 @@ class ProvisionesController extends Controller
         ]);
 
         try {
-            $empresaId = session('empresa_id');
+            $companyId = session('empresa_id');
             $year = (int) $request->input('year');
 
-            $batchesData = $service->generarConsignacionAnual($empresaId, $year);
-
+            $batchesData = $service->generarConsignacionAnual($companyId, $year);
             if (empty($batchesData)) {
                 return back()->with('info', 'No hay saldos de cesantías para consignar en el año seleccionado.');
             }
 
-            $files = [];
-            foreach ($batchesData as $batch) {
-                $fundSlug = strtolower(str_replace(' ', '_', preg_replace('/[^a-zA-Z0-9\s]/', '', $batch['fund'])));
-                $fileName = "cesantias_{$fundSlug}_{$year}.csv";
-
-                // Add UTF-8 BOM for Excel compatibility with special characters
-                $csvContent = "\xEF\xBB\xBF";
-                $csvContent .= "Tipo de documento;Número de documento;Primer apellido;Segundo apellido;Primer nombre;Segundo nombre;Fecha de ingreso del trabajador;Fecha de retiro;Tipo de trabajador;Salario base de liquidación;Días trabajados en el período;Período de liquidación;Fondo de Cesantías;Valor de cesantías a consignar;Tipo de liquidación\n";
-
-                foreach ($batch['employees'] as $emp) {
-                    $tipoDoc = str_replace(';', '', $emp['tipo_doc'] ?? '');
-                    // Force Excel to treat the document as text using formula notation (prevents scientific notation)
-                    $document = '="' . str_replace(['"', ';'], '', $emp['document_number'] ?? '') . '"';
-                    $primerApellido = str_replace(';', '', $emp['primer_apellido'] ?? '');
-                    $segundoApellido = str_replace(';', '', $emp['segundo_apellido'] ?? '');
-                    $primerNombre = str_replace(';', '', $emp['primer_nombre'] ?? '');
-                    $otrosNombres = str_replace(';', '', $emp['otros_nombres'] ?? '');
-                    $fechaIngreso = str_replace(';', '', $emp['fecha_ingreso'] ?? '');
-                    $fechaRetiro = str_replace(';', '', $emp['fecha_retiro'] ?? '');
-                    $tipoTrabajador = str_replace(';', '', $emp['tipo_trabajador'] ?? '');
-                    $salarioBase = number_format((float) ($emp['salario_base'] ?? 0), 2, '.', '');
-                    $diasTrabajados = $emp['dias_trabajados'] ?? 0;
-                    $periodo = str_replace(';', '', $emp['periodo_liquidacion'] ?? '');
-                    $fondo = str_replace(';', '', $emp['fund'] ?? '');
-                    $amount = number_format((float) ($emp['amount'] ?? 0), 2, '.', '');
-                    $tipoLiquidacion = 'anual';
-
-                    $csvContent .= "{$tipoDoc};{$document};{$primerApellido};{$segundoApellido};{$primerNombre};{$otrosNombres};{$fechaIngreso};{$fechaRetiro};{$tipoTrabajador};{$salarioBase};{$diasTrabajados};{$periodo};{$fondo};{$amount};{$tipoLiquidacion}\n";
-                }
-
-                $files[$fileName] = $csvContent;
+            $tempPath = $service->generateConsignmentZip($batchesData, $year);
+            if (!$tempPath) {
+                return back()->with('error', 'No se pudo generar el archivo de consignación.');
             }
 
-            if (count($files) === 1) {
-                $fileName = array_key_first($files);
-                $csvContent = $files[$fileName];
-                return response($csvContent)
-                    ->header('Content-Type', 'text/csv; charset=UTF-8')
-                    ->header('Content-Disposition', "attachment; filename=\"{$fileName}\"");
-            }
-
-            $zipFileName = "cesantias_consignacion_{$year}_empresa_{$empresaId}.zip";
-            $tempPath = tempnam(sys_get_temp_dir(), 'ces_') . '.zip';
-
-            $zip = new \ZipArchive();
-            if ($zip->open($tempPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-                foreach ($files as $name => $content) {
-                    $zip->addFromString($name, $content);
-                }
-                $zip->close();
-            }
-
-            return response()->download($tempPath, $zipFileName)->deleteFileAfterSend(true);
+            $fileName = basename($tempPath);
+            return response()->download($tempPath, $fileName)->deleteFileAfterSend(true);
         } catch (\Exception $e) {
             return back()->with('error', 'Error al generar consignación: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Serves the recently generated consignment from session.
+     */
+    public function descargarConsignacionReciente()
+    {
+        $path = session('recent_consignacion_path');
+        if (!$path || !Storage::disk('local')->exists($path)) {
+            return back()->with('error', 'El archivo ya no está disponible o ha expirado.');
+        }
+
+        return Storage::disk('local')->download($path)->deleteFileAfterSend(true);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -382,25 +367,70 @@ class ProvisionesController extends Controller
         return $this->pagarPrestacion($request, $service);
     }
 
-    public function descargarComprobantePrestacion($movementId, Request $request)
+    /**
+     * Save/Update automation settings for the company.
+     */
+    public function updateAutomation(Request $request)
     {
         $empresaId = session('empresa_id');
+        
+        $request->validate([
+            'automations' => 'required|array',
+            'automations.*.benefit_type' => 'required|string',
+            'automations.*.is_active' => 'sometimes|boolean',
+            'automations.*.payment_mode' => 'required|string|in:direct,payroll',
+            'automations.*.execution_day' => 'required|integer|min:1|max:31',
+            'automations.*.execution_month' => 'required|integer|min:1|max:12',
+        ]);
 
-        $movement = BenefitLedger::with(['usuario', 'empresa'])
-            ->where('tenant_id', $empresaId)
-            ->findOrFail($movementId);
+        $validMonths = [
+            'prima_1' => [6],
+            'prima_2' => [12],
+            'cesantias' => [1, 2],
+            'intereses_cesantias' => [1],
+        ];
 
-        if ($request->get('format') === 'pdf') {
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('provisiones.comprobante_pdf', compact('movement'));
-            
-            $filename = 'comprobante_' . ($movement->usuario->doc ?? $movementId) . '_' . $movement->created_at->format('dmY') . '.pdf';
-            
-            $mode = $request->get('mode', 'inline'); // inline (view) or attachment (download)
-            
-            return $pdf->setPaper('letter', 'portrait')
-                ->stream($filename, ['Attachment' => $mode === 'attachment' ? 1 : 0]);
+        $demoUnlock = $request->input('demo_unlock');
+
+        foreach ($request->input('automations') as $benefitType => $settings) {
+            if (!$demoUnlock) {
+                // Validate month according to benefit type
+                if (isset($validMonths[$benefitType]) && !in_array($settings['execution_month'], $validMonths[$benefitType])) {
+                    return redirect()->back()->with('error', "El beneficio {$benefitType} solo puede liquidarse en los meses permitidos.");
+                }
+
+                // Special restriction for Cesantias in February (max 14th)
+                if ($benefitType === 'cesantias' && $settings['execution_month'] == 2 && $settings['execution_day'] > 14) {
+                    return redirect()->back()->with('error', "Las cesantías solo pueden programarse hasta el 14 de febrero.");
+                }
+            }
+
+            ProvisionAutomation::updateOrCreate(
+                [
+                    'id_empresa' => $empresaId,
+                    'benefit_type' => $benefitType
+                ],
+                [
+                    'is_active' => isset($settings['is_active']) ? (bool)$settings['is_active'] : false,
+                    'payment_mode' => $settings['payment_mode'],
+                    'execution_day' => $settings['execution_day'],
+                    'execution_month' => $settings['execution_month'],
+                ]
+            );
         }
 
-        return view('provisiones.comprobante', compact('movement'));
+        return redirect()->back()->with('success', 'Configuración de automatización guardada correctamente.');
+    }
+
+    public function resetAutomation(Request $request)
+    {
+        $empresaId = session('empresa_id');
+        $benefitType = $request->input('benefit_type');
+
+        \App\Models\ProvisionAutomation::where('id_empresa', $empresaId)
+            ->where('benefit_type', $benefitType)
+            ->update(['last_execution_year' => null]);
+
+        return redirect()->back()->with('success', 'Automatización reiniciada. Lista para nueva prueba.');
     }
 }

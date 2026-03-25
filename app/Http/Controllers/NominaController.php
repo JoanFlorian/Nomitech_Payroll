@@ -682,6 +682,9 @@ class NominaController extends Controller
 
         if (!$aplicaPorTope) {
             $auxilioTransporteDb = 0;
+        } else {
+            // Pro-rate the allowance based on worked days (monthly amount / 30 * days)
+            $auxilioTransporteDb = ($auxilioTransporteDb / 30) * $diasTrabajados;
         }
 
         $empresaId = session('empresa_id');
@@ -720,7 +723,18 @@ class NominaController extends Controller
                 ->where('payroll_period_id', $periodoActivo->id_periodo)
                 ->where('movement_type', BenefitLedger::MOVEMENT_SCHEDULED)
                 ->where('status', BenefitLedger::STATUS_PENDING_PAYROLL)
-                ->get();
+                ->get()
+                ->map(function ($bp) use ($salarioBase) {
+                    $bp->display_amount = abs($bp->amount);
+                    if ($bp->benefit_type === BenefitLedger::TYPE_VACACIONES) {
+                        $bp->display_amount = (($salarioBase ?? 0) / 30) * $bp->display_amount;
+                    }
+                    return $bp;
+                })
+                ->filter(function ($bp) {
+                    // Exclude Cesantías from display and total as they are paid differently
+                    return trim(strtolower($bp->benefit_type)) !== 'cesantias';
+                });
         }
 
         return view('nomina.step2_ingresos', compact(
@@ -766,24 +780,8 @@ class NominaController extends Controller
             ])->withInput();
         }
 
-        $s1 = session('nomina.step1', []);
-        $salarioBaseMensual = (float) ($s1['salario_base'] ?? 0);
-        $params = app(\App\Services\NominaParameterService::class)->get();
-
-        $smmlv = (float) ($params->smmlv ?? 0);
-        $topeAuxilio = (float) ($params->auxilio_transporte_tope ?? 0);
-        $auxilioTransporteDb = (float) ($params->auxilio_transporte ?? 0);
-
-        $aplicaPorTope = $smmlv > 0 && $topeAuxilio > 0
-            ? ($salarioBaseMensual <= ($smmlv * $topeAuxilio))
-            : true;
-
-        if (!$aplicaPorTope) {
-            $auxilioTransporteDb = 0;
-        }
-
         $aplicaAuxilio = (int) ($data['aplica_auxilio_transporte'] ?? 0) === 1;
-        $auxilioTransporte = $aplicaAuxilio ? $auxilioTransporteDb : 0;
+        $auxilioTransporte = $this->parseMoneyInput($data['auxilio_transporte'] ?? 0);
 
         session([
             'nomina.step2_ingresos' => [
@@ -792,6 +790,7 @@ class NominaController extends Controller
                 'otros_devengos' => $otrosDevengos,
                 'aplica_auxilio_transporte' => $aplicaAuxilio ? 1 : 0,
                 'auxilio_transporte' => $auxilioTransporte,
+                'recalculate_transport_allowance' => true,
             ]
         ]);
 
@@ -812,11 +811,13 @@ class NominaController extends Controller
             return redirect()->route('nomina.step1');
         }
 
+        $periodoActivo = \App\Models\PeriodoLiquidacion::getActivePeriod();
+
         $salarioBase = (float) ($step1['salario_base_proporcional'] ?? $step1['salario_base'] ?? 0);
 
         $idTipoContrato = null;
         if (isset($step1['id_contrato'])) {
-            $contratoSession = \DB::table('contrato')->where('id_contrato', $step1['id_contrato'])->first(['id_tipo_contrato']);
+            $contratoSession = DB::table('contrato')->where('id_contrato', $step1['id_contrato'])->first(['id_tipo_contrato']);
             if ($contratoSession) {
                 $idTipoContrato = (int) $contratoSession->id_tipo_contrato;
             }
@@ -825,6 +826,29 @@ class NominaController extends Controller
         $contribuciones = $this->calculator
             ->calcularContribuciones($salarioBase, $idTipoContrato);
 
+        // Calculate integrated benefits sum for summary display
+        $integratedBenefitsTotal = 0;
+        if (isset($step1['id_contrato']) && $periodoActivo) {
+            $integratedBenefitsTotal = DB::table('benefit_ledger')
+                ->where('contract_id', $step1['id_contrato'])
+                ->where('payroll_period_id', $periodoActivo->id_periodo)
+                ->where('movement_type', \App\Models\BenefitLedger::MOVEMENT_SCHEDULED)
+                ->where('status', \App\Models\BenefitLedger::STATUS_PENDING_PAYROLL)
+                ->get()
+                ->sum(function ($bp) use ($salarioBase) {
+                    $amount = abs($bp->amount);
+                    $type = trim(strtolower($bp->benefit_type));
+                    if ($type === 'vacaciones') {
+                        // Use pro-rated base for vacations consistent with service logic for partial months
+                        return ($salarioBase / 30) * $amount;
+                    }
+                    if ($type === 'cesantias') {
+                        return 0; // Exclude Cesantias as per user request
+                    }
+                    return $amount;
+                });
+        }
+
         $totalDevengos =
             $salarioBase +
             (float) ($step2['horas_extra'] ?? 0) +
@@ -832,7 +856,8 @@ class NominaController extends Controller
             (float) ($ingresos['bonificaciones'] ?? 0) +
             (float) ($ingresos['comisiones'] ?? 0) +
             (float) ($ingresos['otros_devengos'] ?? 0) +
-            (float) ($ingresos['auxilio_transporte'] ?? 0);
+            (float) ($ingresos['auxilio_transporte'] ?? 0) +
+            (float) $integratedBenefitsTotal;
 
         $step3 = session('nomina.step3', []);
         $isEditing = (bool) session('nomina.editing_id');
@@ -906,6 +931,8 @@ class NominaController extends Controller
                 'retencion_fuente' => $retencionFuente,
                 'embargo_fiscal' => $embargoFiscal,
                 'pension_voluntaria' => $pensionVoluntaria,
+                'recalculate_transport_allowance' => (bool) ($s3['recalculate_transport_allowance'] ?? false),
+                'aplica_auxilio_transporte' => (int) ($s3['aplica_auxilio_transporte'] ?? 0),
             ]);
         } catch (\App\Exceptions\EmpleadoIncapacitadoException $e) {
             return back()->with('error', $e->getMessage());
@@ -934,6 +961,7 @@ class NominaController extends Controller
              'total_devengado' => $calculo['total_devengado'],
              'total_deducciones' => $calculo['total_deducciones'],
              'neto_pagar' => $calculo['neto_pagar'],
+             'prestaciones_sociales' => $calculo['prestaciones_sociales'] ?? 0,
              'updated_at' => now(),
          ];
 
@@ -1030,6 +1058,7 @@ class NominaController extends Controller
                     ->orWhereIn('estado', [
                         \App\Models\Contrato::ESTADO_ACTIVO,
                         \App\Models\Contrato::ESTADO_POR_VENCER,
+                        \App\Models\Contrato::ESTADO_PROGRAMADO,
                     ]);
             })
             ->pluck('id_contrato');
@@ -1075,12 +1104,19 @@ class NominaController extends Controller
                             // SUGGEST DAYS based on active period normally
                             $inputCalculo['dias_trabajados'] = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
                         }
+                    }
 
-                        // Also process termination for benefits if applicable
+                    // STEP 1: Create/update the salary record FIRST
+                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo);
+
+                    // STEP 2: Auto-schedule termination benefits if contract ends in this period.
+                    // handleContractTermination() internally checks fecha_fin vs period dates,
+                    // so it only triggers for contracts ACTUALLY ending in this period.
+                    // It also recalculates the salary with the integrated benefits.
+                    if ($contratoObj) {
                         $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
                     }
 
-                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo);
                     $procesados++;
                 } catch (\App\Exceptions\EmpleadoIncapacitadoException $e) {
                     // Empleado con incapacidad activa: se omite sin romper el proceso masivo.

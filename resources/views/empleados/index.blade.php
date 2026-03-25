@@ -115,9 +115,9 @@
                         {{-- EMPLEADO --}}
                         <td class="py-4 px-6 text-gray-800">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-user-tie text-blue-600 text-sm"></i>
-                                </div>
+                                <img src="{{ $usuario->avatar_url }}"
+                                     alt="Foto de {{ \Illuminate\Support\Str::title(trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? ''))) }}"
+                                     class="w-10 h-10 rounded-full object-cover border border-blue-100 flex-shrink-0">
                                 <div class="flex flex-col">
                                     <p class="font-semibold text-gray-900">{{ \Illuminate\Support\Str::title(trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? ''))) }}</p>
                                     <p class="text-xs text-gray-500">{{ \Illuminate\Support\Str::title(trim(($usuario->otros_nombres ?? '') . ' ' . ($usuario->segundo_apellido ?? ''))) }}</p>
@@ -214,9 +214,9 @@
                         {{-- EMPLEADO SIN CONTRATO --}}
                         <td class="py-4 px-6 text-gray-800">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-user-slash text-orange-600 text-sm"></i>
-                                </div>
+                                <img src="{{ $usuario->avatar_url }}"
+                                     alt="Foto de {{ \Illuminate\Support\Str::title(trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? ''))) }}"
+                                     class="w-10 h-10 rounded-full object-cover border border-orange-100 flex-shrink-0">
                                 <div class="flex flex-col">
                                     <p class="font-semibold text-gray-900">{{ \Illuminate\Support\Str::title(trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? ''))) }}</p>
                                     <p class="text-xs text-gray-500">{{ $usuario->email ?? 'Sin email' }}</p>

@@ -19,9 +19,16 @@
                     Volver
                 </a>
 
-                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-right shadow-sm">
-                    <p class="text-sm font-semibold text-gray-800">{{ $usuario->nombre_completo ?? (($usuario->primer_nombre ?? 'Usuario') . ' ' . ($usuario->primer_apellido ?? '')) }}</p>
-                    <p class="text-xs text-gray-500">{{ $usuario->rol->nombre ?? 'Trabajador' }}</p>
+                <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <img src="{{ $usuario->avatar_url }}"
+                             alt="Foto de perfil"
+                             class="w-12 h-12 rounded-full object-cover border border-gray-200">
+                        <div class="text-right">
+                            <p class="text-sm font-semibold text-gray-800">{{ $usuario->nombre_completo ?? (($usuario->primer_nombre ?? 'Usuario') . ' ' . ($usuario->primer_apellido ?? '')) }}</p>
+                            <p class="text-xs text-gray-500">{{ $usuario->rol->nombre ?? 'Trabajador' }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -51,6 +58,42 @@
                 </div>
             </div>
         @endif
+
+        <div class="mb-6 bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center pb-3 border-b-2 border-indigo-500">
+                <span class="material-icons mr-2 text-indigo-600">photo_camera</span>
+                Foto de Perfil
+            </h2>
+
+            <div class="flex flex-col md:flex-row md:items-center gap-5">
+                <img id="avatar-preview"
+                     src="{{ $usuario->avatar_url }}"
+                     alt="Avatar actual"
+                     class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 shadow-sm cursor-pointer hover:shadow-lg hover:border-indigo-400 transition-all duration-200"
+                     data-full-src="{{ $usuario->avatar_url }}"
+                     role="button"
+                     tabindex="0"
+                     title="Haz click para ampliar">
+
+                <form action="{{ route('trabajador.perfil.foto') }}" method="POST" enctype="multipart/form-data" class="flex-1">
+                    @csrf
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <input type="file"
+                               id="avatar"
+                               name="avatar"
+                               accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                               class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">
+                            Actualizar foto
+                        </button>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">Formatos permitidos: JPG, JPEG, PNG. Tamaño máximo: 2MB.</p>
+                    @error('avatar')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </form>
+            </div>
+        </div>
 
         <!-- Formulario de Perfil -->
         <form action="{{ route('trabajador.perfil.actualizar') }}" method="POST" class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
@@ -305,6 +348,24 @@
             </div>
         </form>
     </div>
+
+    <!-- Modal para ampliación de foto -->
+    <div id="avatar-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Header del modal -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-800">Foto de Perfil</h3>
+                <button id="close-avatar-modal" class="text-gray-500 hover:text-gray-700 text-2xl leading-none transition">
+                    ×
+                </button>
+            </div>
+            
+            <!-- Contenido del modal -->
+            <div class="p-6 flex flex-col items-center justify-center">
+                <img id="avatar-modal-img" src="" alt="Foto ampliada" class="w-full max-w-sm rounded-xl shadow-lg object-cover">
+            </div>
+        </div>
+    </div>
 </div>
 
 @push('styles')
@@ -330,6 +391,60 @@
             this.value = ucWords(this.value);
         });
     });
+
+    // Modal de ampliación de foto
+    const avatarPreview = document.getElementById('avatar-preview');
+    const avatarModal = document.getElementById('avatar-modal');
+    const avatarModalImg = document.getElementById('avatar-modal-img');
+    const closeAvatarModal = document.getElementById('close-avatar-modal');
+
+    // Abrir modal al hacer click en la imagen
+    if (avatarPreview) {
+        avatarPreview.addEventListener('click', function () {
+            const imageSrc = this.getAttribute('data-full-src') || this.src;
+            avatarModalImg.src = imageSrc;
+            avatarModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+
+        // Abrir modal con Enter o Space
+        avatarPreview.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const imageSrc = this.getAttribute('data-full-src') || this.src;
+                avatarModalImg.src = imageSrc;
+                avatarModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        });
+    }
+
+    // Cerrar modal
+    function closeModal() {
+        avatarModal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    if (closeAvatarModal) {
+        closeAvatarModal.addEventListener('click', closeModal);
+    }
+
+    // Cerrar modal al hacer click en el fondo
+    if (avatarModal) {
+        avatarModal.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    }
+
+    // Cerrar modal con tecla Escape
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !avatarModal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
+
 </script>
 @endpush
 @endsection

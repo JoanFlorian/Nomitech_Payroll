@@ -19,9 +19,14 @@
         {{-- HEADER --}}
         <div class="bg-gradient-to-r from-[#1565C0] to-[#1976D2] px-8 py-6 text-white">
             <div class="flex items-center gap-5">
-                <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-user-tie text-3xl"></i>
-                </div>
+                <img id="avatar-preview"
+                     src="{{ $usuario->avatar_url }}"
+                     alt="Foto de {{ \Illuminate\Support\Str::title(trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? ''))) }}"
+                     class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md flex-shrink-0 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all duration-200"
+                     data-full-src="{{ $usuario->avatar_url }}"
+                     role="button"
+                     tabindex="0"
+                     title="Haz click para ampliar">
                 <div>
                     <h1 class="text-2xl font-bold">
                         {{ \Illuminate\Support\Str::title(trim(
@@ -199,5 +204,81 @@
 
         </div>{{-- /grid --}}
     </div>
+
+    <!-- Modal para ampliación de foto -->
+    <div id="avatar-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Header del modal -->
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-800">Foto de Empleado</h3>
+                <button id="close-avatar-modal" class="text-gray-500 hover:text-gray-700 text-2xl leading-none transition">
+                    ×
+                </button>
+            </div>
+            
+            <!-- Contenido del modal -->
+            <div class="p-6 flex flex-col items-center justify-center">
+                <img id="avatar-modal-img" src="" alt="Foto ampliada" class="w-full max-w-sm rounded-xl shadow-lg object-cover">
+            </div>
+        </div>
+    </div>
 </div>
+
+@push('scripts')
+<script>
+    // Modal de ampliación de foto
+    const avatarPreview = document.getElementById('avatar-preview');
+    const avatarModal = document.getElementById('avatar-modal');
+    const avatarModalImg = document.getElementById('avatar-modal-img');
+    const closeAvatarModal = document.getElementById('close-avatar-modal');
+
+    // Abrir modal al hacer click en la imagen
+    if (avatarPreview) {
+        avatarPreview.addEventListener('click', function () {
+            const imageSrc = this.getAttribute('data-full-src') || this.src;
+            avatarModalImg.src = imageSrc;
+            avatarModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+
+        // Abrir modal con Enter o Space
+        avatarPreview.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const imageSrc = this.getAttribute('data-full-src') || this.src;
+                avatarModalImg.src = imageSrc;
+                avatarModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        });
+    }
+
+    // Cerrar modal
+    function closeModal() {
+        avatarModal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    if (closeAvatarModal) {
+        closeAvatarModal.addEventListener('click', closeModal);
+    }
+
+    // Cerrar modal al hacer click en el fondo
+    if (avatarModal) {
+        avatarModal.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    }
+
+    // Cerrar modal con tecla Escape
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !avatarModal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
+</script>
+@endpush
+
 @endsection

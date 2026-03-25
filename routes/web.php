@@ -279,6 +279,7 @@ Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history', 'mus
     Route::post('/notas-ajuste', [NotaAjusteController::class, 'store'])->name('notas.store');
     Route::delete('/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'destroy'])->name('notas.destroy');
     Route::get('/perfil', [TrabajadorController::class, 'perfil'])->name('perfil');
+    Route::post('/perfil/foto', [TrabajadorController::class, 'actualizarFotoPerfil'])->name('perfil.foto');
     Route::post('/perfil', [TrabajadorController::class, 'actualizarPerfil'])->name('perfil.actualizar');
 });
 

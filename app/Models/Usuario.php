@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class Usuario extends Authenticatable
 {
@@ -24,6 +25,7 @@ class Usuario extends Authenticatable
         'primer_apellido',
         'segundo_apellido',
         'correo',
+        'avatar',
         'telefono',
         'direccion',
         'id_ciudad',
@@ -263,5 +265,14 @@ class Usuario extends Authenticatable
             $this->primer_apellido,
             $this->segundo_apellido,
         ])->filter()->implode(' '));
+    }
+
+    public function getAvatarUrlAttribute(): string
+    {
+        if (!empty($this->avatar)) {
+            return Storage::url($this->avatar);
+        }
+
+        return asset('images/avatar-default.svg');
     }
 }

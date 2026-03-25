@@ -9,6 +9,7 @@ use App\Models\HistorialNovedad;
 use App\Http\Requests\UpdatePerfilRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class TrabajadorController extends Controller
@@ -201,6 +202,33 @@ class TrabajadorController extends Controller
         $usuario = Auth::user();
         
         return view('trabajador.perfil', compact('usuario'));
+    }
+
+    /**
+     * Actualizar solo la foto de perfil del trabajador autenticado.
+     */
+    public function actualizarFotoPerfil(Request $request)
+    {
+        $validated = $request->validate([
+            'avatar' => 'required|file|mimes:jpg,jpeg,png|max:2048',
+        ], [
+            'avatar.required' => 'Debes seleccionar una imagen.',
+            'avatar.file' => 'El archivo seleccionado no es válido.',
+            'avatar.mimes' => 'La foto debe estar en formato JPG, JPEG o PNG.',
+            'avatar.max' => 'La foto no puede superar 2MB.',
+        ]);
+
+        $usuario = Usuario::where('doc', Auth::user()->doc)->firstOrFail();
+
+        if (!empty($usuario->avatar) && Storage::disk('public')->exists($usuario->avatar)) {
+            Storage::disk('public')->delete($usuario->avatar);
+        }
+
+        $path = $validated['avatar']->store('empleados', 'public');
+        $usuario->update(['avatar' => $path]);
+
+        return redirect()->route('trabajador.perfil')
+            ->with('success', 'Foto de perfil actualizada correctamente.');
     }
     
     /**

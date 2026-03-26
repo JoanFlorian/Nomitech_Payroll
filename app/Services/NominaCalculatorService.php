@@ -550,9 +550,6 @@ class NominaCalculatorService
         return $this->normalizarMultiplicador($texto, 0);
     }
 
-        return $this->normalizarMultiplicador($texto, 0);
-    }
-
     private function normalizarMultiplicador(string $nombre, float $valorCrudo): float
     {
         $nombreNormalizado = mb_strtolower(trim($nombre), 'UTF-8');

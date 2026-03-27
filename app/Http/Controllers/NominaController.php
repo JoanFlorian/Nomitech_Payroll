@@ -8,17 +8,19 @@ use App\Models\PeriodoLiquidacion;
 use App\Models\Empresa;
 use App\Services\NominaCalculatorService;
 use App\Services\NominaEmployeeService;
+use App\Http\Controllers\Concerns\HandlesExportResponses;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Models\Contrato;
 use App\Services\ContractTerminationService;
 
 class NominaController extends Controller
 {
+    use HandlesExportResponses;
+
     private NominaCalculatorService $calculator;
     private NominaEmployeeService $employeeService;
     private \App\Services\PlanService $planService;
@@ -1483,11 +1485,7 @@ class NominaController extends Controller
             $row++;
         }
 
-        $writer = new Xlsx($spreadsheet);
-
-        return response()->streamDownload(function () use ($writer) {
-            $writer->save('php://output');
-        }, 'nomina.xlsx');
+        return $this->streamSpreadsheetDownload($spreadsheet, 'nomina.xlsx');
     }
 
     /* ==========================
@@ -1531,7 +1529,7 @@ class NominaController extends Controller
             'periodo' => $periodoLabel,
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('nomina.pdf');
+        return $this->downloadPdfResponse($pdf, 'nomina.pdf');
     }
 
     public function exportarNominaExcel(Request $request)

@@ -16,10 +16,10 @@ use App\Models\TipoCuenta;
 use App\Models\Eps;
 use App\Models\Afp;
 use App\Models\NivelRiesgo;
+use App\Http\Controllers\Concerns\HandlesExportResponses;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Models\Contrato;
 use App\Models\Rol;
 use Illuminate\Support\Facades\Schema;
@@ -27,6 +27,8 @@ use App\Services\ContractAlertService;
 
 class EmployeesController extends Controller
 {
+    use HandlesExportResponses;
+
     private function contratoActivoCallback(): \Closure
     {
         $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
@@ -290,14 +292,9 @@ class EmployeesController extends Controller
 
         $sheet->getStyle('E2:E' . max(2, $fila - 1))->getNumberFormat()->setFormatCode('#,##0.00');
 
-        $writer = new Xlsx($spreadsheet);
         $filename = 'empleados-' . now()->format('Ymd_His') . '.xlsx';
 
-        return response()->streamDownload(function () use ($writer) {
-            $writer->save('php://output');
-        }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+        return $this->streamSpreadsheetDownload($spreadsheet, $filename);
     }
 
     public function exportarEmpleadosPdf(Request $request)
@@ -319,6 +316,6 @@ class EmployeesController extends Controller
             'busqueda' => $request->query('search', 'Sin filtro'),
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('reporte-empleados-' . now()->format('Ymd_His') . '.pdf');
+        return $this->downloadPdfResponse($pdf, 'reporte-empleados-' . now()->format('Ymd_His') . '.pdf');
     }
 }

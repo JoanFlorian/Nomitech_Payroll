@@ -3,15 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\TipoContrato;
+use App\Http\Controllers\Concerns\HandlesExportResponses;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ReportesController extends Controller
 {
+    use HandlesExportResponses;
+
     public function index(Request $request)
     {
         return view('reportes.index', $this->buildReportData($request));
@@ -28,7 +30,7 @@ class ReportesController extends Controller
 
         $pdf = Pdf::loadView('reportes.reporte-pdf', $data)->setPaper('a4', 'landscape');
 
-        return $pdf->download('reporte-nomina-' . now()->format('Ymd_His') . '.pdf');
+        return $this->downloadPdfResponse($pdf, 'reporte-nomina-' . now()->format('Ymd_His') . '.pdf');
     }
 
     public function exportarExcel(Request $request)
@@ -102,14 +104,9 @@ class ReportesController extends Controller
             $sheet->getColumnDimension($columna)->setAutoSize(true);
         }
 
-        $writer = new Xlsx($spreadsheet);
         $filename = 'reporte-nomina-' . now()->format('Ymd_His') . '.xlsx';
 
-        return response()->streamDownload(function () use ($writer) {
-            $writer->save('php://output');
-        }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+        return $this->streamSpreadsheetDownload($spreadsheet, $filename);
     }
 
     private function buildReportData(Request $request): array

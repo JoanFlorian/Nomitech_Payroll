@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesExportResponses;
 use App\Models\Usuario;
 use App\Models\Contrato;
 use App\Models\Salario;
@@ -14,6 +15,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class TrabajadorController extends Controller
 {
+    use HandlesExportResponses;
+
     /**
      * Dashboard principal del trabajador
      */
@@ -175,7 +178,7 @@ class TrabajadorController extends Controller
         
         $filename = 'desprendible_' . str_replace(' ', '_', $desprendible->periodo->nombre ?? 'periodo') . '.pdf';
         
-        return $pdf->download($filename);
+        return $this->downloadPdfResponse($pdf, $filename);
     }
     
     /**

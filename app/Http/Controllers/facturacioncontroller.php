@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pago;
 use App\Models\Licencia;
+use App\Http\Controllers\Concerns\HandlesExportResponses;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -12,10 +13,11 @@ use App\Models\Plan;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class facturacioncontroller extends Controller
 {
+    use HandlesExportResponses;
+
     private function construirConsultaFacturacion(Request $request)
     {
         $estadoFiltro = $request->query('estado');
@@ -222,14 +224,12 @@ class facturacioncontroller extends Controller
             // Plan desde el pago (nuevo) o desde la licencia (histórico)
             $planParaPdf = $pago->plan ?? ($licencia ? $licencia->plan : null);
 
-            $html = view('superadmin.pdf', compact('pago', 'empresa', 'licencia', 'estadoTexto', 'planParaPdf'))->render();
+            $pdf = Pdf::loadView('superadmin.pdf', compact('pago', 'empresa', 'licencia', 'estadoTexto', 'planParaPdf'));
 
-            return response($html, 200)
-                ->header('Content-Type', 'text/html; charset=utf-8')
-                ->header('Content-Disposition', 'inline; filename="factura-' . $pago->id . '.html"');
+            return $this->downloadPdfResponse($pdf, 'factura-' . $pago->id . '.pdf');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error al generar factura HTML: " . $e->getMessage());
-            return back()->with('error', 'No se pudo generar la vista de la factura.');
+            \Illuminate\Support\Facades\Log::error("Error al generar factura PDF: " . $e->getMessage());
+            return back()->with('error', 'No se pudo generar el PDF de la factura.');
         }
     }
 
@@ -284,7 +284,7 @@ class facturacioncontroller extends Controller
             $pdf = Pdf::loadView('superadmin.reporte-pdf', $data);
 
             $filename = $selectedDate ? "reporte-{$selectedDate}.pdf" : "reporte-{$selectedYear}.pdf";
-            return $pdf->download($filename);
+            return $this->downloadPdfResponse($pdf, $filename);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error al generar reporte PDF: " . $e->getMessage());
             return back()->with('error', 'Hubo un error al generar el reporte PDF. Por favor, intente nuevamente.');
@@ -318,7 +318,7 @@ class facturacioncontroller extends Controller
 
             $pdf = Pdf::loadView('superadmin.facturacion-reporte-pdf', $data)->setPaper('a4', 'landscape');
 
-            return $pdf->download('reporte-facturacion-empresas-' . now()->format('Ymd_His') . '.pdf');
+            return $this->downloadPdfResponse($pdf, 'reporte-facturacion-empresas-' . now()->format('Ymd_His') . '.pdf');
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error al generar reporte de facturación en PDF: " . $e->getMessage());
             return back()->with('error', 'No fue posible generar el reporte PDF de facturación.');
@@ -388,14 +388,9 @@ class facturacioncontroller extends Controller
             $sheet->getStyle('A1:I1')->getFont()->setBold(true);
             $sheet->getStyle('I2:I' . max(2, $fila - 1))->getNumberFormat()->setFormatCode('#,##0.00');
 
-            $writer = new Xlsx($spreadsheet);
             $nombreArchivo = 'reporte-facturacion-empresas-' . now()->format('Ymd_His') . '.xlsx';
 
-            return response()->streamDownload(function () use ($writer) {
-                $writer->save('php://output');
-            }, $nombreArchivo, [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ]);
+            return $this->streamSpreadsheetDownload($spreadsheet, $nombreArchivo);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error al generar reporte de facturación en Excel: " . $e->getMessage());
             return back()->with('error', 'No fue posible generar el reporte Excel de facturación.');

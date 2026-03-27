@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesExportResponses;
 use App\Models\Salario;
 use App\Models\PeriodoLiquidacion;
 use App\Models\BenefitLedger;
@@ -10,6 +11,8 @@ use Illuminate\Http\Request;
 
 class NominaElectronicaController extends Controller
 {
+    use HandlesExportResponses;
+
     /**
      * Muestra la vista principal de Nómina Electrónica.
      */
@@ -196,7 +199,7 @@ class NominaElectronicaController extends Controller
         ]);
 
         $nombreArchivo = 'volante_' . $empleado->doc . '_' . $periodo->fecha_inicio->format('MY') . '.pdf';
-        return $pdf->download($nombreArchivo);
+        return $this->downloadPdfResponse($pdf, $nombreArchivo);
     }
 
     /**

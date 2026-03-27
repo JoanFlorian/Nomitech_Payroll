@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HandlesExportResponses;
 use App\Models\Empresa;
 use App\Models\Usuario;
 use App\Models\Ciudad;
@@ -12,10 +13,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class EmpresaController extends Controller
 {
+    use HandlesExportResponses;
+
     private function normalizarCorreo(string $correo): string
     {
         $correo = preg_replace('/[\x{00A0}\x{200B}-\x{200D}\x{FEFF}]/u', '', $correo);
@@ -131,13 +133,7 @@ class EmpresaController extends Controller
 
         $fileName = 'reporte-empresas-' . now()->format('Ymd-His') . '.xlsx';
 
-        return response()->streamDownload(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output');
-            $spreadsheet->disconnectWorksheets();
-        }, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+        return $this->streamSpreadsheetDownload($spreadsheet, $fileName);
     }
 
     public function show(Empresa $empresa)
@@ -233,13 +229,7 @@ class EmpresaController extends Controller
         $nombreBase = Str::slug($empresa->razon_social ?: 'empresa');
         $fileName = "certificado-{$nombreBase}.xlsx";
 
-        return response()->streamDownload(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output');
-            $spreadsheet->disconnectWorksheets();
-        }, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+        return $this->streamSpreadsheetDownload($spreadsheet, $fileName);
     }
 
    public function update(Request $request, Empresa $empresa)

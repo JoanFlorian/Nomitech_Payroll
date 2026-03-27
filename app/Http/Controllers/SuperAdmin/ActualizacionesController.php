@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HandlesExportResponses;
 use App\Models\Ciudad;
 use App\Models\Departamento;
 use App\Http\Requests\Actualizaciones\StoreCiudadRequest;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ActualizacionesController extends Controller
 {
+    use HandlesExportResponses;
+
     private function config(?string $tipo = null): array
     {
         $all = config('actualizaciones.modulos');
@@ -108,14 +109,7 @@ class ActualizacionesController extends Controller
             $row++;
         }
 
-        return new StreamedResponse(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output');
-        }, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $tipo . '_' . date('Y-m-d') . '.xlsx"',
-            'Cache-Control' => 'max-age=0',
-        ]);
+        return $this->streamSpreadsheetDownload($spreadsheet, $tipo . '_' . date('Y-m-d') . '.xlsx');
     }
 
     public function getDatos(Request $request, $tipo)

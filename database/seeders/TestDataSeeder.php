@@ -121,6 +121,14 @@ class TestDataSeeder extends Seeder
             DB::table('benefit_ledger')->where('tenant_id', $empresa->id_empresa)->delete();
             DB::table('benefit_balance')->where('tenant_id', $empresa->id_empresa)->delete();
             DB::table('provision')->whereIn('id_periodo', $periodIds)->delete();
+            DB::table('pila_archivos')->whereIn('periodo_id', $periodIds)->delete();
+            
+            // Clean up other PILA tables
+            $planillaIds = DB::table('planilla_pila')->whereIn('id_periodo', $periodIds)->pluck('id');
+            if ($planillaIds->isNotEmpty()) {
+                DB::table('pila_detalle_empleado')->whereIn('planilla_id', $planillaIds)->delete();
+                DB::table('planilla_pila')->whereIn('id', $planillaIds)->delete();
+            }
             
             $salarioIds = DB::table('salario')->whereIn('id_periodo', $periodIds)->pluck('id_salario');
             if ($salarioIds->isNotEmpty()) {

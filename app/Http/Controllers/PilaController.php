@@ -99,7 +99,11 @@ class PilaController extends Controller
 
         $historialPila = collect();
         if (Schema::hasTable('pila_archivos')) {
-            $this->sincronizarHistorialDesdePlanilla();
+            try {
+                $this->sincronizarHistorialDesdePlanilla();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error sincronizando historial PILA: ' . $e->getMessage());
+            }
 
             $historialPila = DB::table('pila_archivos as pa')
                 ->leftJoin('periodo_liquidacion as pl', 'pl.id_periodo', '=', 'pa.periodo_id')
@@ -432,9 +436,23 @@ class PilaController extends Controller
                 continue;
             }
 
+            $periodoId = (int) ($row->id_periodo ?? 0);
+            if ($periodoId <= 0) {
+                continue;
+            }
+
+            // Validar que el periodo realmente exista para evitar errores de llave foránea
+            $periodoExiste = DB::table('periodo_liquidacion')
+                ->where('id_periodo', $periodoId)
+                ->exists();
+
+            if (!$periodoExiste) {
+                continue;
+            }
+
             $yaExiste = DB::table('pila_archivos')
                 ->where('empresa_id', (int) $row->id_empresa)
-                ->where('periodo_id', (int) ($row->id_periodo ?? 0))
+                ->where('periodo_id', $periodoId)
                 ->where('ruta_archivo', $ruta)
                 ->exists();
 
@@ -450,7 +468,7 @@ class PilaController extends Controller
             }
 
             DB::table('pila_archivos')->insert([
-                'periodo_id' => (int) ($row->id_periodo ?? 0),
+                'periodo_id' => $periodoId,
                 'empresa_id' => (int) ($row->id_empresa ?? 0),
                 'nombre_archivo' => basename($ruta),
                 'ruta_archivo' => $ruta,

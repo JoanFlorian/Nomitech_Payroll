@@ -364,7 +364,18 @@ class PilaFileGeneratorService
     public function formatNombreEmpleado(string $nombre): string
     {
         $texto = $this->sanitizeField($nombre);
-        $texto = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto) ?: $texto;
+        
+        // Solo intentar iconv si la extensión está cargada para evitar Error 500
+        if (function_exists('iconv')) {
+            $prevErrorLevel = error_reporting(0);
+            $transliterated = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $texto);
+            error_reporting($prevErrorLevel);
+            
+            if ($transliterated !== false) {
+                $texto = $transliterated;
+            }
+        }
+        
         $texto = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $texto) ?? $texto;
         $texto = preg_replace('/\s+/', ' ', $texto) ?? $texto;
 

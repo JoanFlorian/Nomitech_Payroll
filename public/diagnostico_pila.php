@@ -1,8 +1,6 @@
 <?php
-/**
- * Script de diagnóstico para el módulo PILA
- * Úselo en entornos donde el módulo arroje un Error 500 (Server Error)
- */
+echo "<pre>"; // Para que se vea bien en el navegador
+header('Content-Type: text/plain'); 
 
 echo "🔍 INICIANDO DIAGNÓSTICO DEL MÓDULO PILA - NOMITECH\n";
 echo "--------------------------------------------------\n\n";
@@ -31,7 +29,8 @@ foreach ($extensiones as $ext => $desc) {
 
 // 3. Verificar Entorno Laravel y Vite
 echo "\n3. Verificando manifest de Vite (Producción):\n";
-$publicPath = __DIR__ . '/public';
+$basePath = dirname(__DIR__);
+$publicPath = $basePath . '/public';
 $manifestPath = $publicPath . '/build/manifest.json';
 $hotPath = $publicPath . '/hot';
 
@@ -46,7 +45,7 @@ if (file_exists($hotPath)) {
 
 // 4. Verificar Permisos de Almacenamiento
 echo "\n4. Verificando permisos de escritura en Storage:\n";
-$storagePath = __DIR__ . '/storage/app';
+$storagePath = $basePath . '/storage/app';
 $pilaDir = $storagePath . '/pila';
 
 if (is_writable($storagePath)) {
@@ -65,8 +64,8 @@ if (!is_dir($pilaDir)) {
 
 // 5. Verificar Archivos Críticos
 echo "\n5. Verificando archivos de configuración:\n";
-$envFile = __DIR__ . '/.env';
-$pilaConfig = __DIR__ . '/config/pila.php';
+$envFile = $basePath . '/.env';
+$pilaConfig = $basePath . '/config/pila.php';
 
 if (file_exists($envFile)) echo "   ✅ .env: Encontrado\n"; else echo "   ❌ .env: NO ENCONTRADO ⚠️\n";
 if (file_exists($pilaConfig)) echo "   ✅ config/pila.php: Encontrado\n"; else echo "   ❌ config/pila.php: NO ENCONTRADO ⚠️\n";

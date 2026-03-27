@@ -8,7 +8,47 @@ echo "--------------------------------------------------\n\n";
 // 1. Verificar Versión de PHP
 echo "1. Versión de PHP: " . PHP_VERSION . " (Recomendado: 8.2+)\n";
 
-// 2. Verificar Extensiones Críticas
+// 2. Verificar Conexión a Base de Datos (Nuevo)
+echo "\n2. Verificando Conexión a Base de Datos:\n";
+try {
+    // Intentar conectar usando pdo_mysql si está disponible
+    if (extension_loaded('pdo_mysql')) {
+        $host = getenv('DB_HOST') ?: '127.0.0.1';
+        $port = getenv('DB_PORT') ?: '3306';
+        $dbname = getenv('DB_DATABASE');
+        $user = getenv('DB_USERNAME');
+        $pass = getenv('DB_PASSWORD');
+        
+        if ($dbname && $user) {
+            $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
+            $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            echo "   ✅ Conexión exitosa a la base de datos '$dbname'.\n";
+        } else {
+            echo "   ⚠️ Variables de entorno de DB no completas (DB_DATABASE, DB_USERNAME). Usando variables de Laravel...\n";
+            // En Render, a veces están dentro de DATABASE_URL
+            if (getenv('DATABASE_URL')) {
+                echo "   ℹ️ Se detectó DATABASE_URL. Intentando parsear...\n";
+                $url = parse_url(getenv('DATABASE_URL'));
+                $host = $url['host'] ?? '127.0.0.1';
+                $port = $url['port'] ?? '3306';
+                $user = $url['user'] ?? '';
+                $pass = $url['pass'] ?? '';
+                $path = ltrim($url['path'] ?? '', '/');
+                $dsn = "mysql:host=$host;port=$port;dbname=$path;charset=utf8mb4";
+                $pdo = new PDO($dsn, $user, $pass);
+                echo "   ✅ Conexión exitosa via DATABASE_URL.\n";
+            } else {
+                 echo "   ❌ No se pudieron detectar credenciales de DB en el entorno directo.\n";
+            }
+        }
+    } else {
+        echo "   ❌ Extensión pdo_mysql no cargada.\n";
+    }
+} catch (Exception $e) {
+    echo "   ❌ Error de conexión: " . $e->getMessage() . "\n";
+}
+
+// 3. Verificar Extensiones Críticas
 $extensiones = [
     'iconv' => 'Limpieza de strings y sanitización PILA',
     'bcmath' => 'Cálculos de precisión (Requerido por PhpSpreadsheet)',

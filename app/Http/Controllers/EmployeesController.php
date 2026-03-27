@@ -200,7 +200,7 @@ class EmployeesController extends Controller
         $usuario = Empleado::with([
             'contratos' => function ($q) {
                 $q->orderByDesc('id_contrato')
-                  ->with(['tipoContrato', 'tipoTrabajador', 'arl', 'eps', 'afp', 'formaPago', 'metodoPago', 'nivelRiesgo']);
+                                    ->with(['tipoContrato', 'tipoTrabajador', 'arl', 'eps', 'afp', 'formaPago', 'metodoPago', 'nivelRiesgo', 'cuentaActiva.banco', 'cuentaActiva.tipoCuenta']);
             },
             'ciudad',
             'rol',

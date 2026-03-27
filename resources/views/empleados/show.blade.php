@@ -174,6 +174,18 @@
                         <dd class="text-gray-800 text-right">{{ $contrato->formaPago->nombre ?? '—' }}</dd>
                     </div>
                     <div class="flex justify-between gap-4">
+                        <dt class="text-gray-500 font-medium shrink-0">Método de Pago</dt>
+                        <dd class="text-gray-800 text-right">{{ $contrato->metodoPago->nombre ?? '—' }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-gray-500 font-medium shrink-0">Banco</dt>
+                        <dd class="text-gray-800 text-right">{{ $contrato->cuentaActiva->banco->nombre ?? '—' }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-gray-500 font-medium shrink-0">Tipo de Cuenta</dt>
+                        <dd class="text-gray-800 text-right">{{ $contrato->cuentaActiva->tipoCuenta->nombre ?? '—' }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-4">
                         <dt class="text-gray-500 font-medium shrink-0">Estado</dt>
                         <dd class="text-right">
                             @php $estado = $contrato->estado_dinamico ?? 'ACTIVO'; @endphp

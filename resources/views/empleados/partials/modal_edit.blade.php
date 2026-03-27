@@ -217,15 +217,18 @@
                 <div x-show="editWizardStep === 2" x-cloak>
                     <h3 class="text-2xl font-bold text-gray-800 mb-6">Datos Laborales</h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="editContractualContainer" x-data="contractualData()">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Trabajador</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                                name="id_tipo_trabajador" id="editIdTipoTrabajador">
-                                @foreach ($tipotrabajadores as $tipo)
-                                    <option value="{{ $tipo->id_tipo_trabajador }}">{{ $tipo->nombre }}</option>
-                                @endforeach
+                                name="id_tipo_trabajador" id="editIdTipoTrabajador"
+                                x-model="selectedWorkerType"
+                                @change="updateSalary()">
+                                <option value="">Seleccionar...</option>
+                                <template x-for="type in filteredWorkerTypes" :key="type.id_tipo_trabajador">
+                                    <option :value="type.id_tipo_trabajador" x-text="type.nombre"></option>
+                                </template>
                             </select>
                             <p class="error-message text-red-500 text-sm hidden" data-error="id_tipo_trabajador"></p>
                         </div>
@@ -247,7 +250,9 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Contrato</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                                name="id_tipo_contrato" id="editIdTipoContrato">
+                                name="id_tipo_contrato" id="editIdTipoContrato"
+                                x-model="selectedContract"
+                                @change="handleContractChange($event)">
                                 @foreach ($contratos as $contrato)
                                     <option value="{{ $contrato->id_tipo_contrato }}">{{ $contrato->nombre }}</option>
                                 @endforeach
@@ -678,17 +683,15 @@
         let minFechaFin = nextDate.toISOString().split('T')[0];
 
         // Nueva validación: No puede ser anterior al periodo activo
-        if (window.employeeValidationRules && window.employeeValidationRules.activePeriodStart) {
-            const periodStart = window.employeeValidationRules.activePeriodStart;
-            if (periodStart > minFechaFin) {
-                minFechaFin = periodStart;
-            }
+        const activePeriodStart = window.employeeValidationRules?.activePeriodStart;
+        if (activePeriodStart && activePeriodStart > minFechaFin) {
+            minFechaFin = activePeriodStart;
         }
 
         fechaFinInput.setAttribute('min', minFechaFin);
 
         const fechaFinValue = (fechaFinInput.value ?? '').toString().trim();
-        if (fechaFinValue !== '' && fechaFinValue <= fechaInicioValue) {
+        if (fechaFinValue !== '' && (fechaFinValue <= fechaInicioValue || (activePeriodStart && fechaFinValue < activePeriodStart))) {
             fechaFinInput.value = '';
             clearEditFieldError(fechaFinInput);
         }
@@ -1069,7 +1072,29 @@
                         if (!fechaInicioValue) {
                             return validateEditInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
                         }
-                        return validateEditInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
+                        if (value <= fechaInicioValue) {
+                            return validateEditInput(input, false, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
+                        }
+
+                        // Validación: No puede ser anterior al periodo activo
+                        const activePeriodStart = window.employeeValidationRules?.activePeriodStart;
+                        if (activePeriodStart && value < activePeriodStart) {
+                            return validateEditInput(input, false, 'La fecha de fin no puede ser anterior al periodo de liquidación actual.', showError);
+                        }
+
+                        // Validación: Duración máxima de 2 años para Aprendizaje (4) y Prácticas (5)
+                        const idTipoContrato = Number(tipoContratoInput ? tipoContratoInput.value : 0);
+                        if (idTipoContrato === 4 || idTipoContrato === 5) {
+                            const start = new Date(`${fechaInicioValue}T00:00:00`);
+                            const end = new Date(`${value}T00:00:00`);
+                            const diffTime = Math.abs(end - start);
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays > 730) {
+                                return validateEditInput(input, false, 'La duración para este tipo de contrato no puede exceder los 2 años.', showError);
+                            }
+                        }
+
+                        return validateEditInput(input, true, '', showError);
                     }
                 case 'salario':
                     if (value === '') {
@@ -1338,9 +1363,26 @@
                 const contrato = data.contrato;
                 const cuenta = data.cuenta;
                 if (contrato) {
-                    document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
+                    // Sincronizar con Alpine
+                    const alpineContainer = document.getElementById('editContractualContainer');
+                    if (alpineContainer) {
+                        try {
+                            const alpineData = Alpine.$data(alpineContainer);
+                            if (alpineData) {
+                                alpineData.selectedContract = contrato.id_tipo_contrato || '';
+                                alpineData.selectedWorkerType = contrato.id_tipo_trabajador || '';
+                            }
+                        } catch (e) {
+                            console.warn('Error al sincronizar Alpine en loadEmployee:', e);
+                            document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
+                            document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
+                        }
+                    } else {
+                        document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
+                        document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
+                    }
+
                     document.getElementById('editIdSubTipoTrabajador').value = contrato.id_sub_tipo_trabajador || '';
-                    document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
                     document.getElementById('editIdArl').value = contrato.id_arl || '';
                     if (isRenewal && contrato.fecha_fin) {
                         try {

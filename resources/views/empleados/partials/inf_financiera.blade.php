@@ -57,6 +57,21 @@
         </div>
 
         <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="id_metodo_pago">
+                Método de Pago <span class="text-red-500">*</span>
+            </label>
+            <select id="id_metodo_pago" class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
+                    focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="id_metodo_pago"
+                required>
+                <option value="">Seleccionar...</option>
+                @foreach ($metodopago as $metodo)
+                    <option value="{{ $metodo->id_metodo_pago }}">{{ $metodo->nombre }}</option>
+                @endforeach
+            </select>
+            <div class="error-message invalid-feedback" data-error="id_metodo_pago"></div>
+        </div>
+
+        <div>
             <label class="block text-sm font-medium text-gray-700 mb-1" for="id_banco">
                 Banco <span class="text-red-500">*</span>
             </label>

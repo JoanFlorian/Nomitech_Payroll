@@ -28,6 +28,10 @@ class CompanyRoleSeeder extends Seeder
                 'permissions' => '*'
             ],
             [
+                'name' => 'Representante Legal',
+                'permissions' => '*'
+            ],
+            [
                 'name' => 'Empleado',
                 'permissions' => ['view_payroll']
             ],

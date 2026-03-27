@@ -33,7 +33,115 @@
     </div>
 </div>
 
-<form id="step2" novalidate action="{{ route('employees.step2') }}" method="POST">
+<script>
+    function contractualData() {
+        return {
+            selectedContract: '',
+            selectedWorkerType: '',
+            smmlv: window.employeeValidationRules?.smmlv || 0,
+            workerTypes: @json($tipotrabajadores),
+            
+            get filteredWorkerTypes() {
+                const contractId = parseInt(this.selectedContract);
+                if (contractId === 4) { // Aprendizaje
+                    return this.workerTypes.filter(t => [12, 19].includes(parseInt(t.id_tipo_trabajador)));
+                } else if (contractId === 6) { // Prestación de servicios
+                    return this.workerTypes.filter(t => parseInt(t.id_tipo_trabajador) === 2);
+                } else { // Otros (Indefinido, Fijo, Obra, Prácticas)
+                    // Nota: El usuario pidió que el resto sean dependiente (1), excepto aprendizaje y servicios.
+                    return this.workerTypes.filter(t => parseInt(t.id_tipo_trabajador) === 1);
+                }
+            },
+
+            updateSalary() {
+                if (this.selectedContract == '4') {
+                    let salaryInput = document.getElementById('salario') || document.getElementById('editSalario');
+                    if (!salaryInput) return;
+
+                    if (this.selectedWorkerType == '12') {
+                        let valor = Math.round(this.smmlv * 0.75);
+                        salaryInput.value = new Intl.NumberFormat('es-CO').format(valor);
+                    } else if (this.selectedWorkerType == '19') {
+                        salaryInput.value = new Intl.NumberFormat('es-CO').format(this.smmlv);
+                    }
+                    salaryInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            },
+
+            checkDuration() {
+                let startInput = document.getElementById('fecha_inicio') || document.getElementById('editFechaInicio');
+                let endInput = document.getElementById('fecha_fin') || document.getElementById('editFechaFin');
+                if (!startInput || !endInput) return true;
+
+                let start = startInput.value;
+                let end = endInput.value;
+                let errorDiv = document.querySelector('[data-error="fecha_fin"]');
+                const activePeriodStart = window.employeeValidationRules?.activePeriodStart;
+
+                if (start && end) {
+                    let d1 = new Date(start);
+                    let d2 = new Date(end);
+
+                    // Regla de los 2 años
+                    if ([4, 5].includes(parseInt(this.selectedContract))) {
+                        let months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+                        if (months > 24) {
+                            endInput.classList.add('border-red-500');
+                            if (errorDiv) {
+                                errorDiv.textContent = 'La duración no puede superar los 2 años.';
+                                errorDiv.classList.add('d-block');
+                            }
+                            return false;
+                        }
+                    }
+
+                    // Regla del periodo activo
+                    if (activePeriodStart && end < activePeriodStart) {
+                        const formattedDate = new Date(activePeriodStart + 'T00:00:00').toLocaleDateString('es-CO');
+                        endInput.classList.add('border-red-500');
+                        if (errorDiv) {
+                            errorDiv.textContent = `La fecha no puede ser anterior al periodo activo (${formattedDate}).`;
+                            errorDiv.classList.add('d-block');
+                        }
+                        return false;
+                    }
+
+                    // Caso normal: limpiar errores de estas reglas específicas
+                    endInput.classList.remove('border-red-500');
+                    if (errorDiv && (errorDiv.textContent.includes('2 años') || errorDiv.textContent.includes('periodo activo'))) {
+                        errorDiv.textContent = '';
+                        errorDiv.classList.remove('d-block');
+                    }
+                }
+                return true;
+            },
+
+            handleContractChange(e) {
+                this.selectedContract = e.target.value;
+                
+                // Auto-seleccionar tipo de trabajador si solo hay una opción lógica
+                const filtered = this.filteredWorkerTypes;
+                if (filtered.length === 1) {
+                    this.selectedWorkerType = filtered[0].id_tipo_trabajador;
+                } else {
+                    this.selectedWorkerType = '';
+                }
+
+                this.updateSalary();
+                this.checkDuration();
+            },
+
+            handleWorkerTypeChange(e) {
+                this.selectedWorkerType = e.target.value;
+                this.updateSalary();
+            }
+        }
+    }
+</script>
+
+<form id="step2" novalidate action="{{ route('employees.step2') }}" method="POST"
+    x-data="contractualData()"
+    x-on:change="if($event.target.type === 'date') { checkDuration(); }">
     @csrf
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
@@ -45,6 +153,7 @@
                     class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                     name="id_tipo_contrato"
+                    x-on:change="handleContractChange($event)"
                     required>
                 <option value="">Seleccionar...</option>
                 @foreach ( $contratos as $contrato )
@@ -62,11 +171,13 @@
                     class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
                         focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" 
                     name="id_tipo_trabajador"
+                    x-on:change="handleWorkerTypeChange($event)"
+                    x-model="selectedWorkerType"
                     required>
                 <option value="">Seleccionar...</option>
-                @foreach ( $tipotrabajadores as $tipotrabajador )
-                    <option value="{{ $tipotrabajador->id_tipo_trabajador }}">{{ $tipotrabajador->nombre }}</option>
-                @endforeach
+                <template x-for="type in filteredWorkerTypes" :key="type.id_tipo_trabajador">
+                    <option :value="type.id_tipo_trabajador" x-text="type.nombre"></option>
+                </template>
             </select>
             <div class="error-message invalid-feedback" data-error="id_tipo_trabajador"></div>
         </div>

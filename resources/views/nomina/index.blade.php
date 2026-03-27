@@ -237,6 +237,48 @@
 
 			setEditButtonEnabled(false);
 		});
+
+		function updateAutoClose(id, fecha) {
+			if (!fecha) {
+				if (!confirm('¿Desea eliminar la programación de cierre automático?')) return;
+			}
+
+			const url = "{{ route('periodos.update-auto-close', ['id' => ':id']) }}".replace(':id', id);
+
+			fetch(url, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-CSRF-TOKEN': '{{ csrf_token() }}',
+					'Accept': 'application/json'
+				},
+				body: JSON.stringify({
+					fecha_cierre_automatico: fecha
+				})
+			})
+			.then(res => res.json())
+			.then(data => {
+				if (data.success) {
+					if (window.Swal) {
+						Swal.fire({
+							icon: 'success',
+							title: 'Programado',
+							text: data.message,
+							timer: 2000,
+							showConfirmButton: false
+						});
+					} else {
+						alert(data.message);
+					}
+				} else {
+					alert('Error: ' + data.message);
+				}
+			})
+			.catch(err => {
+				console.error(err);
+				alert('Error al actualizar la fecha.');
+			});
+		}
 	</script>
 
 	@include('periodos.partials.modal_cerrar')

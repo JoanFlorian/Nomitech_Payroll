@@ -66,7 +66,7 @@ class TestDataSeeder extends Seeder
             'id_rol' => $idRolRep,
             'activo' => true,
             'contrasena' => Hash::make('password'),
-            // 'is_owner' => true, // Column missing in DB
+            'is_owner' => true,
             'updated_at' => now(),
             'created_at' => now(),
         ];

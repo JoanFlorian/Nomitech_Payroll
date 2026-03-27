@@ -121,6 +121,10 @@ class UpdateEmployeePartialRequest extends FormRequest
             $rules['id_metodo_pago'] = 'bail|required|integer|exists:metodo_pago,id_metodo_pago';
         }
 
+        if ($this->has('id_banco')) {
+            $rules['id_banco'] = 'bail|required|integer|exists:banco,id_banco';
+        }
+
         if ($this->has('tipo_cuenta')) {
             $rules['tipo_cuenta'] = 'bail|nullable|integer|exists:tipo_cuenta,id_tipo_cuenta';
         }
@@ -265,6 +269,10 @@ class UpdateEmployeePartialRequest extends FormRequest
             'id_metodo_pago.required' => 'Debe seleccionar el método de pago.',
             'id_metodo_pago.integer' => 'El método de pago no es válido.',
             'id_metodo_pago.exists' => 'El método de pago seleccionado no existe.',
+
+            'id_banco.required' => 'Debe seleccionar el banco.',
+            'id_banco.integer' => 'El banco no es válido.',
+            'id_banco.exists' => 'El banco seleccionado no existe.',
 
             'tipo_cuenta.required' => 'Debe seleccionar el tipo de cuenta.',
             'tipo_cuenta.integer' => 'El tipo de cuenta no es válido.',

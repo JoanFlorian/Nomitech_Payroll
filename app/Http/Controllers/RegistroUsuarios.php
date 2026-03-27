@@ -274,10 +274,14 @@ class RegistroUsuarios extends Controller
                 // Solo crear cuenta bancaria si no es forma de pago efectivo
                 $tipoCuenta = $allData['tipo_cuenta'] ?? null;
                 $numeroCuenta = $allData['numero_cuenta'] ?? null;
+                $bankId = (int) ($allData['id_banco'] ?? 0);
 
                 if (!empty($tipoCuenta) && !empty($numeroCuenta)) {
-                    $defaultBankId = Banco::query()->value('id_banco');
-                    if (empty($defaultBankId)) {
+                    if ($bankId <= 0) {
+                        $bankId = (int) Banco::query()->value('id_banco');
+                    }
+
+                    if ($bankId <= 0) {
                         throw new \RuntimeException('No hay bancos configurados para crear la cuenta del empleado.');
                     }
 
@@ -288,7 +292,7 @@ class RegistroUsuarios extends Controller
                         ],
                         [
                             'id_tipo_cuenta' => $tipoCuenta,
-                            'id_banco' => $defaultBankId,
+                            'id_banco' => $bankId,
                             'numero_cuenta' => $numeroCuenta,
                             'activo' => true,
                         ]
@@ -467,7 +471,10 @@ class RegistroUsuarios extends Controller
             $numeroCuenta = $data['numero_cuenta'] ?? null;
 
             if (!empty($tipoCuenta) && !empty($numeroCuenta)) {
-                $bancoId = Banco::query()->value('id_banco');
+                $bancoId = (int) ($data['id_banco'] ?? 0);
+                if ($bancoId <= 0) {
+                    $bancoId = (int) Banco::query()->value('id_banco');
+                }
                 Cuenta::updateOrCreate(
                     ['id_contrato' => $nuevoContrato->id_contrato],
                     [
@@ -667,7 +674,7 @@ class RegistroUsuarios extends Controller
                     ->where('activo', true)
                     ->first();
 
-                $bankId = $activeCuenta->id_banco ?? Banco::query()->value('id_banco');
+                $bankId = (int) ($data['id_banco'] ?? ($activeCuenta->id_banco ?? Banco::query()->value('id_banco')));
                 if (empty($bankId)) {
                     throw new \RuntimeException('No hay bancos configurados para actualizar la cuenta.');
                 }

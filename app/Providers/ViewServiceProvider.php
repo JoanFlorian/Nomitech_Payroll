@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Afp;
 use App\Models\Arl;
+use App\Models\Banco;
 use App\Models\CajaCompensacion;
 use App\Models\Ciudad;
 use App\Models\Departamento;
@@ -51,10 +52,11 @@ class ViewServiceProvider extends ServiceProvider
             $formapagos = FormaPago::all();
             $metodopago = MetodoPago::all();
             $tipocuenta = TipoCuenta::all();
+            $Bancos = Banco::orderBy('nombre')->get();
             $Eps = Eps::all();
             $Afp = Afp::all();
             $Cajas = CajaCompensacion::orderBy('nombre')->get();
-            $view->with(compact('pais', 'departamento', 'ciudad', 'tipodoc', 'tipotrabajadores', 'suptrabajadores', 'contratos', 'Arl', 'formapagos', 'metodopago', 'tipocuenta', 'Eps', 'Afp', 'Cajas'));
+            $view->with(compact('pais', 'departamento', 'ciudad', 'tipodoc', 'tipotrabajadores', 'suptrabajadores', 'contratos', 'Arl', 'formapagos', 'metodopago', 'tipocuenta', 'Bancos', 'Eps', 'Afp', 'Cajas'));
         });
 
         View::composer('layouts.app', function ($view) {

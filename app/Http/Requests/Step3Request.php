@@ -37,6 +37,7 @@ class Step3Request extends FormRequest
     {
         return [
             'id_forma_pago' => 'required|integer|exists:forma_pago,id_forma_pago',
+            'id_banco' => 'required|integer|exists:banco,id_banco',
             'tipo_cuenta' => 'nullable|integer|exists:tipo_cuenta,id_tipo_cuenta',
             'numero_cuenta' => 'nullable|string|max:20|regex:/^[0-9]{6,20}$/',
             'id_eps' => 'required|integer|exists:eps,id_eps',
@@ -58,6 +59,10 @@ class Step3Request extends FormRequest
             'id_forma_pago.required' => 'Debe seleccionar la forma de pago.',
             'id_forma_pago.integer' => 'La forma de pago no es válida.',
             'id_forma_pago.exists' => 'La forma de pago seleccionada no existe.',
+
+            'id_banco.required' => 'Debe seleccionar el banco.',
+            'id_banco.integer' => 'El banco no es válido.',
+            'id_banco.exists' => 'El banco seleccionado no existe.',
 
             'tipo_cuenta.required' => 'Debe seleccionar el tipo de cuenta.',
             'tipo_cuenta.integer' => 'El tipo de cuenta no es válido.',

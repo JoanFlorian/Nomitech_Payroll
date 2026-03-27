@@ -271,10 +271,11 @@
     }
 
     function syncFieldsByFormaPago(form) {
+        const bancoInput = getField(form, 'id_banco');
         const tipoCuentaInput = getField(form, 'tipo_cuenta');
         const numeroCuentaInput = getField(form, 'numero_cuenta');
 
-        [tipoCuentaInput, numeroCuentaInput].filter(Boolean).forEach((field) => {
+        [bancoInput, tipoCuentaInput, numeroCuentaInput].filter(Boolean).forEach((field) => {
             field.removeAttribute('disabled');
             field.classList.remove('bg-gray-100', 'cursor-not-allowed');
         });
@@ -448,6 +449,8 @@
         switch (fieldName) {
             case 'id_forma_pago':
                 return validarInput(input, value !== '', 'La forma de pago es obligatoria.', showError);
+            case 'id_banco':
+                return validarInput(input, value !== '', 'El banco es obligatorio.', showError);
             case 'tipo_cuenta':
                 if (value === '') {
                     if (showError) clearFieldError(input);
@@ -505,7 +508,7 @@
         }
 
         if (form.id === 'step3') {
-            return ['id_forma_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'id_caja'];
+            return ['id_forma_pago', 'id_banco', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'id_caja'];
         }
 
         return [];

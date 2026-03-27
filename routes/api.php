@@ -7,7 +7,7 @@ Route::middleware(['web', 'auth'])->get('/empleados', EmpleadoAutocompleteContro
     ->name('api.empleados.autocomplete');
 
 // Webhook para Cron Externo (Render Free Tier)
-Route::get('/cron/auto-close', function (\Illuminate\Http\Request $request) {
+Route::get('/cron/run-schedule', function (\Illuminate\Http\Request $request) {
     // Token de seguridad simple
     $token = 'nomitech-cron-safe-789'; 
     
@@ -15,12 +15,16 @@ Route::get('/cron/auto-close', function (\Illuminate\Http\Request $request) {
         return response()->json(['error' => 'Unauthorized'], 401);
     }
     
-    \Illuminate\Support\Facades\Artisan::call('periods:auto-close');
+    // Ejecutamos el scheduler
+    \Illuminate\Support\Facades\Artisan::call('schedule:run');
+    
+    // Capturamos el resultado para depuración
     $output = \Illuminate\Support\Facades\Artisan::output();
     
     return response()->json([
         'success' => true,
-        'message' => 'Auto-close command executed',
-        'output' => $output
+        'message' => 'Scheduler executed',
+        'server_time' => now('America/Bogota')->toDateTimeString(),
+        'output' => $output // Aquí verás si el comando dijo "No hay periodos", "Cerrando periodo...", etc.
     ]);
 });

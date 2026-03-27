@@ -44,6 +44,7 @@ class Novedad extends Model
         'certificado_medico',
         'afecta_nomina',
         'periodo_aplicado_id',
+        'dias_restantes_rollover',
     ];
 
     protected $casts = [

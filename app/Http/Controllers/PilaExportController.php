@@ -39,12 +39,12 @@ class PilaExportController extends Controller
                 ]);
             }
 
-            // Obtener datos del historial
-            $historialPila = DB::table('pila_archivos as pa')
+            // Obtener el primer/último registro PILA para descargar
+            $registroPila = DB::table('pila_archivos as pa')
                 ->leftJoin('periodo_liquidacion as pl', 'pl.id_periodo', '=', 'pa.periodo_id')
                 ->where('pa.empresa_id', $empresaId)
                 ->orderByDesc('pa.id')
-                ->get([
+                ->first([
                     'pa.id',
                     'pa.periodo_id',
                     'pa.empresa_id',
@@ -56,7 +56,7 @@ class PilaExportController extends Controller
                     'pl.fecha_fin',
                 ]);
 
-            if ($historialPila->isEmpty()) {
+            if (!$registroPila) {
                 return back()->withErrors([
                     'pila' => 'No hay historial de archivos PILA para descargar.',
                 ]);
@@ -70,11 +70,32 @@ class PilaExportController extends Controller
                 ]);
             }
 
-            // Generar exportación a través del servicio
-            return $this->exportService->exportarHistorialExcel(
-                $historialPila->toArray(),
-                $empresa
-            );
+            // Usar la nueva clase PilaTxtToExcelExport con el archivo .txt
+            // El archivo está en storage('local') que apunta a storage/app/private
+            $rutaArchivo = storage_path('app/private/' . $registroPila->ruta_archivo);
+            
+            if (!file_exists($rutaArchivo)) {
+                return back()->withErrors([
+                    'pila' => "No se encontró el archivo PILA: {$registroPila->ruta_archivo} (buscado en: {$rutaArchivo})",
+                ]);
+            }
+
+            // Verificar si se solicita la versión simple (sin formatos)
+            $simple = $request->query('simple', false);
+
+            if ($simple) {
+                // Versión simple: mantiene exactamente los valores
+                return $this->exportService->exportarPilaTxtAExcelSimple(
+                    $rutaArchivo,
+                    $empresa
+                );
+            } else {
+                // Versión con diseño profesional (mantiene estructura exacta del texto)
+                return $this->exportService->exportarPilaTxtAExcelWithDesign(
+                    $rutaArchivo,
+                    $empresa
+                );
+            }
 
         } catch (\Exception $e) {
             return back()->withErrors([
@@ -128,9 +149,19 @@ class PilaExportController extends Controller
                 ]);
             }
 
-            // Generar exportación de un solo registro
-            return $this->exportService->exportarRegistroExcel(
-                (array) $registro,
+            // Usar la nueva clase PilaTxtToExcelExport con el archivo .txt
+            // El archivo está en storage('local') que apunta a storage/app/private
+            $rutaArchivo = storage_path('app/private/' . $registro->ruta_archivo);
+            
+            if (!file_exists($rutaArchivo)) {
+                return back()->withErrors([
+                    'pila' => "No se encontró el archivo PILA: {$registro->ruta_archivo} (buscado en: {$rutaArchivo})",
+                ]);
+            }
+
+            // Versión con diseño profesional (mantiene estructura exacta del texto)
+            return $this->exportService->exportarPilaTxtAExcelWithDesign(
+                $rutaArchivo,
                 $empresa
             );
 

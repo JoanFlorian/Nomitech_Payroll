@@ -103,14 +103,12 @@ class PilaFileGeneratorService
             $salud_total_rate = $this->epsEmployeeRate + $this->epsEmployerRate;
             $aporteSalud = (int) round($ibc * $salud_total_rate);
             
-            // Pensión: solo para contratos laborales (1, 2, 3)
-            // Para aprendices (4) y practicantes (5), la pensión es 0
+            // Pensión: TODOS pagan (incluyendo aprendices y practicantes) desde 2026
             $pension_total_rate = $this->pensionEmployeeRate + $this->pensionEmployerRate;
-            $aportePension = in_array($idTipoContrato, [4, 5]) ? 0 : (int) round($ibc * $pension_total_rate);
+            $aportePension = (int) round($ibc * $pension_total_rate);
             
-            // Caja de compensación: solo para contratos laborales (1, 2, 3)
-            // Para aprendices (4) y practicantes (5), la caja es 0
-            $aporteCaja = in_array($idTipoContrato, [4, 5]) ? 0 : (int) round($ibc * $this->cajaRate);
+            // Caja de compensación: TODOS pagan (incluyendo aprendices y practicantes) desde 2026
+            $aporteCaja = (int) round($ibc * $this->cajaRate);
             
             // ARL: presente en todos los tipos de contrato (1, 2, 3, 4, 5)
             // usar valor real de BD, o calcular con tasa si no existe

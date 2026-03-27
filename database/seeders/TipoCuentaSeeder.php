@@ -13,9 +13,6 @@ class TipoCuentaSeeder extends Seeder
         $tiposCuenta = [
             ['nombre' => 'Cuenta de Ahorros'],
             ['nombre' => 'Cuenta Corriente'],
-            ['nombre' => 'Cuenta de Inversión a Término'],
-            ['nombre' => 'Cuenta de Nómina'],
-            ['nombre' => 'Cuenta de Pagos Especiales'],
         ];
 
         foreach ($tiposCuenta as $tipo) {

@@ -380,15 +380,33 @@
 
 @push('scripts')
 <script>
-    // Capitalizar primera letra de cada palabra al salir del campo
+    // Capitalizar primera letra de cada palabra mientras se escribe
     function ucWords(str) {
         if (!str) return str;
         return str.toLowerCase().replace(/(?:^|\s)[a-záéíóúñü]/g, c => c.toUpperCase());
     }
 
+    function normalizeNameInput(input) {
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const nextValue = ucWords(input.value);
+
+        if (input.value !== nextValue) {
+            input.value = nextValue;
+
+            if (typeof start === 'number' && typeof end === 'number') {
+                input.setSelectionRange(start, end);
+            }
+        }
+    }
+
     document.querySelectorAll('.nombre-campo').forEach(function (input) {
+        input.addEventListener('input', function () {
+            normalizeNameInput(this);
+        });
+
         input.addEventListener('blur', function () {
-            this.value = ucWords(this.value);
+            normalizeNameInput(this);
         });
     });
 

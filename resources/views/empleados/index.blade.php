@@ -635,6 +635,9 @@
             },
             
             async openRenewalModal(doc) {
+                const editForm = document.getElementById('editEmployeeForm');
+                if (editForm) editForm.reset();
+
                 this.currentDoc = doc;
                 this.isRenewal = true;
                 this.editWizardStep = 2; // Enfocar datos laborales
@@ -649,6 +652,9 @@
 
             
             openEditModal(doc) {
+                const editForm = document.getElementById('editEmployeeForm');
+                if (editForm) editForm.reset();
+
                 this.currentDoc = doc;
                 this.isRenewal = false;
                 this.showEditModal = true;

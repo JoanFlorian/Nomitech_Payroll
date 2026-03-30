@@ -266,15 +266,87 @@ class NominaElectronicaController extends Controller
                 ->where('id_empresa', session('empresa_id'))
                 ->firstOrFail();
 
-            if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($export->archivo_path)) {
-                throw new \Exception('El archivo físico no existe.');
+            $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($export->archivo_path);
+
+            // Limpiar el buffer de salida para evitar corrupción del archivo binario
+            if (ob_get_level()) {
+                ob_end_clean();
             }
 
-            $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($export->archivo_path);
             return response()->download($fullPath);
 
         } catch (\Exception $e) {
             return back()->with('error', 'Error al descargar: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descarga el archivo Excel de una exportación.
+     */
+    public function downloadExportExcel($id)
+    {
+        try {
+            $export = \App\Models\NominaExportacion::where('id', $id)
+                ->where('id_empresa', session('empresa_id'))
+                ->firstOrFail();
+
+            if (!$export->archivo_excel_path || !\Illuminate\Support\Facades\Storage::disk('public')->exists($export->archivo_excel_path)) {
+                throw new \Exception('El archivo Excel no existe.');
+            }
+
+            $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($export->archivo_excel_path);
+            
+            // Limpiar el buffer de salida para evitar corrupción del archivo binario
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            return response()->download($fullPath);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al descargar Excel: ' . $e->getMessage());
+        }
+    }
+    /**
+     * Genera archivo PAB (Pagos Automatizados Bancolombia) para un periodo.
+     */
+    public function exportarPab(Request $request, $id, \App\Services\Banking\BankExportService $service)
+    {
+        try {
+            $request->validate([
+                'cuenta_debito'      => 'required|string|min:5|max:20',
+                'tipo_cuenta_debito' => 'required|in:S,D',
+            ], [
+                'cuenta_debito.required'      => 'Debe ingresar la cuenta de débito.',
+                'tipo_cuenta_debito.required'  => 'Debe seleccionar el tipo de cuenta de débito.',
+            ]);
+
+            $result = $service->generarArchivoPab(
+                (int) $id,
+                $request->input('cuenta_debito'),
+                $request->input('tipo_cuenta_debito'),
+                $request->input('secuencia', 'A1')
+            );
+
+            return response()->json([
+                'success'         => true,
+                'message'         => 'Archivo PAB y Resumen Excel generados exitosamente.',
+                'download_url'    => route('nomina-electronica.exportar.descargar', $result['exportacion']->id),
+                'download_excel_url' => route('nomina-electronica.exportar.descargar-excel', $result['exportacion']->id),
+                'total_empleados' => $result['total_empleados'],
+                'total_pagado'    => $result['total_pagado'],
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($ve->errors())->flatten()->first(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 }

@@ -20,6 +20,7 @@ class NominaExportacion extends Model
         'total_empleados',
         'total_pagado',
         'archivo_path',
+        'archivo_excel_path',
     ];
 
     protected $casts = [

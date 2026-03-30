@@ -9,25 +9,20 @@ class MetodoPagoSeeder extends Seeder
 {
     public function run(): void
     {
-        $metodoPagos = [
-            ['nombre' => 'Tarjeta Débito'],
-            ['nombre' => 'Transferencia Bancaria'],
-            ['nombre' => 'Efectivo'],
-            ['nombre' => 'Consignación bancaria'],
-            ['nombre' => 'Transferencia Crédito Bancario'],
-            ['nombre' => 'Transferencia Crédito'],
-            ['nombre' => 'CATS (Nequi, Daviplata, etc.)'],
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('metodo_pago')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
+        $metodosPago = [
+            'transferencia_bancaria',
+            'billetera_digital',
+            'efectivo',
         ];
         
-        foreach ($metodoPagos as $metodo) {
-            DB::table('metodo_pago')->updateOrInsert(
-                ['nombre' => $metodo['nombre']],
-                [
-                    'nombre' => $metodo['nombre'],
-                    'updated_at' => now(),
-                ]
-            );
+        foreach ($metodosPago as $metodo) {
+            DB::table('metodo_pago')->insert([
+                'nombre' => $metodo,
+            ]);
         }
     }
 }

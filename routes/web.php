@@ -157,7 +157,9 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/nomina-electronica/pdf/{idSalario}', [\App\Http\Controllers\NominaElectronicaController::class, 'descargarPdf'])->name('nomina-electronica.pdf')->middleware('permission:view_electronic_payroll');
     Route::get('/nomina-electronica/{id}/export-preview', [\App\Http\Controllers\NominaElectronicaController::class, 'exportPreview'])->name('nomina-electronica.export-preview')->middleware('permission:export_bank_files');
     Route::post('/nomina-electronica/{id}/exportar', [\App\Http\Controllers\NominaElectronicaController::class, 'exportar'])->name('nomina-electronica.exportar')->middleware('permission:export_bank_files');
+    Route::post('/nomina-electronica/{id}/exportar-pab', [\App\Http\Controllers\NominaElectronicaController::class, 'exportarPab'])->name('nomina-electronica.exportar-pab')->middleware('permission:export_bank_files');
     Route::get('/nomina-electronica/exportacion/{id}/descargar', [\App\Http\Controllers\NominaElectronicaController::class, 'downloadExport'])->name('nomina-electronica.exportar.descargar')->middleware('permission:export_bank_files');
+    Route::get('/nomina-electronica/exportacion/{id}/descargar-excel', [\App\Http\Controllers\NominaElectronicaController::class, 'downloadExportExcel'])->name('nomina-electronica.exportar.descargar-excel')->middleware('permission:export_bank_files');
 
     // Gestión de Periodos
     Route::get('/periodos', [\App\Http\Controllers\PeriodoLiquidacionController::class, 'index'])

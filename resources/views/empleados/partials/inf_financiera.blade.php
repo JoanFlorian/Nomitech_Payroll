@@ -41,18 +41,14 @@
             <label class="block text-sm font-medium text-gray-700 mb-1" for="id_forma_pago">
                 Forma de pago
             </label>
-            <select id="id_forma_pago" class="form-select w-full border border-gray-300 rounded-md px-3 py-2 bg-white shadow-sm
-                    focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm" name="id_forma_pago"
-                required>
-                <option value="">Seleccionar...</option>
-                @foreach ($formapagos as $formapago)
-                    @php
-                        $formaNombre = strtolower(trim($formapago->nombre ?? ''));
-                        $esContado = str_contains($formaNombre, 'contado');
-                    @endphp
-                    <option value="{{ $formapago->id_forma_pago }}" {{ ($loop->count === 1 || $esContado) ? 'selected' : '' }}>{{ $formapago->nombre }}</option>
-                @endforeach
-            </select>
+            @php
+                $formaContado = $formapagos->first(function($f) {
+                    return str_contains(strtolower(trim($f->nombre ?? '')), 'contado');
+                });
+                $idFormaContado = $formaContado ? $formaContado->id_forma_pago : 1;
+            @endphp
+            <input type="text" value="Contado" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 shadow-sm sm:text-sm cursor-not-allowed text-gray-600 font-medium" readonly tabindex="-1">
+            <input type="hidden" name="id_forma_pago" id="id_forma_pago" value="{{ $idFormaContado }}">
             <div class="error-message invalid-feedback" data-error="id_forma_pago"></div>
         </div>
 
@@ -65,7 +61,7 @@
                 required>
                 <option value="">Seleccionar...</option>
                 @foreach ($metodopago as $metodo)
-                    <option value="{{ $metodo->id_metodo_pago }}">{{ $metodo->nombre }}</option>
+                    <option value="{{ $metodo->id_metodo_pago }}">{{ ucfirst(str_replace('_', ' ', $metodo->nombre)) }}</option>
                 @endforeach
             </select>
             <div class="error-message invalid-feedback" data-error="id_metodo_pago"></div>
@@ -80,7 +76,7 @@
                 required>
                 <option value="">Seleccionar...</option>
                 @foreach ($Bancos as $banco)
-                    <option value="{{ $banco->id_banco }}">{{ $banco->nombre }}</option>
+                    <option value="{{ $banco->id_banco }}" data-nombre="{{ strtoupper($banco->nombre) }}">{{ $banco->nombre }}</option>
                 @endforeach
             </select>
             <div class="error-message invalid-feedback" data-error="id_banco"></div>
@@ -395,5 +391,73 @@ document.addEventListener('DOMContentLoaded', function() {
             validateField(input);
         }
     });
+});
+</script>
+
+<script>
+// Filtrado de bancos según método de pago (Registro)
+document.addEventListener('DOMContentLoaded', function() {
+    const BILLETERAS_DIGITALES = ['DAVIPLATA', 'NEQUI', 'MOVII', 'RAPPIPAY', 'UALÁ', 'POWWI', 'COINK'];
+
+    const metodoSelect = document.getElementById('id_metodo_pago');
+    const bancoSelect = document.getElementById('id_banco');
+    const tipoCuentaSelect = document.getElementById('tipo_cuenta');
+    const numeroCuentaInput = document.getElementById('numero_cuenta');
+
+    if (!metodoSelect) return;
+
+    function syncBankFieldsByPaymentMethod() {
+        const selectedOption = metodoSelect.options[metodoSelect.selectedIndex];
+        const metodoNombre = selectedOption ? selectedOption.textContent.trim().toLowerCase() : '';
+        const isEfectivo = metodoNombre.includes('efectivo');
+        const isBilletera = metodoNombre.includes('billetera');
+        const isTransferencia = metodoNombre.includes('transferencia');
+
+        const bankFields = [bancoSelect, tipoCuentaSelect, numeroCuentaInput].filter(Boolean);
+
+        if (isEfectivo) {
+            bankFields.forEach(field => {
+                field.setAttribute('disabled', 'disabled');
+                field.classList.add('bg-gray-100', 'cursor-not-allowed');
+                if (field.tagName === 'SELECT') field.value = '';
+                else field.value = '';
+            });
+        } else {
+            bankFields.forEach(field => {
+                field.removeAttribute('disabled');
+                field.classList.remove('bg-gray-100', 'cursor-not-allowed');
+            });
+
+            if (bancoSelect) {
+                const currentVal = bancoSelect.value;
+                const options = bancoSelect.querySelectorAll('option');
+                options.forEach(opt => {
+                    if (!opt.value) return;
+                    const nombre = (opt.dataset.nombre || opt.textContent).toUpperCase().trim();
+                    const esBilletera = BILLETERAS_DIGITALES.some(b => nombre.includes(b));
+
+                    if (isBilletera) {
+                        opt.style.display = esBilletera ? '' : 'none';
+                        opt.disabled = !esBilletera;
+                    } else if (isTransferencia) {
+                        opt.style.display = esBilletera ? 'none' : '';
+                        opt.disabled = esBilletera;
+                    } else {
+                        opt.style.display = '';
+                        opt.disabled = false;
+                    }
+                });
+                const currentOpt = bancoSelect.querySelector(`option[value="${currentVal}"]`);
+                if (currentOpt && currentOpt.disabled) {
+                    bancoSelect.value = '';
+                }
+            }
+        }
+    }
+
+    metodoSelect.addEventListener('change', syncBankFieldsByPaymentMethod);
+
+    // Correr el sync inicial por si ya hay un valor preseleccionado
+    syncBankFieldsByPaymentMethod();
 });
 </script>

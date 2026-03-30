@@ -122,15 +122,15 @@ class UpdateEmployeePartialRequest extends FormRequest
         }
 
         if ($this->has('id_banco')) {
-            $rules['id_banco'] = 'bail|required|integer|exists:banco,id_banco';
+            $rules['id_banco'] = 'bail|required_unless:id_metodo_pago,3|nullable|integer|exists:banco,id_banco';
         }
 
         if ($this->has('tipo_cuenta')) {
-            $rules['tipo_cuenta'] = 'bail|nullable|integer|exists:tipo_cuenta,id_tipo_cuenta';
+            $rules['tipo_cuenta'] = 'bail|required_unless:id_metodo_pago,3|nullable|integer|exists:tipo_cuenta,id_tipo_cuenta';
         }
 
         if ($this->has('numero_cuenta')) {
-            $rules['numero_cuenta'] = 'bail|nullable|string|max:20|regex:/^[0-9]{6,20}$/';
+            $rules['numero_cuenta'] = 'bail|required_unless:id_metodo_pago,3|nullable|string|max:20|regex:/^[0-9]{6,20}$/';
         }
 
         if ($this->has('id_eps')) {
@@ -271,14 +271,17 @@ class UpdateEmployeePartialRequest extends FormRequest
             'id_metodo_pago.exists' => 'El método de pago seleccionado no existe.',
 
             'id_banco.required' => 'Debe seleccionar el banco.',
+            'id_banco.required_unless' => 'Debe seleccionar el banco cuando el método de pago no es efectivo.',
             'id_banco.integer' => 'El banco no es válido.',
             'id_banco.exists' => 'El banco seleccionado no existe.',
 
             'tipo_cuenta.required' => 'Debe seleccionar el tipo de cuenta.',
+            'tipo_cuenta.required_unless' => 'Debe seleccionar el tipo de cuenta cuando el método de pago no es efectivo.',
             'tipo_cuenta.integer' => 'El tipo de cuenta no es válido.',
             'tipo_cuenta.exists' => 'El tipo de cuenta seleccionada no existe.',
 
             'numero_cuenta.required' => 'Debe ingresar el número de cuenta.',
+            'numero_cuenta.required_unless' => 'Debe ingresar el número de cuenta cuando el método de pago no es efectivo.',
             'numero_cuenta.string' => 'El número de cuenta debe ser texto.',
             'numero_cuenta.max' => 'El número de cuenta no puede superar 20 caracteres.',
             'numero_cuenta.regex' => 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.',

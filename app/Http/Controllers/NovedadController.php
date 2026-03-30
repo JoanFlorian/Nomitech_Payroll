@@ -153,7 +153,7 @@ class NovedadController extends Controller
             'empleadosBusqueda' => $empleadosBusqueda,
             'periodoActivo' => $periodoActivo,
             'periodosCerrados' => $periodosCerrados,
-            'catalogos' => $this->catalogosNovedad(),
+            ...$this->catalogosNovedad(),
         ]);
     }
 

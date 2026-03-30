@@ -16,6 +16,7 @@ use App\Models\TipoCuenta;
 use App\Models\Eps;
 use App\Models\Afp;
 use App\Models\NivelRiesgo;
+use App\Models\Banco;
 use App\Http\Controllers\Concerns\HandlesExportResponses;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -143,6 +144,7 @@ class EmployeesController extends Controller
         $Afp = Afp::all();
         $niveles = NivelRiesgo::orderBy('porcentaje')->get();
         $roles = Rol::whereIn('nombre', ['Auxiliar de Nómina', 'Empleado'])->get();
+        $Bancos = Banco::all();
 
         if ($canView) {
             // Obtener conteos para los filtros usando Empleado para aislamiento
@@ -182,6 +184,7 @@ class EmployeesController extends Controller
               'Afp',
               'niveles',
               'roles',
+              'Bancos',
               'totalEmpleados',
               'activosCount',
               'inactivosCount',

@@ -1069,6 +1069,11 @@
         const input = form.querySelector(`[name="${fieldName}"]`);
         const value = input ? (input.value ?? '').toString().trim() : '';
 
+        if (input && input.disabled) {
+            if (showError) clearEditFieldError(input);
+            return true;
+        }
+
         if (stepNumber === 1) {
             switch (fieldName) {
                 case 'id_tipo_doc':

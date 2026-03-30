@@ -499,6 +499,12 @@
             return true;
         }
 
+        const input = getField(form, fieldName);
+        if (input && input.disabled) {
+            if (showError) clearFieldError(input);
+            return true;
+        }
+
         if (form.id === 'step1') {
             return validateStep1Field(form, fieldName, showError);
         }

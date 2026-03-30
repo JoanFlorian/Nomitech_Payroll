@@ -4,8 +4,8 @@
 @section('hide-layout-header', '1')
 
 @section('content')
-<div class="min-h-screen bg-[radial-gradient(circle_at_top,_#f0f7ff,_#f8fafc_55%,_#eef4ff)] p-4 md:p-8">
-    <div class="max-w-4xl mx-auto">
+<div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_#e8f4ff,_#f8fafc_45%,_#f1f5ff)] p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
         <!-- Header -->
         <div class="mb-8 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
@@ -19,7 +19,7 @@
                     Volver
                 </a>
 
-                <div class="rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+                <div class="rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm backdrop-blur profile-mini-summary">
                     <div class="flex items-center gap-3">
                         <img src="{{ $usuario->avatar_url }}"
                              alt="Foto de perfil"
@@ -59,50 +59,53 @@
             </div>
         @endif
 
-        <div class="profile-card mb-6">
-            <h2 class="profile-card-title">
-                <span class="material-icons mr-2 text-sky-600">photo_camera</span>
-                Foto de Perfil
-            </h2>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+            <div class="profile-card profile-card-accent xl:sticky xl:top-6">
+                <h2 class="profile-card-title">
+                    <span class="material-icons mr-2 text-cyan-600">photo_camera</span>
+                    Foto de Perfil
+                </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-5 items-start">
-                <div class="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                    <img id="avatar-preview"
-                         src="{{ $usuario->avatar_url }}"
-                         alt="Avatar actual"
-                         class="w-24 h-24 rounded-full object-cover border-2 border-slate-200 shadow-sm cursor-pointer hover:shadow-lg hover:border-sky-400 transition-all duration-200"
-                         data-full-src="{{ $usuario->avatar_url }}"
-                         role="button"
-                         tabindex="0"
-                         title="Haz click para ampliar">
-                    <p id="avatar-status" class="text-xs text-slate-500 text-center">Vista previa actual</p>
-                </div>
+                <div class="space-y-4">
+                    <div class="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/90 p-5">
+                        <img id="avatar-preview"
+                             src="{{ $usuario->avatar_url }}"
+                             alt="Avatar actual"
+                             class="w-28 h-28 rounded-full object-cover border-2 border-slate-200 shadow-sm cursor-pointer hover:shadow-lg hover:border-cyan-400 transition-all duration-200"
+                             data-full-src="{{ $usuario->avatar_url }}"
+                             role="button"
+                             tabindex="0"
+                             title="Haz click para ampliar">
+                        <p id="avatar-status" class="text-xs text-slate-500 text-center">Vista previa actual</p>
+                    </div>
 
-                <form action="{{ route('trabajador.perfil.foto') }}" method="POST" enctype="multipart/form-data" class="flex-1">
-                    @csrf
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <form action="{{ route('trabajador.perfil.foto') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                        @csrf
                         <input type="file"
                                id="avatar"
                                name="avatar"
                                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                               class="block w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-xl p-2 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200">
-                        <button type="button" id="clear-avatar-selection" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all duration-200">
-                            Quitar selección
-                        </button>
-                        <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-xl transition-colors shadow-sm">
-                            Guardar foto
-                        </button>
-                    </div>
-                    <p class="mt-2 text-xs text-slate-500">Formatos permitidos: JPG, JPEG, PNG. Tamaño máximo: 2MB.</p>
-                    @error('avatar')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </form>
-            </div>
-        </div>
+                               class="block w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-xl p-2 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-100 file:text-cyan-700 hover:file:bg-cyan-200">
 
-        <!-- Formulario de Perfil -->
-        <form action="{{ route('trabajador.perfil.actualizar') }}" method="POST" class="profile-card">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <button type="button" id="clear-avatar-selection" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all duration-200">
+                                Quitar selección
+                            </button>
+                            <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-xl transition-colors shadow-sm">
+                                Guardar foto
+                            </button>
+                        </div>
+
+                        <p class="text-xs text-slate-500">Formatos permitidos: JPG, JPEG, PNG. Tamaño máximo: 2MB.</p>
+                        @error('avatar')
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </form>
+                </div>
+            </div>
+
+            <!-- Formulario de Perfil -->
+            <form action="{{ route('trabajador.perfil.actualizar') }}" method="POST" class="profile-card profile-form-card xl:col-span-2">
             @csrf
 
             <!-- Información Personal -->
@@ -321,25 +324,36 @@
 
             <!-- Información Solo Lectura -->
             <div class="profile-section">
-                <h2 class="profile-card-title">
+                <h2 class="profile-card-title profile-card-title-muted">
                     <span class="material-icons mr-2 text-slate-600">lock</span>
                     Información Contractual (No Editable)
+                    <span class="ml-auto inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 border border-slate-200">Solo lectura</span>
                 </h2>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                    <div>
-                        <p class="text-sm text-slate-600 mb-1">Salario Base</p>
-                        <p class="text-lg font-semibold text-slate-700">${{ number_format($usuario->salario_base ?? 0, 0, ',', '.') }}</p>
+                <div class="contract-meta-grid">
+                    <div class="contract-meta-card">
+                        <div class="contract-meta-icon bg-emerald-100 text-emerald-700">
+                            <span class="material-icons text-base">payments</span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-600 mb-1">Salario Base</p>
+                            <p class="text-xl font-semibold text-slate-800">${{ number_format($usuario->salario_base ?? 0, 0, ',', '.') }}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-sm text-slate-600 mb-1">Fecha de Ingreso</p>
-                        <p class="text-lg font-semibold text-slate-700">
+                    <div class="contract-meta-card">
+                        <div class="contract-meta-icon bg-blue-100 text-blue-700">
+                            <span class="material-icons text-base">calendar_month</span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-600 mb-1">Fecha de Ingreso</p>
+                            <p class="text-xl font-semibold text-slate-800">
                             {{ $usuario->fecha_inicio ? \Carbon\Carbon::parse($usuario->fecha_inicio)->format('d/m/Y') : 'N/A' }}
-                        </p>
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mt-4 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl">
+                <div class="profile-warning">
                     <div class="flex items-start">
                         <span class="material-icons text-amber-600 mr-3 mt-0.5">warning</span>
                         <p class="text-sm text-amber-800">
@@ -351,7 +365,7 @@
             </div>
 
             <!-- Botones de Acción -->
-            <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-6 border-t border-slate-200">
+            <div class="profile-action-bar">
                 <a href="{{ route('trabajador.dashboard') }}" class="inline-flex justify-center px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-colors">
                     Cancelar
                 </a>
@@ -360,7 +374,8 @@
                     Actualizar Perfil
                 </button>
             </div>
-        </form>
+            </form>
+        </div>
     </div>
 
     <!-- Modal para ampliación de foto -->
@@ -392,19 +407,49 @@
     .animate-fade-in { animation: fade-in 0.3s ease-out; }
 
     .profile-card {
-        background: rgba(255, 255, 255, 0.96);
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        border-radius: 1rem;
-        box-shadow: 0 10px 30px -18px rgba(15, 23, 42, 0.35);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 1.1rem;
+        box-shadow: 0 24px 38px -28px rgba(15, 23, 42, 0.45);
         padding: 1.5rem;
     }
 
+    .profile-card-accent {
+        background:
+            radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 35%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);
+    }
+
+    .profile-form-card {
+        position: relative;
+    }
+
+    .profile-form-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 1.1rem;
+        pointer-events: none;
+        background: linear-gradient(135deg, rgba(14, 116, 144, 0.04), transparent 35%, rgba(37, 99, 235, 0.04));
+    }
+
+    .profile-mini-summary {
+        box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.45);
+    }
+
     .profile-section {
-        margin-bottom: 2rem;
+        position: relative;
+        margin-bottom: 1.25rem;
         padding: 1.25rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid #dbe7f3;
         border-radius: 1rem;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        background: #ffffff;
+        transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .profile-section:hover {
+        border-color: #bfdbfe;
+        box-shadow: 0 12px 24px -22px rgba(30, 64, 175, 0.5);
     }
 
     .profile-card-title {
@@ -414,15 +459,76 @@
         margin-bottom: 1.25rem;
         border-bottom: 2px solid #e2e8f0;
         color: #1e293b;
-        font-size: 1.25rem;
+        font-size: 1.1rem;
         font-weight: 700;
-        letter-spacing: -0.01em;
+        letter-spacing: 0;
+    }
+
+    .profile-card-title-muted {
+        border-bottom-color: #dbe7f3;
+    }
+
+    .contract-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .contract-meta-card {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        border: 1px solid #dbe7f3;
+        border-radius: 0.9rem;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        padding: 1rem;
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+
+    .contract-meta-card:hover {
+        transform: translateY(-1px);
+        border-color: #bfdbfe;
+        box-shadow: 0 10px 24px -20px rgba(30, 64, 175, 0.5);
+    }
+
+    .contract-meta-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 0.65rem;
+        flex-shrink: 0;
+    }
+
+    .profile-warning {
+        margin-top: 1rem;
+        border-left: 4px solid #f59e0b;
+        background: linear-gradient(180deg, #fffbeb 0%, #fff7df 100%);
+        border-radius: 0 0.85rem 0.85rem 0;
+        padding: 1rem;
+    }
+
+    .profile-action-bar {
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+        padding: 1rem 0 0;
+        border-top: 1px solid #cbd5e1;
+        background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.98) 35%);
+        backdrop-filter: blur(6px);
     }
 
     .profile-input {
         width: 100%;
-        border-radius: 0.75rem;
-        border: 2px solid #cbd5e1;
+        border-radius: 0.8rem;
+        border: 1.5px solid #cbd5e1;
         background: #fff;
         padding: 0.75rem 1rem;
         color: #0f172a;
@@ -439,8 +545,9 @@
 
     .profile-input:focus {
         outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+        border-color: #0284c7;
+        box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+        background-color: #f8fdff;
     }
 
     @media (min-width: 768px) {
@@ -450,6 +557,21 @@
 
         .profile-section {
             padding: 1.5rem;
+        }
+
+        .contract-meta-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .profile-action-bar {
+            flex-direction: row;
+            align-items: center;
+        }
+    }
+
+    @media (max-width: 1279px) {
+        .profile-card-accent {
+            position: static;
         }
     }
 </style>

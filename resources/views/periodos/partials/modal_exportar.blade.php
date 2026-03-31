@@ -1,4 +1,4 @@
-{{-- MODAL EXPORTAR BANCO --}}
+{{-- MODAL EXPORTAR BANCO / PAB --}}
 <div id="modalExportarBanco" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
     role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen p-4 text-center sm:p-0">
@@ -21,7 +21,7 @@
             class="relative inline-block overflow-hidden text-left align-middle transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:max-w-lg sm:w-full border border-gray-100 sm:-translate-y-12">
             <div class="bg-gradient-to-r from-[#1A237E] to-[#283593] p-6 rounded-t-xl flex justify-between items-center text-white">
                 <h2 class="text-xl font-bold flex items-center gap-2">
-                    <span class="material-icons">account_balance</span>
+                    <span class="material-icons" id="icono_modal_export">account_balance</span>
                     <span id="titulo_modal_export">Exportar Pagos Bancarios</span>
                 </h2>
                 <button onclick="cerrarModalExportar()" class="text-white hover:text-gray-200 transition-colors">
@@ -61,7 +61,8 @@
                             <p id="exp_total" class="text-3xl font-black mt-1">$ 0.00</p>
                         </div>
 
-                        <div class="space-y-2">
+                        {{-- FORMATO CSV (visible para bank/general) --}}
+                        <div id="seccion_formato_csv" class="space-y-2">
                             <label class="text-sm font-bold text-gray-700">Formato de Archivo</label>
                             <div class="grid grid-cols-1 gap-3">
                                 <label
@@ -74,6 +75,36 @@
                                             de cálculo.</p>
                                     </div>
                                 </label>
+                            </div>
+                        </div>
+
+                        {{-- CAMPOS PAB (visibles solo para PAB) --}}
+                        <div id="seccion_pab_fields" class="hidden space-y-4">
+                            <div class="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="material-icons text-amber-600 text-lg">payments</span>
+                                    <p class="text-sm font-bold text-amber-800">Archivo PAB — Bancolombia</p>
+                                </div>
+                                <p class="text-xs text-amber-700">Archivo plano de posiciones fijas para pagos masivos automatizados.</p>
+                            </div>
+
+                            <div>
+                                <label for="cuenta_debito" class="block text-sm font-bold text-gray-700 mb-1">Cuenta a Debitar</label>
+                                <input type="text" name="cuenta_debito" id="cuenta_debito"
+                                    placeholder="Número de cuenta origen"
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm"
+                                    maxlength="20">
+                                <p class="text-xs text-gray-400 mt-1">Cuenta de la empresa desde donde se debitarán los pagos.</p>
+                            </div>
+
+                            <div>
+                                <label for="tipo_cuenta_debito" class="block text-sm font-bold text-gray-700 mb-1">Tipo de Cuenta</label>
+                                <select name="tipo_cuenta_debito" id="tipo_cuenta_debito"
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm bg-white">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="S">Ahorros</option>
+                                    <option value="D">Corriente</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -99,18 +130,23 @@
                         </svg>
                     </div>
                     <div>
-                        <h4 class="text-xl font-bold text-gray-900">¡Archivo Generado!</h4>
-                        <p class="text-sm text-gray-500 mt-2">El archivo de dispersión bancaria está listo para ser
-                            procesado.</p>
+                        <h4 class="text-xl font-bold text-gray-900">¡Exportación Exitosa!</h4>
+                        <p id="success_pab_msg" class="text-sm text-gray-500 mt-2">Los archivos de dispersión bancaria y resumen han sido generados.</p>
+                        <p id="success_general_msg" class="text-sm text-gray-500 mt-2 hidden">El archivo de dispersión bancaria está listo para descargar.</p>
                     </div>
-                    <a id="btn_descargar_final" href="#" target="_blank"
-                        class="w-full max-w-xs px-8 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all flex items-center justify-center gap-3">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                        </svg>
-                        Descargar Archivo
-                    </a>
+                    
+                    <div class="w-full flex flex-col gap-3">
+                        <a id="btn_descargar_txt" href="#" target="_blank"
+                            class="w-full px-8 py-4 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all flex items-center justify-center gap-3">
+                            <span class="material-icons">description</span>
+                            <span id="text_btn_txt">Descargar Archivo (.txt)</span>
+                        </a>
+                        <a id="btn_descargar_excel" href="#" target="_blank"
+                            class="w-full px-8 py-4 bg-white text-[#1A237E] font-bold rounded-2xl hover:bg-gray-50 border-2 border-[#1A237E] shadow-lg transition-all flex items-center justify-center gap-3 hidden">
+                            <span class="material-icons">table_view</span>
+                            <span>Descargar Resumen (.xlsx)</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -119,13 +155,48 @@
 
 <script>
     let currentPeriodoId = null;
+    let currentTipoExport = 'bank';
     // La vista padre debe redefinir `exportBaseUrl` si requiere una ruta distinta a `/periodos`
     let exportBaseUrl = window.exportBaseUrl || '/periodos';
 
     function abrirModalExportar(id, tipo = 'bank') {
         currentPeriodoId = id;
+        currentTipoExport = tipo;
         document.getElementById('tipo_exportacion').value = tipo;
-        document.getElementById('titulo_modal_export').textContent = tipo === 'bank' ? 'Exportar Pagos Bancarios' : 'Exportar General (CSV)';
+
+        // Configurar títulos e ícono según tipo
+        const titulos = {
+            'bank': 'Exportar Pagos Bancarios',
+            'general': 'Resumen General de Nómina (Excel)',
+            'pab': 'Generar Archivo PAB — Bancolombia'
+        };
+        const iconos = {
+            'bank': 'account_balance',
+            'general': 'analytics',
+            'pab': 'payments'
+        };
+        document.getElementById('titulo_modal_export').textContent = titulos[tipo] || titulos['bank'];
+        document.getElementById('icono_modal_export').textContent = iconos[tipo] || iconos['bank'];
+
+        // Mostrar/ocultar secciones según tipo
+        const seccionCSV = document.getElementById('seccion_formato_csv');
+        const seccionPAB = document.getElementById('seccion_pab_fields');
+
+        if (tipo === 'pab') {
+            seccionCSV.classList.add('hidden');
+            seccionPAB.classList.remove('hidden');
+            // Limpiar campos PAB
+            document.getElementById('cuenta_debito').value = '';
+            document.getElementById('tipo_cuenta_debito').value = '';
+        } else if (tipo === 'general') {
+            seccionCSV.classList.add('hidden'); // Ocultamos CSV porque ahora es Excel fixed
+            seccionPAB.classList.add('hidden');
+            // Forzar formato a XLSX internamente si fuera necesario, 
+            // aunque el servicio ya lo forza para 'general'
+        } else {
+            seccionCSV.classList.remove('hidden');
+            seccionPAB.classList.add('hidden');
+        }
 
         const modal = document.getElementById('modalExportarBanco');
         const loading = document.getElementById('loading_export');
@@ -139,7 +210,6 @@
         form.classList.remove('hidden');
         success.classList.add('hidden');
 
-        window.NomitechLoader.show('Obteniendo vista previa...');
         window.NomitechLoader.show('Obteniendo vista previa...');
         fetch(`${exportBaseUrl}/${id}/export-preview`)
             .then(res => res.json())
@@ -174,12 +244,34 @@
         const form = document.getElementById('formExportarBanco');
         const formData = new FormData(form);
 
+        // Validación de campos PAB
+        if (currentTipoExport === 'pab') {
+            const cuentaDebito = document.getElementById('cuenta_debito').value.trim();
+            const tipoCuentaDebito = document.getElementById('tipo_cuenta_debito').value;
+
+            if (!cuentaDebito) {
+                Swal.fire('Campo requerido', 'Debe ingresar la cuenta a debitar.', 'warning');
+                return;
+            }
+            if (!tipoCuentaDebito) {
+                Swal.fire('Campo requerido', 'Debe seleccionar el tipo de cuenta a debitar.', 'warning');
+                return;
+            }
+        }
+
         btn.disabled = true;
         btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Procesando...';
 
+        // Determinar la URL según el tipo de exportación
+        let exportUrl;
+        if (currentTipoExport === 'pab') {
+            exportUrl = `${exportBaseUrl}/${currentPeriodoId}/exportar-pab`;
+        } else {
+            exportUrl = `${exportBaseUrl}/${currentPeriodoId}/exportar`;
+        }
+
         window.NomitechLoader.show('Generando archivo de exportación...');
-        window.NomitechLoader.show('Generando archivo de exportación...');
-        fetch(`${exportBaseUrl}/${currentPeriodoId}/exportar`, {
+        fetch(exportUrl, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -192,18 +284,46 @@
                 if (data.success) {
                     document.getElementById('formExportarBanco').classList.add('hidden');
                     document.getElementById('success_export').classList.remove('hidden');
-                    document.getElementById('btn_descargar_final').href = data.download_url;
+                    
+                    const btnTxt = document.getElementById('btn_descargar_txt');
+                    const btnExcel = document.getElementById('btn_descargar_excel');
+                    const msgPab = document.getElementById('success_pab_msg');
+                    const msgGen = document.getElementById('success_general_msg');
+                    const labelTxt = document.getElementById('text_btn_txt');
+
+                    btnTxt.href = data.download_url;
+                    
+                    if (currentTipoExport === 'pab' && data.download_excel_url) {
+                        btnExcel.href = data.download_excel_url;
+                        btnExcel.classList.remove('hidden');
+                        msgPab.classList.remove('hidden');
+                        msgGen.classList.add('hidden');
+                        labelTxt.textContent = 'Descargar Archivo PAB (.txt)';
+                    } else if (currentTipoExport === 'general') {
+                        // Para general, el archivo principal ya es el Excel
+                        btnTxt.classList.add('hidden');
+                        btnExcel.href = data.download_url;
+                        btnExcel.classList.remove('hidden');
+                        msgPab.classList.add('hidden');
+                        msgGen.classList.remove('hidden');
+                        msgGen.textContent = 'El resumen general en Excel se ha generado correctamente.';
+                    } else {
+                        btnExcel.classList.add('hidden');
+                        msgPab.classList.add('hidden');
+                        msgGen.classList.remove('hidden');
+                        labelTxt.textContent = 'Descargar Archivo';
+                    }
                 } else {
-                    alert('Error: ' + data.message);
+                    Swal.fire('Error', data.message || 'Error al generar el archivo.', 'error');
                     btn.disabled = false;
-                    btn.innerHTML = 'Generar Archivo';
+                    btn.innerHTML = '<span>Generar Archivo</span>';
                 }
             })
             .catch(err => {
                 window.NomitechLoader.hide();
-                alert('Error al procesar la exportación');
+                Swal.fire('Error', 'Error al procesar la exportación.', 'error');
                 btn.disabled = false;
-                btn.innerHTML = 'Generar Archivo';
+                btn.innerHTML = '<span>Generar Archivo</span>';
             });
     }
 </script>

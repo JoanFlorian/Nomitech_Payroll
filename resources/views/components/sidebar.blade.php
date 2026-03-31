@@ -140,6 +140,7 @@
                 </a>
             @endcan
 
+{{-- 
             @can('view_periods')
                 <a href="{{ route('periodos.index') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition
                    {{ request()->is('periodos*') ? 'bg-[#0D47A1] text-white font-semibold' : '' }}">
@@ -147,6 +148,7 @@
                     <span class="menu-text whitespace-nowrap">Periodos de Liquidación</span>
                 </a>
             @endcan
+--}}
 
             @can('view_pila')
                 <a href="{{ url('/pila') }}" class="menu-item flex items-center gap-3 px-4 py-2 rounded-lg text-blue-100 hover:bg-[#0D47A1] hover:text-white transition

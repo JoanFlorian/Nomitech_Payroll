@@ -217,15 +217,18 @@
                 <div x-show="editWizardStep === 2" x-cloak>
                     <h3 class="text-2xl font-bold text-gray-800 mb-6">Datos Laborales</h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="editContractualContainer" x-data="contractualData()">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Trabajador</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                                name="id_tipo_trabajador" id="editIdTipoTrabajador">
-                                @foreach ($tipotrabajadores as $tipo)
-                                    <option value="{{ $tipo->id_tipo_trabajador }}">{{ $tipo->nombre }}</option>
-                                @endforeach
+                                name="id_tipo_trabajador" id="editIdTipoTrabajador"
+                                x-model="selectedWorkerType"
+                                @change="updateSalary()">
+                                <option value="">Seleccionar...</option>
+                                <template x-for="type in filteredWorkerTypes" :key="type.id_tipo_trabajador">
+                                    <option :value="type.id_tipo_trabajador" x-text="type.nombre"></option>
+                                </template>
                             </select>
                             <p class="error-message text-red-500 text-sm hidden" data-error="id_tipo_trabajador"></p>
                         </div>
@@ -247,7 +250,9 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Contrato</label>
                             <select
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                                name="id_tipo_contrato" id="editIdTipoContrato">
+                                name="id_tipo_contrato" id="editIdTipoContrato"
+                                x-model="selectedContract"
+                                @change="handleContractChange($event)">
                                 @foreach ($contratos as $contrato)
                                     <option value="{{ $contrato->id_tipo_contrato }}">{{ $contrato->nombre }}</option>
                                 @endforeach
@@ -367,13 +372,14 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago</label>
-                            <select
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
-                                name="id_forma_pago" id="editIdFormaPago">
-                                @foreach ($formapagos as $forma)
-                                    <option value="{{ $forma->id_forma_pago }}">{{ $forma->nombre }}</option>
-                                @endforeach
-                            </select>
+                            @php
+                                $formaContado = $formapagos->first(function($f) {
+                                    return str_contains(strtolower(trim($f->nombre ?? '')), 'contado');
+                                });
+                                $idFormaContado = $formaContado ? $formaContado->id_forma_pago : 1;
+                            @endphp
+                            <input type="text" value="Contado" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 shadow-sm sm:text-sm cursor-not-allowed text-gray-600 font-medium" readonly tabindex="-1">
+                            <input type="hidden" name="id_forma_pago" id="editIdFormaPago" value="{{ $idFormaContado }}">
                             <p class="error-message text-red-500 text-sm hidden" data-error="id_forma_pago"></p>
                         </div>
 
@@ -383,10 +389,23 @@
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
                                 name="id_metodo_pago" id="editIdMetodoPago">
                                 @foreach ($metodopago as $metodo)
-                                    <option value="{{ $metodo->id_metodo_pago }}">{{ $metodo->nombre }}</option>
+                                    <option value="{{ $metodo->id_metodo_pago }}">{{ ucfirst(str_replace('_', ' ', $metodo->nombre)) }}</option>
                                 @endforeach
                             </select>
                             <p class="error-message text-red-500 text-sm hidden" data-error="id_metodo_pago"></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Entidad Bancaria</label>
+                            <select
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-[#1565C0] focus:border-[#1565C0] sm:text-sm"
+                                name="id_banco" id="editIdBanco">
+                                <option value="">Seleccionar...</option>
+                                @foreach ($Bancos as $banco)
+                                    <option value="{{ $banco->id_banco }}" data-nombre="{{ strtoupper($banco->nombre) }}">{{ $banco->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <p class="error-message text-red-500 text-sm hidden" data-error="id_banco"></p>
                         </div>
 
                         <div>
@@ -678,17 +697,15 @@
         let minFechaFin = nextDate.toISOString().split('T')[0];
 
         // Nueva validación: No puede ser anterior al periodo activo
-        if (window.employeeValidationRules && window.employeeValidationRules.activePeriodStart) {
-            const periodStart = window.employeeValidationRules.activePeriodStart;
-            if (periodStart > minFechaFin) {
-                minFechaFin = periodStart;
-            }
+        const activePeriodStart = window.employeeValidationRules?.activePeriodStart;
+        if (activePeriodStart && activePeriodStart > minFechaFin) {
+            minFechaFin = activePeriodStart;
         }
 
         fechaFinInput.setAttribute('min', minFechaFin);
 
         const fechaFinValue = (fechaFinInput.value ?? '').toString().trim();
-        if (fechaFinValue !== '' && fechaFinValue <= fechaInicioValue) {
+        if (fechaFinValue !== '' && (fechaFinValue <= fechaInicioValue || (activePeriodStart && fechaFinValue < activePeriodStart))) {
             fechaFinInput.value = '';
             clearEditFieldError(fechaFinInput);
         }
@@ -828,18 +845,67 @@
         bajoRiesgo.checked = true;
     }
 
-    function syncEditBankFieldsByPaymentMethod() {
-        const fields = [
-            document.getElementById('editBanco'),
-            document.getElementById('editIdBanco'),
-            document.getElementById('editTipoCuenta'),
-            document.getElementById('editNumeroCuenta'),
-        ].filter(Boolean);
+    // Lista de billeteras digitales (nombres en mayúsculas para comparación)
+    const BILLETERAS_DIGITALES = ['DAVIPLATA', 'NEQUI', 'MOVII', 'RAPPIPAY', 'UALÁ', 'POWWI', 'COINK'];
 
-        fields.forEach((field) => {
-            field.removeAttribute('disabled');
-            field.classList.remove('bg-gray-100', 'cursor-not-allowed');
-        });
+    function syncEditBankFieldsByPaymentMethod() {
+        const metodoSelect = document.getElementById('editIdMetodoPago');
+        const bancoSelect = document.getElementById('editIdBanco');
+        const tipoCuentaSelect = document.getElementById('editTipoCuenta');
+        const numeroCuentaInput = document.getElementById('editNumeroCuenta');
+
+        if (!metodoSelect) return;
+
+        const selectedOption = metodoSelect.options[metodoSelect.selectedIndex];
+        const metodoNombre = selectedOption ? selectedOption.textContent.trim().toLowerCase() : '';
+        const isEfectivo = metodoNombre.includes('efectivo');
+        const isBilletera = metodoNombre.includes('billetera');
+        const isTransferencia = metodoNombre.includes('transferencia');
+
+        const bankFields = [bancoSelect, tipoCuentaSelect, numeroCuentaInput].filter(Boolean);
+
+        if (isEfectivo) {
+            // Bloquear banco, tipo cuenta y numero cuenta
+            bankFields.forEach(field => {
+                field.setAttribute('disabled', 'disabled');
+                field.classList.add('bg-gray-100', 'cursor-not-allowed');
+                if (field.tagName === 'SELECT') field.value = '';
+                else field.value = '';
+            });
+        } else {
+            // Habilitar todos los campos
+            bankFields.forEach(field => {
+                field.removeAttribute('disabled');
+                field.classList.remove('bg-gray-100', 'cursor-not-allowed');
+            });
+
+            // Filtrar opciones de banco
+            if (bancoSelect) {
+                const currentVal = bancoSelect.value;
+                const options = bancoSelect.querySelectorAll('option');
+                options.forEach(opt => {
+                    if (!opt.value) return; // skip placeholder
+                    const nombre = (opt.dataset.nombre || opt.textContent).toUpperCase().trim();
+                    const esBilletera = BILLETERAS_DIGITALES.some(b => nombre.includes(b));
+
+                    if (isBilletera) {
+                        opt.style.display = esBilletera ? '' : 'none';
+                        opt.disabled = !esBilletera;
+                    } else if (isTransferencia) {
+                        opt.style.display = esBilletera ? 'none' : '';
+                        opt.disabled = esBilletera;
+                    } else {
+                        opt.style.display = '';
+                        opt.disabled = false;
+                    }
+                });
+                // Si el valor actual ya no es visible, resetear
+                const currentOpt = bancoSelect.querySelector(`option[value="${currentVal}"]`);
+                if (currentOpt && currentOpt.disabled) {
+                    bancoSelect.value = '';
+                }
+            }
+        }
     }
 
     function normalizeEditFieldValue(field) {
@@ -1003,6 +1069,11 @@
         const input = form.querySelector(`[name="${fieldName}"]`);
         const value = input ? (input.value ?? '').toString().trim() : '';
 
+        if (input && input.disabled) {
+            if (showError) clearEditFieldError(input);
+            return true;
+        }
+
         if (stepNumber === 1) {
             switch (fieldName) {
                 case 'id_tipo_doc':
@@ -1069,7 +1140,29 @@
                         if (!fechaInicioValue) {
                             return validateEditInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
                         }
-                        return validateEditInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
+                        if (value <= fechaInicioValue) {
+                            return validateEditInput(input, false, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
+                        }
+
+                        // Validación: No puede ser anterior al periodo activo
+                        const activePeriodStart = window.employeeValidationRules?.activePeriodStart;
+                        if (activePeriodStart && value < activePeriodStart) {
+                            return validateEditInput(input, false, 'La fecha de fin no puede ser anterior al periodo de liquidación actual.', showError);
+                        }
+
+                        // Validación: Duración máxima de 2 años para Aprendizaje (4) y Prácticas (5)
+                        const idTipoContrato = Number(tipoContratoInput ? tipoContratoInput.value : 0);
+                        if (idTipoContrato === 4 || idTipoContrato === 5) {
+                            const start = new Date(`${fechaInicioValue}T00:00:00`);
+                            const end = new Date(`${value}T00:00:00`);
+                            const diffTime = Math.abs(end - start);
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays > 730) {
+                                return validateEditInput(input, false, 'La duración para este tipo de contrato no puede exceder los 2 años.', showError);
+                            }
+                        }
+
+                        return validateEditInput(input, true, '', showError);
                     }
                 case 'salario':
                     if (value === '') {
@@ -1338,9 +1431,26 @@
                 const contrato = data.contrato;
                 const cuenta = data.cuenta;
                 if (contrato) {
-                    document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
+                    // Sincronizar con Alpine
+                    const alpineContainer = document.getElementById('editContractualContainer');
+                    if (alpineContainer) {
+                        try {
+                            const alpineData = Alpine.$data(alpineContainer);
+                            if (alpineData) {
+                                alpineData.selectedContract = contrato.id_tipo_contrato || '';
+                                alpineData.selectedWorkerType = contrato.id_tipo_trabajador || '';
+                            }
+                        } catch (e) {
+                            console.warn('Error al sincronizar Alpine en loadEmployee:', e);
+                            document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
+                            document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
+                        }
+                    } else {
+                        document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
+                        document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
+                    }
+
                     document.getElementById('editIdSubTipoTrabajador').value = contrato.id_sub_tipo_trabajador || '';
-                    document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
                     document.getElementById('editIdArl').value = contrato.id_arl || '';
                     if (isRenewal && contrato.fecha_fin) {
                         try {
@@ -1370,11 +1480,17 @@
                     document.getElementById('editAltoRiesgo').checked = contrato.alto_riesgo == 1;
                     document.getElementById('editBajoRiesgo').checked = contrato.alto_riesgo != 1;
 
-                    document.getElementById('editIdFormaPago').value = contrato.id_forma_pago || '';
+                    // No actualizamos editIdFormaPago dinámicamente porque debe permanecer fijo en 'Contado' (valor por defecto del HTML)
                     document.getElementById('editIdMetodoPago').value = contrato.id_metodo_pago || '';
                     
-                    // Sincronizar campos bancarios (habilitar/deshabilitar) según método de pago
+                    // Sincronizar campos bancarios (habilitar/deshabilitar y filtrar bancos) según método de pago
                     syncEditBankFieldsByPaymentMethod();
+
+                    // Cargar banco DESPUÉS del sync para que las opciones estén filtradas
+                    const editBancoSelect = document.getElementById('editIdBanco');
+                    if (editBancoSelect && cuenta?.id_banco) {
+                        editBancoSelect.value = cuenta.id_banco;
+                    }
 
                     // Cargar valores bancarios DESPUÉS del sync para que no se borren
                     document.getElementById('editTipoCuenta').value = cuenta?.id_tipo_cuenta || '';
@@ -1396,11 +1512,12 @@
                     document.getElementById('editSalario').value = '';
                     document.getElementById('editCodigoInterno').value = '';
                     document.getElementById('editNivelRiesgo').value = '';
-                    document.getElementById('editAltoRiesgo').checked = false;
                     document.getElementById('editBajoRiesgo').checked = false;
 
-                    document.getElementById('editIdFormaPago').value = '';
+                    // No actualizamos editIdFormaPago
                     document.getElementById('editIdMetodoPago').value = '';
+                    const editBancoReset = document.getElementById('editIdBanco');
+                    if (editBancoReset) editBancoReset.value = '';
                     document.getElementById('editTipoCuenta').value = '';
                     document.getElementById('editNumeroCuenta').value = '';
                     document.getElementById('editIdEps').value = '';

@@ -271,10 +271,11 @@
     }
 
     function syncFieldsByFormaPago(form) {
+        const bancoInput = getField(form, 'id_banco');
         const tipoCuentaInput = getField(form, 'tipo_cuenta');
         const numeroCuentaInput = getField(form, 'numero_cuenta');
 
-        [tipoCuentaInput, numeroCuentaInput].filter(Boolean).forEach((field) => {
+        [bancoInput, tipoCuentaInput, numeroCuentaInput].filter(Boolean).forEach((field) => {
             field.removeAttribute('disabled');
             field.classList.remove('bg-gray-100', 'cursor-not-allowed');
         });
@@ -344,13 +345,14 @@
         const value = input ? (input.value || '').trim() : '';
         const fechaInicioInput = getField(form, 'fecha_inicio');
         const fechaInicioValue = fechaInicioInput ? (fechaInicioInput.value || '').trim() : '';
+        const contractInput = getField(form, 'id_tipo_contrato');
+        const contractId = Number(contractInput ? contractInput.value : 0);
 
         switch (fieldName) {
             case 'fecha_inicio':
                 return validarInput(input, value !== '', 'La fecha de ingreso es obligatoria.', showError);
             case 'fecha_fin':
                 {
-                    const contractInput = getField(form, 'id_tipo_contrato');
                     const isIndefiniteContract = isIndefiniteContractSelected(contractInput);
 
                     if (isIndefiniteContract) {
@@ -374,7 +376,29 @@
                     return validarInput(input, false, 'Debe ingresar primero la fecha de inicio.', showError);
                 }
 
-                return validarInput(input, value > fechaInicioValue, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
+                const fechaFinValida = value > fechaInicioValue;
+                if (!fechaFinValida) {
+                    return validarInput(input, false, 'La fecha fin debe ser posterior a la fecha de inicio.', showError);
+                }
+
+                // Límite de 2 años para contratos de Aprendizaje (4) y Prácticas (5)
+                if ([4, 5].includes(contractId)) {
+                    const start = new Date(fechaInicioValue);
+                    const end = new Date(value);
+                    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+                    if (months > 24) {
+                        return validarInput(input, false, 'La duración del contrato no puede ser superior a dos años.', showError);
+                    }
+                }
+
+                // Validación contra el periodo activo (si existe)
+                const activePeriodStart = window.employeeValidationRules?.activePeriodStart;
+                if (activePeriodStart && value < activePeriodStart) {
+                    const formattedDate = new Date(activePeriodStart + 'T00:00:00').toLocaleDateString('es-CO');
+                    return validarInput(input, false, `La fecha de fin no puede ser anterior al inicio del periodo activo (${formattedDate}).`, showError);
+                }
+
+                return true;
             case 'id_tipo_contrato':
                 return validarInput(input, value !== '', 'El tipo de contrato es obligatorio.', showError);
             case 'nivel_riesgo_id':
@@ -388,9 +412,6 @@
                 if (Number.isNaN(salario) || salario < 0 || salario > 999999999) {
                     return validarInput(input, false, 'El salario debe estar entre 0 y 999999999.', showError);
                 }
-
-                const contractInput = getField(form, 'id_tipo_contrato');
-                const contractId = Number(contractInput ? contractInput.value : 0);
 
                 // Excepciones: prestación de servicios y obra/labor.
                 if (isSalaryExemptContractSelected(contractInput)) {
@@ -448,6 +469,8 @@
         switch (fieldName) {
             case 'id_forma_pago':
                 return validarInput(input, value !== '', 'La forma de pago es obligatoria.', showError);
+            case 'id_banco':
+                return validarInput(input, value !== '', 'El banco es obligatorio.', showError);
             case 'tipo_cuenta':
                 if (value === '') {
                     if (showError) clearFieldError(input);
@@ -473,6 +496,12 @@
 
     function validateFieldByStep(form, fieldName, showError = true) {
         if (!form) {
+            return true;
+        }
+
+        const input = getField(form, fieldName);
+        if (input && input.disabled) {
+            if (showError) clearFieldError(input);
             return true;
         }
 
@@ -505,7 +534,7 @@
         }
 
         if (form.id === 'step3') {
-            return ['id_forma_pago', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'id_caja'];
+            return ['id_forma_pago', 'id_banco', 'tipo_cuenta', 'numero_cuenta', 'id_eps', 'id_afp', 'id_caja'];
         }
 
         return [];
@@ -734,11 +763,18 @@
 
             const nextDate = new Date(`${fechaInicioValue}T00:00:00`);
             nextDate.setDate(nextDate.getDate() + 1);
-            const minFechaFin = nextDate.toISOString().split('T')[0];
-            fechaFinInput.setAttribute('min', minFechaFin);
+            let minDate = nextDate.toISOString().split('T')[0];
+
+            // Forzar el inicio del periodo activo como mínimo si es posterior al día siguiente del inicio
+            const activePeriodStart = window.employeeValidationRules?.activePeriodStart;
+            if (activePeriodStart && activePeriodStart > minDate) {
+                minDate = activePeriodStart;
+            }
+
+            fechaFinInput.setAttribute('min', minDate);
 
             const fechaFinValue = (fechaFinInput.value || '').trim();
-            if (fechaFinValue !== '' && fechaFinValue <= fechaInicioValue) {
+            if (fechaFinValue !== '' && (fechaFinValue <= fechaInicioValue || (activePeriodStart && fechaFinValue < activePeriodStart))) {
                 fechaFinInput.value = '';
                 clearFieldError(fechaFinInput);
             }

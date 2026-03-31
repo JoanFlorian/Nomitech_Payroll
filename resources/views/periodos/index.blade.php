@@ -165,17 +165,6 @@
                                         </button>
                                         @endcan
 
-                                        {{-- Cierre Automático (Solo después del día 20) --}}
-                                        @if(now()->day >= 20)
-                                            <div class="flex flex-col items-start">
-                                                <label class="text-[9px] uppercase font-bold text-gray-400 leading-none mb-1">Auto-Cierre</label>
-                                                <input type="date" 
-                                                    value="{{ $periodo->fecha_cierre_automatico ? $periodo->fecha_cierre_automatico->format('Y-m-d') : '' }}"
-                                                    onchange="updateAutoClose({{ $periodo->id_periodo }}, this.value)"
-                                                    class="text-[10px] border-gray-200 rounded-lg p-1 w-28 focus:ring-blue-500 focus:border-blue-500"
-                                                    title="Programar cierre automático">
-                                            </div>
-                                        @endif
                                     </div>
                                 @endif
                             @endif

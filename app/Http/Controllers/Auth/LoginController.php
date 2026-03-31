@@ -76,6 +76,11 @@ class LoginController extends Controller
         // Superadmin (role 4) - no license check needed
         if ((int) $usuario->id_rol === 4) {
             Auth::login($usuario);
+
+            if ((bool) $usuario->must_change_password) {
+                return redirect()->route('cambiar-password');
+            }
+
             return redirect()->route('superadmin.empresas.index');
         }
 
@@ -94,6 +99,11 @@ class LoginController extends Controller
                 // License is missing or pending payment - redirect to pending view
                 Auth::login($usuario);
                 session(['empresa_id' => $empresa->id_empresa]);
+
+                if ((bool) $usuario->must_change_password) {
+                    return redirect()->route('cambiar-password');
+                }
+
                 return redirect()->route('licencia.pending');
             }
 
@@ -101,17 +111,27 @@ class LoginController extends Controller
                 // License is expired - redirect to expired license view
                 Auth::login($usuario);
                 session(['empresa_id' => $empresa->id_empresa]);
+
+                if ((bool) $usuario->must_change_password) {
+                    return redirect()->route('cambiar-password');
+                }
+
                 return redirect()->route('licencia.expired');
             }
 
             // License is active, proceed normally
             Auth::login($usuario);
             session(['empresa_id' => $empresa->id_empresa]);
+
+            if ((bool) $usuario->must_change_password) {
+                return redirect()->route('cambiar-password');
+            }
+
             return redirect()->route('empleados.index');
         }
 
-        // Empleado (rol 3) o Perfiles Administrativos (Administrador 2, Auxiliar 6, Auditor 7)
-        if (in_array((int) $usuario->id_rol, [2, 3, 6, 7])) {
+        // Empleado (rol 3) o Perfiles Administrativos (Administrador, Auxiliar, Auditor)
+        if (!in_array((int) $usuario->id_rol, [1, 4])) {
             // Get company from contrato (employee contract)
             $contrato = $usuario->contratos()->first();
 
@@ -133,12 +153,21 @@ class LoginController extends Controller
                 Auth::login($usuario);
                 session(['empresa_id' => $empresa->id_empresa]);
                 session(['license_expired' => true]); // Flag to show modal
+
+                if ((bool) $usuario->must_change_password) {
+                    return redirect()->route('cambiar-password');
+                }
+
                 return redirect('/'); // Redirect to landing page
             }
 
             // License is active, proceed normally
             Auth::login($usuario);
             session(['empresa_id' => $empresa->id_empresa]);
+
+            if ((bool) $usuario->must_change_password) {
+                return redirect()->route('cambiar-password');
+            }
 
             // Redirect based on sub-role
             if ((int) $usuario->id_rol === 3) {
@@ -151,6 +180,11 @@ class LoginController extends Controller
 
         // Retorno predeterminado
         Auth::login($usuario);
+
+        if ((bool) $usuario->must_change_password) {
+            return redirect()->route('cambiar-password');
+        }
+
         return redirect('/');
     }
 }

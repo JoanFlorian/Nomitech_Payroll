@@ -17,6 +17,7 @@ class Banco extends Model
         'nombre',
         'telefono',
         'direccion',
+        'codigo_ach',
     ];
 
     public function cuentas()

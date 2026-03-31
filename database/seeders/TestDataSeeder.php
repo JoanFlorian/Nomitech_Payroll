@@ -66,7 +66,7 @@ class TestDataSeeder extends Seeder
             'id_rol' => $idRolRep,
             'activo' => true,
             'contrasena' => Hash::make('password'),
-            // 'is_owner' => true, // Column missing in DB
+            'is_owner' => true,
             'updated_at' => now(),
             'created_at' => now(),
         ];
@@ -140,18 +140,20 @@ class TestDataSeeder extends Seeder
         }
 
         // 5.2 Cleanup existing employees and contracts for this company to avoid duplicate errors
-        $this->command->info('5.2 Cleaning up existing employees and contracts...');
+        $this->command->info('5.2 Cleaning up ALL employees and contracts (seeded and manual)...');
         
-        $employeeDocs = [];
-        for ($i = 1; $i <= 29; $i++) {
-            $employeeDocs[] = (string)(3000000000 + $i);
-        }
+        // Get all employee documents associated with this company
+        $employeeDocs = DB::table('usuario_empresa')
+            ->join('usuario', 'usuario_empresa.doc', '=', 'usuario.doc')
+            ->where('usuario_empresa.id_empresa', $empresa->id_empresa)
+            ->where('usuario.id_rol', $idRolEmp)
+            ->pluck('usuario.doc');
 
         // Clean up contracts and employee relationships for this company
         DB::table('contrato')->where('id_empresa', $empresa->id_empresa)->delete();
         DB::table('usuario_empresa')->where('id_empresa', $empresa->id_empresa)->whereIn('doc', $employeeDocs)->delete();
         
-        // Cleanup the users themselves if they are only test users
+        // Cleanup the users themselves
         DB::table('usuario')->whereIn('doc', $employeeDocs)->delete();
 
         if (DB::table('usuario_empresa')->where(['doc' => $representante->doc, 'id_empresa' => $empresa->id_empresa])->doesntExist()) {
@@ -198,43 +200,12 @@ class TestDataSeeder extends Seeder
             DB::table('pago')->insert($pagoData);
         }
 
-        // 7. Create Auxiliaries
-        $this->command->info('7. Creating Auxiliaries...');
+        // 7. Create Auxiliaries (SKIPPED AS PER USER REQUEST - MANUAL CREATION)
+        $this->command->info('7. Skipping Auxiliary creation (will be created manually)...');
+        /*
         $maxAux = $plan->max_auxiliares ?: 0;
-        $auxNames = [
-            ['nombre' => 'Margarita', 'apellido' => 'Rosa'],
-            ['nombre' => 'Pedro', 'apellido' => 'Infante'],
-        ];
-        for ($i = 1; $i <= $maxAux; $i++) {
-            $docAux = "200000000$i";
-            $auxData = [
-                'doc' => $docAux,
-                'id_tipo_doc' => $idTipoDoc,
-                'primer_nombre' => $auxNames[$i-1]['nombre'],
-                'primer_apellido' => $auxNames[$i-1]['apellido'],
-                'correo' => "aux$i@test.com",
-                'id_rol' => $idRolAux,
-                'id_ciudad' => $idCiudadBCS,
-                'activo' => true,
-                'direccion' => 'Calle Auxiliar',
-                'telefono' => '3000000000',
-                'contrasena' => Hash::make('password'),
-                'updated_at' => now(),
-                'created_at' => now(),
-            ];
-            
-            if (DB::table('usuario')->where('doc', $docAux)->exists()) {
-                DB::table('usuario')->where('doc', $docAux)->update($auxData);
-            } else {
-                DB::table('usuario')->insert($auxData);
-            }
-            
-            $aux = Usuario::where('doc', $docAux)->first();
-
-            if (DB::table('usuario_empresa')->where(['doc' => $aux->doc, 'id_empresa' => $empresa->id_empresa])->doesntExist()) {
-                DB::table('usuario_empresa')->insert(['doc' => $aux->doc, 'id_empresa' => $empresa->id_empresa]);
-            }
-        }
+        ... (rest of the loop)
+        */
 
         // 8. Create Employees and Contracts (BATCHED)
         $this->command->info('8. Creating Employees and Contracts (BATCHED)...');
@@ -243,7 +214,7 @@ class TestDataSeeder extends Seeder
         $lastNames = ['Rodriguez', 'Martinez', 'Garcia', 'Gomez', 'Lopez', 'Gonzalez', 'Hernandez', 'Diaz', 'Perez', 'Sanchez', 'Romero', 'Torres', 'Alvarez', 'Ruiz', 'Ramirez', 'Flores', 'Acosta', 'Morales', 'Vargas', 'Castillo', 'Jimenez', 'Mendoza', 'Reyes', 'Salazar', 'Castro', 'Ortiz', 'Silva', 'Rojas', 'Duarte', 'Castro'];
         $salaries = [2000000, 3000000, 4000000];
 
-        $numEmpl = 29;
+        $numEmpl = 26;
         $usersBatch = [];
         $contractsBatch = [];
         $userEmpBatch = [];
@@ -253,6 +224,23 @@ class TestDataSeeder extends Seeder
         $idEps = DB::table('eps')->value('id_eps') ?? 9001562642;
         $idAfp = DB::table('afp')->value('id_afp') ?? 1;
         $idCaja = DB::table('cajas_compensacion')->value('id_caja') ?? 860066942;
+        $idBancoBancolombia = DB::table('banco')->where('nombre', 'LIKE', '%Bancolombia%')->value('id_banco') ?? 1;
+        $idTipoCuentaAhorros = DB::table('tipo_cuenta')->where('nombre', 'LIKE', '%Ahorros%')->value('id_tipo_cuenta') ?? 1;
+        $idTipoCuentaCorriente = DB::table('tipo_cuenta')->where('nombre', 'LIKE', '%Corriente%')->value('id_tipo_cuenta') ?? 2;
+        
+        // Asegurar tipo de cuenta Depósito Electrónico
+        DB::table('tipo_cuenta')->updateOrInsert(
+            ['nombre' => 'Depósito Electrónico'],
+            ['updated_at' => now(), 'created_at' => now()]
+        );
+        $idTipoCuentaDigital = DB::table('tipo_cuenta')->where('nombre', 'Depósito Electrónico')->value('id_tipo_cuenta');
+
+        // Obtener varios bancos para distribuir
+        $bancosInteres = ['Banco de Bogotá', 'Banco Davivienda', 'Banco de Occidente', 'Banco Popular', 'Nequi', 'Daviplata'];
+        $bancosColeccion = DB::table('banco')->whereIn('nombre', $bancosInteres)->get();
+        $idBancosDiversos = $bancosColeccion->pluck('id_banco')->toArray();
+        if (empty($idBancosDiversos)) $idBancosDiversos = [$idBancoBancolombia];
+
         $password = Hash::make('password');
 
         for ($i = 0; $i < $numEmpl; $i++) {
@@ -283,6 +271,20 @@ class TestDataSeeder extends Seeder
                 'id_empresa' => $empresa->id_empresa
             ];
 
+            // Distribution logic:
+            // 0: Ahorros (Metodo 1)
+            // 1: Corriente (Metodo 1)
+            // 2: Billetera Digital (Metodo 2)
+            // 3: Efectivo (Metodo 3)
+            $mod = $i % 4;
+            if ($mod === 3) {
+                $idMetodoPago = 3; // Efectivo
+            } elseif ($mod === 2) {
+                $idMetodoPago = 2; // Billetera Digital
+            } else {
+                $idMetodoPago = 1; // Transferencia
+            }
+
             // Create Contract
             $idTipoContrato = ($i % 6) + 1; 
             $fechaFin = null;
@@ -299,13 +301,13 @@ class TestDataSeeder extends Seeder
                 'id_tipo_trabajador' => 1,
                 'id_sub_tipo_trabajador' => 1,
                 'id_forma_pago' => 1,
-                'id_metodo_pago' => 1,
+                'id_metodo_pago' => $idMetodoPago,
                 'id_arl' => $idArl,
                 'id_eps' => $idEps,
                 'id_afp' => $idAfp,
                 'id_caja' => $idCaja,
                 'nivel_riesgo_id' => $idNivelRiesgo,
-                'fecha_inicio' => now()->subMonths(1)->format('Y-m-d'),
+                'fecha_inicio' => '2026-03-01',
                 'fecha_fin' => $fechaFin,
                 'salario_base' => $salary,
                 'salario' => $salary,
@@ -320,7 +322,55 @@ class TestDataSeeder extends Seeder
         // Ejecutar los batches
         DB::table('usuario')->upsert($usersBatch, ['doc'], ['correo', 'id_rol', 'activo', 'updated_at']);
         DB::table('usuario_empresa')->insert($userEmpBatch);
-        DB::table('contrato')->upsert($contractsBatch, ['doc', 'id_empresa'], ['id_tipo_contrato', 'salario_base', 'salario', 'estado', 'updated_at']);
+        DB::table('contrato')->upsert($contractsBatch, ['doc', 'id_empresa'], ['id_tipo_contrato', 'salario_base', 'salario', 'estado', 'id_metodo_pago', 'updated_at']);
+
+        // 8.1 Create Bank Accounts (only for non-efectivo)
+        $this->command->info('8.1 Creating Bank Accounts for Contracts...');
+        $insertedContracts = DB::table('contrato')
+            ->where('id_empresa', $empresa->id_empresa)
+            ->whereIn('doc', collect($userEmpBatch)->pluck('doc'))
+            ->get();
+
+        $accountsBatch = [];
+        foreach ($insertedContracts as $index => $contract) {
+            $mod = $index % 4;
+            
+            if ($mod === 3) {
+                // Efectivo - skip account
+                continue;
+            }
+
+            $tipoCuentaId = 1; // Default Ahorros
+            $bancoId = $idBancoBancolombia;
+            $numeroCuenta = '999' . str_pad($contract->id_contrato, 7, '0', STR_PAD_LEFT);
+
+            if ($mod === 0) {
+                $tipoCuentaId = $idTipoCuentaAhorros;
+                $bancoId = $idBancoBancolombia;
+            } elseif ($mod === 1) {
+                $tipoCuentaId = $idTipoCuentaCorriente;
+                // Usar un banco diverso para corriente
+                $bancoId = $idBancosDiversos[$index % count($idBancosDiversos)];
+            } elseif ($mod === 2) {
+                $tipoCuentaId = $idTipoCuentaDigital;
+                // Billetera Digital - Usar Nequi o Daviplata si están disponibles
+                $bancoDigital = DB::table('banco')->whereIn('nombre', ['NEQUI', 'DAVIPLATA'])->orWhereIn('nombre', ['Nequi', 'Daviplata'])->inRandomOrder()->first();
+                $bancoId = $bancoDigital ? $bancoDigital->id_banco : $idBancoBancolombia;
+                // Número de celular para billetera
+                $numeroCuenta = '3' . str_pad(rand(0, 999999999), 9, '0', STR_PAD_LEFT);
+            }
+
+            $accountsBatch[] = [
+                'id_contrato' => $contract->id_contrato,
+                'id_tipo_cuenta' => $tipoCuentaId,
+                'id_banco' => $bancoId,
+                'numero_cuenta' => $numeroCuenta,
+                'activo' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        DB::table('cuenta')->insert($accountsBatch);
 
 
         // 9. Create Liquidation Period

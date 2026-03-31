@@ -47,6 +47,7 @@ class PermissionSeeder extends Seeder
             // Nómina Electrónica
             ['name' => 'view_electronic_payroll', 'module' => 'Nómina Electrónica', 'description' => 'Ver historial de nóminas electrónicas'],
             ['name' => 'transmit_electronic_payroll', 'module' => 'Nómina Electrónica', 'description' => 'Generar y transmitir nómina electrónica a la DIAN'],
+            ['name' => 'export_bank_files', 'module' => 'Nómina Electrónica', 'description' => 'Exportar archivos para pagos bancarios (CSV/Bancolombia/etc)'],
 
             // PILA (Seguridad Social)
             ['name' => 'view_pila', 'module' => 'PILA', 'description' => 'Ver planillas de seguridad social (PILA)'],

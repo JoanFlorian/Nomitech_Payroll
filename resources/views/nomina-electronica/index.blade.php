@@ -169,15 +169,15 @@
                                         @can('export_bank_files')
                                             @if($periodo->estado === 'cerrado')
                                                 <div class="grid grid-cols-2 gap-2">
-                                                    <button onclick="abrirModalExportar({{ $periodo->id_periodo }}, 'bank')"
-                                                        title="Exportar archivo CSV solo con transferencias bancarias"
-                                                        class="w-full flex items-center justify-center gap-1 text-center bg-emerald-50 text-emerald-700 font-semibold py-2 px-2 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200 text-sm">
-                                                        <span class="material-icons text-sm">account_balance</span> Bancos
-                                                    </button>
                                                     <button onclick="abrirModalExportar({{ $periodo->id_periodo }}, 'general')"
-                                                        title="Exportar archivo CSV general incluyendo pagos en efectivo"
+                                                        title="Exportar resumen general en Excel (Incluye todos los medios de pago)"
                                                         class="w-full flex items-center justify-center gap-1 text-center bg-blue-50 text-blue-700 font-semibold py-2 px-2 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 text-sm">
-                                                        <span class="material-icons text-sm">list_alt</span> General
+                                                        <span class="material-icons text-sm">analytics</span> Resumen Gral
+                                                    </button>
+                                                    <button onclick="abrirModalExportar({{ $periodo->id_periodo }}, 'pab')"
+                                                        title="Generar archivos PAB para dispersión Bancolombia"
+                                                        class="w-full flex items-center justify-center gap-1 text-center bg-amber-50 text-amber-700 font-semibold py-2 px-2 rounded-lg hover:bg-amber-100 transition-colors border border-amber-200 text-sm">
+                                                        <span class="material-icons text-sm">payments</span> PAB
                                                     </button>
                                                 </div>
                                             @endif

@@ -37,8 +37,10 @@ class Step3Request extends FormRequest
     {
         return [
             'id_forma_pago' => 'required|integer|exists:forma_pago,id_forma_pago',
-            'tipo_cuenta' => 'nullable|integer|exists:tipo_cuenta,id_tipo_cuenta',
-            'numero_cuenta' => 'nullable|string|max:20|regex:/^[0-9]{6,20}$/',
+            'id_metodo_pago' => 'required|integer|exists:metodo_pago,id_metodo_pago',
+            'id_banco' => 'required_unless:id_metodo_pago,3|nullable|integer|exists:banco,id_banco',
+            'tipo_cuenta' => 'required_unless:id_metodo_pago,3|nullable|integer|exists:tipo_cuenta,id_tipo_cuenta',
+            'numero_cuenta' => 'required_unless:id_metodo_pago,3|nullable|string|max:20|regex:/^[0-9]{6,20}$/',
             'id_eps' => 'required|integer|exists:eps,id_eps',
             'id_afp' => 'required|integer|exists:afp,id_afp',
             'id_caja' => 'required|integer|exists:cajas_compensacion,id_caja',
@@ -59,11 +61,22 @@ class Step3Request extends FormRequest
             'id_forma_pago.integer' => 'La forma de pago no es válida.',
             'id_forma_pago.exists' => 'La forma de pago seleccionada no existe.',
 
+            'id_metodo_pago.required' => 'Debe seleccionar el método de pago.',
+            'id_metodo_pago.integer' => 'El método de pago no es válido.',
+            'id_metodo_pago.exists' => 'El método de pago seleccionado no existe.',
+
+            'id_banco.required' => 'Debe seleccionar el banco.',
+            'id_banco.required_unless' => 'Debe seleccionar el banco cuando el método de pago no es efectivo.',
+            'id_banco.integer' => 'El banco no es válido.',
+            'id_banco.exists' => 'El banco seleccionado no existe.',
+
             'tipo_cuenta.required' => 'Debe seleccionar el tipo de cuenta.',
+            'tipo_cuenta.required_unless' => 'Debe seleccionar el tipo de cuenta cuando el método de pago no es efectivo.',
             'tipo_cuenta.integer' => 'El tipo de cuenta no es válido.',
             'tipo_cuenta.exists' => 'El tipo de cuenta seleccionada no existe.',
 
             'numero_cuenta.required' => 'Debe ingresar el número de cuenta.',
+            'numero_cuenta.required_unless' => 'Debe ingresar el número de cuenta cuando el método de pago no es efectivo.',
             'numero_cuenta.string' => 'El número de cuenta debe ser texto.',
             'numero_cuenta.max' => 'El número de cuenta no puede superar 20 caracteres.',
             'numero_cuenta.regex' => 'El número de cuenta debe tener entre 6 y 20 dígitos numéricos.',

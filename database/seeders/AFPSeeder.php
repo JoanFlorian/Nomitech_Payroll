@@ -15,7 +15,7 @@ class AFPSeeder extends Seeder
             [
                 'id_afp' => 1,
                 'nombre' => 'PROTECCION',
-                'empresa_nit' => '800229739',
+                'empresa_nit' => null,
                 'codigo_pila' => 'AFP001',
                 'telefono' => '018000525800',
                 'direccion' => 'Medellín, Antioquia',
@@ -26,7 +26,7 @@ class AFPSeeder extends Seeder
             [
                 'id_afp' => 2,
                 'nombre' => 'COLFONDOS',
-                'empresa_nit' => '800227940',
+                'empresa_nit' => null,
                 'codigo_pila' => 'AFP002',
                 'telefono' => '018000510000',
                 'direccion' => 'Bogotá D.C.',
@@ -37,7 +37,7 @@ class AFPSeeder extends Seeder
             [
                 'id_afp' => 3,
                 'nombre' => 'PORVENIR',
-                'empresa_nit' => '800224808',
+                'empresa_nit' => null,
                 'codigo_pila' => 'AFP005',
                 'telefono' => '018000510800',
                 'direccion' => 'Bogotá D.C.',
@@ -48,7 +48,7 @@ class AFPSeeder extends Seeder
             [
                 'id_afp' => 4,
                 'nombre' => 'SKANDIA',
-                'empresa_nit' => '860058454',
+                'empresa_nit' => null,
                 'codigo_pila' => 'AFP004',
                 'telefono' => '018000517526',
                 'direccion' => 'Bogotá D.C.',

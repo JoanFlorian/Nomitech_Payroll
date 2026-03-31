@@ -11,6 +11,9 @@ class TipoTrabajadorSeeder extends Seeder
     {
         $tiposTrabajador = [
             ['id_tipo_trabajador' => 1, 'nombre' => 'Dependiente'],
+            ['id_tipo_trabajador' => 2, 'nombre' => 'Independiente'],
+            ['id_tipo_trabajador' => 12, 'nombre' => 'Aprendices del Sena en etapa lectiva'],
+            ['id_tipo_trabajador' => 19, 'nombre' => 'Aprendices del SENA en etapa productiva'],
         ];
 
         foreach ($tiposTrabajador as $tipo) {

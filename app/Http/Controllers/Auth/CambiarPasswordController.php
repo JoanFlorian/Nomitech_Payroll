@@ -15,9 +15,9 @@ class CambiarPasswordController extends Controller
      */
     public function show()
     {
-        // Si el usuario no necesita cambiar contraseña, redirigir al dashboard
+        // Si el usuario no necesita cambiar contraseña, redirigir al dashboard correspondiente
         if (!Auth::check() || !(bool) Auth::user()->must_change_password) {
-            return redirect()->route('trabajador.dashboard');
+            return redirect()->route($this->getRedirectRoute(Auth::user()));
         }
 
         return view('auth.cambiar-password');
@@ -58,7 +58,20 @@ class CambiarPasswordController extends Controller
         $usuario->must_change_password = false;
         $usuario->save();
 
-        return redirect()->route('trabajador.dashboard')
+        return redirect()->route($this->getRedirectRoute($usuario))
             ->with('success', 'Contraseña actualizada correctamente. ¡Bienvenido!');
+    }
+
+    private function getRedirectRoute($usuario)
+    {
+        if ((int) $usuario->id_rol === 4) {
+            return 'superadmin.empresas.index';
+        } elseif ((int) $usuario->id_rol === 1) {
+            return 'empleados.index';
+        } elseif ((int) $usuario->id_rol === 3) {
+            return 'trabajador.dashboard';
+        }
+
+        return $usuario->getFirstAccessibleRoute() ?? 'index';
     }
 }

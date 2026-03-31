@@ -198,6 +198,8 @@ class Step2Request extends FormRequest
                 return;
             }
 
+            $idTipoTrabajador = (int) $this->input('id_tipo_trabajador');
+
             if ($idTipoContrato === 4) {
                 $etapaAprendiz = $this->resolveAprendizStage();
 
@@ -212,7 +214,7 @@ class Step2Request extends FormRequest
                     return;
                 }
 
-                if ($etapaAprendiz === 'productiva') {
+                if ($etapaAprendiz === 'productiva' || $idTipoTrabajador === 19) {
                     if ($salario < $smmlv) {
                         $validator->errors()->add(
                             'salario',
@@ -234,6 +236,20 @@ class Step2Request extends FormRequest
                     'salario',
                     'El salario base no puede ser inferior al salario mínimo legal vigente para este tipo de contrato.'
                 );
+            }
+
+            // Validación: Máximo 2 años para Aprendizaje (4) y Prácticas (5)
+            if (in_array($idTipoContrato, [4, 5])) {
+                if (!empty($fechaFin)) {
+                    $inicio = \Carbon\Carbon::parse($this->input('fecha_inicio'));
+                    $fin = \Carbon\Carbon::parse($fechaFin);
+                    if ($inicio->diffInMonths($fin) > 24) {
+                        $validator->errors()->add(
+                            'fecha_fin',
+                            'La duración del contrato de aprendizaje o prácticas no puede ser superior a dos años.'
+                        );
+                    }
+                }
             }
 
             // Validación de fecha_fin vs periodo activo

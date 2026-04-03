@@ -16,39 +16,46 @@
             justify-content: center;
         }
 
+
+
         .loader-logo {
-            width: 45px;
+            width: 32px;
             height: auto;
             position: absolute;
             z-index: 2;
         }
 
+
         .loader-spinner {
             width: 100px;
             height: 100px;
-            animation: loader-spin 1.1s linear infinite;
+            animation: loader-spin 2.5s linear infinite;
         }
+
+
 
         .loader-segments line {
             stroke: #1fd1a5;
             stroke-width: 3;
             stroke-linecap: round;
             opacity: 0.15;
-            animation: loader-fade 1.1s linear infinite;
+            animation: loader-fade 2.5s linear infinite;
         }
 
+
         .loader-segments line:nth-child(1) { animation-delay: 0s; }
-        .loader-segments line:nth-child(2) { animation-delay: .1s; }
-        .loader-segments line:nth-child(3) { animation-delay: .2s; }
-        .loader-segments line:nth-child(4) { animation-delay: .3s; }
-        .loader-segments line:nth-child(5) { animation-delay: .4s; }
-        .loader-segments line:nth-child(6) { animation-delay: .5s; }
-        .loader-segments line:nth-child(7) { animation-delay: .6s; }
-        .loader-segments line:nth-child(8) { animation-delay: .7s; }
-        .loader-segments line:nth-child(9) { animation-delay: .8s; }
-        .loader-segments line:nth-child(10) { animation-delay: .9s; }
-        .loader-segments line:nth-child(11) { animation-delay: 1s; }
-        .loader-segments line:nth-child(12) { animation-delay: 1.1s; }
+        .loader-segments line:nth-child(2) { animation-delay: .2s; }
+        .loader-segments line:nth-child(3) { animation-delay: .4s; }
+        .loader-segments line:nth-child(4) { animation-delay: .6s; }
+        .loader-segments line:nth-child(5) { animation-delay: .8s; }
+        .loader-segments line:nth-child(6) { animation-delay: 1s; }
+        .loader-segments line:nth-child(7) { animation-delay: 1.2s; }
+        .loader-segments line:nth-child(8) { animation-delay: 1.4s; }
+        .loader-segments line:nth-child(9) { animation-delay: 1.6s; }
+        .loader-segments line:nth-child(10) { animation-delay: 1.8s; }
+        .loader-segments line:nth-child(11) { animation-delay: 2s; }
+        .loader-segments line:nth-child(12) { animation-delay: 2.2s; }
+
 
         @keyframes loader-spin {
             to { transform: rotate(360deg); }

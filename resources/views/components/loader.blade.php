@@ -95,12 +95,14 @@
 
 <script>
     window.NomitechLoader = {
-        timeout: null,
+        showTimeout: null,
+        hideTimeout: null,
         overlay: null,
-        delay: 100, // 0.1 segundos para ver la respuesta inmediata
+        delay: 100, // Default delay for generic show()
 
         show(text = 'Cargando...', customDelay = null) {
-            this.hide(); // Clear any previous timer
+            // Cancelar cualquier proceso de ocultación o mostrado previo
+            this.clearTimers();
             
             if (!this.overlay) {
                 this.overlay = document.getElementById('global-loader');
@@ -109,32 +111,52 @@
             const loaderText = document.getElementById('loader-text');
             const effectiveDelay = customDelay !== null ? customDelay : this.delay;
 
-            this.timeout = setTimeout(() => {
+            const startShowing = () => {
                 if (this.overlay) {
                     if (loaderText) loaderText.textContent = text;
                     this.overlay.classList.remove('hidden');
                     this.overlay.classList.add('flex');
+                    // Pequeño delay para permitir que el navegador registre el cambio de hidden a flex antes de la opacidad
                     setTimeout(() => {
-                        this.overlay.classList.replace('opacity-0', 'opacity-100');
+                        this.overlay.classList.remove('opacity-0');
+                        this.overlay.classList.add('opacity-100');
                     }, 10);
                 }
-            }, effectiveDelay);
+            };
+
+            if (effectiveDelay > 0) {
+                this.showTimeout = setTimeout(startShowing, effectiveDelay);
+            } else {
+                startShowing();
+            }
         },
 
         hide() {
-            if (this.timeout) {
-                clearTimeout(this.timeout);
-                this.timeout = null;
-            }
+            this.clearTimers();
+
             if (!this.overlay) {
                 this.overlay = document.getElementById('global-loader');
             }
+
             if (this.overlay) {
-                this.overlay.classList.replace('opacity-100', 'opacity-0');
-                setTimeout(() => {
+                this.overlay.classList.remove('opacity-100');
+                this.overlay.classList.add('opacity-0');
+                
+                this.hideTimeout = setTimeout(() => {
                     this.overlay.classList.add('hidden');
                     this.overlay.classList.remove('flex');
                 }, 300);
+            }
+        },
+
+        clearTimers() {
+            if (this.showTimeout) {
+                clearTimeout(this.showTimeout);
+                this.showTimeout = null;
+            }
+            if (this.hideTimeout) {
+                clearTimeout(this.hideTimeout);
+                this.hideTimeout = null;
             }
         }
     };
@@ -144,7 +166,8 @@
         const form = e.target;
         if (form.hasAttribute('data-loader')) {
             const text = form.getAttribute('data-loader-text') || 'Procesando...';
-            window.NomitechLoader.show(text);
+            // Para formularios, mostramos el loader de inmediato para confirmar la acción al usuario
+            window.NomitechLoader.show(text, 0);
         }
     });
 

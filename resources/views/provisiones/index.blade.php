@@ -98,7 +98,8 @@
                     <i class="bi bi-gear-fill"></i>
                     Automatización
                 </button>
-                <button type="button" @click.prevent="masivoModal = true"
+                <button type="button" @click.stop="masivoModal = true"
+
                     class="bg-[#1565C0] text-white font-bold py-2.5 px-6 rounded-lg shadow-md hover:bg-[#0D47A1] transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                     <i class="bi bi-people"></i>
                     Liquidación Masiva
@@ -355,7 +356,8 @@
                                                 {{-- SINGLE unified button --}}
                                                 @can('manage_provisions')
                                                 <button type="button"
-                                                    @click.prevent="gestionarModal = true; selectedEmployee = '{{ trim((string) $balance->employee_id) }}'; selectedAmount = ''; selectedBenefit = ''; paymentMode = 'direct'; cesantiasMode = 'pago_directo'; retiroReason = 'housing'"
+                                                    @click.stop="gestionarModal = true; selectedEmployee = '{{ trim((string) $balance->employee_id) }}'; selectedAmount = ''; selectedBenefit = ''; paymentMode = 'direct'; cesantiasMode = 'pago_directo'; retiroReason = 'housing'"
+
                                                     class="inline-flex items-center gap-1 px-4 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#1565C0] to-[#1976D2] rounded-lg shadow-sm hover:from-[#0D47A1] hover:to-[#1565C0] transition-all"
                                                     title="Gestionar prestación">
                                                     <i class="bi bi-cash-stack"></i> Gestionar

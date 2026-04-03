@@ -101,8 +101,17 @@
         delay: 100, // Default delay for generic show()
 
         show(text = 'Cargando...', customDelay = null) {
+            // Trace caller for debugging
+            if (window.DEBUG_NOMITECH_LOADER) {
+                console.group('NomitechLoader.show');
+                console.log('Text:', text, 'Delay:', customDelay);
+                console.trace();
+                console.groupEnd();
+            }
+
             // Cancelar cualquier proceso de ocultación o mostrado previo
             this.clearTimers();
+
             
             if (!this.overlay) {
                 this.overlay = document.getElementById('global-loader');
@@ -163,8 +172,10 @@
 
     // Auto-hook into forms that have data-loader attribute
     document.addEventListener('submit', (e) => {
+        if (e.defaultPrevented) return;
         const form = e.target;
         if (form.hasAttribute('data-loader')) {
+
             const text = form.getAttribute('data-loader-text') || 'Procesando...';
             // Para formularios, mostramos el loader de inmediato para confirmar la acción al usuario
             window.NomitechLoader.show(text, 0);

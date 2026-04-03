@@ -44,7 +44,9 @@
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             }
         });
+        window.DEBUG_NOMITECH_LOADER = true;
     </script>
+
 
     <style>
     [x-cloak] { display: none !important; }

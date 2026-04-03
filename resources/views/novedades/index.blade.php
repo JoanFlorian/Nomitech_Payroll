@@ -249,15 +249,15 @@
 							@endcan
 
 							@can('delete_novedad')
-							<button
-								type="button"
-								onclick="window.__deleteNovedadByButton && window.__deleteNovedadByButton(this)"
-								class="trigger-delete-direct text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
-								title="Eliminar"
-								data-novedad-id="{{ $novedad->id_novedad }}"
-							>
-								<span class="material-icons text-[20px]">delete</span>
-							</button>
+								<button
+									type="button"
+									onclick="window.__deleteNovedadByButton && window.__deleteNovedadByButton(this)"
+									class="trigger-delete-direct text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
+									title="Eliminar"
+									data-novedad-id="{{ $novedad->id_novedad }}"
+								>
+									<span class="material-icons text-[20px]">delete</span>
+								</button>
 							@endcan
 						</div>
 					</div>
@@ -294,6 +294,13 @@
 							@endif
 						</div>
 					</div>
+
+					@if(!empty($novedad->observaciones))
+					<div class="mt-4 pt-3 border-t border-gray-100/60 flex items-start gap-2.5 text-sm text-gray-600 bg-gray-50/50 rounded-lg p-3">
+						<span class="material-icons text-[16px] text-blue-500 mt-0.5">chat_bubble_outline</span>
+						<p class="leading-relaxed whitespace-pre-line">{{ $novedad->observaciones }}</p>
+					</div>
+					@endif
 				</div>
 			</article>
 		@empty
@@ -354,6 +361,7 @@
 		const empleadosApiUrl = @json(url('/api/empleados'));
 		const closedPeriods = @json($periodosCerrados ?? []);
 		const activePeriodStart = @json($periodoActivo ? $periodoActivo->fecha_inicio->format('Y-m-d') : null);
+		const activePeriodEnd = @json($periodoActivo ? $periodoActivo->fecha_fin->format('Y-m-d') : null);
 
 		console.log('Delete URL Template:', deleteUrlTemplate);
 		
@@ -422,8 +430,8 @@
 		const licenciaRemuneradaInput = document.getElementById('licencia-remunerada');
 		const remuneradaLabel = document.getElementById('remunerada-label');
 		const observationsInput = document.getElementById('observaciones');
-		const createUnitDaysRadio = document.querySelector('input[name="unidad_cantidad"][value="dias"]');
-		const createUnitHoursRadio = document.querySelector('input[name="unidad_cantidad"][value="horas"]');
+		const createUnitDaysRadio = document.getElementById('unit-days');
+		const createUnitHoursRadio = document.getElementById('unit-hours');
 		const tipoIncapacidadWrap = document.getElementById('tipo-incapacidad-wrap');
 		const tipoIncapacidadInput = document.getElementById('tipo-incapacidad');
 		const tipoLicenciaWrap = document.getElementById('tipo-licencia-wrap');
@@ -1008,8 +1016,15 @@
 			suggestions.classList.add('hidden');
 			suggestions.innerHTML = '';
 			highlightedSuggestionIndex = -1;
-			selectedEmployee = { doc };
+			selectedEmployee = { 
+				doc,
+				id_eps: employee.id_eps || (employee.contrato ? employee.contrato.id_eps : null),
+				eps_nombre: employee.eps_nombre || '',
+				id_afp: employee.id_afp || (employee.contrato ? employee.contrato.id_afp : null),
+				afp_nombre: employee.afp_nombre || '',
+			};
 			updateCreateEstimatedValue();
+			updateCreateQuantityMode(); // Refrescar origenes si aplica
 		};
 
 		const fetchEmployeesSuggestions = async (query = '') => {
@@ -1044,6 +1059,10 @@
 					nombres: String(row.nombre || ''),
 					apellidos: '',
 					salario_base: Number(row.salario_base || 0),
+					id_eps: row.id_eps || null,
+					eps_nombre: row.eps_nombre || '',
+					id_afp: row.id_afp || null,
+					afp_nombre: row.afp_nombre || '',
 				}));
 			} finally {
 				if (sequence === employeeFetchSeq) {
@@ -1306,10 +1325,52 @@
 				certificadoMedicoWrap.classList.toggle('hidden', !['IGE', 'IRL', 'INC'].includes(tipo));
 			}
 			if (epsWrap) {
-				epsWrap.classList.toggle('hidden', !['TDE', 'TAE'].includes(tipo));
+				const isTransferEps = ['TDE', 'TAE'].includes(tipo);
+				epsWrap.classList.toggle('hidden', !isTransferEps);
+				
+				const epsLabel = epsWrap.querySelector('label');
+				if (epsLabel) {
+					epsLabel.textContent = isTransferEps ? 'Nueva EPS (Destino)' : 'EPS';
+				}
+				
+				let epsHint = document.getElementById('eps-origen-hint');
+				if (!epsHint) {
+					epsHint = document.createElement('p');
+					epsHint.id = 'eps-origen-hint';
+					epsHint.className = 'text-[10.5px] text-indigo-600 mt-1.5 font-medium flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded w-fit';
+					epsWrap.appendChild(epsHint);
+				}
+				
+				if (isTransferEps && selectedEmployee && selectedEmployee.id_eps) {
+					epsHint.innerHTML = `<span class="material-icons text-[12px]">info</span> <b>EPS Actual:</b> ${selectedEmployee.eps_nombre || 'N/A'}`;
+					epsHint.classList.remove('hidden');
+				} else {
+					epsHint.classList.add('hidden');
+				}
 			}
 			if (afpWrap) {
-				afpWrap.classList.toggle('hidden', !['TDP', 'TAP'].includes(tipo));
+				const isTransferAfp = ['TDP', 'TAP'].includes(tipo);
+				afpWrap.classList.toggle('hidden', !isTransferAfp);
+				
+				const afpLabel = afpWrap.querySelector('label');
+				if (afpLabel) {
+					afpLabel.textContent = isTransferAfp ? 'Nueva AFP (Destino)' : 'AFP';
+				}
+				
+				let afpHint = document.getElementById('afp-origen-hint');
+				if (!afpHint) {
+					afpHint = document.createElement('p');
+					afpHint.id = 'afp-origen-hint';
+					afpHint.className = 'text-[10.5px] text-indigo-600 mt-1.5 font-medium flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded w-fit';
+					afpWrap.appendChild(afpHint);
+				}
+				
+				if (isTransferAfp && selectedEmployee && selectedEmployee.id_afp) {
+					afpHint.innerHTML = `<span class="material-icons text-[12px]">info</span> <b>AFP Actual:</b> ${selectedEmployee.afp_nombre || 'N/A'}`;
+					afpHint.classList.remove('hidden');
+				} else {
+					afpHint.classList.add('hidden');
+				}
 			}
 			if (arlWrap) {
 				arlWrap.classList.toggle('hidden', tipo !== 'VCT');
@@ -1318,11 +1379,45 @@
 
 		const updateCreateQuantityMode = () => {
 			const type = normalizeNoveltyType(noveltyType.value || '');
-			const noCantidad = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(type);
+			const isTraslado = ['TDE', 'TAE', 'TDP', 'TAP'].includes(type);
+			const noCantidad = isTraslado || ['VSP', 'VST', 'VCT'].includes(type);
 			const allowsHours = ['IGE', 'IRL', 'INC'].includes(type);
 			const fixedDays = type === 'LMAT' ? 126 : (type === 'LPAT' ? 14 : null);
 			const forceDaysOnly = ['LMAT', 'LPAT', 'VAC', 'SLN', 'LIC'].includes(type) || noCantidad;
 			const maxDays = getMaxDaysByType(type);
+
+			// Ocultar campos para traslados (TDE, TAE, TDP, TAP)
+			const endWrap = endDateInput?.closest('div');
+			const daysWrap = quantityDaysInput?.closest('div');
+			const hoursWrap = quantityHoursInput?.closest('div');
+			const unitWrap = document.querySelector('input[name="unidad_cantidad"]')?.closest('div');
+
+			if (isTraslado) {
+				if (endWrap) endWrap.classList.add('hidden');
+				if (daysWrap) daysWrap.classList.add('hidden');
+				if (hoursWrap) hoursWrap.classList.add('hidden');
+				if (unitWrap) unitWrap.classList.add('hidden');
+				
+				// Restringir Fecha Inicio al periodo activo
+				if (startDateInput && activePeriodStart && activePeriodEnd) {
+					startDateInput.setAttribute('min', activePeriodStart);
+					startDateInput.setAttribute('max', activePeriodEnd);
+				}
+
+				if (endDateInput && startDateInput && startDateInput.value) {
+					endDateInput.value = startDateInput.value;
+				}
+			} else {
+				if (endWrap) endWrap.classList.remove('hidden');
+				if (daysWrap) daysWrap.classList.remove('hidden');
+				if (hoursWrap) hoursWrap.classList.remove('hidden');
+				if (unitWrap) unitWrap.classList.remove('hidden');
+				
+				if (startDateInput) {
+					startDateInput.removeAttribute('min');
+					startDateInput.removeAttribute('max');
+				}
+			}
 
 			// Mostrar/Ocultar info de balance de vacaciones
 			const vacBalanceInfo = document.getElementById('vacaciones-balance-info');
@@ -1332,6 +1427,7 @@
 
 			if (forceDaysOnly && createUnitDaysRadio) {
 				createUnitDaysRadio.checked = true;
+				// NO dispatchEvent here — doing so calls updateCreateQuantityMode recursively!
 			}
 			if (createUnitDaysRadio) {
 				createUnitDaysRadio.disabled = noCantidad;
@@ -1434,14 +1530,49 @@
 
 		const updateEditQuantityMode = () => {
 			const type = normalizeNoveltyType(editNoveltyTypeInput.value || '');
-			const noCantidad = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(type);
+			const isTraslado = ['TDE', 'TAE', 'TDP', 'TAP'].includes(type);
+			const noCantidad = isTraslado || ['VSP', 'VST', 'VCT'].includes(type);
 			const allowsHours = ['IGE', 'IRL', 'INC'].includes(type);
 			const fixedDays = type === 'LMAT' ? 126 : (type === 'LPAT' ? 14 : null);
 			const forceDaysOnly = ['LMAT', 'LPAT', 'VAC', 'SLN', 'LIC'].includes(type) || noCantidad;
 			const maxDays = getMaxDaysByType(type);
 
+			// Ocultar campos para traslados (TDE, TAE, TDP, TAP)
+			const endWrap = editEndDateInput?.closest('div');
+			const daysWrap = editQuantityDaysInput?.closest('div');
+			const hoursWrap = editQuantityHoursInput?.closest('div');
+			const unitWrap = document.querySelector('#edit-novelty-form input[name="unidad_cantidad"]')?.closest('div');
+
+			if (isTraslado) {
+				if (endWrap) endWrap.classList.add('hidden');
+				if (daysWrap) daysWrap.classList.add('hidden');
+				if (hoursWrap) hoursWrap.classList.add('hidden');
+				if (unitWrap) unitWrap.classList.add('hidden');
+				
+				// Restringir Fecha Inicio al periodo activo (Edición)
+				if (editStartDateInput && activePeriodStart && activePeriodEnd) {
+					editStartDateInput.setAttribute('min', activePeriodStart);
+					editStartDateInput.setAttribute('max', activePeriodEnd);
+				}
+
+				if (editEndDateInput && editStartDateInput && editStartDateInput.value) {
+					editEndDateInput.value = editStartDateInput.value;
+				}
+			} else {
+				if (endWrap) endWrap.classList.remove('hidden');
+				if (daysWrap) daysWrap.classList.remove('hidden');
+				if (hoursWrap) hoursWrap.classList.remove('hidden');
+				if (unitWrap) unitWrap.classList.remove('hidden');
+				
+				if (editStartDateInput) {
+					editStartDateInput.removeAttribute('min');
+					editStartDateInput.removeAttribute('max');
+				}
+			}
+
 			if (forceDaysOnly && editUnitDaysRadio) {
 				editUnitDaysRadio.checked = true;
+				// NO dispatchEvent here — doing so would cause infinite recursion
 			}
 			if (editUnitDaysRadio) {
 				editUnitDaysRadio.disabled = noCantidad;
@@ -1477,16 +1608,11 @@
 			const startDate = startDateInput.value;
 			const endDate = endDateInput.value;
 
-			if (startDate) {
-				endDateInput.min = startDate;
-			} else {
-				endDateInput.removeAttribute('min');
-			}
+		// Removido asignación de min para evitar validación nativa que bloquea inputs ocultos
 
 			if (!startDate || !endDate) {
 				clearFieldError('endDate');
 				clearInvalid(endDateInput);
-				endDateInput.setCustomValidity('');
 				return true;
 			}
 
@@ -1495,13 +1621,11 @@
 			if (!isValidRange) {
 				showFieldError('endDate', 'La fecha de fin no puede ser menor que la fecha de inicio.');
 				markInvalid(endDateInput);
-				endDateInput.setCustomValidity('La fecha de fin no puede ser menor que la fecha de inicio.');
 				return false;
 			}
 
 			clearFieldError('endDate');
 			clearInvalid(endDateInput);
-			endDateInput.setCustomValidity('');
 			return true;
 		};
 
@@ -1622,9 +1746,9 @@
 
 		const preselectedDoc = docEmpleadoInput.value;
 		if (preselectedDoc) {
-			const selectedEmployee = employees.find((employee) => employee.doc === preselectedDoc);
-			if (selectedEmployee) {
-				setEmployeeSelection(selectedEmployee);
+			const foundEmployee = employees.find((employee) => employee.doc === preselectedDoc);
+			if (foundEmployee) {
+				setEmployeeSelection(foundEmployee);
 			}
 		}
 
@@ -1675,7 +1799,12 @@
 				if (val > 0) dias = val;
 			}
 			
-			if (dias <= 0) return;
+			if (dias <= 0 && !['TDE', 'TAE', 'TDP', 'TAP'].includes(tipo)) return;
+			
+			// Si es traslado, la duración es 1 día (inicio = fin)
+			if (['TDE', 'TAE', 'TDP', 'TAP'].includes(tipo)) {
+				dias = 1;
+			}
 			
 			try {
 				const fin = new Date(fechaInicio);
@@ -1732,16 +1861,11 @@
 			const startDate = editStartDateInput.value;
 			const endDate = editEndDateInput.value;
 
-			if (startDate) {
-				editEndDateInput.min = startDate;
-			} else {
-				editEndDateInput.removeAttribute('min');
-			}
+		// Removido asignación de min para evitar validación nativa en inputs ocultos
 
 			if (!startDate || !endDate) {
 				clearEditFieldError('endDate');
 				clearInvalid(editEndDateInput);
-				editEndDateInput.setCustomValidity('');
 				return true;
 			}
 
@@ -1749,13 +1873,11 @@
 			if (!isValidRange) {
 				showEditFieldError('endDate', 'La fecha de fin no puede ser menor que la fecha de inicio.');
 				markInvalid(editEndDateInput);
-				editEndDateInput.setCustomValidity('La fecha de fin no puede ser menor que la fecha de inicio.');
 				return false;
 			}
 
 			clearEditFieldError('endDate');
 			clearInvalid(editEndDateInput);
-			editEndDateInput.setCustomValidity('');
 			return true;
 		};
 
@@ -2110,23 +2232,39 @@
 		form?.addEventListener('submit', (event) => {
 			clearAllErrors();
 			let isValid = true;
-			const hasSelectedEmployee = Boolean(
-				selectedEmployee
-				&& selectedEmployee.doc
-				&& docEmpleadoInput.value
-				&& String(selectedEmployee.doc) === String(docEmpleadoInput.value)
-			);
+			const hasSelectedEmployee = Boolean(docEmpleadoInput.value && docEmpleadoInput.value.trim() !== '');
 
 			if (!hasSelectedEmployee) {
 				isValid = false;
 				showFieldError('employee', 'Debe buscar y seleccionar un empleado válido.');
 				markInvalid(employeeSearch);
+				
+				// Alerta visible para el usuario (como en SLN/Licencias)
+				if (window.Swal) {
+					Swal.fire({
+						icon: 'warning',
+						title: 'Empleado no seleccionado',
+						text: 'Debe buscar y seleccionar un empleado válido antes de guardar la novedad.',
+						confirmButtonColor: '#1565C0'
+					});
+				} else {
+					alert('Debe buscar y seleccionar un empleado válido antes de guardar la novedad.');
+				}
 			}
 
 			if (!noveltyType.value) {
 				isValid = false;
 				showFieldError('noveltyType', 'Debe seleccionar el tipo de novedad.');
 				markInvalid(noveltyType);
+				
+				if (window.Swal && isValid === true) { // Solo si no falló el empleado
+					Swal.fire({
+						icon: 'warning',
+						title: 'Tipo de novedad faltante',
+						text: 'Debe seleccionar el tipo de novedad.',
+						confirmButtonColor: '#1565C0'
+					});
+				}
 			}
 
 			const selectedType = normalizeNoveltyType(noveltyType.value || '');
@@ -2138,22 +2276,64 @@
 				isValid = false;
 				showFieldError('noveltyType', 'La incapacidad requiere certificado médico.');
 			}
-			if (['TDE', 'TAE'].includes(selectedType) && !epsIdInput?.value) {
-				isValid = false;
-				showFieldError('noveltyType', 'Debe seleccionar la EPS para el traslado.');
+			if (['TDE', 'TAE'].includes(selectedType)) {
+				if (!epsIdInput?.value) {
+					isValid = false;
+					showFieldError('noveltyType', 'Debe seleccionar la EPS para el traslado.');
+					if (window.Swal) {
+						Swal.fire({
+							icon: 'warning',
+							title: 'EPS requerida',
+							text: 'Debe seleccionar la EPS para el traslado.',
+							confirmButtonColor: '#1565C0'
+						});
+					}
+				} else if (selectedEmployee && String(selectedEmployee.id_eps) === String(epsIdInput.value)) {
+					isValid = false;
+					const msg = 'La EPS destino no puede ser igual a la EPS actual de este empleado.';
+					showFieldError('noveltyType', msg);
+					if (window.Swal) {
+						Swal.fire({ icon: 'warning', title: 'Traslado inválido', text: msg, confirmButtonColor: '#1565C0' });
+					}
+				}
 			}
-			if (['TDP', 'TAP'].includes(selectedType) && !afpIdInput?.value) {
-				isValid = false;
-				showFieldError('noveltyType', 'Debe seleccionar la AFP para el traslado.');
+			if (['TDP', 'TAP'].includes(selectedType)) {
+				if (!afpIdInput?.value) {
+					isValid = false;
+					showFieldError('noveltyType', 'Debe seleccionar la AFP para el traslado.');
+					if (window.Swal) {
+						Swal.fire({
+							icon: 'warning',
+							title: 'AFP requerida',
+							text: 'Debe seleccionar la AFP para el traslado.',
+							confirmButtonColor: '#1565C0'
+						});
+					}
+				} else if (selectedEmployee && String(selectedEmployee.id_afp) === String(afpIdInput.value)) {
+					isValid = false;
+					const msg = 'La AFP destino no puede ser igual a la AFP actual de este empleado.';
+					showFieldError('noveltyType', msg);
+					if (window.Swal) {
+						Swal.fire({ icon: 'warning', title: 'Traslado inválido', text: msg, confirmButtonColor: '#1565C0' });
+					}
+				}
 			}
 			if (selectedType === 'VCT' && !arlIdInput?.value) {
 				isValid = false;
 				showFieldError('noveltyType', 'Debe seleccionar la ARL para la variación de centro de trabajo.');
+				if (window.Swal) {
+					Swal.fire({
+						icon: 'warning',
+						title: 'ARL requerida',
+						text: 'Debe seleccionar la ARL para la variación de centro de trabajo.',
+						confirmButtonColor: '#1565C0'
+					});
+				}
 			}
 
 			const selectedUnit = getSelectedCreateUnit();
 			const typeWithoutQuantity = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(selectedType);
-			if (!selectedUnit) {
+			if (!typeWithoutQuantity && !selectedUnit) {
 				isValid = false;
 				showFieldError('quantityUnit', 'Debe seleccionar si la cantidad corresponde a días u horas.');
 			}
@@ -2238,14 +2418,42 @@
 				isValid = false;
 				showFieldError('startDate', 'La fecha de inicio es obligatoria.');
 				markInvalid(startDateInput);
+			} else if (['TDE', 'TAE', 'TDP', 'TAP'].includes(selectedType)) {
+				// Validar que la fecha esté dentro del periodo activo
+				if (activePeriodStart && activePeriodEnd) {
+					const date = startDateInput.value;
+					if (date < activePeriodStart || date > activePeriodEnd) {
+						isValid = false;
+						const msg = `La fecha de traslado debe estar dentro del periodo de liquidación actual (${activePeriodStart} a ${activePeriodEnd}).`;
+						showFieldError('startDate', msg);
+						markInvalid(startDateInput);
+						
+						if (window.Swal) {
+							Swal.fire({
+								icon: 'error',
+								title: 'Fecha inválida',
+								text: msg,
+								confirmButtonColor: '#1565C0'
+							});
+						}
+					}
+				}
+				
+				// Forzar sincronización de fecha fin para evitar bloqueos por validación de fecha_fin obligatoria
+				if (endDateInput && startDateInput) {
+					endDateInput.value = startDateInput.value;
+				}
 			}
 
-			if (!endDateInput.value) {
-				isValid = false;
-				showFieldError('endDate', 'La fecha de fin es obligatoria.');
-				markInvalid(endDateInput);
-			} else if (!validateDateRange()) {
-				isValid = false;
+			// Para traslados y similares, fecha_fin se maneja automáticamente — no validar
+			if (!typeWithoutQuantity) {
+				if (!endDateInput.value) {
+					isValid = false;
+					showFieldError('endDate', 'La fecha de fin es obligatoria.');
+					markInvalid(endDateInput);
+				} else if (!validateDateRange()) {
+					isValid = false;
+				}
 			}
 
 			if (paymentInput.value) {
@@ -2281,22 +2489,68 @@
 				isValid = false;
 				showEditFieldError('noveltyType', 'La incapacidad requiere certificado médico.');
 			}
-			if (['TDE', 'TAE'].includes(selectedEditType) && !editEpsIdInput?.value) {
-				isValid = false;
-				showEditFieldError('noveltyType', 'Debe seleccionar la EPS para el traslado.');
+			if (['TDE', 'TAE'].includes(selectedEditType)) {
+				if (!editEpsIdInput?.value) {
+					isValid = false;
+					showEditFieldError('noveltyType', 'Debe seleccionar la EPS para el traslado.');
+					if (window.Swal) {
+						Swal.fire({
+							icon: 'warning',
+							title: 'EPS requerida',
+							text: 'Debe seleccionar la EPS para el traslado.',
+							confirmButtonColor: '#1565C0'
+						});
+					}
+				} else {
+					// Validación de duplicidad en edición
+					const idEpsAnterior = document.getElementById('edit-novelty-type').dataset.id_eps;
+					if (idEpsAnterior && String(idEpsAnterior) === String(editEpsIdInput.value)) {
+						isValid = false;
+						const msg = 'La EPS destino no puede ser igual a la EPS actual en la base del empleado.';
+						showEditFieldError('noveltyType', msg);
+						if (window.Swal) Swal.fire({ icon: 'warning', title: 'Traslado inválido', text: msg, confirmButtonColor: '#1565C0' });
+					}
+				}
 			}
-			if (['TDP', 'TAP'].includes(selectedEditType) && !editAfpIdInput?.value) {
-				isValid = false;
-				showEditFieldError('noveltyType', 'Debe seleccionar la AFP para el traslado.');
+			if (['TDP', 'TAP'].includes(selectedEditType)) {
+				if (!editAfpIdInput?.value) {
+					isValid = false;
+					showEditFieldError('noveltyType', 'Debe seleccionar la AFP para el traslado.');
+					if (window.Swal) {
+						Swal.fire({
+							icon: 'warning',
+							title: 'AFP requerida',
+							text: 'Debe seleccionar la AFP para el traslado.',
+							confirmButtonColor: '#1565C0'
+						});
+					}
+				} else {
+					// Validación de duplicidad en edición
+					const idAfpAnterior = document.getElementById('edit-novelty-type').dataset.id_afp;
+					if (idAfpAnterior && String(idAfpAnterior) === String(editAfpIdInput.value)) {
+						isValid = false;
+						const msg = 'La AFP destino no puede ser igual a la AFP actual en la base del empleado.';
+						showEditFieldError('noveltyType', msg);
+						if (window.Swal) Swal.fire({ icon: 'warning', title: 'Traslado inválido', text: msg, confirmButtonColor: '#1565C0' });
+					}
+				}
 			}
 			if (selectedEditType === 'VCT' && !editArlIdInput?.value) {
 				isValid = false;
 				showEditFieldError('noveltyType', 'Debe seleccionar la ARL para la variación de centro de trabajo.');
+				if (window.Swal) {
+					Swal.fire({
+						icon: 'warning',
+						title: 'ARL requerida',
+						text: 'Debe seleccionar la ARL para la variación de centro de trabajo.',
+						confirmButtonColor: '#1565C0'
+					});
+				}
 			}
 
 			const selectedEditUnit = getSelectedEditUnit();
 			const editTypeWithoutQuantity = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(selectedEditType);
-			if (!selectedEditUnit) {
+			if (!editTypeWithoutQuantity && !selectedEditUnit) {
 				isValid = false;
 				showEditFieldError('quantityUnit', 'Debe seleccionar si la cantidad corresponde a días u horas.');
 			}
@@ -2384,6 +2638,31 @@
 				isValid = false;
 				showEditFieldError('startDate', 'La fecha de inicio es obligatoria.');
 				markInvalid(editStartDateInput);
+			} else if (['TDE', 'TAE', 'TDP', 'TAP'].includes(selectedEditType)) {
+				// Validar que la fecha esté dentro del periodo activo (Edición)
+				if (activePeriodStart && activePeriodEnd) {
+					const date = editStartDateInput.value;
+					if (date < activePeriodStart || date > activePeriodEnd) {
+						isValid = false;
+						const msg = `La fecha de traslado debe estar dentro del periodo de liquidación actual (${activePeriodStart} a ${activePeriodEnd}).`;
+						showEditFieldError('startDate', msg);
+						markInvalid(editStartDateInput);
+						
+						if (window.Swal) {
+							Swal.fire({
+								icon: 'error',
+								title: 'Fecha inválida',
+								text: msg,
+								confirmButtonColor: '#1565C0'
+							});
+						}
+					}
+				}
+				
+				// Forzar sincronización de fecha fin para edición
+				if (editEndDateInput && editStartDateInput) {
+					editEndDateInput.value = editStartDateInput.value;
+				}
 			}
 
 			if (!editEndDateInput.value) {

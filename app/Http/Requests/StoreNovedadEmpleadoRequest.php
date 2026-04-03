@@ -57,7 +57,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'dias' => 'bail|nullable|numeric|min:0.01|max:126',
             'horas' => 'bail|nullable|numeric|min:0.01|max:240',
             'fecha_inicio' => 'bail|required|date',
-            'fecha_fin' => 'bail|required|date|after_or_equal:fecha_inicio',
+            'fecha_fin' => 'bail|nullable|date|after_or_equal:fecha_inicio',
             'observaciones' => 'bail|nullable|string|max:500',
             'pago_manual' => 'bail|nullable|numeric|min:0|max:999999999.99',
             'valor_manual' => 'bail|nullable|numeric|min:0|max:999999999.99',
@@ -123,8 +123,13 @@ class StoreNovedadEmpleadoRequest extends FormRequest
         $unidadCantidad = $this->input('unidad_cantidad', ($horas > 0 ? 'horas' : 'dias'));
 
         if (in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'], true)) {
-            $dias = null;
+            $dias = in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP'], true) ? 1 : null;
             $horas = null;
+            
+            // Para traslados (TDE, TAE, TDP, TAP), sincronizar fecha_fin con fecha_inicio
+            if (in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP'], true)) {
+                $this->merge(['fecha_fin' => $this->input('fecha_inicio')]);
+            }
         }
 
         if ($tipoNovedad === 'LMAT') {
@@ -264,6 +269,33 @@ class StoreNovedadEmpleadoRequest extends FormRequest
                 $validator->errors()->add('id_arl', 'Debe seleccionar la ARL para la variación de centro de trabajo.');
             }
 
+            // Validación: Múltiples traslados en el mismo mes calendario
+            if (in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP'], true) && $this->input('empleado_id') && $this->input('fecha_inicio')) {
+                $mes = date('m', strtotime($this->input('fecha_inicio')));
+                $anio = date('Y', strtotime($this->input('fecha_inicio')));
+                
+                $esEps = in_array($tipo, ['TDE', 'TAE'], true);
+                $tiposAValidar = $esEps ? ['TDE', 'TAE'] : ['TDP', 'TAP'];
+                
+                $existeTraslado = \Illuminate\Support\Facades\DB::table('novedad')
+                    ->where('empleado_id', $this->input('empleado_id'))
+                    ->whereIn('tipo_novedad_codigo', $tiposAValidar)
+                    ->whereMonth('fecha_inicio', $mes)
+                    ->whereYear('fecha_inicio', $anio)
+                    ->where(function($q) {
+                        $q->where('estado', '!=', 'cerrada')->orWhereNull('estado');
+                    })
+                    ->when($this->input('edit_novedad_id'), function ($q, $id) {
+                        $q->where('id_novedad', '!=', $id);
+                    })
+                    ->exists();
+
+                if ($existeTraslado) {
+                    $grupo = $esEps ? 'EPS' : 'AFP';
+                    $validator->errors()->add('tipo_novedad', 'El empleado ya tiene un traslado de ' . $grupo . ' registrado en el mes ' . $mes . '-' . $anio . '.');
+                }
+            }
+
             // Validación: fechas coherentes
             $fechaInicio = $this->input('fecha_inicio');
             $fechaFin = $this->input('fecha_fin');
@@ -305,7 +337,24 @@ class StoreNovedadEmpleadoRequest extends FormRequest
                         $validator->errors()->add(
                             'fecha_fin',
                             'La fecha de fin de la novedad debe estar dentro o después del periodo de liquidación actual ('
-                            . $fechaInicioPeriodo->format('d/m/Y') . ').'
+                            . \Carbon\Carbon::parse($fechaInicioPeriodo)->format('d/m/Y') . ').'
+                        );
+                    }
+                }
+            }
+            
+            // Nueva validación para traslados: La fecha debe estar dentro del periodo activo
+            if (in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP'], true) && ($fechaInicio || $fechaFin)) {
+                $periodoActivo = PeriodoLiquidacion::getActivePeriod();
+                if ($periodoActivo) {
+                    $fecha = $fechaInicio ?: $fechaFin;
+                    $f = \Carbon\Carbon::parse($fecha);
+                    if ($f->lt($periodoActivo->fecha_inicio) || $f->gt($periodoActivo->fecha_fin)) {
+                        $validator->errors()->add(
+                            'fecha_inicio',
+                            'La fecha de traslado debe estar dentro del periodo de liquidación actual ('
+                            . \Carbon\Carbon::parse($periodoActivo->fecha_inicio)->format('d/m/Y') . ' a '
+                            . \Carbon\Carbon::parse($periodoActivo->fecha_fin)->format('d/m/Y') . ').'
                         );
                     }
                 }

@@ -153,7 +153,7 @@
                 </tr>
                 <tr>
                     <td class="label">Días Trabajados:</td>
-                    <td>{{ $salario->dias_a_trabajar }}</td>
+                    <td>{{ $salario->dias_trabajados }}</td>
                     <td class="label">Fecha de Pago:</td>
                     <td>{{ $salario->fecha_pago ? \Carbon\Carbon::parse($salario->fecha_pago)->format('d/m/Y') : 'N/A' }}</td>
                 </tr>

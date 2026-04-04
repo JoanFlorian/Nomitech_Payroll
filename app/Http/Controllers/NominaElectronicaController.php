@@ -94,12 +94,12 @@ class NominaElectronicaController extends Controller
         // 1. Recopilar Devengos
         $devengos = collect();
         
-        // Salario Base (proporcional a días trabajados)
+        // Salario Base (proporcional a días trabajados REALES)
         $salarioBaseOriginal = (float) ($salario->contrato->salario_base ?? 0);
-        $diasTrabajados = (int) ($salario->dias_a_trabajar ?? 30);
+        $diasTrabajados = (int) ($salario->dias_trabajados ?? 30);
         $pagoDias = ($salarioBaseOriginal / 30) * $diasTrabajados;
         
-        if ($pagoDias > 0) {
+        if ($pagoDias > 0 || $diasTrabajados > 0) {
             $devengos->push(['concepto' => 'Sueldo Básico (' . $diasTrabajados . ' días)', 'valor' => $pagoDias]);
         }
 
@@ -152,15 +152,36 @@ class NominaElectronicaController extends Controller
 
         // 3. Agregar Novedades
         foreach ($salario->novedades as $novedad) {
+            $nombreNovedad = $novedad->tipoNovedad->nombre ?? $novedad->tipo_novedad_nombre ?? 'Novedad';
+            
+            // Si es traslado, intentar extraer información de entidades de las observaciones
+            $codigoNov = strtoupper((string) ($novedad->tipo_novedad_codigo ?? ''));
+            if (in_array($codigoNov, ['TDE', 'TAE', 'TDP', 'TAP'])) {
+                if (preg_match('/\[Traslado: de (.*) a (.*)\]/', $novedad->observaciones ?? '', $matches)) {
+                    $nombreNovedad .= " ({$matches[1]} → {$matches[2]})";
+                }
+            }
+
+            // Incluir días en el concepto si aplica (y no es traslado que ya tiene detalle)
+            if ($novedad->dias > 0 && !in_array($codigoNov, ['TDE', 'TAE', 'TDP', 'TAP'])) {
+                $nombreNovedad .= " ({$novedad->dias} días)";
+            }
+
             if ($novedad->pago > 0) {
                 $devengos->push([
-                    'concepto' => $novedad->tipoNovedad->nombre ?? $novedad->tipo_novedad_nombre ?? 'Novedad',
+                    'concepto' => $nombreNovedad,
                     'valor' => $novedad->pago
                 ]);
             } elseif ($novedad->pago < 0) {
                 $deducciones->push([
-                    'concepto' => $novedad->tipoNovedad->nombre ?? $novedad->tipo_novedad_nombre ?? 'Novedad (Deducción)',
+                    'concepto' => $nombreNovedad,
                     'valor' => abs($novedad->pago)
+                ]);
+            } else {
+                // Novedades Informativas (pago cero, ej: SLN)
+                $devengos->push([
+                    'concepto' => $nombreNovedad,
+                    'valor' => 0
                 ]);
             }
         }

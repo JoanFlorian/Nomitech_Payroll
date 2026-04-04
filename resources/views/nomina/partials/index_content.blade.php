@@ -99,17 +99,15 @@
                     @if(($periodoActivo->estado === 'abierto' || $periodoActivo->estado === 'pendiente') && $periodoActivo->canBeClosed())
                         @can('close_period')
                         <div class="flex items-center gap-3">
-                            {{-- Cierre Automático (Solo después del día 20) --}}
-                            @if(now()->day >= 20)
-                                <div class="flex flex-col items-start mr-2">
-                                    <label class="text-[9px] uppercase font-bold text-slate-500 leading-none mb-1">Auto-Cierre</label>
-                                    <input type="date"
-                                        value="{{ $periodoActivo->fecha_cierre_automatico ? $periodoActivo->fecha_cierre_automatico->format('Y-m-d') : '' }}"
-                                        onchange="updateAutoClose({{ $periodoActivo->id_periodo }}, this.value)"
-                                        class="text-[10px] border-slate-200 rounded-lg p-1.5 w-28 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                        title="Programar cierre automático">
-                                </div>
-                            @endif
+                            {{-- Cierre Automático Temporalmente Visible (Originalmente: Solo después del día 20) --}}
+                            <div class="flex flex-col items-start mr-2">
+                                <label class="text-[9px] uppercase font-bold text-slate-500 leading-none mb-1">Auto-Cierre</label>
+                                <input type="date"
+                                    value="{{ $periodoActivo->fecha_cierre_automatico ? $periodoActivo->fecha_cierre_automatico->format('Y-m-d') : '' }}"
+                                    onchange="updateAutoClose({{ $periodoActivo->id_periodo }}, this.value)"
+                                    class="text-[10px] border-slate-200 rounded-lg p-1.5 w-28 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                    title="Programar cierre automático">
+                            </div>
 
                             <button type="button"
                                 onclick="abrirModalCierre({{ $periodoActivo->id_periodo }}, '{{ $periodoActivo->fecha_inicio->format('d/m/Y') }}', '{{ $periodoActivo->fecha_fin->format('d/m/Y') }}')"
@@ -293,7 +291,7 @@
                             </td>
 
                             <td class="px-4 py-3 text-center font-bold text-slate-700">
-                                {{ (int) $salario->dias_a_trabajar }}
+                                {{ (int) ($salario->dias_trabajados ?? $salario->dias_a_trabajar) }}
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right text-slate-700">

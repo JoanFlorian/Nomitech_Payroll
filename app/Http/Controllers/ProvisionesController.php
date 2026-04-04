@@ -11,17 +11,19 @@ use App\Models\ProvisionAutomation;
 use App\Services\Benefits\BenefitPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ProvisionesController extends Controller
 {
     /**
      * Dashboard: balance summary cards + table of balances per employee.
      */
-    public function index()
+    public function index(Request $request)
     {
         $empresaId = session('empresa_id');
+        $search = trim($request->input('search'));
 
-        $balances = BenefitBalance::where('tenant_id', $empresaId)
+        $query = BenefitBalance::where('tenant_id', $empresaId)
             ->where(function ($query) {
                 $query->whereHas('usuario.contratos', function ($q) {
                     $q->whereIn('estado', [
@@ -35,19 +37,32 @@ class ProvisionesController extends Controller
                     ->orWhere('cesantias_balance', '>', 0)
                     ->orWhere('intereses_balance', '>', 0)
                     ->orWhere('vacaciones_balance', '>', 0);
-            })
-            ->with(['usuario'])
-            ->orderBy('employee_id')
-            ->paginate(4);
+            });
 
+        // ── FILTRADO ──
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('employee_id', 'like', "%{$search}%")
+                    ->orWhereHas('usuario', function ($u) use ($search) {
+                        $u->where(DB::raw("CONCAT_WS(' ', primer_nombre, otros_nombres, primer_apellido, segundo_apellido)"), 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // ── TOTALES GLOBALES (Sobre la consulta completa de la empresa) ──
         $totals = [
-            'prima' => $balances->sum('prima_balance'),
-            'cesantias' => $balances->sum('cesantias_balance'),
-            'intereses' => $balances->sum('intereses_balance'),
-            'vacaciones' => $balances->sum('vacaciones_balance'),
+            'prima' => (float) $query->sum('prima_balance'),
+            'cesantias' => (float) $query->sum('cesantias_balance'),
+            'intereses' => (float) $query->sum('intereses_balance'),
+            'vacaciones' => (float) $query->sum('vacaciones_balance'),
         ];
-        // Total money only includes benefits in currency ($)
         $totals['total_money'] = $totals['prima'] + $totals['cesantias'] + $totals['intereses'];
+
+        // ── PAGINACIÓN ──
+        $balances = $query->with(['usuario'])
+            ->orderBy('employee_id')
+            ->paginate(4)
+            ->appends(['search' => $search]);
 
         // Active payroll period (for payroll integration option)
         $activePeriod = PeriodoLiquidacion::getActivePeriod();

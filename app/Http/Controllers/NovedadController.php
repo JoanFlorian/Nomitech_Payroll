@@ -142,9 +142,9 @@ class NovedadController extends Controller
                               ->orWhereNull('id_periodo');
                         }
                     })
-                    // O novedades de tipo IGE/IRL (o similares) que sigan vigentes por fecha
+                    // O novedades de duracion prolongada que sigan vigentes por fecha
                     ->orWhere(function ($q) use ($hoy) {
-                        $q->whereIn('tipo_novedad_codigo', ['IGE', 'IRL'])
+                        $q->whereIn('tipo_novedad_codigo', self::TIPOS_EXCLUSIVOS)
                           ->whereNotNull('fecha_inicio')
                           ->whereNotNull('fecha_fin')
                           ->whereDate('fecha_inicio', '<=', $hoy)

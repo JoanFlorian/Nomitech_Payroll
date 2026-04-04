@@ -240,7 +240,7 @@
             </div>
         @else
             <div x-data="{ 
-                                search: '',
+                                search: '{{ request('search') }}',
                                 get filteredBalances() {
                                     if (!this.search) return true;
                                     return true; {{-- Logic handled in x-show for simplicity with Blade loops --}}
@@ -253,13 +253,16 @@
                         Saldos por Empleado
                     </h3>
 
-                    <div class="relative w-full md:w-72">
+                    <form action="{{ route('provisiones.index') }}" method="GET" class="relative w-full md:w-72">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                             <i class="bi bi-search text-sm"></i>
                         </span>
-                        <input type="text" x-model.debounce.300ms="search" placeholder="Buscar por nombre o documento..."
+                        <input type="text" name="search" value="{{ request('search') }}"
+                            x-model.debounce.500ms="search"
+                            @input.debounce.800ms="$el.form.submit()"
+                            placeholder="Buscar por nombre o documento..."
                             class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:text-sm transition-all shadow-sm">
-                    </div>
+                    </form>
                 </div>
 
                 <div class="overflow-x-auto rounded-xl border border-gray-100 shadow-sm bg-white">

@@ -98,7 +98,7 @@ class Empresa extends Model
             ->whereIn('id_rol', function($query) {
                 $query->select('id_rol')
                     ->from('rol')
-                    ->whereIn('nombre', ['Representante Legal', 'Administrador', 'Auditor de Nómina']);
+                    ->whereIn('nombre', ['Administrador', 'Auditor de Nómina']);
             })
             ->count();
     }

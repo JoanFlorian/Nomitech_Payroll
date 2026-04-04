@@ -46,18 +46,24 @@ class Salario extends Model
 
     public function getTotalDevengosAttribute()
     {
-        $salarioBase = isset($this->attributes['salario_base'])
-            ? (float) $this->attributes['salario_base']
-            : (float) ($this->contrato->salario_base ?? 0);
+        $dias = (int) ($this->dias_trabajados ?? ($this->dias_a_trabajar ?? 30));
+        $salarioMensual = (float) ($this->contrato->salario_base ?? 0);
+        $salarioBase = ($salarioMensual / 30) * $dias;
 
         $novedades = $this->resolveNovedadesTotals();
 
-        $integratedBenefits = DB::table('benefit_ledger')
-            ->where('contract_id', $this->id_contrato)
-            ->where('payroll_period_id', $this->id_periodo)
-            ->where('movement_type', 'scheduled_payment')
-            ->where('status', 'pending_payroll')
-            ->sum('amount');
+        $integratedBenefits = (float)($this->prestaciones_sociales ?? 0);
+        
+        // Solo si no hay dato guardado (ej. en medio del proceso de liquidación) 
+        // o si es una nómina normal donde no se guardó el desglose prestacional
+        if ($integratedBenefits <= 0) {
+            $integratedBenefits = DB::table('benefit_ledger')
+                ->where('contract_id', $this->id_contrato)
+                ->where('payroll_period_id', $this->id_periodo)
+                ->where('movement_type', 'scheduled_payment')
+                ->where('status', 'pending_payroll')
+                ->sum('amount');
+        }
 
         return $salarioBase
             + ($this->auxilio_transporte ?? 0)
@@ -118,8 +124,8 @@ class Salario extends Model
         }
 
         $resumen = $this->novedades()
-            ->selectRaw('COALESCE(SUM(CASE WHEN pago > 0 THEN pago ELSE 0 END), 0) as total_devengado')
-            ->selectRaw('COALESCE(SUM(CASE WHEN pago < 0 THEN ABS(pago) ELSE 0 END), 0) as total_deduccion')
+            ->selectRaw('COALESCE(SUM(CASE WHEN valor_calculado > 0 THEN valor_calculado ELSE 0 END), 0) as total_devengado')
+            ->selectRaw('COALESCE(SUM(CASE WHEN valor_calculado < 0 THEN ABS(valor_calculado) ELSE 0 END), 0) as total_deduccion')
             ->first();
 
         $this->cachedNovedadesTotals = [

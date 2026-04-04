@@ -220,33 +220,48 @@ class NominaCalculatorService
             $absAmount = abs((float) $ib->amount);
             $type = trim(strtolower($ib->benefit_type));
             
-            // Skip Cesantías as requested by user - they should not affect payroll total
+            // Skip Cesantías — se pagan al fondo, no al empleado
             if ($type === 'cesantias') {
                 continue;
             }
 
-            // Vacaciones are stored in DÍAS in the ledger. Convert to monetary value dynamically.
-            // Formula: (Devenged Salary / 30) * Accumulated Days 
-            // We use $salarioDevengado (pro-rated) to match user expectation for partial months (e.g. 456k vs 540k)
+            // Vacaciones: Solo integrar en terminación de contrato en este periodo
             if ($type === 'vacaciones') {
                 $fechaFinContrato = $contrato->fecha_fin ? \Carbon\Carbon::parse($contrato->fecha_fin) : null;
                 $fechaInicioPeriodo = \Carbon\Carbon::parse($periodo->fecha_inicio);
                 $fechaFinPeriodo = \Carbon\Carbon::parse($periodo->fecha_fin);
 
-                // USER RULE: Vacations ONLY integrated on termination in this period
                 $isTermination = $fechaFinContrato && 
                                  $fechaFinContrato->between($fechaInicioPeriodo, $fechaFinPeriodo);
 
                 if ($isTermination) {
-                    $integratedTotal += round(($salarioDevengado / 30) * $absAmount, 2);
+                    $salarioBaseMensualFull = (float) ($contrato->salario_base ?? 0);
+                    $amountInPesos = round(($salarioBaseMensualFull / 30) * $absAmount, 2);
+                    $integratedTotal += $amountInPesos;
                 }
             } else {
-                // All other benefits (Prima, Intereses) are stored directly in monetary value
+                // Prima, Intereses — valores monetarios directos
                 $integratedTotal += $absAmount;
             }
         }
 
         $totalDevengado += $integratedTotal;
+        
+        // ── CÁLCULO DE IBC (Ingreso Base de Cotización) ──
+        // Según la ley colombiana, el IBC excluye conceptos no salariales como:
+        // 1. Auxilio de transporte / conectividad.
+        // 2. Prestaciones sociales (Prima, Cesantías, Intereses, Vacaciones Compensadas).
+        // El IBC tiene un piso de 1 SMMLV (ajustado a días) y un techo de 25 SMMLV.
+        $ibc = max(0, $totalDevengado - $auxilioTransporte - $integratedTotal);
+        
+        // Piso legal: Pro-rateamos el SMMLV por los días trabajados
+        $smmlvDecimal = (float) ($this->params->smmlv ?? 0);
+        if ($smmlvDecimal > 0 && $diasTrabajados > 0) {
+             $pisoIbc = ($smmlvDecimal / 30) * $diasTrabajados;
+             if ($ibc < $pisoIbc && $ibc > 0) {
+                 $ibc = $pisoIbc;
+             }
+        }
 
         $eps = 0;
         $afp = 0;
@@ -254,21 +269,20 @@ class NominaCalculatorService
         $arl = 0;
         $aportesEmpresa = [];
 
-        // Si el empleado está en licencia de maternidad, NO se calculan aportes de seguridad social
+        // Si el empleado está en licencia de maternidad, NO se calculan aportes de seguridad social (se asumen por la EPS)
         if ($diasLicenciaMaternidad === 0 && (int) $contrato->id_tipo_contrato !== \App\Models\TipoContrato::TIPO_PRESTACION_SERVICIOS) {
             $epsRate = (float) ($this->params->eps_employee ?? 0.04);
             $afpRate = (float) ($this->params->pension_employee ?? 0.04);
-            $eps = $totalDevengado * $epsRate;
-            $afp = $totalDevengado * $afpRate;
+            $eps = $ibc * $epsRate;
+            $afp = $ibc * $afpRate;
             $seguridadSocial = $eps + $afp;
 
-            // IBC para ARL: salario base del contrato.
-            $ibcArl = max(0, (float) ($contrato->salario_base ?? 0));
+            // IBC para ARL: Generalmente es el mismo IBC de salud/pension
             $arlRate = $this->resolveArlRateFromContrato($contrato);
-            $arl = round($ibcArl * $arlRate, 2);
+            $arl = round($ibc * $arlRate, 2);
 
             $aportesEmpresa = $this->securitySocialCalculator->calculate(
-                $totalDevengado,
+                $ibc,
                 $this->params
             );
         }
@@ -286,7 +300,9 @@ class NominaCalculatorService
             'id_contrato' => $idContrato,
             'id_periodo' => $idPeriodo,
             'fecha_pago' => $input['fecha_pago'] ?? now()->toDateString(),
-            'dias_a_trabajar' => $diasTrabajados,
+            'dias_a_trabajar' => (int) ($input['dias_trabajados'] ?? 30),
+            'dias_trabajados' => $diasTrabajados,
+            'dias_ausencia' => $diasAusenciaTotal,
             'dias_trabajados_prestacional' => $diasPrestacionales,
             // IMPORTANTE: Estas variables 'horas_extra', 'otros_devengos', etc. 
             // ahora representan solo el componente MANUAL/BASE que se guardará en la tabla 'salario'.
@@ -313,7 +329,7 @@ class NominaCalculatorService
             'total_deducciones' => $totalDeducciones,
             'neto_pagar' => $netoPagar,
             'prestaciones_sociales' => $integratedTotal,
-            'total_novedades_devengado' => $novHorasExtra + $novRecargos + $novBonificaciones + $novOtrosDevengos,
+            'total_novedades_devengado' => $novHorasExtra + $novRecargos + $novBonificaciones + $novOtrosDevengos + (float)($resumenNovedades['valor_vacaciones'] ?? 0) + (float)($resumenNovedades['valor_licencia_maternidad'] ?? 0),
             'total_novedades_deduccion' => $novDeducciones,
             'resumen_novedades' => $resumenNovedades,
             'dias_licencia_maternidad' => $diasLicenciaMaternidad,
@@ -365,9 +381,13 @@ class NominaCalculatorService
             'pension_voluntaria' => $calculo['pension_voluntaria'],
             'caja_compensacion' => $calculo['caja_compensacion'],
             'dias_a_trabajar' => $calculo['dias_a_trabajar'],
+            'dias_trabajados' => $calculo['dias_trabajados'],
+            'dias_ausencia' => $calculo['dias_ausencia'],
             'dias_trabajados_prestacional' => $calculo['dias_trabajados_prestacional'],
             'total_devengado' => $calculo['total_devengado'],
             'total_deducciones' => $calculo['total_deducciones'],
+            'total_novedades_devengado' => $calculo['total_novedades_devengado'],
+            'total_novedades_deduccion' => $calculo['total_novedades_deduccion'],
             'neto_pagar' => $calculo['neto_pagar'],
             'prestaciones_sociales' => $calculo['prestaciones_sociales'],
             'estado' => Salario::ESTADO_PENDIENTE,
@@ -487,6 +507,22 @@ class NominaCalculatorService
                     $efectivoInicio = $novInicio->greaterThan($pInicio) ? $novInicio : $pInicio;
                     $efectivoFin = $novFin->lessThan($pFin) ? $novFin : $pFin;
                     $diasEnPeriodo = max(0, $efectivoInicio->diffInDays($efectivoFin) + 1);
+
+                    // 🔹 NUEVO: Limitar los días deducibles a la cantidad de 'días' explícitos en la novedad.
+                    // Dado que la fecha_fin puede alojar fines de semana (generando días de calendario mayores a los hábiles),
+                    // distribuimos el límite restante restando los días consumidos en periodos anteriores.
+                    $diasRegistrados = (int) ($novedad->dias ?? 0);
+                    if ($diasRegistrados > 0) {
+                        $diasConsumidosAntes = 0;
+                        if ($novInicio->lessThan($pInicio)) {
+                            // Días calendario transcurridos desde el inicio real hasta ayer
+                            $finConsumoPrevio = $pInicio->copy()->subDay();
+                            $diasConsumidosAntes = max(0, $novInicio->diffInDays($finConsumoPrevio) + 1);
+                        }
+                        
+                        $diasRestantes = max(0, $diasRegistrados - $diasConsumidosAntes);
+                        $diasEnPeriodo = min($diasEnPeriodo, $diasRestantes);
+                    }
                 } elseif ($novInicio && !$novFin && (int) ($novedad->dias ?? 0) > 0) {
                     // Soporte para novedad de maternidad/parental con fecha_fin no explicitada
                     $novedadFin = $novInicio->copy()->addDays((int) ($novedad->dias ?? 0) - 1);
@@ -536,6 +572,13 @@ class NominaCalculatorService
                     $resumen['dias_licencia_maternidad'] += (int) $diasEnPeriodo;
                     $resumen['valor_licencia_maternidad'] += $valorLicencia;
                     // NO procesar en el ciclo general abajo - es especial
+                    continue;
+                }
+
+                // VAC: se paga proporcional a los días que caen estrictamente dentro del periodo
+                if ($codigo === 'VAC') {
+                    $valorDia = $valorHora * 8;
+                    $resumen['otros_devengos'] += round($valorDia * $diasEnPeriodo, 2);
                     continue;
                 }
             }
@@ -719,7 +762,7 @@ class NominaCalculatorService
 
         \Illuminate\Support\Facades\Log::info(
             "ROLLOVER MATERNIDAD: Contrato {$idContrato}, Período {$idPeriodo}: "
-            . "{$diasDispuestos} días ({$novedadesRollover->tipo_novedad_codigo}) = ${$valorLicencia}"
+            . "{$diasDispuestos} días ({$novedadesRollover->tipo_novedad_codigo}) = $" . number_format($valorLicencia, 2)
         );
     }
 }

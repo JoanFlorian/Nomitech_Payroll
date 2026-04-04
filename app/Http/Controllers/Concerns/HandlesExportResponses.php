@@ -21,6 +21,7 @@ trait HandlesExportResponses
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
             'Pragma' => 'public',
+            'Set-Cookie' => 'fileDownloadToken=true; Path=/; Max-Age=60; SameSite=Lax'
         ]);
     }
 
@@ -29,7 +30,7 @@ trait HandlesExportResponses
         $this->clearOutputBuffers();
         $safeFileName = $this->sanitizeDownloadFileName($fileName, 'documento.pdf');
 
-        return $pdf->download($safeFileName);
+        return $pdf->download($safeFileName)->header('Set-Cookie', 'fileDownloadToken=true; Path=/; Max-Age=60; SameSite=Lax');
     }
 
     protected function sanitizeDownloadFileName(string $fileName, string $default = 'archivo'): string

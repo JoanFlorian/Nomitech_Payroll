@@ -19,6 +19,7 @@ use App\Models\NivelRiesgo;
 use App\Models\Banco;
 use App\Http\Controllers\Concerns\HandlesExportResponses;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use App\Models\Contrato;
@@ -86,10 +87,9 @@ class EmployeesController extends Controller
         ])->orderByDesc('created_at')->orderByDesc('doc');
 
         if ($request->filled('search')) {
-            $search = $request->input('search');
+            $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
-                $q->where('primer_nombre', 'like', "%{$search}%")
-                    ->orWhere('primer_apellido', 'like', "%{$search}%")
+                $q->where(DB::raw("CONCAT_WS(' ', primer_nombre, otros_nombres, primer_apellido, segundo_apellido)"), 'like', "%{$search}%")
                     ->orWhere('doc', 'like', "%{$search}%");
             });
         }
@@ -143,7 +143,7 @@ class EmployeesController extends Controller
         $Eps = Eps::all();
         $Afp = Afp::all();
         $niveles = NivelRiesgo::orderBy('porcentaje')->get();
-        $roles = Rol::whereIn('nombre', ['Auxiliar de Nómina', 'Empleado'])->get();
+        $roles = Rol::whereIn('nombre', ['Administrador', 'Auxiliar de Nómina', 'Empleado'])->get();
         $Bancos = Banco::all();
 
         if ($canView) {

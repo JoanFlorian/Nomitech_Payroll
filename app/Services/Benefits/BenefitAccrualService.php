@@ -50,8 +50,16 @@ class BenefitAccrualService
             // Calculate each benefit
             $prima = $this->calculatePrima($salarioBase, $diasTrabajados);
             $cesantias = $this->calculateCesantias($salarioBase, $diasTrabajados);
-            $intereses = $this->calculateInteresesCesantias($cesantias);
             $vacaciones = $this->calculateVacaciones($salarioBase, $diasTrabajados);
+
+            // Intereses: Se recalculan GLOBALMENTE sobre el balance acumulado + la nueva cesantía.
+            // Primero obtenemos el balance actual de cesantías y los días acumulados desde inicio de contrato.
+            $balance = BenefitBalance::findOrCreateFor($employeeId, $tenantId);
+            $cesantiasAcumuladas = (float) $balance->cesantias_balance + $cesantias;
+            $diasAcumulados = $this->calculateDiasAcumuladosContrato($contrato);
+            $interesesGlobal = $this->calculateInteresesCesantias($cesantiasAcumuladas, $diasAcumulados);
+            // Solo acruamos la DIFERENCIA vs lo ya acumulado en el balance
+            $intereses = max(0, round($interesesGlobal - (float) $balance->intereses_balance, 2));
 
             $reference = sprintf(
                 'Causación periodo %s – %s',
@@ -83,15 +91,43 @@ class BenefitAccrualService
         return round($salarioBase * $diasTrabajados / 360, 2);
     }
 
-    public function calculateInteresesCesantias(float $cesantias): float
+    public function calculateInteresesCesantias(float $cesantias, int $diasTrabajados): float
     {
-        return round($cesantias * 0.12, 2);
+        // Fórmula Legal Colombiana: (Cesantías × Días × 0.12) / 360
+        return round(($cesantias * $diasTrabajados * 0.12) / 360, 2);
     }
 
     public function calculateVacaciones(float $salarioBase, int $diasTrabajados): float
     {
-        // Formula: (Días trabajados * 15) / 360
-        return round(($diasTrabajados * 15) / 360, 2);
+        // Fórmula en días: (Días trabajados × 15) / 360
+        return round($diasTrabajados * 15 / 360, 2);
+    }
+
+    /**
+     * Calcula los días acumulados desde el inicio del contrato hasta hoy.
+     * Para el cálculo de intereses de cesantías proporcionales.
+     */
+    public function calculateDiasAcumuladosContrato(\App\Models\Contrato $contrato): int
+    {
+        $inicio = \Carbon\Carbon::parse($contrato->fecha_inicio);
+        $fin = $contrato->fecha_fin ? \Carbon\Carbon::parse($contrato->fecha_fin) : now();
+        
+        // Convención colombiana: meses completos × 30 + días del último mes parcial
+        // Ejemplo: Mar 1 → Abr 15 = 1 mes completo (30d) + 15 días = 45
+        $mesesCompletos = (int) $inicio->diffInMonths($fin);
+        $finMesRestante = $inicio->copy()->addMonths($mesesCompletos);
+        $diasRestantes = max(0, (int) $finMesRestante->diffInDays($fin) + 1);
+        
+        // Si el día de inicio es > 1, ajustar los días del primer mes parcial
+        if ($inicio->day > 1 && $mesesCompletos === 0) {
+            $diasRestantes = min(30, $diasRestantes);
+        } else {
+            $diasRestantes = min(30, $diasRestantes);
+        }
+        
+        $totalDias = ($mesesCompletos * 30) + $diasRestantes;
+        
+        return min(360, max(1, $totalDias));
     }
 
     /* ── Ledger + Balance ── */
@@ -99,7 +135,7 @@ class BenefitAccrualService
     /**
      * Create a single accrual entry and update the balance incrementally.
      */
-    private function createAccrualEntry(
+    public function createAccrualEntry(
         int $tenantId,
         string $employeeId,
         int $contractId,
@@ -109,6 +145,20 @@ class BenefitAccrualService
         string $reference
     ): void {
         if ($amount <= 0) {
+            return;
+        }
+
+        // IDEMPOTENCIA: No crear una nueva causación si ya existe una para este empleado y periodo.
+        // Esto permite las "mini-causaciones" en liquidaciones finales sin duplicar valores al cerrar el mes.
+        $exists = BenefitLedger::where('employee_id', $employeeId)
+            ->where('contract_id', $contractId)
+            ->where('benefit_type', $benefitType)
+            ->where('period_id', $periodId)
+            ->where('movement_type', BenefitLedger::MOVEMENT_ACCRUAL)
+            ->exists();
+
+        if ($exists) {
+            Log::info("Causación ya existente omitida para empleado {$employeeId}, contrato {$contractId}, tipo {$benefitType}, periodo {$periodId}");
             return;
         }
 

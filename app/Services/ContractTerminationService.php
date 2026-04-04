@@ -7,6 +7,7 @@ use App\Models\PeriodoLiquidacion;
 use App\Models\BenefitLedger;
 use App\Models\BenefitBalance;
 use App\Services\Benefits\BenefitPaymentService;
+use App\Services\Benefits\BenefitAccrualService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,10 +15,12 @@ use Illuminate\Support\Facades\Log;
 class ContractTerminationService
 {
     protected BenefitPaymentService $benefitService;
+    protected BenefitAccrualService $accrualService;
 
-    public function __construct(BenefitPaymentService $benefitService)
+    public function __construct(BenefitPaymentService $benefitService, BenefitAccrualService $accrualService)
     {
         $this->benefitService = $benefitService;
+        $this->accrualService = $accrualService;
     }
 
     /**
@@ -113,11 +116,26 @@ class ContractTerminationService
      */
     public function autoScheduleAllBenefits(Contrato $contrato, PeriodoLiquidacion $periodo): bool
     {
+        // 1. CAUSACIÓN PARCIAL: Antes de agendar pagos, asegurar que los días trabajados en este mes 
+        // ya estén sumados al balance de prestaciones.
+        $this->accrueCurrentPeriodBenefits($contrato, $periodo);
+
         $balance = BenefitBalance::where('employee_id', $contrato->doc)
             ->where('tenant_id', $contrato->id_empresa)
             ->first();
 
         if (!$balance) return false;
+
+        // 2. CORRECCIÓN DE INTERESES: Recalcular globalmente desde el balance de cesantías.
+        // La acumulación mensual produce errores de compounding. En terminación, usamos la fórmula legal exacta:
+        // Intereses = Cesantías_Acumuladas × Días_Contrato × 0.12 / 360
+        $cesantiasBalance = (float) $balance->cesantias_balance;
+        $diasContrato = $this->accrualService->calculateDiasAcumuladosContrato($contrato);
+        $interesesCorrectos = round($cesantiasBalance * $diasContrato * 0.12 / 360, 2);
+        
+        // Ajustar el balance de intereses al valor legal correcto
+        $balance->intereses_balance = $interesesCorrectos;
+        $balance->save();
 
         $scheduledAny = false;
         $benefitTypes = [
@@ -133,69 +151,78 @@ class ContractTerminationService
 
             if ($amount > 0) {
                 try {
-                    // Avoid double scheduling if already exists for this period
-                    $exists = BenefitLedger::where('employee_id', $contrato->doc)
+                    // Vacaciones se mantienen en días para el ledger; la conversión a pesos se hace
+                    // en NominaCalculatorService al sumar al devengado.
+
+                    // REFRESH LOGIC: Remove any existing scheduled payment for this period/benefit
+                    // to ensure we use the updated balance (after Mini-Closure).
+                    BenefitLedger::where('employee_id', $contrato->doc)
                         ->where('payroll_period_id', $periodo->id_periodo)
                         ->where('benefit_type', $type)
                         ->where('movement_type', BenefitLedger::MOVEMENT_SCHEDULED)
                         ->where('status', BenefitLedger::STATUS_PENDING_PAYROLL)
-                        ->exists();
+                        ->delete();
 
-                    if (!$exists) {
-                        $this->benefitService->payBenefit(
-                            $contrato->doc,
-                            $type,
-                            $amount,
-                            $contrato->id_empresa,
-                            BenefitLedger::PAYMENT_PAYROLL,
-                            $periodo->id_periodo,
-                            "Liquidación automática por terminación de contrato (Célebre Liquidación)"
-                        );
-                        $scheduledAny = true;
-                    }
+                    $this->benefitService->payBenefit(
+                        $contrato->doc,
+                        $type,
+                        $amount,
+                        $contrato->id_empresa,
+                        BenefitLedger::PAYMENT_PAYROLL,
+                        $periodo->id_periodo,
+                        "Liquidación automática por retiro (Balance Actualizado)"
+                    );
+                    $scheduledAny = true;
                 } catch (\Exception $e) {
                     Log::error("Error auto-scheduling benefit {$type} for {$contrato->doc}: " . $e->getMessage());
                 }
             }
         }
 
-        // Trigger salary recalculation so the integrated benefits reflect in the final total
-        if ($scheduledAny) {
-            try {
-                $salario = \App\Models\Salario::where('id_contrato', $contrato->id_contrato)
-                    ->where('id_periodo', $periodo->id_periodo)
-                    ->first();
-
-                if ($salario) {
-                    $input = [
-                        'fecha_pago' => $salario->fecha_pago ?? now()->toDateString(),
-                        'horas_extra' => (float) ($salario->horas_extra ?? 0),
-                        'recargos' => max(0, (float) ($salario->valor_horas_extras_recargos ?? 0) - (float) ($salario->horas_extra ?? 0)),
-                        'bonificaciones' => (float) ($salario->bonificaciones ?? 0),
-                        'comisiones' => (float) ($salario->comisiones ?? 0),
-                        'otros_devengos' => (float) ($salario->otros_devengos ?? 0),
-                        'auxilio_transporte' => (float) ($salario->auxilio_transporte ?? 0),
-                        'retencion_fuente' => (float) ($salario->retencion_fuente ?? 0),
-                        'embargo_fiscal' => (float) ($salario->embargo_fiscal ?? 0),
-                        'pension_voluntaria' => (float) ($salario->pension_voluntaria ?? 0),
-                        'dias_trabajados' => (int) ($salario->dias_a_trabajar ?? 30),
-                        'limpiar_novedades' => true,
-                        'recalculate_transport_allowance' => true,
-                    ];
-
-                    app(\App\Services\NominaCalculatorService::class)->guardarNominaEmpleado(
-                        $contrato->id_contrato,
-                        $periodo->id_periodo,
-                        $input,
-                        true // Force save even if already liquidado
-                    );
-                }
-            } catch (\Exception $e) {
-                Log::error("Error recalculating salary after termination benefits for {$contrato->doc}: " . $e->getMessage());
-            }
-        }
+        // La recalculación del salario se deja al caller original (nomina masiva, Step 3 Store, etc.)
+        // para evitar un loop recursivo donde guardarNominaEmpleado → handleContractTermination → guardarNominaEmpleado.
 
         return $scheduledAny;
+    }
+
+    /**
+     * Accrues benefits for the days worked in the current open period.
+     * This "Mini-Closure" ensures the balance is current before the final payout.
+     */
+    private function accrueCurrentPeriodBenefits(Contrato $contrato, PeriodoLiquidacion $periodo): void
+    {
+        $diasTrabajados = $this->calculateWorkedDaysInPeriod($contrato, $periodo);
+        
+        if ($diasTrabajados <= 0) {
+            return;
+        }
+
+        $salarioBase = (float) ($contrato->salario_base ?? 0);
+        $tenantId = (int) $contrato->id_empresa;
+        $employeeId = $contrato->doc;
+        $contractId = (int) $contrato->id_contrato;
+
+        $prima = $this->accrualService->calculatePrima($salarioBase, $diasTrabajados);
+        $cesantias = $this->accrualService->calculateCesantias($salarioBase, $diasTrabajados);
+        $vacaciones = $this->accrualService->calculateVacaciones($salarioBase, $diasTrabajados);
+
+        // Intereses: Recalcular GLOBALMENTE sobre cesantías acumuladas + nuevas del periodo
+        $balance = BenefitBalance::findOrCreateFor($employeeId, $tenantId);
+        $cesantiasAcumuladas = (float) $balance->cesantias_balance + $cesantias;
+        $diasAcumulados = $this->accrualService->calculateDiasAcumuladosContrato($contrato);
+        $interesesGlobal = $this->accrualService->calculateInteresesCesantias($cesantiasAcumuladas, $diasAcumulados);
+        $intereses = max(0, round($interesesGlobal - (float) $balance->intereses_balance, 2));
+
+        $reference = sprintf(
+            'Causación parcial por liquidación final (%d días en periodo %s)',
+            $diasTrabajados,
+            Carbon::parse($periodo->fecha_inicio)->format('d/m/Y')
+        );
+
+        $this->accrualService->createAccrualEntry($tenantId, $employeeId, $contractId, \App\Models\BenefitLedger::TYPE_PRIMA, $prima, $periodo->id_periodo, $reference);
+        $this->accrualService->createAccrualEntry($tenantId, $employeeId, $contractId, \App\Models\BenefitLedger::TYPE_CESANTIAS, $cesantias, $periodo->id_periodo, $reference);
+        $this->accrualService->createAccrualEntry($tenantId, $employeeId, $contractId, \App\Models\BenefitLedger::TYPE_INTERESES_CESANTIAS, $intereses, $periodo->id_periodo, $reference);
+        $this->accrualService->createAccrualEntry($tenantId, $employeeId, $contractId, \App\Models\BenefitLedger::TYPE_VACACIONES, $vacaciones, $periodo->id_periodo, $reference);
     }
 
     /**

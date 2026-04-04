@@ -211,9 +211,17 @@ document.addEventListener('DOMContentLoaded', () => {
         let eps = 0;
         let afp = 0;
 
+        // IBC logic: exclude integrated benefits from health/pension base
+        // We get the 'integrated benefits' by comparing totalDevengos with the sum of salarial components
+        // Or simpler: pass the 'salarial base' from the controller too.
+        // For now, we'll try to find the hidden inputs or use the salario_base.
+        
+        // We'll use the 'salario_base' from Step 1 as a baseline for IBC calculation.
+        const ibcBase = Number(document.getElementById('salario_base').value || 0);
+
         if (idTipoContrato !== TIPO_PRESTACION) {
-            eps = totalDevengos * EPS_RATE;
-            afp = totalDevengos * AFP_RATE;
+            eps = ibcBase * EPS_RATE;
+            afp = ibcBase * AFP_RATE;
         }
 
         const seguridadSocial = eps + afp;

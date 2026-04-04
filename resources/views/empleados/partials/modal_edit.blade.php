@@ -671,7 +671,8 @@
         return null;
     }
 
-    function updateEditFechaFinMin() {
+    function updateEditFechaFinMin(isInitialLoad = false) {
+        // ... (keep rest the same)
         const fechaInicioInput = document.getElementById('editFechaInicio');
         const fechaFinInput = document.getElementById('editFechaFin');
         const tipoContratoInput = document.getElementById('editIdTipoContrato');
@@ -706,8 +707,13 @@
 
         const fechaFinValue = (fechaFinInput.value ?? '').toString().trim();
         if (fechaFinValue !== '' && (fechaFinValue <= fechaInicioValue || (activePeriodStart && fechaFinValue < activePeriodStart))) {
-            fechaFinInput.value = '';
-            clearEditFieldError(fechaFinInput);
+            if (isInitialLoad instanceof Event === false && isInitialLoad === true) {
+                // If it's the initial load from DB, DON'T wipe the old fecha_fin even if it violates the new min constraint.
+                // The validation will catch and flag it without stealthily erasing user data.
+            } else {
+                fechaFinInput.value = '';
+                clearEditFieldError(fechaFinInput);
+            }
         }
     }
 
@@ -750,7 +756,7 @@
         return String(value).slice(0, 10);
     }
 
-    function syncEditFechaFinByContractType() {
+    function syncEditFechaFinByContractType(isInitialLoad = false) {
         const fechaFinInput = document.getElementById('editFechaFin');
         const fechaFinHint = document.getElementById('editFechaFinHint');
         const fechaFinContainer = document.getElementById('editFechaFinContainer');
@@ -785,7 +791,7 @@
                 : 'Debe ser posterior a la fecha de inicio.';
         }
 
-        updateEditFechaFinMin();
+        updateEditFechaFinMin(isInitialLoad);
     }
 
     function getEditRiskLevelNumber(rawValue) {
@@ -1431,6 +1437,12 @@
                 const contrato = data.contrato;
                 const cuenta = data.cuenta;
                 if (contrato) {
+                    // Actualizar DOM nativo inmediatamente para que funciones sincrónicas lean opciones actualizadas
+                    const tipoContratoInput = document.getElementById('editIdTipoContrato');
+                    const tipoTrabajadorInput = document.getElementById('editIdTipoTrabajador');
+                    if (tipoContratoInput) tipoContratoInput.value = contrato.id_tipo_contrato || '';
+                    if (tipoTrabajadorInput) tipoTrabajadorInput.value = contrato.id_tipo_trabajador || '';
+
                     // Sincronizar con Alpine
                     const alpineContainer = document.getElementById('editContractualContainer');
                     if (alpineContainer) {
@@ -1438,16 +1450,13 @@
                             const alpineData = Alpine.$data(alpineContainer);
                             if (alpineData) {
                                 alpineData.selectedContract = contrato.id_tipo_contrato || '';
-                                alpineData.selectedWorkerType = contrato.id_tipo_trabajador || '';
+                                setTimeout(() => {
+                                    alpineData.selectedWorkerType = contrato.id_tipo_trabajador || '';
+                                }, 50);
                             }
                         } catch (e) {
                             console.warn('Error al sincronizar Alpine en loadEmployee:', e);
-                            document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
-                            document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
                         }
-                    } else {
-                        document.getElementById('editIdTipoTrabajador').value = contrato.id_tipo_trabajador || '';
-                        document.getElementById('editIdTipoContrato').value = contrato.id_tipo_contrato || '';
                     }
 
                     document.getElementById('editIdSubTipoTrabajador').value = contrato.id_sub_tipo_trabajador || '';
@@ -1473,7 +1482,7 @@
                         document.getElementById('editFechaInicio').value = toDateInputValue(contrato.fecha_inicio);
                         document.getElementById('editFechaFin').value = toDateInputValue(contrato.fecha_fin);
                     }
-                    syncEditFechaFinByContractType();
+                    syncEditFechaFinByContractType(true);
                     document.getElementById('editSalario').value = formatEditLocalizedNumber(contrato.salario_base || '');
                     document.getElementById('editCodigoInterno').value = contrato.codigo_interno || '';
                     document.getElementById('editNivelRiesgo').value = contrato.nivel_riesgo_id || '';

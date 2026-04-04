@@ -414,7 +414,7 @@ class RegistroUsuarios extends Controller
 
             // 1. Actualizar datos del Usuario (si cambiaron durante la renovación)
             $usuarioData = [];
-            foreach (['id_tipo_doc', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion', 'fondo_cesantias'] as $field) {
+            foreach (['id_tipo_doc', 'id_rol', 'primer_nombre', 'otros_nombres', 'primer_apellido', 'segundo_apellido', 'id_ciudad', 'direccion', 'fondo_cesantias'] as $field) {
                 if (isset($data[$field])) $usuarioData[$field] = $data[$field];
             }
             if (!empty($usuarioData)) {

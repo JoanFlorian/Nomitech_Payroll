@@ -331,10 +331,16 @@ class PeriodoLiquidacionController extends Controller
                 // Esto crea novedades continuas en el próximo período si la licencia no ha terminado
                 $maternityRollover->processMaternityRollover($periodo);
 
-                // Cerrar novedades activas del periodo que TERMINAN en este periodo
+                $periodosEmpresaIds = \App\Models\PeriodoLiquidacion::where('id_empresa', $periodo->id_empresa)->pluck('id_periodo');
+
+                // Cerrar novedades activas que TERMINAN en este periodo o en fechas pasadas
+                // Esto incluye las novedades arrastradas de periodos de liquidacion anteriores
                 // EXCEPTO: Las novedades LMAT/LPAT que ya fueron procesadas por el rollover
                 // Las novedades que se extienden al futuro (fecha_fin > periodo->fecha_fin) deben seguir activas
-                \App\Models\Novedad::where('id_periodo', $periodo->id_periodo)
+                \App\Models\Novedad::where(function ($query) use ($periodosEmpresaIds) {
+                        $query->whereIn('id_periodo', $periodosEmpresaIds)
+                              ->orWhereNull('id_periodo');
+                    })
                     ->where('estado', \App\Models\Novedad::ESTADO_ACTIVA)
                     ->whereNotIn('tipo_novedad_codigo', ['LMAT', 'LPAT'])
                     ->where(function($q) use ($periodo) {

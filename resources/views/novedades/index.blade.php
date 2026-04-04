@@ -1897,7 +1897,8 @@
 			}
 			
 			try {
-				const fin = new Date(fechaInicio);
+				const [year, month, day] = fechaInicio.split('-');
+				const fin = new Date(year, month - 1, day);
 				fin.setDate(fin.getDate() + dias - 1);
 				const yyyy = fin.getFullYear();
 				const mm = String(fin.getMonth() + 1).padStart(2, '0');

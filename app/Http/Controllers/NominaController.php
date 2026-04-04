@@ -701,8 +701,10 @@ class NominaController extends Controller
             if ($contratoObj) {
                 $termResult = $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
                 
-                // If suggested days were returned (contract ends in period), update session
-                if ($termResult['is_terminating'] && $termResult['suggested_days'] !== null) {
+                // Solo sugerir días si el usuario NO los ha ajustado aún
+                // (es decir, aún están en el default de 30 o si no se ha editado)
+                $currentDays = (int) ($s1['dias_trabajados'] ?? 30);
+                if ($termResult['is_terminating'] && $termResult['suggested_days'] !== null && $currentDays >= 30) {
                     $s1['dias_trabajados'] = $termResult['suggested_days'];
                     session(['nomina.step1' => $s1]);
                 }
@@ -718,10 +720,13 @@ class NominaController extends Controller
                 ->where('movement_type', BenefitLedger::MOVEMENT_SCHEDULED)
                 ->where('status', BenefitLedger::STATUS_PENDING_PAYROLL)
                 ->get()
-                ->map(function ($bp) use ($salarioBase) {
-                    $bp->display_amount = abs($bp->amount);
-                    if ($bp->benefit_type === BenefitLedger::TYPE_VACACIONES) {
-                        $bp->display_amount = (($salarioBase ?? 0) / 30) * $bp->display_amount;
+                ->map(function ($bp) use ($s1) {
+                    $amount = abs($bp->amount);
+                    if (trim(strtolower($bp->benefit_type)) === 'vacaciones') {
+                        $salarioMensualFull = (float) ($s1['salario_base'] ?? 0);
+                        $bp->display_amount = round(($salarioMensualFull / 30) * $amount, 2);
+                    } else {
+                        $bp->display_amount = $amount;
                     }
                     return $bp;
                 })
@@ -829,27 +834,33 @@ class NominaController extends Controller
                 ->where('movement_type', \App\Models\BenefitLedger::MOVEMENT_SCHEDULED)
                 ->where('status', \App\Models\BenefitLedger::STATUS_PENDING_PAYROLL)
                 ->get()
-                ->sum(function ($bp) use ($salarioBase) {
+                ->sum(function ($bp) use ($step1) {
                     $amount = abs($bp->amount);
                     $type = trim(strtolower($bp->benefit_type));
-                    if ($type === 'vacaciones') {
-                        // Use pro-rated base for vacations consistent with service logic for partial months
-                        return ($salarioBase / 30) * $amount;
-                    }
                     if ($type === 'cesantias') {
-                        return 0; // Exclude Cesantias as per user request
+                        return 0; // Cesantías se pagan al fondo, no al empleado
+                    }
+                    if ($type === 'vacaciones') {
+                        $salarioMensualFull = (float) ($step1['salario_base'] ?? 0);
+                        return round(($salarioMensualFull / 30) * $amount, 2);
                     }
                     return $amount;
                 });
         }
 
+        $resumenNovedades = $this->obtenerResumenNovedadesPorContratoPeriodo((int) ($step1['id_contrato'] ?? 0), (int) $periodoActivo->id_periodo);
+        $novDevengos = (float) ($resumenNovedades['otros_devengos'] ?? 0);
+        $novHE = (float) ($resumenNovedades['horas_extra'] ?? 0);
+        $novRecargos = (float) ($resumenNovedades['recargos'] ?? 0);
+        $novBono = (float) ($resumenNovedades['bonificaciones'] ?? 0);
+
         $totalDevengos =
             $salarioBase +
-            (float) ($step2['horas_extra'] ?? 0) +
-            (float) ($step2['recargos'] ?? 0) +
-            (float) ($ingresos['bonificaciones'] ?? 0) +
+            (float) ($step2['horas_extra'] ?? 0) + $novHE +
+            (float) ($step2['recargos'] ?? 0) + $novRecargos +
+            (float) ($ingresos['bonificaciones'] ?? 0) + $novBono +
             (float) ($ingresos['comisiones'] ?? 0) +
-            (float) ($ingresos['otros_devengos'] ?? 0) +
+            (float) ($ingresos['otros_devengos'] ?? 0) + $novDevengos +
             (float) ($ingresos['auxilio_transporte'] ?? 0) +
             (float) $integratedBenefitsTotal;
 
@@ -1064,7 +1075,9 @@ class NominaController extends Controller
 
         $procesados = 0;
         $omitidos   = 0;
-        DB::transaction(function () use ($contratos, $periodoActivo, $fechaPago, &$procesados, &$omitidos) {
+        $omitidos_ya_liquidados = 0;
+
+        DB::transaction(function () use ($contratos, $periodoActivo, $fechaPago, &$procesados, &$omitidos, &$omitidos_ya_liquidados) {
             foreach ($contratos as $idContrato) {
                 try {
                     $contratoObj = Contrato::find($idContrato);
@@ -1082,34 +1095,38 @@ class NominaController extends Controller
                             ->where('id_periodo', $idPeriodo)
                             ->first();
 
-                        if ($salarioExistente && $salarioExistente->id_contrato != $idContrato) {
-                            // Se detectó una renovación en el mismo mes. 
-                            // Consolidamos: Movemos el registro existente al nuevo contrato para que solo quede uno.
-                            $salarioExistente->id_contrato = $idContrato;
-                            $salarioExistente->save();
-                            
-                            // Calculamos la suma de días de ambos contratos en este periodo
-                            $contratoAnterior = \App\Models\Contrato::find($salarioExistente->getOriginal('id_contrato'));
-                            $diasAnterior = $contratoAnterior ? $this->terminationService->calculateWorkedDaysInPeriod($contratoAnterior, $periodoActivo) : 0;
-                            $diasNuevo = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
-                            
-                            $inputCalculo['dias_trabajados'] = min(30, $diasAnterior + $diasNuevo);
+                        if ($salarioExistente) {
+                            if ($salarioExistente->id_contrato == $idContrato) {
+                                // 🔹 Ya existe liquidación para este MISMO contrato. 
+                                // Omitimos para no sobrescribir ajustes manuales del usuario.
+                                $omitidos_ya_liquidados++;
+                                continue;
+                            } else {
+                                // Se detectó una renovación en el mismo mes (otro contrato).
+                                // Consolidamos: Movemos el registro existente al nuevo contrato para que solo quede uno.
+                                $salarioExistente->id_contrato = $idContrato;
+                                $salarioExistente->save();
+                                
+                                // Calculamos la suma de días de ambos contratos en este periodo
+                                $contratoAnterior = \App\Models\Contrato::find($salarioExistente->getOriginal('id_contrato'));
+                                $diasAnterior = $contratoAnterior ? $this->terminationService->calculateWorkedDaysInPeriod($contratoAnterior, $periodoActivo) : 0;
+                                $diasNuevo = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
+                                
+                                $inputCalculo['dias_trabajados'] = min(30, $diasAnterior + $diasNuevo);
+                            }
                         } else {
                             // SUGGEST DAYS based on active period normally
                             $inputCalculo['dias_trabajados'] = $this->terminationService->calculateWorkedDaysInPeriod($contratoObj, $periodoActivo);
                         }
                     }
 
-                    // STEP 1: Create/update the salary record FIRST
-                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo);
-
-                    // STEP 2: Auto-schedule termination benefits if contract ends in this period.
-                    // handleContractTermination() internally checks fecha_fin vs period dates,
-                    // so it only triggers for contracts ACTUALLY ending in this period.
-                    // It also recalculates the salary with the integrated benefits.
+                    // STEP 1: Auto-schedule termination benefits BEFORE saving salary.
                     if ($contratoObj) {
                         $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
                     }
+
+                    // STEP 2: Create/update the salary record WITH benefits already in the ledger
+                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo);
 
                     $procesados++;
                 } catch (\App\Exceptions\EmpleadoIncapacitadoException $e) {
@@ -1120,8 +1137,16 @@ class NominaController extends Controller
         });
 
         $mensaje = "Nómina masiva realizada correctamente para {$procesados} empleado(s).";
+        $extraInfo = [];
+        if ($omitidos_ya_liquidados > 0) {
+            $extraInfo[] = "{$omitidos_ya_liquidados} ya estaban liquidados";
+        }
         if ($omitidos > 0) {
-            $mensaje .= " {$omitidos} empleado(s) omitido(s) por tener incapacidad activa en este periodo.";
+            $extraInfo[] = "{$omitidos} con incapacidad activa";
+        }
+
+        if (!empty($extraInfo)) {
+            $mensaje .= " (" . implode(', ', $extraInfo) . " omitidos).";
         }
 
         return redirect()->route('nomina.index')

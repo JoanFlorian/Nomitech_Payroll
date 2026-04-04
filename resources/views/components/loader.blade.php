@@ -74,7 +74,35 @@
             font-weight: 600;
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
+
+        #loader-close {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+        }
+
+        #loader-close:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.1);
+        }
     </style>
+
+    <button id="loader-close" class="hidden" onclick="window.NomitechLoader.hide()" title="Cerrar (si la descarga ya inició)">
+        <i class="bi bi-x-lg"></i>
+    </button>
 
     <div class="loader-container">
         <div class="loader-wrapper">
@@ -119,12 +147,12 @@
             // Cancelar cualquier proceso de ocultación o mostrado previo
             this.clearTimers();
 
-            
             if (!this.overlay) {
                 this.overlay = document.getElementById('global-loader');
             }
             
             const loaderText = document.getElementById('loader-text');
+            const closeBtn = document.getElementById('loader-close');
             const effectiveDelay = customDelay !== null ? customDelay : this.delay;
 
             const startShowing = () => {
@@ -132,11 +160,22 @@
                     if (loaderText) loaderText.textContent = text;
                     this.overlay.classList.remove('hidden');
                     this.overlay.classList.add('flex');
+                    
+                    // Mostrar botón de cierre tras 5 segundos de espera (seguridad para descargas)
+                    setTimeout(() => {
+                        if (closeBtn && !this.overlay.classList.contains('hidden')) {
+                            closeBtn.classList.remove('hidden');
+                        }
+                    }, 5000);
+
                     // Pequeño delay para permitir que el navegador registre el cambio de hidden a flex antes de la opacidad
                     setTimeout(() => {
                         this.overlay.classList.remove('opacity-0');
                         this.overlay.classList.add('opacity-100');
                     }, 10);
+
+                    // Iniciar vigilancia de cookie de descarga
+                    this.startDownloadMonitoring();
                 }
             };
 
@@ -147,8 +186,39 @@
             }
         },
 
+        startDownloadMonitoring() {
+            this.clearDownloadInterval();
+            this.downloadInterval = setInterval(() => {
+                if (this.getCookie('fileDownloadToken')) {
+                    if (window.DEBUG_NOMITECH_LOADER) console.log('Download detected via cookie. Hiding loader.');
+                    this.hide();
+                    this.deleteCookie('fileDownloadToken');
+                    this.clearDownloadInterval();
+                }
+            }, 500);
+        },
+
+        getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        },
+
+        deleteCookie(name) {
+            document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+        },
+
+        clearDownloadInterval() {
+            if (this.downloadInterval) {
+                clearInterval(this.downloadInterval);
+                this.downloadInterval = null;
+            }
+        },
+
         hide() {
             this.clearTimers();
+            this.clearDownloadInterval();
 
             if (!this.overlay) {
                 this.overlay = document.getElementById('global-loader');
@@ -158,6 +228,9 @@
                 this.overlay.classList.remove('opacity-100');
                 this.overlay.classList.add('opacity-0');
                 
+                const closeBtn = document.getElementById('loader-close');
+                if (closeBtn) closeBtn.classList.add('hidden');
+
                 this.hideTimeout = setTimeout(() => {
                     this.overlay.classList.add('hidden');
                     this.overlay.classList.remove('flex');

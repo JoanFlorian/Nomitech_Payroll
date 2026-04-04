@@ -88,12 +88,10 @@ class PilaController extends Controller
                 $planillaEstado = strtolower((string) ($planilla->estado ?? 'pendiente'));
                 $archivoGenerado = $planilla->archivo_generado;
 
-                // Una vez generada queda bloqueada permanentemente.
-                if ($planillaEstado === 'generada') {
-                    $canGenerate = false;
-                } else {
-                    $canGenerate = $detalles->isNotEmpty();
-                }
+                // Se puede permitir regeneración si hay cambios en los datos (hash diferente)
+                // Para esto, el usuario siempre puede intentar generar - el sistema verificará
+                // si hay cambios (hash) para permitir o bloquear la regeneración
+                $canGenerate = $detalles->isNotEmpty();
             }
         }
 
@@ -156,12 +154,11 @@ class PilaController extends Controller
         $periodo = PeriodoLiquidacion::query()
             ->where('id_periodo', $periodoId)
             ->where('id_empresa', $empresaId)
-            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
             ->first();
 
         if (!$periodo) {
             return back()->withErrors([
-                'pila' => 'El periodo seleccionado no es valido para la empresa activa o ya fue cerrado.',
+                'pila' => 'El periodo seleccionado no es valido para la empresa activa.',
             ])->withInput();
         }
 
@@ -178,11 +175,19 @@ class PilaController extends Controller
         $datosHash = $this->generarHashPlanilla($empresaId, $periodoId, $detalles, $totales);
         $planillaExistente = $this->buscarPlanillaExistente($empresaId, $periodoId, $periodo->fecha_inicio);
 
-        // Bloqueo permanente: si ya fue generada no se puede volver a generar.
+        // Verificar si ya fue generada: solo bloquear si no hay cambios en los datos
         if ($planillaExistente && strtolower((string) ($planillaExistente->estado ?? '')) === 'generada') {
-            return back()->withErrors([
-                'pila' => 'Esta planilla ya fue generada y está bloqueada. Solo puede descargarse.',
-            ])->withInput();
+            $hashAnterior = (string) ($planillaExistente->datos_hash ?? '');
+            
+            // Si el hash es igual, significa que no hay cambios - bloquear
+            if ($hashAnterior !== '' && $hashAnterior === $datosHash) {
+                return back()->withErrors([
+                    'pila' => 'Esta planilla ya fue generada sin cambios en los datos. Solo puede descargarse. Si necesita regenerarla, realice cambios en la nómina o información de seguridad social.',
+                ])->withInput();
+            }
+            
+            // Si el hash cambió, es una actualización permitida
+            // (no bloqueamos, continuamos con la regeneración)
         }
 
         $empresa = Empresa::query()

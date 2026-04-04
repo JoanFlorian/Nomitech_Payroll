@@ -10,8 +10,12 @@
             </div>
             <div class="flex items-center gap-2">
                 @php
-                    $exportGeneralParams = [];
-                    $exportPagadosParams = ['estado' => 'paid'];
+                    $sharedExportParams = array_filter([
+                        'q' => request('q'),
+                        'metodo' => request('metodo') && request('metodo') !== 'Todos' ? request('metodo') : null,
+                    ]);
+                    $exportGeneralParams = $sharedExportParams;
+                    $exportPagadosParams = array_merge($sharedExportParams, ['estado' => 'paid']);
                     $exportOptions = [
                         'General (todas) - Excel' => route('superadmin.facturacion.exportar.excel', $exportGeneralParams),
                         'General (todas) - PDF' => route('superadmin.facturacion.exportar.pdf', $exportGeneralParams),
@@ -26,8 +30,7 @@
                             <option value="{{ $url }}">{{ $label }}</option>
                         @endforeach
                     </select>
-                    <button type="button"
-                        onclick="window.NomitechLoader.show('Generando archivo...'); window.location.href = document.getElementById('exportSelect').value; setTimeout(() => window.NomitechLoader.hide(), 5000);"
+                    <button id="exportFacturacionBtn" type="button" data-export-count="{{ $transacciones->total() }}"
                         class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition">
                         Exportar
                     </button>
@@ -45,6 +48,18 @@
                 class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </form>
     </div>
+
+    @if (session('warning'))
+        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
 
     <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
         <form method="GET" action="{{ route('superadmin.facturacion') }}" class="flex gap-3 items-end" data-loader data-loader-text="Filtrando...">
@@ -179,6 +194,53 @@
 
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const exportSelect = document.getElementById('exportSelect');
+            const exportButton = document.getElementById('exportFacturacionBtn');
+
+            if (!exportSelect || !exportButton) {
+                return;
+            }
+
+            const showExportMessage = (message, icon = 'warning') => {
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon,
+                        title: icon === 'warning' ? 'Atención' : 'Exportación',
+                        text: message,
+                        confirmButtonColor: '#2563eb'
+                    });
+                    return;
+                }
+
+                window.alert(message);
+            };
+
+            exportButton.addEventListener('click', () => {
+                const exportUrl = exportSelect.value;
+                const exportCount = Number(exportButton.dataset.exportCount || 0);
+
+                if (!exportUrl) {
+                    showExportMessage('Selecciona una opción de exportación válida.');
+                    return;
+                }
+
+                if (exportCount <= 0) {
+                    showExportMessage('No hay datos para exportar con los filtros seleccionados.');
+                    return;
+                }
+
+                window.NomitechLoader?.show?.('Generando archivo...');
+                window.location.assign(exportUrl);
+
+                if (window.NomitechLoader?.hide) {
+                    window.setTimeout(() => window.NomitechLoader.hide(), 4000);
+                }
+            });
+        });
+    </script>
 
     @include('superadmin.factura')
 

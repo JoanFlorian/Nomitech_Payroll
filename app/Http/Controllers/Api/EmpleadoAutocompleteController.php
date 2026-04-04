@@ -27,6 +27,8 @@ class EmpleadoAutocompleteController extends Controller
                     $join->on('benefit_balance.employee_id', '=', 'usuario.doc')
                          ->on('benefit_balance.tenant_id', '=', 'contrato.id_empresa');
                 })
+                ->leftJoin('eps', 'eps.id_eps', '=', 'contrato.id_eps')
+                ->leftJoin('afp', 'afp.id_afp', '=', 'contrato.id_afp')
                 ->where(function ($q) {
                     $q->where('contrato.activo', true)
                         ->orWhereIn('contrato.estado', [
@@ -41,7 +43,11 @@ class EmpleadoAutocompleteController extends Controller
                 ->selectRaw("usuario.doc as documento")
                 ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_nombre, usuario.otros_nombres, usuario.primer_apellido, usuario.segundo_apellido)) as nombre")
                 ->selectRaw('contrato.salario_base as salario_base')
-                ->selectRaw('COALESCE(benefit_balance.vacaciones_balance, 0) as vacaciones_balance');
+                ->selectRaw('COALESCE(benefit_balance.vacaciones_balance, 0) as vacaciones_balance')
+                ->selectRaw('contrato.id_eps as id_eps')
+                ->selectRaw('eps.nombre as eps_nombre')
+                ->selectRaw('contrato.id_afp as id_afp')
+                ->selectRaw('afp.nombre as afp_nombre');
 
             if ($search !== '') {
                 $term = mb_strtolower($search);
@@ -69,6 +75,10 @@ class EmpleadoAutocompleteController extends Controller
                 'documento' => (string) $empleado->documento,
                 'salario_base' => (float) $empleado->salario_base,
                 'vacaciones_balance' => (float) $empleado->vacaciones_balance,
+                'id_eps' => $empleado->id_eps ? (int) $empleado->id_eps : null,
+                'eps_nombre' => $empleado->eps_nombre ? (string) $empleado->eps_nombre : null,
+                'id_afp' => $empleado->id_afp ? (int) $empleado->id_afp : null,
+                'afp_nombre' => $empleado->afp_nombre ? (string) $empleado->afp_nombre : null,
             ])
             ->values();
 

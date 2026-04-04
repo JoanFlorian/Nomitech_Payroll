@@ -13,7 +13,9 @@ use App\Models\TipoNovedad;
 use App\Services\CalculoNovedadService;
 use App\Models\PeriodoLiquidacion;
 use App\Services\NominaCalculatorService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 
 class NovedadController extends Controller
@@ -82,6 +84,8 @@ class NovedadController extends Controller
                     $join->on('benefit_balance.employee_id', '=', 'usuario.doc')
                          ->on('benefit_balance.tenant_id', '=', 'contrato.id_empresa');
                 })
+                ->leftJoin('eps', 'eps.id_eps', '=', 'contrato.id_eps')
+                ->leftJoin('afp', 'afp.id_afp', '=', 'contrato.id_afp')
                 ->where('contrato.id_empresa', $empresaFilterId)
                 ->where(function ($query) {
                     $query->where('contrato.activo', true)
@@ -93,6 +97,10 @@ class NovedadController extends Controller
                 ->selectRaw("TRIM(CONCAT_WS(' ', usuario.primer_apellido, usuario.segundo_apellido)) as apellidos")
                 ->selectRaw('contrato.salario_base as salario_base')
                 ->selectRaw('COALESCE(benefit_balance.vacaciones_balance, 0) as vacaciones_balance')
+                ->selectRaw('contrato.id_eps')
+                ->selectRaw('eps.nombre as eps_nombre')
+                ->selectRaw('contrato.id_afp')
+                ->selectRaw('afp.nombre as afp_nombre')
                 ->selectRaw('(SELECT COALESCE(SUM(n.dias), 0) FROM novedad n WHERE n.empleado_id = usuario.doc AND n.tipo_novedad_codigo = "VAC" AND n.id_periodo = ?) as vacaciones_registradas', [$periodoId])
                 ->orderBy('usuario.primer_nombre')
                 ->orderBy('usuario.primer_apellido')
@@ -110,6 +118,10 @@ class NovedadController extends Controller
                 'salario_base' => (float) ($row->salario_base ?? 0),
                 'vacaciones_balance' => (float) ($row->vacaciones_balance ?? 0),
                 'vacaciones_registradas' => (float) ($row->vacaciones_registradas ?? 0),
+                'id_eps' => isset($row->id_eps) ? (int) $row->id_eps : null,
+                'eps_nombre' => (string) ($row->eps_nombre ?? ''),
+                'id_afp' => isset($row->id_afp) ? (int) $row->id_afp : null,
+                'afp_nombre' => (string) ($row->afp_nombre ?? ''),
             ])
             ->values();
 
@@ -311,8 +323,38 @@ class NovedadController extends Controller
             return back()->withErrors(['tipo_novedad' => $coexistenciaError])->withInput()->with('open_novedad_modal', true);
         }
 
+        // Validar conflictos específicos para traslados
+        $conflictoTrasladoError = $this->verificarConflictosTraslado(
+            (string) $data['empleado_id'],
+            strtoupper((string) $data['tipo_novedad']),
+            $data['fecha_inicio'],
+            $data['fecha_fin']
+        );
+        if ($conflictoTrasladoError) {
+            session()->flash('error', $conflictoTrasladoError);
+            return back()->withErrors(['tipo_novedad' => $conflictoTrasladoError])->withInput()->with('open_novedad_modal', true);
+        }
+
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
         $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, $periodo);
+        $payload = $this->attachMedicalSupportFilePayload($request, $payload);
+
+        // Si es traslado, documentar la entidad origen y destino en las observaciones
+        $tipoNovRaw = strtoupper((string) $data['tipo_novedad']);
+        if (in_array($tipoNovRaw, ['TDE', 'TAE', 'TDP', 'TAP'])) {
+            $isEps = in_array($tipoNovRaw, ['TDE', 'TAE']);
+            $oldEntityId = $isEps ? $salario->contrato?->id_eps : $salario->contrato?->id_afp;
+            
+            $oldEntityName = $oldEntityId 
+                ? DB::table($isEps ? 'eps' : 'afp')->where($isEps ? 'id_eps' : 'id_afp', $oldEntityId)->value('nombre') 
+                : 'Ninguna';
+                
+            $newEntityId = $isEps ? $data['id_eps'] : $data['id_afp'];
+            $newEntityName = DB::table($isEps ? 'eps' : 'afp')->where($isEps ? 'id_eps' : 'id_afp', $newEntityId)->value('nombre') ?? 'Desconocida';
+            
+            $suffix = "\n[Traslado: de {$oldEntityName} a {$newEntityName}]";
+            $payload['observaciones'] = ltrim(trim($payload['observaciones'] ?? '') . $suffix);
+        }
 
         $novedad = Novedad::create($payload);
         $this->historialService->registrarCreacion($novedad);
@@ -364,6 +406,19 @@ class NovedadController extends Controller
             return back()->withErrors(['tipo_novedad' => $coexistenciaError])->withInput();
         }
 
+        // Validar conflictos específicos para traslados
+        $conflictoTrasladoError = $this->verificarConflictosTraslado(
+            (string) $data['empleado_id'],
+            strtoupper((string) $data['tipo_novedad']),
+            $data['fecha_inicio'],
+            $data['fecha_fin'],
+            $id_novedad
+        );
+        if ($conflictoTrasladoError) {
+            session()->flash('error', $conflictoTrasladoError);
+            return back()->withErrors(['tipo_novedad' => $conflictoTrasladoError])->withInput();
+        }
+
         $novedadAnterior = clone $novedad;
 
         // Validar si la fecha_inicio original pertenece a un periodo cerrado
@@ -383,6 +438,26 @@ class NovedadController extends Controller
 
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
         $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, null);
+        $payload = $this->attachMedicalSupportFilePayload($request, $payload, $novedad);
+
+        // Si es traslado, re-documentar la entidad origen y destino
+        $tipoNovRaw = strtoupper((string) $data['tipo_novedad']);
+        if (in_array($tipoNovRaw, ['TDE', 'TAE', 'TDP', 'TAP'])) {
+            $isEps = in_array($tipoNovRaw, ['TDE', 'TAE']);
+            $oldEntityId = $isEps ? $salario->contrato?->id_eps : $salario->contrato?->id_afp; // Asume que la UI no revirtió el ID aún, o simplemente sobreescribe de la entidad actual
+            // Dado que no controlamos el "undo" histórico de la UI aquí, limpiamos cualquier sufijo previo:
+            $obsOriginal = preg_replace('/\[Traslado: de .* a .*\]/', '', $payload['observaciones'] ?? '');
+            
+            $oldEntityName = $oldEntityId 
+                ? DB::table($isEps ? 'eps' : 'afp')->where($isEps ? 'id_eps' : 'id_afp', $oldEntityId)->value('nombre') 
+                : 'Ninguna';
+                
+            $newEntityId = $isEps ? $data['id_eps'] : $data['id_afp'];
+            $newEntityName = DB::table($isEps ? 'eps' : 'afp')->where($isEps ? 'id_eps' : 'id_afp', $newEntityId)->value('nombre') ?? 'Desconocida';
+            
+            $suffix = "\n[Traslado: de {$oldEntityName} a {$newEntityName}]";
+            $payload['observaciones'] = ltrim(trim($obsOriginal) . $suffix);
+        }
 
         $novedad->update($payload);
         $this->historialService->registrarActualizacion($novedadAnterior, $novedad->fresh());
@@ -425,6 +500,9 @@ class NovedadController extends Controller
     {
         $novedad = Novedad::query()->findOrFail($id_novedad);
 
+        // Validar que si es un traslado, se puede eliminar y requiere rollback
+        $isTraslado = in_array(strtoupper($novedad->tipo_novedad_codigo), ['TDE', 'TAE', 'TDP', 'TAP']);
+
         // Validar si la fecha_inicio pertenece a un periodo cerrado
         if ($novedad->fecha_inicio) {
             $periodoCerrado = PeriodoLiquidacion::query()
@@ -451,7 +529,35 @@ class NovedadController extends Controller
                 ->delete();
         }
 
+        if ($isTraslado) {
+            $isEps = in_array(strtoupper($novedad->tipo_novedad_codigo), ['TDE', 'TAE']);
+            $tipoHistorial = $isEps ? 'EPS' : 'AFP';
+            
+            $contrato = DB::table('contrato')->where('doc', $novedad->empleado_id)->orderByDesc('id_contrato')->first();
+            
+            if ($contrato) {
+                // Recuperar el último movimiento histórico con relación a este contrato y EPS/AFP
+                $ultimoHistorial = DB::table('historial_contrato')
+                    ->where('id_contrato', $contrato->id_contrato)
+                    ->where('tipo_novedad', $tipoHistorial)
+                    ->orderByDesc('fecha_cambio')
+                    ->orderByDesc('id_historial')
+                    ->first();
+                    
+                if ($ultimoHistorial && $ultimoHistorial->dato_anterior !== null) {
+                    // Hacer Rollback del contrato a su entidad anterior
+                    DB::table('contrato')->where('id_contrato', $contrato->id_contrato)->update([
+                        ($isEps ? 'id_eps' : 'id_afp') => $ultimoHistorial->dato_anterior,
+                        'updated_at' => now(),
+                    ]);
+                    // Borramos el log de ese cambio para que el historial quede limpio como si no hubiera pasado
+                    DB::table('historial_contrato')->where('id_historial', $ultimoHistorial->id_historial)->delete();
+                }
+            }
+        }
+
         $doc = $novedad->empleado_id;
+        $this->deleteMedicalSupportFile($novedad->soporte_medico_path ?? null);
         $novedad->delete();
 
         $this->refreshPayrollRecalculation((string) $doc);
@@ -538,6 +644,48 @@ class NovedadController extends Controller
             'afecta_nomina' => true,
             'periodo_aplicado_id' => $periodo?->id_periodo ?? $salario->id_periodo ?? null,
         ];
+    }
+
+    private function attachMedicalSupportFilePayload(Request $request, array $payload, ?Novedad $existingNovedad = null): array
+    {
+        if ($request->hasFile('soporte_medico_archivo')) {
+            $archivo = $request->file('soporte_medico_archivo');
+
+            if ($existingNovedad && !empty($existingNovedad->soporte_medico_path)) {
+                $this->deleteMedicalSupportFile($existingNovedad->soporte_medico_path);
+            }
+
+            $path = $archivo->store('novedades/soportes_medicos', 'public');
+
+            $payload['certificado_medico'] = true;
+            $payload['soporte_medico_path'] = $path;
+            $payload['soporte_medico_original_name'] = $archivo->getClientOriginalName();
+            $payload['soporte_medico_mime'] = $archivo->getClientMimeType();
+            $payload['soporte_medico_size'] = (int) $archivo->getSize();
+
+            return $payload;
+        }
+
+        if ($existingNovedad && !empty($existingNovedad->soporte_medico_path)) {
+            $payload['certificado_medico'] = true;
+            $payload['soporte_medico_path'] = $existingNovedad->soporte_medico_path;
+            $payload['soporte_medico_original_name'] = $existingNovedad->soporte_medico_original_name;
+            $payload['soporte_medico_mime'] = $existingNovedad->soporte_medico_mime;
+            $payload['soporte_medico_size'] = $existingNovedad->soporte_medico_size;
+        }
+
+        return $payload;
+    }
+
+    private function deleteMedicalSupportFile(?string $path): void
+    {
+        if (!$path) {
+            return;
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     private function aplicarEfectosNovedad(array $data, Salario $salario): void
@@ -631,6 +779,55 @@ class NovedadController extends Controller
         return "No se puede registrar esta novedad porque ya existe una novedad "
             . "\"{$labelConflicto}\" registrada del {$fInicio} al {$fFin}. "
             . "Estas novedades no pueden coexistir en el mismo periodo de tiempo.";
+    }
+
+    /**
+     * Verifica conflictos específicos para traslados (TDE, TAE, TDP, TAP).
+     * No pueden coexistir con SLN ni en periodos de retiro (contrato inactivo/vencido).
+     */
+    private function verificarConflictosTraslado(
+        string $empleadoId,
+        string $tipoNovedad,
+        string $fechaInicio,
+        string $fechaFin,
+        ?int $excludeNovedadId = null
+    ): ?string {
+        if (!in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP'], true)) {
+            return null;
+        }
+
+        // 1. Validar solapamiento con SLN
+        $conflictoSLN = Novedad::query()
+            ->where('empleado_id', $empleadoId)
+            ->where('tipo_novedad_codigo', 'SLN')
+            ->where(function ($q) {
+                $q->where('estado', '!=', Novedad::ESTADO_CERRADA)
+                  ->orWhereNull('estado');
+            })
+            ->whereDate('fecha_inicio', '<=', $fechaFin)
+            ->whereDate('fecha_fin', '>=', $fechaInicio)
+            ->when($excludeNovedadId, function ($q, $id) {
+                $q->where('id_novedad', '!=', $id);
+            })
+            ->first();
+
+        if ($conflictoSLN) {
+            $fInicio = $conflictoSLN->fecha_inicio ? $conflictoSLN->fecha_inicio->format('d/m/Y') : '?';
+            $fFin = $conflictoSLN->fecha_fin ? $conflictoSLN->fecha_fin->format('d/m/Y') : '?';
+            return "No se puede registrar este traslado porque existe una novedad de Suspensión (SLN) registrada del {$fInicio} al {$fFin}.";
+        }
+
+        // 2. Validar que el empleado no esté en retiro con contrato finalizado
+        $contrato = DB::table('contrato')
+            ->where('doc', $empleadoId)
+            ->orderByDesc('id_contrato')
+            ->first();
+
+        if ($contrato && $contrato->fecha_fin && strtotime($contrato->fecha_fin) <= strtotime($fechaInicio)) {
+             return "No se puede registrar este traslado porque el contrato actual del empleado está finalizado o marcado como retiro para la fecha de inicio designada.";
+        }
+
+        return null;
     }
 
     private function catalogosNovedad(): array

@@ -16,39 +16,46 @@
             justify-content: center;
         }
 
+
+
         .loader-logo {
-            width: 45px;
+            width: 32px;
             height: auto;
             position: absolute;
             z-index: 2;
         }
 
+
         .loader-spinner {
             width: 100px;
             height: 100px;
-            animation: loader-spin 1.1s linear infinite;
+            animation: loader-spin 2.5s linear infinite;
         }
+
+
 
         .loader-segments line {
             stroke: #1fd1a5;
             stroke-width: 3;
             stroke-linecap: round;
             opacity: 0.15;
-            animation: loader-fade 1.1s linear infinite;
+            animation: loader-fade 2.5s linear infinite;
         }
 
+
         .loader-segments line:nth-child(1) { animation-delay: 0s; }
-        .loader-segments line:nth-child(2) { animation-delay: .1s; }
-        .loader-segments line:nth-child(3) { animation-delay: .2s; }
-        .loader-segments line:nth-child(4) { animation-delay: .3s; }
-        .loader-segments line:nth-child(5) { animation-delay: .4s; }
-        .loader-segments line:nth-child(6) { animation-delay: .5s; }
-        .loader-segments line:nth-child(7) { animation-delay: .6s; }
-        .loader-segments line:nth-child(8) { animation-delay: .7s; }
-        .loader-segments line:nth-child(9) { animation-delay: .8s; }
-        .loader-segments line:nth-child(10) { animation-delay: .9s; }
-        .loader-segments line:nth-child(11) { animation-delay: 1s; }
-        .loader-segments line:nth-child(12) { animation-delay: 1.1s; }
+        .loader-segments line:nth-child(2) { animation-delay: .2s; }
+        .loader-segments line:nth-child(3) { animation-delay: .4s; }
+        .loader-segments line:nth-child(4) { animation-delay: .6s; }
+        .loader-segments line:nth-child(5) { animation-delay: .8s; }
+        .loader-segments line:nth-child(6) { animation-delay: 1s; }
+        .loader-segments line:nth-child(7) { animation-delay: 1.2s; }
+        .loader-segments line:nth-child(8) { animation-delay: 1.4s; }
+        .loader-segments line:nth-child(9) { animation-delay: 1.6s; }
+        .loader-segments line:nth-child(10) { animation-delay: 1.8s; }
+        .loader-segments line:nth-child(11) { animation-delay: 2s; }
+        .loader-segments line:nth-child(12) { animation-delay: 2.2s; }
+
 
         @keyframes loader-spin {
             to { transform: rotate(360deg); }
@@ -95,12 +102,23 @@
 
 <script>
     window.NomitechLoader = {
-        timeout: null,
+        showTimeout: null,
+        hideTimeout: null,
         overlay: null,
-        delay: 100, // 0.1 segundos para ver la respuesta inmediata
+        delay: 100, // Default delay for generic show()
 
         show(text = 'Cargando...', customDelay = null) {
-            this.hide(); // Clear any previous timer
+            // Trace caller for debugging
+            if (window.DEBUG_NOMITECH_LOADER) {
+                console.group('NomitechLoader.show');
+                console.log('Text:', text, 'Delay:', customDelay);
+                console.trace();
+                console.groupEnd();
+            }
+
+            // Cancelar cualquier proceso de ocultación o mostrado previo
+            this.clearTimers();
+
             
             if (!this.overlay) {
                 this.overlay = document.getElementById('global-loader');
@@ -109,42 +127,65 @@
             const loaderText = document.getElementById('loader-text');
             const effectiveDelay = customDelay !== null ? customDelay : this.delay;
 
-            this.timeout = setTimeout(() => {
+            const startShowing = () => {
                 if (this.overlay) {
                     if (loaderText) loaderText.textContent = text;
                     this.overlay.classList.remove('hidden');
                     this.overlay.classList.add('flex');
+                    // Pequeño delay para permitir que el navegador registre el cambio de hidden a flex antes de la opacidad
                     setTimeout(() => {
-                        this.overlay.classList.replace('opacity-0', 'opacity-100');
+                        this.overlay.classList.remove('opacity-0');
+                        this.overlay.classList.add('opacity-100');
                     }, 10);
                 }
-            }, effectiveDelay);
+            };
+
+            if (effectiveDelay > 0) {
+                this.showTimeout = setTimeout(startShowing, effectiveDelay);
+            } else {
+                startShowing();
+            }
         },
 
         hide() {
-            if (this.timeout) {
-                clearTimeout(this.timeout);
-                this.timeout = null;
-            }
+            this.clearTimers();
+
             if (!this.overlay) {
                 this.overlay = document.getElementById('global-loader');
             }
+
             if (this.overlay) {
-                this.overlay.classList.replace('opacity-100', 'opacity-0');
-                setTimeout(() => {
+                this.overlay.classList.remove('opacity-100');
+                this.overlay.classList.add('opacity-0');
+                
+                this.hideTimeout = setTimeout(() => {
                     this.overlay.classList.add('hidden');
                     this.overlay.classList.remove('flex');
                 }, 300);
+            }
+        },
+
+        clearTimers() {
+            if (this.showTimeout) {
+                clearTimeout(this.showTimeout);
+                this.showTimeout = null;
+            }
+            if (this.hideTimeout) {
+                clearTimeout(this.hideTimeout);
+                this.hideTimeout = null;
             }
         }
     };
 
     // Auto-hook into forms that have data-loader attribute
     document.addEventListener('submit', (e) => {
+        if (e.defaultPrevented) return;
         const form = e.target;
         if (form.hasAttribute('data-loader')) {
+
             const text = form.getAttribute('data-loader-text') || 'Procesando...';
-            window.NomitechLoader.show(text);
+            // Para formularios, mostramos el loader de inmediato para confirmar la acción al usuario
+            window.NomitechLoader.show(text, 0);
         }
     });
 

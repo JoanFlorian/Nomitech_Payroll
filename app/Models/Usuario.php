@@ -83,6 +83,17 @@ class Usuario extends Authenticatable
         return 'doc';
     }
 
+    public function getNumeroDocumentoAttribute($value): string
+    {
+        $numeroDocumento = is_string($value) ? trim($value) : $value;
+
+        if ($numeroDocumento !== null && $numeroDocumento !== '') {
+            return (string) $numeroDocumento;
+        }
+
+        return (string) ($this->attributes['doc'] ?? '');
+    }
+
     public function contratos()
     {
         return $this->hasMany(Contrato::class, 'doc', 'doc');

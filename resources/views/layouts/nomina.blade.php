@@ -24,6 +24,8 @@
         body { font-family: 'Manrope', sans-serif; }
         [x-cloak]{ display:none !important; }
     </style>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo_nomitech.svg') }}">
+    <link rel="shortcut icon" type="image/svg+xml" href="{{ asset('images/logo_nomitech.svg') }}">
 </head>
 
 <body class="bg-slate-100 min-h-screen">

@@ -42,6 +42,10 @@ class Novedad extends Model
         'tipo_licencia',
         'tipo_incapacidad',
         'certificado_medico',
+        'soporte_medico_path',
+        'soporte_medico_original_name',
+        'soporte_medico_mime',
+        'soporte_medico_size',
         'afecta_nomina',
         'periodo_aplicado_id',
         'dias_restantes_rollover',
@@ -54,6 +58,7 @@ class Novedad extends Model
         'es_remunerado' => 'boolean',
         'afecta_ibc' => 'boolean',
         'certificado_medico' => 'boolean',
+        'soporte_medico_size' => 'integer',
         'afecta_nomina' => 'boolean',
     ];
 

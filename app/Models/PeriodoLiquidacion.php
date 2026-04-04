@@ -40,6 +40,26 @@ class PeriodoLiquidacion extends Model
         'fecha_cierre_automatico' => 'date',
     ];
 
+    public function getNombreAttribute(): string
+    {
+        $inicio = $this->fecha_inicio;
+        $fin = $this->fecha_fin;
+
+        if ($inicio && $fin) {
+            return $inicio->format('d/m/Y') . ' al ' . $fin->format('d/m/Y');
+        }
+
+        if ($inicio) {
+            return $inicio->format('d/m/Y');
+        }
+
+        if ($fin) {
+            return $fin->format('d/m/Y');
+        }
+
+        return 'Periodo #' . $this->id_periodo;
+    }
+
     public function empresa()
     {
         return $this->belongsTo(Empresa::class, 'id_empresa', 'id_empresa');

@@ -10,7 +10,7 @@
 			</button>
 		</div>
 
-		<form id="novelty-form" action="{{ route('novedades.store') }}" method="POST" class="relative z-10">
+		<form id="novelty-form" action="{{ route('novedades.store') }}" method="POST" enctype="multipart/form-data" class="relative z-10">
 			@csrf
 			<div class="p-6 md:p-8 space-y-5 max-h-[70vh] overflow-y-auto">
 				<div>
@@ -97,11 +97,11 @@
 						<label class="block text-sm font-medium text-gray-700 mb-1">Unidad de cantidad</label>
 						<div class="flex items-center gap-4 h-[42px] px-3 border border-gray-300 rounded-md shadow-sm">
 							<label class="inline-flex items-center gap-2 text-sm text-gray-700">
-								<input type="radio" name="unidad_cantidad" value="dias" {{ old('unidad_cantidad', 'dias') === 'dias' ? 'checked' : '' }}>
+								<input type="radio" name="unidad_cantidad" value="dias" id="unit-days" {{ old('unidad_cantidad', 'dias') === 'dias' ? 'checked' : '' }}>
 								Días
 							</label>
 							<label class="inline-flex items-center gap-2 text-sm text-gray-700">
-								<input type="radio" name="unidad_cantidad" value="horas" {{ old('unidad_cantidad') === 'horas' ? 'checked' : '' }}>
+								<input type="radio" name="unidad_cantidad" value="horas" id="unit-hours" {{ old('unidad_cantidad') === 'horas' ? 'checked' : '' }}>
 								Horas
 							</label>
 						</div>
@@ -113,7 +113,7 @@
 
 					<div>
 						<label for="quantity-days" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en días</label>
-						<input id="quantity-days" name="cantidad_dias" type="number" step="0.01" min="0.01" max="126" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
+						<input id="quantity-days" name="cantidad_dias" type="number" step="0.01" value="{{ old('cantidad_dias') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 10">
 						<div id="vacaciones-balance-info" class="hidden mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
 							<div class="flex items-center gap-2 text-indigo-700">
 								<i class="material-icons text-[18px]">wb_sunny</i>
@@ -130,7 +130,7 @@
 
 					<div>
 						<label for="quantity-hours" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en horas</label>
-						<input id="quantity-hours" name="cantidad_horas" type="number" step="0.01" min="0.01" max="240" value="{{ old('cantidad_horas') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 8">
+						<input id="quantity-hours" name="cantidad_horas" type="number" step="0.01" value="{{ old('cantidad_hours') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 8">
 						<p id="quantity-hours-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('cantidad_horas')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -152,10 +152,27 @@
 					</div>
 
 					<div id="certificado-medico-wrap" class="hidden md:col-span-2">
-						<label class="inline-flex items-center gap-2 text-sm text-gray-700">
-							<input type="checkbox" id="certificado-medico" name="certificado_medico" value="1" {{ old('certificado_medico') ? 'checked' : '' }}>
-							<span>Certificado médico adjunto/verificado</span>
-						</label>
+						<div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-3">
+							<div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+								<div>
+									<label for="medical-support-file" class="block text-sm font-semibold text-gray-700">Certificado médico / soporte clínico <span class="text-red-500">*</span></label>
+									<p class="mt-1 text-xs text-gray-500">Obligatorio para novedades de incapacidad (`INC`, `IGE`, `IRL`). Formatos permitidos: PDF, JPG y PNG. Tamaño máximo: 5 MB.</p>
+								</div>
+								<label class="inline-flex items-center gap-2 text-xs text-gray-600">
+									<input type="checkbox" id="certificado-medico" name="certificado_medico" value="1" {{ old('certificado_medico') ? 'checked' : '' }}>
+									<span>Soporte verificado</span>
+								</label>
+							</div>
+
+							<input id="medical-support-file" name="soporte_medico_archivo" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100">
+							<p id="medical-support-file-error" class="mt-1 text-xs text-red-600 hidden"></p>
+							@error('soporte_medico_archivo')
+								<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+							@enderror
+							@error('certificado_medico')
+								<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+							@enderror
+						</div>
 					</div>
 
 					<div id="eps-wrap" class="hidden">
@@ -166,6 +183,9 @@
 								<option value="{{ $eps->id_eps }}" {{ (string) old('id_eps') === (string) $eps->id_eps ? 'selected' : '' }}>{{ $eps->nombre }}</option>
 							@endforeach
 						</select>
+						@error('id_eps')
+							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+						@enderror
 					</div>
 
 					<div id="afp-wrap" class="hidden">
@@ -176,6 +196,9 @@
 								<option value="{{ $afp->id_afp }}" {{ (string) old('id_afp') === (string) $afp->id_afp ? 'selected' : '' }}>{{ $afp->nombre }}</option>
 							@endforeach
 						</select>
+						@error('id_afp')
+							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+						@enderror
 					</div>
 
 					<div id="arl-wrap" class="hidden">
@@ -186,11 +209,14 @@
 								<option value="{{ $arl->id_arl }}" {{ (string) old('id_arl') === (string) $arl->id_arl ? 'selected' : '' }}>{{ $arl->nombre }}</option>
 							@endforeach
 						</select>
+						@error('id_arl')
+							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+						@enderror
 					</div>
 
 					<div>
 						<label for="start-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-						<input id="start-date" name="fecha_inicio" type="date" value="{{ old('fecha_inicio') }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+						<input id="start-date" name="fecha_inicio" type="date" value="{{ old('fecha_inicio') }}" min="{{ now(config('app.timezone'))->toDateString() }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
 						<p id="start-date-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('fecha_inicio')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -199,8 +225,7 @@
 
 					<div>
 						<label for="end-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
-						<input id="end-date" name="fecha_fin" type="date" value="{{ old('fecha_fin') }}" required 
-							@if(isset($periodoActivo) && $periodoActivo) min="{{ $periodoActivo->fecha_inicio->format('Y-m-d') }}" @endif
+						<input id="end-date" name="fecha_fin" type="date" value="{{ old('fecha_fin') }}"
 							class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
 						<p id="end-date-hint" class="text-[10px] text-gray-500 mt-1">
 							@if(isset($periodoActivo) && $periodoActivo)

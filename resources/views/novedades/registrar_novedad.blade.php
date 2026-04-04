@@ -216,7 +216,7 @@
 
 					<div>
 						<label for="start-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-						<input id="start-date" name="fecha_inicio" type="date" value="{{ old('fecha_inicio') }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+						<input id="start-date" name="fecha_inicio" type="date" value="{{ old('fecha_inicio') }}" min="{{ now(config('app.timezone'))->toDateString() }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
 						<p id="start-date-error" class="mt-1 text-xs text-red-600 hidden"></p>
 						@error('fecha_inicio')
 							<p class="mt-1 text-xs text-red-600">{{ $message }}</p>

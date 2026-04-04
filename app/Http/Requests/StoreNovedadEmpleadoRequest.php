@@ -42,6 +42,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
     public function rules(): array
     {
         $empresaId = (int) session('empresa_id');
+        $today = now(config('app.timezone'))->toDateString();
 
         return [
             'empleado_id' => [
@@ -59,7 +60,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'cantidad_horas' => 'bail|nullable|numeric|min:0.01|max:240',
             'dias' => 'bail|nullable|numeric|min:0.01|max:126',
             'horas' => 'bail|nullable|numeric|min:0.01|max:240',
-            'fecha_inicio' => 'bail|required|date',
+            'fecha_inicio' => 'bail|required|date|after_or_equal:' . $today,
             'fecha_fin' => 'bail|nullable|date|after_or_equal:fecha_inicio',
             'observaciones' => 'bail|nullable|string|max:500',
             'pago_manual' => 'bail|nullable|numeric|min:0|max:999999999.99',
@@ -99,6 +100,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'cantidad_horas.max' => 'Las horas no pueden superar 240 por novedad.',
             'fecha_inicio.required' => 'La fecha de inicio es obligatoria.',
             'fecha_inicio.date' => 'La fecha de inicio debe ser una fecha válida.',
+            'fecha_inicio.after_or_equal' => 'La fecha de inicio no puede ser anterior a la fecha actual',
             'fecha_fin.required' => 'La fecha fin es obligatoria.',
             'fecha_fin.date' => 'La fecha fin debe ser una fecha válida.',
             'fecha_fin.after_or_equal' => 'La fecha fin debe ser igual o posterior a la fecha de inicio.',

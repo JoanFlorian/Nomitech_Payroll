@@ -364,6 +364,7 @@
 		const closedPeriods = @json($periodosCerrados ?? []);
 		const activePeriodStart = @json($periodoActivo ? $periodoActivo->fecha_inicio->format('Y-m-d') : null);
 		const activePeriodEnd = @json($periodoActivo ? $periodoActivo->fecha_fin->format('Y-m-d') : null);
+		const todayDate = @json(now(config('app.timezone'))->toDateString());
 
 		console.log('Delete URL Template:', deleteUrlTemplate);
 		
@@ -1447,9 +1448,10 @@
 				if (hoursWrap) hoursWrap.classList.add('hidden');
 				if (unitWrap) unitWrap.classList.add('hidden');
 				
-				// Restringir Fecha Inicio al periodo activo
+				// Restringir Fecha Inicio al periodo activo sin permitir días anteriores a hoy
 				if (startDateInput && activePeriodStart && activePeriodEnd) {
-					startDateInput.setAttribute('min', activePeriodStart);
+					const minAllowedDate = activePeriodStart > todayDate ? activePeriodStart : todayDate;
+					startDateInput.setAttribute('min', minAllowedDate);
 					startDateInput.setAttribute('max', activePeriodEnd);
 				}
 
@@ -1463,7 +1465,7 @@
 				if (unitWrap) unitWrap.classList.remove('hidden');
 				
 				if (startDateInput) {
-					startDateInput.removeAttribute('min');
+					startDateInput.setAttribute('min', todayDate);
 					startDateInput.removeAttribute('max');
 				}
 			}
@@ -1614,9 +1616,10 @@
 				if (hoursWrap) hoursWrap.classList.add('hidden');
 				if (unitWrap) unitWrap.classList.add('hidden');
 				
-				// Restringir Fecha Inicio al periodo activo (Edición)
+				// Restringir Fecha Inicio al periodo activo (Edición) sin permitir días anteriores a hoy
 				if (editStartDateInput && activePeriodStart && activePeriodEnd) {
-					editStartDateInput.setAttribute('min', activePeriodStart);
+					const minAllowedDate = activePeriodStart > todayDate ? activePeriodStart : todayDate;
+					editStartDateInput.setAttribute('min', minAllowedDate);
 					editStartDateInput.setAttribute('max', activePeriodEnd);
 				}
 
@@ -1630,7 +1633,7 @@
 				if (unitWrap) unitWrap.classList.remove('hidden');
 				
 				if (editStartDateInput) {
-					editStartDateInput.removeAttribute('min');
+					editStartDateInput.setAttribute('min', todayDate);
 					editStartDateInput.removeAttribute('max');
 				}
 			}
@@ -1669,11 +1672,33 @@
 			if (!isHoras) editQuantityHoursInput.value = '';
 		};
 
+		const validateStartDateAgainstToday = (input, errorKey, showError, clearError) => {
+			const startDate = input?.value || '';
+
+			if (!startDate) {
+				clearError(errorKey);
+				clearInvalid(input);
+				return true;
+			}
+
+			if (startDate < todayDate) {
+				showError(errorKey, 'La fecha de inicio no puede ser anterior a la fecha actual');
+				markInvalid(input);
+				return false;
+			}
+
+			clearError(errorKey);
+			clearInvalid(input);
+			return true;
+		};
+
 		const validateDateRange = () => {
 			const startDate = startDateInput.value;
 			const endDate = endDateInput.value;
 
-		// Removido asignación de min para evitar validación nativa que bloquea inputs ocultos
+			if (!validateStartDateAgainstToday(startDateInput, 'startDate', showFieldError, clearFieldError)) {
+				return false;
+			}
 
 			if (!startDate || !endDate) {
 				clearFieldError('endDate');
@@ -1926,7 +1951,9 @@
 			const startDate = editStartDateInput.value;
 			const endDate = editEndDateInput.value;
 
-		// Removido asignación de min para evitar validación nativa en inputs ocultos
+			if (!validateStartDateAgainstToday(editStartDateInput, 'startDate', showEditFieldError, clearEditFieldError)) {
+				return false;
+			}
 
 			if (!startDate || !endDate) {
 				clearEditFieldError('endDate');
@@ -1946,11 +1973,24 @@
 			return true;
 		};
 
+		startDateInput?.addEventListener('change', () => {
+			validateStartDateAgainstToday(startDateInput, 'startDate', showFieldError, clearFieldError);
+			if (startDateInput?.value) {
+				autoFillFechaFin(noveltyType, startDateInput, endDateInput);
+			}
+			validateDateRange();
+		});
+		startDateInput?.addEventListener('input', () => {
+			validateStartDateAgainstToday(startDateInput, 'startDate', showFieldError, clearFieldError);
+		});
+
 		editStartDateInput?.addEventListener('change', () => {
+			validateStartDateAgainstToday(editStartDateInput, 'startDate', showEditFieldError, clearEditFieldError);
 			autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput);
 			validateEditDateRange();
 		});
 		editStartDateInput?.addEventListener('input', () => {
+			validateStartDateAgainstToday(editStartDateInput, 'startDate', showEditFieldError, clearEditFieldError);
 			autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput);
 		});
 		editEndDateInput?.addEventListener('change', validateEditDateRange);
@@ -2523,6 +2563,8 @@
 				isValid = false;
 				showFieldError('startDate', 'La fecha de inicio es obligatoria.');
 				markInvalid(startDateInput);
+			} else if (!validateStartDateAgainstToday(startDateInput, 'startDate', showFieldError, clearFieldError)) {
+				isValid = false;
 			} else if (['TDE', 'TAE', 'TDP', 'TAP'].includes(selectedType)) {
 				// Validar que la fecha esté dentro del periodo activo
 				if (activePeriodStart && activePeriodEnd) {
@@ -2751,6 +2793,8 @@
 				isValid = false;
 				showEditFieldError('startDate', 'La fecha de inicio es obligatoria.');
 				markInvalid(editStartDateInput);
+			} else if (!validateStartDateAgainstToday(editStartDateInput, 'startDate', showEditFieldError, clearEditFieldError)) {
+				isValid = false;
 			} else if (['TDE', 'TAE', 'TDP', 'TAP'].includes(selectedEditType)) {
 				// Validar que la fecha esté dentro del periodo activo (Edición)
 				if (activePeriodStart && activePeriodEnd) {

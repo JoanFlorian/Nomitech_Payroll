@@ -195,7 +195,7 @@
                     <div>
                         <label for="edit-start-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
                         <div class="relative">
-                            <input id="edit-start-date" name="fecha_inicio" type="date" value="{{ old('fecha_inicio') }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
+                            <input id="edit-start-date" name="fecha_inicio" type="date" value="{{ old('fecha_inicio') }}" min="{{ now(config('app.timezone'))->toDateString() }}" required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition">
                             <div id="edit-start-date-lock" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-amber-500" title="Fecha protegida por periodo cerrado">
                                 <span class="material-icons text-[18px]">lock</span>
                             </div>

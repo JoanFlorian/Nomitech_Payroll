@@ -175,9 +175,11 @@ class TrabajadorController extends Controller
         
         // Generar PDF
         $pdf = Pdf::loadView('trabajador.pdf-desprendible', compact('desprendible', 'devengos', 'deducciones'));
-        
-        $filename = 'desprendible_' . str_replace(' ', '_', $desprendible->periodo->nombre ?? 'periodo') . '.pdf';
-        
+
+        $periodoNombre = $desprendible->periodo->nombre ?? 'periodo';
+        $periodoNombre = preg_replace('/[^A-Za-z0-9_-]+/u', '_', $periodoNombre) ?: 'periodo';
+        $filename = 'desprendible_' . trim($periodoNombre, '_') . '.pdf';
+
         return $this->downloadPdfResponse($pdf, $filename);
     }
     

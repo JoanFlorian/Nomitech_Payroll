@@ -214,6 +214,23 @@ class PilaFileGeneratorService
         Storage::disk('local')->put($rutaArchivo, $contenidoTxt);
 
         if (Schema::hasTable('pila_archivos')) {
+            // Limpiar registros anteriores de este período (mantener solo uno)
+            $archivosAnteriores = DB::table('pila_archivos')
+                ->where('periodo_id', $periodoId)
+                ->where('empresa_id', $empresaId)
+                ->orderByDesc('id')
+                ->get(['id', 'ruta_archivo']);
+
+            // Eliminar archivos físicos y registros anteriores
+            foreach ($archivosAnteriores as $archivo) {
+                $rutaAnterior = (string) ($archivo->ruta_archivo ?? '');
+                if ($rutaAnterior !== '' && Storage::disk('local')->exists($rutaAnterior)) {
+                    Storage::disk('local')->delete($rutaAnterior);
+                }
+                DB::table('pila_archivos')->where('id', $archivo->id)->delete();
+            }
+
+            // Insertar solo el nuevo registro
             DB::table('pila_archivos')->insert([
                 'periodo_id' => $periodoId,
                 'empresa_id' => $empresaId,

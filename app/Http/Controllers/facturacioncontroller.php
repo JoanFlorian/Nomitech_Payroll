@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use App\Models\Empresa;
 use App\Models\Plan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
@@ -295,6 +296,12 @@ class facturacioncontroller extends Controller
     {
         try {
             $pagos = $this->construirConsultaFacturacion($request)->get();
+
+            if ($pagos->isEmpty()) {
+                return redirect()->route('superadmin.facturacion', $request->only(['q', 'estado', 'metodo']))
+                    ->with('warning', 'No hay datos para exportar con los filtros seleccionados.');
+            }
+
             $estadoSeleccionado = $request->query('estado', 'Todos');
             $estadoTexto = match ($estadoSeleccionado) {
                 'paid' => 'Solo pagados',
@@ -317,8 +324,9 @@ class facturacioncontroller extends Controller
             ];
 
             $pdf = Pdf::loadView('superadmin.facturacion-reporte-pdf', $data)->setPaper('a4', 'landscape');
+            $nombreArchivo = $this->buildFacturacionExportFileName($request, 'pdf');
 
-            return $this->downloadPdfResponse($pdf, 'reporte-facturacion-empresas-' . now()->format('Ymd_His') . '.pdf');
+            return $this->downloadPdfResponse($pdf, $nombreArchivo);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error al generar reporte de facturación en PDF: " . $e->getMessage());
             return back()->with('error', 'No fue posible generar el reporte PDF de facturación.');
@@ -329,6 +337,11 @@ class facturacioncontroller extends Controller
     {
         try {
             $pagos = $this->construirConsultaFacturacion($request)->get();
+
+            if ($pagos->isEmpty()) {
+                return redirect()->route('superadmin.facturacion', $request->only(['q', 'estado', 'metodo']))
+                    ->with('warning', 'No hay datos para exportar con los filtros seleccionados.');
+            }
 
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
@@ -388,12 +401,33 @@ class facturacioncontroller extends Controller
             $sheet->getStyle('A1:I1')->getFont()->setBold(true);
             $sheet->getStyle('I2:I' . max(2, $fila - 1))->getNumberFormat()->setFormatCode('#,##0.00');
 
-            $nombreArchivo = 'reporte-facturacion-empresas-' . now()->format('Ymd_His') . '.xlsx';
+            $nombreArchivo = $this->buildFacturacionExportFileName($request, 'xlsx');
 
             return $this->streamSpreadsheetDownload($spreadsheet, $nombreArchivo);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error al generar reporte de facturación en Excel: " . $e->getMessage());
             return back()->with('error', 'No fue posible generar el reporte Excel de facturación.');
         }
+    }
+
+    private function buildFacturacionExportFileName(Request $request, string $extension): string
+    {
+        $scope = match ((string) $request->query('estado', 'Todos')) {
+            'paid' => 'transacciones_pagadas',
+            'pending' => 'transacciones_pendientes',
+            'failed' => 'transacciones_fallidas',
+            default => 'transacciones_general',
+        };
+
+        $metodo = trim((string) $request->query('metodo', ''));
+        if ($metodo !== '' && strcasecmp($metodo, 'Todos') !== 0) {
+            $scope .= '_' . Str::slug($metodo, '_');
+        }
+
+        if (trim((string) $request->query('q', '')) !== '') {
+            $scope .= '_filtrado';
+        }
+
+        return $scope . '_' . now()->format('Ymd_His') . '.' . $extension;
     }
 }

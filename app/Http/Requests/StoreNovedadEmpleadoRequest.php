@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Novedad;
 use App\Models\PeriodoLiquidacion;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,8 @@ class StoreNovedadEmpleadoRequest extends FormRequest
         'INC',
         'LIC',
     ];
+
+    private const TIPOS_REQUIEREN_SOPORTE_MEDICO = ['INC', 'IGE', 'IRL'];
 
     public function authorize(): bool
     {
@@ -66,6 +69,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'licencia_remunerada' => 'bail|nullable|boolean',
             'tipo_licencia' => 'bail|nullable|string|in:luto,calamidad_domestica,permiso_especial,remunerada,no_remunerada',
             'certificado_medico' => 'bail|nullable|boolean',
+            'soporte_medico_archivo' => 'bail|nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'id_eps' => 'bail|nullable|integer|exists:eps,id_eps',
             'id_afp' => 'bail|nullable|integer|exists:afp,id_afp',
             'id_arl' => 'bail|nullable|integer|exists:arl,id_arl',
@@ -107,6 +111,9 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'valor_manual.numeric' => 'El valor manual debe ser numérico.',
             'valor_manual.min' => 'El valor manual no puede ser negativo.',
             'tipo_licencia.in' => 'El tipo de licencia seleccionado no es válido.',
+            'soporte_medico_archivo.file' => 'Debe adjuntar un archivo válido como soporte médico.',
+            'soporte_medico_archivo.mimes' => 'El soporte médico debe estar en formato PDF, JPG o PNG.',
+            'soporte_medico_archivo.max' => 'El soporte médico no puede superar los 5 MB.',
             'id_eps.exists' => 'La EPS seleccionada no es válida.',
             'id_afp.exists' => 'La AFP seleccionada no es válida.',
             'id_arl.exists' => 'La ARL seleccionada no es válida.',
@@ -157,6 +164,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'pago_manual' => $this->normalizeNumeric($this->input('pago_manual', $this->input('pago'))),
             'valor_manual' => $this->normalizeNumeric($this->input('valor_manual', $this->input('pago_manual', $this->input('pago')))),
             'tipo_licencia' => strtolower(trim((string) $this->input('tipo_licencia', ''))),
+            'certificado_medico' => $this->boolean('certificado_medico') || $this->hasFile('soporte_medico_archivo'),
         ]);
     }
 
@@ -170,6 +178,10 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             $pagoManual = $this->input('valor_manual', $this->input('pago_manual'));
             $tipoLicencia = strtolower(trim((string) $this->input('tipo_licencia')));
             $certificadoMedico = filter_var($this->input('certificado_medico', false), FILTER_VALIDATE_BOOLEAN);
+            $requiereSoporteMedico = in_array($tipo, self::TIPOS_REQUIEREN_SOPORTE_MEDICO, true);
+            $tieneArchivoSoporte = $this->hasFile('soporte_medico_archivo');
+            $tieneSoportePersistido = $this->hasExistingMedicalSupport();
+            $esPreview = $this->routeIs('novedades.calculo.preview');
 
             $requiereCantidad = !in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'], true);
 
@@ -237,9 +249,13 @@ class StoreNovedadEmpleadoRequest extends FormRequest
                 $validator->errors()->add('tipo_licencia', 'Debe seleccionar un tipo de licencia válido.');
             }
 
-            // Validación: certificado médico para incapacidades
-            if (in_array($tipo, ['IGE', 'IRL', 'INC'], true) && !$certificadoMedico) {
+            // Validación: soporte médico obligatorio para incapacidades
+            if ($requiereSoporteMedico && !$certificadoMedico && !$tieneArchivoSoporte && !$tieneSoportePersistido) {
                 $validator->errors()->add('certificado_medico', 'La incapacidad debe contar con certificado médico verificado.');
+            }
+
+            if ($requiereSoporteMedico && !$esPreview && !$tieneArchivoSoporte && !$tieneSoportePersistido) {
+                $validator->errors()->add('soporte_medico_archivo', 'Debe adjuntar el certificado médico en PDF, JPG o PNG para registrar esta incapacidad.');
             }
 
             // Validación: valor manual para VSP
@@ -361,6 +377,24 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             }
 
         });
+    }
+
+    private function hasExistingMedicalSupport(): bool
+    {
+        if ($this->routeIs('novedades.calculo.preview')) {
+            return false;
+        }
+
+        $novedadId = $this->route('id_novedad') ?? $this->input('edit_novedad_id');
+
+        if (!$novedadId || !is_numeric($novedadId)) {
+            return false;
+        }
+
+        return Novedad::query()
+            ->whereKey((int) $novedadId)
+            ->whereNotNull('soporte_medico_path')
+            ->exists();
     }
 
     private function normalizeTipoNovedad($value): string

@@ -229,6 +229,8 @@
 								data-tipo-licencia="{{ $novedad->tipo_licencia ?? '' }}"
 								data-tipo-incapacidad="{{ $novedad->tipo_incapacidad ?? '' }}"
 								data-certificado-medico="{{ (int) ($novedad->certificado_medico ?? 0) }}"
+								data-has-support-file="{{ !empty($novedad->soporte_medico_path) ? 1 : 0 }}"
+								data-soporte-medico-nombre="{{ $novedad->soporte_medico_original_name ?? '' }}"
 								data-id-eps="{{ $novedad->salario?->contrato?->id_eps ?? '' }}"
 								data-id-afp="{{ $novedad->salario?->contrato?->id_afp ?? '' }}"
 								data-id-arl="{{ $novedad->salario?->contrato?->id_arl ?? '' }}"
@@ -438,6 +440,7 @@
 		const tipoLicenciaInput = document.getElementById('tipo-licencia');
 		const certificadoMedicoWrap = document.getElementById('certificado-medico-wrap');
 		const certificadoMedicoInput = document.getElementById('certificado-medico');
+		const medicalSupportFileInput = document.getElementById('medical-support-file');
 		const epsWrap = document.getElementById('eps-wrap');
 		const epsIdInput = document.getElementById('eps-id');
 		const afpWrap = document.getElementById('afp-wrap');
@@ -490,6 +493,9 @@
 		const editTipoLicenciaInput = document.getElementById('edit-tipo-licencia');
 		const editCertificadoMedicoWrap = document.getElementById('edit-certificado-medico-wrap');
 		const editCertificadoMedicoInput = document.getElementById('edit-certificado-medico');
+		const editMedicalSupportFileInput = document.getElementById('edit-medical-support-file');
+		const editExistingMedicalSupportInput = document.getElementById('edit-existing-medical-support');
+		const editMedicalSupportCurrentNote = document.getElementById('edit-medical-support-current-note');
 		const editEpsWrap = document.getElementById('edit-eps-wrap');
 		const editEpsIdInput = document.getElementById('edit-eps-id');
 		const editAfpWrap = document.getElementById('edit-afp-wrap');
@@ -510,6 +516,7 @@
 			startDate: document.getElementById('edit-start-date-error'),
 			endDate: document.getElementById('edit-end-date-error'),
 			payment: document.getElementById('edit-payment-error'),
+			medicalSupport: document.getElementById('edit-medical-support-file-error'),
 		};
 
 		const errorElements = {
@@ -521,6 +528,7 @@
 			startDate: document.getElementById('start-date-error'),
 			endDate: document.getElementById('end-date-error'),
 			payment: document.getElementById('payment-error'),
+			medicalSupport: document.getElementById('medical-support-file-error'),
 		};
 
 		const openModal = () => {
@@ -770,7 +778,7 @@
 			const esInformativo = ['SLN', 'LIC'].includes(tipoNormalizado) && !esRemunerada;
 			const tipoLicencia = tipoLicenciaInput?.value || '';
 			const tipoIncapacidad = tipoIncapacidadInput?.value || '';
-			const certificadoMedico = Boolean(certificadoMedicoInput?.checked);
+			const certificadoMedico = Boolean(certificadoMedicoInput?.checked || medicalSupportFileInput?.files?.length);
 			const idEps = epsIdInput?.value || '';
 			const idAfp = afpIdInput?.value || '';
 			const idArl = arlIdInput?.value || '';
@@ -866,7 +874,7 @@
 			const esInformativo = ['SLN', 'LIC'].includes(tipoNormalizado) && !esRemunerada;
 			const tipoLicencia = editTipoLicenciaInput?.value || '';
 			const tipoIncapacidad = editTipoIncapacidadInput?.value || '';
-			const certificadoMedico = Boolean(editCertificadoMedicoInput?.checked);
+			const certificadoMedico = Boolean(editCertificadoMedicoInput?.checked || editMedicalSupportFileInput?.files?.length || String(editExistingMedicalSupportInput?.value || '0') === '1');
 			const idEps = editEpsIdInput?.value || '';
 			const idAfp = editAfpIdInput?.value || '';
 			const idArl = editArlIdInput?.value || '';
@@ -1242,7 +1250,7 @@
 		const clearAllErrors = () => {
 			Object.keys(errorElements).forEach(clearFieldError);
 
-			[employeeSearch, noveltyType, quantityDaysInput, quantityHoursInput, startDateInput, endDateInput, paymentDisplayInput]
+			[employeeSearch, noveltyType, quantityDaysInput, quantityHoursInput, startDateInput, endDateInput, paymentDisplayInput, medicalSupportFileInput]
 				.forEach((input) => clearInvalid(input));
 		};
 
@@ -1262,8 +1270,39 @@
 
 		const clearAllEditErrors = () => {
 			Object.keys(editErrorElements).forEach(clearEditFieldError);
-			[editNoveltyTypeInput, editQuantityDaysInput, editQuantityHoursInput, editStartDateInput, editEndDateInput, editPaymentDisplayInput]
+			[editNoveltyTypeInput, editQuantityDaysInput, editQuantityHoursInput, editStartDateInput, editEndDateInput, editPaymentDisplayInput, editMedicalSupportFileInput]
 				.forEach((input) => clearInvalid(input));
+		};
+
+		const medicalSupportTypes = ['IGE', 'IRL', 'INC'];
+		const medicalSupportMaxBytes = 5 * 1024 * 1024;
+		const medicalSupportExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+		const requiresMedicalSupport = (tipo) => medicalSupportTypes.includes(normalizeNoveltyType(tipo));
+
+		const validateMedicalSupportFileInput = (fileInput, hasExistingSupport, errorHandler, fieldKey) => {
+			if (!fileInput?.files?.length) {
+				if (hasExistingSupport) {
+					return true;
+				}
+
+				errorHandler(fieldKey, 'Debe adjuntar el certificado médico para esta novedad.');
+				return false;
+			}
+
+			const [file] = fileInput.files;
+			const extension = (file.name.split('.').pop() || '').toLowerCase();
+
+			if (!medicalSupportExtensions.includes(extension)) {
+				errorHandler(fieldKey, 'El soporte médico debe estar en formato PDF, JPG o PNG.');
+				return false;
+			}
+
+			if (file.size > medicalSupportMaxBytes) {
+				errorHandler(fieldKey, 'El soporte médico no puede superar los 5 MB.');
+				return false;
+			}
+
+			return true;
 		};
 
 		const getSelectedCreateUnit = () => {
@@ -1321,8 +1360,18 @@
 			if (tipoIncapacidadWrap) {
 				tipoIncapacidadWrap.classList.toggle('hidden', !(tipo === 'INC'));
 			}
+			const mustShowMedicalSupport = requiresMedicalSupport(tipo);
 			if (certificadoMedicoWrap) {
-				certificadoMedicoWrap.classList.toggle('hidden', !['IGE', 'IRL', 'INC'].includes(tipo));
+				certificadoMedicoWrap.classList.toggle('hidden', !mustShowMedicalSupport);
+			}
+			if (medicalSupportFileInput) {
+				medicalSupportFileInput.required = mustShowMedicalSupport;
+				if (!mustShowMedicalSupport) {
+					medicalSupportFileInput.value = '';
+				}
+			}
+			if (certificadoMedicoInput) {
+				certificadoMedicoInput.checked = mustShowMedicalSupport ? Boolean(certificadoMedicoInput.checked || medicalSupportFileInput?.files?.length) : false;
 			}
 			if (epsWrap) {
 				const isTransferEps = ['TDE', 'TAE'].includes(tipo);
@@ -1514,8 +1563,24 @@
 			if (editTipoIncapacidadWrap) {
 				editTipoIncapacidadWrap.classList.toggle('hidden', !(tipo === 'INC'));
 			}
+			const mustShowMedicalSupport = requiresMedicalSupport(tipo);
+			const hasExistingMedicalSupport = String(editExistingMedicalSupportInput?.value || '0') === '1';
 			if (editCertificadoMedicoWrap) {
-				editCertificadoMedicoWrap.classList.toggle('hidden', !['IGE', 'IRL', 'INC'].includes(tipo));
+				editCertificadoMedicoWrap.classList.toggle('hidden', !mustShowMedicalSupport);
+			}
+			if (editMedicalSupportFileInput) {
+				editMedicalSupportFileInput.required = mustShowMedicalSupport && !hasExistingMedicalSupport;
+				if (!mustShowMedicalSupport) {
+					editMedicalSupportFileInput.value = '';
+				}
+			}
+			if (editMedicalSupportCurrentNote) {
+				editMedicalSupportCurrentNote.classList.toggle('hidden', !mustShowMedicalSupport || !hasExistingMedicalSupport);
+			}
+			if (editCertificadoMedicoInput) {
+				editCertificadoMedicoInput.checked = mustShowMedicalSupport
+					? Boolean(editCertificadoMedicoInput.checked || editMedicalSupportFileInput?.files?.length || hasExistingMedicalSupport)
+					: false;
 			}
 			if (editEpsWrap) {
 				editEpsWrap.classList.toggle('hidden', !['TDE', 'TAE'].includes(tipo));
@@ -1902,6 +1967,24 @@
 			}
 		});
 
+		medicalSupportFileInput?.addEventListener('change', () => {
+			clearFieldError('medicalSupport');
+			clearInvalid(medicalSupportFileInput);
+			if (certificadoMedicoInput) {
+				certificadoMedicoInput.checked = Boolean(medicalSupportFileInput.files?.length);
+			}
+			updateCreateEstimatedValue();
+		});
+
+		editMedicalSupportFileInput?.addEventListener('change', () => {
+			clearEditFieldError('medicalSupport');
+			clearInvalid(editMedicalSupportFileInput);
+			if (editCertificadoMedicoInput && editMedicalSupportFileInput.files?.length) {
+				editCertificadoMedicoInput.checked = true;
+			}
+			updateEditEstimatedValue();
+		});
+
 		const setEditModalData = (data) => {
 			editNovedadIdInput.value = data.id || '';
 			editDocEmpleadoInput.value = data.doc || '';
@@ -1980,8 +2063,19 @@
 			if (editTipoIncapacidadInput) {
 				editTipoIncapacidadInput.value = data.tipoIncapacidad || '';
 			}
+			const hasSupportFile = String(data.hasSupportFile ?? '0') === '1';
+			if (editExistingMedicalSupportInput) {
+				editExistingMedicalSupportInput.value = hasSupportFile ? '1' : '0';
+			}
+			if (editMedicalSupportFileInput) {
+				editMedicalSupportFileInput.value = '';
+			}
+			if (editMedicalSupportCurrentNote) {
+				const supportName = data.soporteMedicoNombre || 'un archivo previamente cargado';
+				editMedicalSupportCurrentNote.textContent = `Ya existe un soporte médico asociado (${supportName}). Solo adjunta uno nuevo si deseas reemplazarlo.`;
+			}
 			if (editCertificadoMedicoInput) {
-				editCertificadoMedicoInput.checked = String(data.certificadoMedico || '0') === '1';
+				editCertificadoMedicoInput.checked = String(data.certificadoMedico ?? '0') === '1' || hasSupportFile;
 			}
 			if (editEpsIdInput) {
 				editEpsIdInput.value = data.idEps || '';
@@ -2044,6 +2138,8 @@
 					tipoLicencia: editButton.dataset.tipoLicencia,
 					tipoIncapacidad: editButton.dataset.tipoIncapacidad,
 					certificadoMedico: editButton.dataset.certificadoMedico,
+					hasSupportFile: editButton.dataset.hasSupportFile,
+					soporteMedicoNombre: editButton.dataset.soporteMedicoNombre,
 					idEps: editButton.dataset.idEps,
 					idAfp: editButton.dataset.idAfp,
 					idArl: editButton.dataset.idArl,
@@ -2116,6 +2212,8 @@
 					tipoLicencia: button.dataset.tipoLicencia,
 					tipoIncapacidad: button.dataset.tipoIncapacidad,
 					certificadoMedico: button.dataset.certificadoMedico,
+					hasSupportFile: button.dataset.hasSupportFile,
+					soporteMedicoNombre: button.dataset.soporteMedicoNombre,
 					idEps: button.dataset.idEps,
 					idAfp: button.dataset.idAfp,
 					idArl: button.dataset.idArl,
@@ -2272,9 +2370,16 @@
 				isValid = false;
 				showFieldError('noveltyType', 'Debe seleccionar el tipo de licencia.');
 			}
-			if (['IGE', 'IRL', 'INC'].includes(selectedType) && !certificadoMedicoInput?.checked) {
-				isValid = false;
-				showFieldError('noveltyType', 'La incapacidad requiere certificado médico.');
+			if (requiresMedicalSupport(selectedType)) {
+				clearFieldError('medicalSupport');
+				const medicalSupportValid = validateMedicalSupportFileInput(medicalSupportFileInput, false, showFieldError, 'medicalSupport');
+				if (!medicalSupportValid) {
+					isValid = false;
+					markInvalid(medicalSupportFileInput);
+				}
+				if (certificadoMedicoInput && medicalSupportValid) {
+					certificadoMedicoInput.checked = true;
+				}
 			}
 			if (['TDE', 'TAE'].includes(selectedType)) {
 				if (!epsIdInput?.value) {
@@ -2485,9 +2590,17 @@
 				isValid = false;
 				showEditFieldError('noveltyType', 'Debe seleccionar el tipo de licencia.');
 			}
-			if (['IGE', 'IRL', 'INC'].includes(selectedEditType) && !editCertificadoMedicoInput?.checked) {
-				isValid = false;
-				showEditFieldError('noveltyType', 'La incapacidad requiere certificado médico.');
+			if (requiresMedicalSupport(selectedEditType)) {
+				clearEditFieldError('medicalSupport');
+				const hasExistingMedicalSupport = String(editExistingMedicalSupportInput?.value || '0') === '1';
+				const medicalSupportValid = validateMedicalSupportFileInput(editMedicalSupportFileInput, hasExistingMedicalSupport, showEditFieldError, 'medicalSupport');
+				if (!medicalSupportValid) {
+					isValid = false;
+					markInvalid(editMedicalSupportFileInput);
+				}
+				if (editCertificadoMedicoInput && medicalSupportValid) {
+					editCertificadoMedicoInput.checked = true;
+				}
 			}
 			if (['TDE', 'TAE'].includes(selectedEditType)) {
 				if (!editEpsIdInput?.value) {
@@ -2714,6 +2827,8 @@
 					tipoLicencia: oldEditData.tipo_licencia || sourceButton.dataset.tipoLicencia,
 					tipoIncapacidad: oldEditData.tipo_incapacidad || sourceButton.dataset.tipoIncapacidad,
 					certificadoMedico: oldEditData.certificado_medico || sourceButton.dataset.certificadoMedico,
+					hasSupportFile: sourceButton.dataset.hasSupportFile,
+					soporteMedicoNombre: sourceButton.dataset.soporteMedicoNombre,
 					idEps: oldEditData.id_eps || sourceButton.dataset.idEps,
 					idAfp: oldEditData.id_afp || sourceButton.dataset.idAfp,
 					idArl: oldEditData.id_arl || sourceButton.dataset.idArl,

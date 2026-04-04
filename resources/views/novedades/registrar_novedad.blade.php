@@ -10,7 +10,7 @@
 			</button>
 		</div>
 
-		<form id="novelty-form" action="{{ route('novedades.store') }}" method="POST" class="relative z-10">
+		<form id="novelty-form" action="{{ route('novedades.store') }}" method="POST" enctype="multipart/form-data" class="relative z-10">
 			@csrf
 			<div class="p-6 md:p-8 space-y-5 max-h-[70vh] overflow-y-auto">
 				<div>
@@ -152,10 +152,27 @@
 					</div>
 
 					<div id="certificado-medico-wrap" class="hidden md:col-span-2">
-						<label class="inline-flex items-center gap-2 text-sm text-gray-700">
-							<input type="checkbox" id="certificado-medico" name="certificado_medico" value="1" {{ old('certificado_medico') ? 'checked' : '' }}>
-							<span>Certificado médico adjunto/verificado</span>
-						</label>
+						<div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-3">
+							<div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+								<div>
+									<label for="medical-support-file" class="block text-sm font-semibold text-gray-700">Certificado médico / soporte clínico <span class="text-red-500">*</span></label>
+									<p class="mt-1 text-xs text-gray-500">Obligatorio para novedades de incapacidad (`INC`, `IGE`, `IRL`). Formatos permitidos: PDF, JPG y PNG. Tamaño máximo: 5 MB.</p>
+								</div>
+								<label class="inline-flex items-center gap-2 text-xs text-gray-600">
+									<input type="checkbox" id="certificado-medico" name="certificado_medico" value="1" {{ old('certificado_medico') ? 'checked' : '' }}>
+									<span>Soporte verificado</span>
+								</label>
+							</div>
+
+							<input id="medical-support-file" name="soporte_medico_archivo" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100">
+							<p id="medical-support-file-error" class="mt-1 text-xs text-red-600 hidden"></p>
+							@error('soporte_medico_archivo')
+								<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+							@enderror
+							@error('certificado_medico')
+								<p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+							@enderror
+						</div>
 					</div>
 
 					<div id="eps-wrap" class="hidden">

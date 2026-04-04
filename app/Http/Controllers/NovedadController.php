@@ -13,7 +13,9 @@ use App\Models\TipoNovedad;
 use App\Services\CalculoNovedadService;
 use App\Models\PeriodoLiquidacion;
 use App\Services\NominaCalculatorService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 
 class NovedadController extends Controller
@@ -335,6 +337,7 @@ class NovedadController extends Controller
 
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
         $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, $periodo);
+        $payload = $this->attachMedicalSupportFilePayload($request, $payload);
 
         // Si es traslado, documentar la entidad origen y destino en las observaciones
         $tipoNovRaw = strtoupper((string) $data['tipo_novedad']);
@@ -435,6 +438,7 @@ class NovedadController extends Controller
 
         $tipoNovedad = $this->resolveTipoNovedad((string) $data['tipo_novedad']);
         $payload = $this->buildNovedadPayload($data, $salario, $tipoNovedad->id_tipo_novedad, $tipoNovedad->nombre, null);
+        $payload = $this->attachMedicalSupportFilePayload($request, $payload, $novedad);
 
         // Si es traslado, re-documentar la entidad origen y destino
         $tipoNovRaw = strtoupper((string) $data['tipo_novedad']);
@@ -553,6 +557,7 @@ class NovedadController extends Controller
         }
 
         $doc = $novedad->empleado_id;
+        $this->deleteMedicalSupportFile($novedad->soporte_medico_path ?? null);
         $novedad->delete();
 
         $this->refreshPayrollRecalculation((string) $doc);
@@ -639,6 +644,48 @@ class NovedadController extends Controller
             'afecta_nomina' => true,
             'periodo_aplicado_id' => $periodo?->id_periodo ?? $salario->id_periodo ?? null,
         ];
+    }
+
+    private function attachMedicalSupportFilePayload(Request $request, array $payload, ?Novedad $existingNovedad = null): array
+    {
+        if ($request->hasFile('soporte_medico_archivo')) {
+            $archivo = $request->file('soporte_medico_archivo');
+
+            if ($existingNovedad && !empty($existingNovedad->soporte_medico_path)) {
+                $this->deleteMedicalSupportFile($existingNovedad->soporte_medico_path);
+            }
+
+            $path = $archivo->store('novedades/soportes_medicos', 'public');
+
+            $payload['certificado_medico'] = true;
+            $payload['soporte_medico_path'] = $path;
+            $payload['soporte_medico_original_name'] = $archivo->getClientOriginalName();
+            $payload['soporte_medico_mime'] = $archivo->getClientMimeType();
+            $payload['soporte_medico_size'] = (int) $archivo->getSize();
+
+            return $payload;
+        }
+
+        if ($existingNovedad && !empty($existingNovedad->soporte_medico_path)) {
+            $payload['certificado_medico'] = true;
+            $payload['soporte_medico_path'] = $existingNovedad->soporte_medico_path;
+            $payload['soporte_medico_original_name'] = $existingNovedad->soporte_medico_original_name;
+            $payload['soporte_medico_mime'] = $existingNovedad->soporte_medico_mime;
+            $payload['soporte_medico_size'] = $existingNovedad->soporte_medico_size;
+        }
+
+        return $payload;
+    }
+
+    private function deleteMedicalSupportFile(?string $path): void
+    {
+        if (!$path) {
+            return;
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     private function aplicarEfectosNovedad(array $data, Salario $salario): void

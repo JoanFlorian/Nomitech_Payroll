@@ -7,7 +7,7 @@
             </button>
         </div>
 
-        <form id="edit-novelty-form" action="{{ route('novedades.update', ['id_novedad' => 0]) }}" method="POST" class="relative z-10">
+        <form id="edit-novelty-form" action="{{ route('novedades.update', ['id_novedad' => 0]) }}" method="POST" enctype="multipart/form-data" class="relative z-10">
             @csrf
             @method('PUT')
             <input type="hidden" id="edit-novedad-id" name="edit_novedad_id" value="{{ old('edit_novedad_id') }}">
@@ -16,6 +16,7 @@
             <input type="hidden" id="edit-vacaciones-balance" name="vacaciones_balance" value="{{ old('vacaciones_balance') }}">
             <input type="hidden" id="edit-vacaciones-registradas" name="vacaciones_registradas" value="0">
             <input type="hidden" id="edit-original-days" value="0">
+            <input type="hidden" id="edit-existing-medical-support" value="0">
 
             <div class="p-6 md:p-8 space-y-5 max-h-[70vh] overflow-y-auto">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -128,10 +129,28 @@
                     </div>
 
                     <div id="edit-certificado-medico-wrap" class="hidden md:col-span-2">
-                        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                            <input type="checkbox" id="edit-certificado-medico" name="certificado_medico" value="1" {{ old('certificado_medico') ? 'checked' : '' }}>
-                            <span>Certificado médico adjunto/verificado</span>
-                        </label>
+                        <div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-3">
+                            <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                    <label for="edit-medical-support-file" class="block text-sm font-semibold text-gray-700">Certificado médico / soporte clínico <span class="text-red-500">*</span></label>
+                                    <p class="mt-1 text-xs text-gray-500">Adjunta el soporte en PDF, JPG o PNG. Máximo 5 MB. Si ya existe uno cargado, solo sube un archivo nuevo para reemplazarlo.</p>
+                                </div>
+                                <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                                    <input type="checkbox" id="edit-certificado-medico" name="certificado_medico" value="1" {{ old('certificado_medico') ? 'checked' : '' }}>
+                                    <span>Soporte verificado</span>
+                                </label>
+                            </div>
+
+                            <input id="edit-medical-support-file" name="soporte_medico_archivo" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100">
+                            <p id="edit-medical-support-current-note" class="hidden text-xs text-emerald-700">Ya existe un soporte médico asociado. Solo adjunta uno nuevo si deseas reemplazarlo.</p>
+                            <p id="edit-medical-support-file-error" class="mt-1 text-xs text-red-600 hidden"></p>
+                            @error('soporte_medico_archivo')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                            @error('certificado_medico')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
 
                     <div id="edit-eps-wrap" class="hidden">

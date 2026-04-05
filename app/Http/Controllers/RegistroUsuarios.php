@@ -502,6 +502,24 @@ class RegistroUsuarios extends Controller
             // ── LABOR CONTINUITY CHECK ──
             $this->terminationService->handleLaborContinuity($nuevoContrato);
 
+            // Invalidar hash PILA si se cambió alguna entidad de seguridad social en la renovación
+            $entidadesSSocial = ['id_eps', 'id_afp', 'id_arl', 'id_caja'];
+            $entidadesCambiadas = false;
+            
+            foreach ($entidadesSSocial as $entidad) {
+                if (isset($data[$entidad]) && $data[$entidad] !== $contratoAnterior->{$entidad}) {
+                    $entidadesCambiadas = true;
+                    break;
+                }
+            }
+            
+            if ($entidadesCambiadas && Schema::hasTable('planilla_pila') && Schema::hasColumn('planilla_pila', 'datos_hash')) {
+                DB::table('planilla_pila')
+                    ->where('id_empresa', $companyId)
+                    ->where('estado', 'generada')
+                    ->update(['datos_hash' => null]);
+            }
+
             DB::commit();
 
             return response()->json([
@@ -645,7 +663,26 @@ class RegistroUsuarios extends Controller
             }
 
             if ($contrato && !empty($contratoData)) {
+                // Verificar si se cambió alguna entidad de seguridad social
+                $entidadesCambiadas = false;
+                $entidadesSSocial = ['id_eps', 'id_afp', 'id_arl', 'id_caja'];
+                
+                foreach ($entidadesSSocial as $entidad) {
+                    if (isset($contratoData[$entidad]) && $contratoData[$entidad] !== $contrato->{$entidad}) {
+                        $entidadesCambiadas = true;
+                        break;
+                    }
+                }
+                
                 $contrato->update($contratoData);
+                
+                // Si cambió alguna entidad de seguridad social, invalidar hash PILA para permitir regeneración
+                if ($entidadesCambiadas && Schema::hasTable('planilla_pila') && Schema::hasColumn('planilla_pila', 'datos_hash')) {
+                    DB::table('planilla_pila')
+                        ->where('id_empresa', $contrato->id_empresa)
+                        ->where('estado', 'generada')
+                        ->update(['datos_hash' => null]);
+                }
             } elseif (!$contrato && !empty($contratoData)) {
                 // Create new contrato if none exists for this usuario
                 $companyId = $this->resolveCompanyId();

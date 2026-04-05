@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Contrato;
 use App\Models\HoraRecargoExtra;
 use App\Models\NotaAjuste;
+use App\Models\NotaAjusteDetalle;
 use App\Models\Salario;
 use App\Models\TipoHoraRecargo;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +24,24 @@ class NotaAjusteController extends Controller
         'bonificaciones',
         'comisiones',
         'otros_devengos',
+        'eps',
+        'afp',
+        'aporte_fp',
+        'retencion_fuente',
+        'embargo_fiscal',
+        'pension_voluntaria',
+    ];
+
+    /** Campos que constituyen base de seguridad social (son salariales) */
+    private const CAMPOS_SALARIALES = [
+        'valor_horas_extras_recargos',
+        'bonificaciones',
+        'comisiones',
+        'otros_devengos',
+    ];
+
+    /** Campos de deducción: al incrementar, reducen el neto del empleado */
+    private const CAMPOS_DEDUCCION = [
         'eps',
         'afp',
         'aporte_fp',
@@ -126,7 +146,7 @@ class NotaAjusteController extends Controller
 
         abort_unless($this->canAccessAdminNote($notaAjuste), 403);
 
-        $notaAjuste->load(['usuario', 'salario.periodo', 'salario.contrato']);
+        $notaAjuste->load(['usuario', 'salario.periodo', 'salario.contrato', 'detalles']);
 
         return view('admin.notas-ajuste.show', [
             'nota' => $notaAjuste,
@@ -176,11 +196,66 @@ class NotaAjusteController extends Controller
 
         abort_unless($this->canAccessAdminNote($notaAjuste), 403);
 
-        $notaAjuste->loadMissing(['salario.periodo', 'salario.contrato']);
+        $notaAjuste->loadMissing(['salario.periodo', 'salario.contrato', 'detalles']);
 
         abort_unless($notaAjuste->salario !== null, 404, 'No se encontró el desprendible asociado a la nota.');
         abort_if($notaAjuste->estado === NotaAjuste::ESTADO_OMITIDO, 422, 'No se pueden aplicar ajustes sobre una nota omitida.');
 
+        $salario  = $notaAjuste->salario;
+        $adminDoc = (string) (Auth::user()->doc ?? Auth::id());
+        $ahora    = now();
+
+        // ── PATH A: detalles pre-guardados → usarlos directamente (más seguro) ─
+        $detallesGuardados = $notaAjuste->detalles;
+
+        if ($detallesGuardados->isNotEmpty()) {
+            $before  = [];
+            $updates = [];
+
+            foreach ($detallesGuardados as $detalle) {
+                $campo         = $detalle->campo;
+                $valorActual   = round((float) ($salario->{$campo} ?? 0), 2);
+                $valorCorregido = round((float) $detalle->valor_corregido, 2);
+
+                if (abs($valorActual - $valorCorregido) < 0.00001) {
+                    continue;
+                }
+
+                $before[$campo]  = $valorActual;
+                $updates[$campo] = $valorCorregido;
+            }
+
+            if (empty($updates)) {
+                return redirect()
+                    ->route('admin.notas-ajuste.show', $notaAjuste)
+                    ->with('warning', 'No se aplicaron cambios porque las correcciones guardadas coinciden con los valores actuales.');
+            }
+
+            DB::transaction(function () use ($salario, $updates, $notaAjuste, $adminDoc, $ahora) {
+                $salario->update($updates);
+
+                NotaAjusteDetalle::where('nota_id', $notaAjuste->id)
+                    ->update(['aprobado_por' => $adminDoc, 'aprobado_en' => $ahora]);
+            });
+
+            Log::info('Ajuste aplicado desde nota_ajuste_detalles pre-guardados', [
+                'nota_ajuste_id'     => $notaAjuste->id,
+                'id_salario'         => $salario->id_salario,
+                'usuario_trabajador' => $notaAjuste->usuario_id,
+                'aprobado_por'       => $adminDoc,
+                'id_empresa'         => $notaAjuste->id_empresa,
+                'periodo_id'         => $salario->id_periodo,
+                'before'             => $before,
+                'after'              => $updates,
+                'timestamp'          => $ahora->toDateTimeString(),
+            ]);
+
+            return redirect()
+                ->route('admin.notas-ajuste.show', $notaAjuste)
+                ->with('success', 'Ajuste de pago aplicado correctamente al desprendible relacionado.');
+        }
+
+        // ── PATH B: sin detalles pre-guardados → comportamiento original ────────
         $request->merge([
             'ajuste' => $this->normalizeAdjustmentValues((array) $request->input('ajuste', [])),
         ]);
@@ -204,7 +279,6 @@ class NotaAjusteController extends Controller
             'motivo_ajuste.max' => 'El motivo del ajuste no puede superar 500 caracteres.',
         ]);
 
-        $salario = $notaAjuste->salario;
         $camposSeleccionados = array_values(array_unique($validated['campos_a_ajustar'] ?? []));
         $detallesAjuste = [
             'hasData' => false,
@@ -215,6 +289,7 @@ class NotaAjusteController extends Controller
 
         $before = [];
         $updates = [];
+        $detallesParaAuditoria = [];
 
         if (in_array('valor_horas_extras_recargos', $camposSeleccionados, true)) {
             $detallesAjuste = $this->buildDetalleHorasRecargosFromRequest($request, $salario);
@@ -229,6 +304,16 @@ class NotaAjusteController extends Controller
                 if (abs($valorActualHorasRecargos - $nuevoTotal) >= 0.00001) {
                     $before['valor_horas_extras_recargos'] = $valorActualHorasRecargos;
                     $updates['valor_horas_extras_recargos'] = $nuevoTotal;
+
+                    $detallesParaAuditoria['valor_horas_extras_recargos'] = [
+                        'valor_original'  => round($valorActualHorasRecargos, 2),
+                        'valor_corregido' => round($nuevoTotal, 2),
+                        'diferencia'      => round($nuevoTotal - $valorActualHorasRecargos, 2),
+                        'es_salarial'     => true,
+                        'guardado_por'    => $adminDoc,
+                        'aprobado_por'    => $adminDoc,
+                        'aprobado_en'     => $ahora,
+                    ];
                 }
 
                 if (abs($valorActualHorasExtra - $nuevoHorasExtra) >= 0.00001) {
@@ -272,6 +357,16 @@ class NotaAjusteController extends Controller
 
             $before[$campo] = $valorActual;
             $updates[$campo] = $nuevoValor;
+
+            $detallesParaAuditoria[$campo] = [
+                'valor_original'  => round($valorActual, 2),
+                'valor_corregido' => round($nuevoValor, 2),
+                'diferencia'      => round($nuevoValor - $valorActual, 2),
+                'es_salarial'     => in_array($campo, self::CAMPOS_SALARIALES, true),
+                'guardado_por'    => $adminDoc,
+                'aprobado_por'    => $adminDoc,
+                'aprobado_en'     => $ahora,
+            ];
         }
 
         if (empty($updates)) {
@@ -280,7 +375,7 @@ class NotaAjusteController extends Controller
                 ->with('warning', 'No se aplicaron cambios porque los valores enviados coinciden con los actuales o están vacíos.');
         }
 
-        DB::transaction(function () use ($salario, $updates, $detallesAjuste) {
+        DB::transaction(function () use ($salario, $updates, $detallesAjuste, $notaAjuste, $detallesParaAuditoria) {
             $salario->update($updates);
 
             if (!empty($detallesAjuste['hasData'])) {
@@ -297,13 +392,21 @@ class NotaAjusteController extends Controller
                     );
                 }
             }
+
+            // Persistir detalles para trazabilidad
+            foreach ($detallesParaAuditoria as $campo => $data) {
+                NotaAjusteDetalle::updateOrCreate(
+                    ['nota_id' => $notaAjuste->id, 'campo' => $campo],
+                    $data
+                );
+            }
         });
 
         Log::info('Ajuste de pago aplicado desde nota de ajuste', [
             'nota_ajuste_id' => $notaAjuste->id,
             'id_salario' => $salario->id_salario,
             'usuario_trabajador' => $notaAjuste->usuario_id,
-            'admin_doc' => Auth::user()->doc ?? null,
+            'admin_doc' => $adminDoc,
             'id_empresa' => $notaAjuste->id_empresa,
             'periodo_id' => $salario->id_periodo,
             'periodo_estado' => $salario->periodo->estado ?? null,
@@ -312,12 +415,217 @@ class NotaAjusteController extends Controller
             'after' => $updates,
             'detalle_horas_recargos_before' => $detallesAjuste['before_rows'] ?? [],
             'detalle_horas_recargos_after' => $detallesAjuste['rows'] ?? [],
-            'timestamp' => now()->toDateTimeString(),
+            'timestamp' => $ahora->toDateTimeString(),
         ]);
 
         return redirect()
             ->route('admin.notas-ajuste.show', $notaAjuste)
             ->with('success', 'Ajuste de pago aplicado correctamente al desprendible relacionado.');
+    }
+
+    /**
+     * Guarda las correcciones en nota_ajuste_detalles SIN tocar salario ni nómina.
+     * Las correcciones quedan en estado "borrador" listas para la aprobación definitiva.
+     */
+    public function adminGuardarDetalles(Request $request, NotaAjuste $notaAjuste): RedirectResponse
+    {
+        $this->authorizeAdminAccess();
+
+        abort_unless($this->canAccessAdminNote($notaAjuste), 403);
+
+        $notaAjuste->loadMissing(['salario.periodo', 'salario.contrato']);
+
+        abort_unless($notaAjuste->salario !== null, 404, 'No se encontró el desprendible asociado a la nota.');
+        abort_if($notaAjuste->estado === NotaAjuste::ESTADO_OMITIDO, 422, 'No se pueden registrar correcciones sobre una nota omitida.');
+
+        $request->merge([
+            'ajuste' => $this->normalizeAdjustmentValues((array) $request->input('ajuste', [])),
+        ]);
+
+        $validated = $request->validateWithBag('guardarDetalles', [
+            'campos_a_ajustar'   => 'bail|required|array|min:1',
+            'campos_a_ajustar.*' => 'bail|string|in:' . implode(',', self::CAMPOS_AJUSTABLES_PAGO),
+            'ajuste'             => 'bail|required|array',
+            'ajuste.*'           => 'nullable|numeric|min:0|max:999999999.99',
+        ], [
+            'campos_a_ajustar.required'   => 'Debes seleccionar al menos un campo para guardar.',
+            'campos_a_ajustar.min'        => 'Debes seleccionar al menos un campo para guardar.',
+            'campos_a_ajustar.*.in'       => 'Uno de los campos seleccionados no está permitido.',
+            'ajuste.required'             => 'Debes enviar los valores de corrección.',
+            'ajuste.*.numeric'            => 'Los valores deben ser numéricos.',
+            'ajuste.*.min'                => 'Los valores no pueden ser negativos.',
+            'ajuste.*.max'                => 'Uno de los valores supera el límite permitido.',
+        ]);
+
+        $salario         = $notaAjuste->salario;
+        $camposSeleccionados = array_values(array_unique($validated['campos_a_ajustar'] ?? []));
+        $detalleHoras    = $this->buildDetalleHorasRecargosFromRequest($request, $salario);
+        $adminDoc        = (string) (Auth::user()->doc ?? Auth::id());
+
+        $detallesAGuardar = [];
+
+        foreach ($camposSeleccionados as $campo) {
+            if ($campo === 'valor_horas_extras_recargos') {
+                if (!$detalleHoras['hasData']) {
+                    continue;
+                }
+                $valorOriginal  = round((float) ($salario->valor_horas_extras_recargos ?? 0), 2);
+                $valorCorregido = round((float) $detalleHoras['total'], 2);
+            } else {
+                $nuevoValor = $validated['ajuste'][$campo] ?? null;
+                if ($nuevoValor === null || $nuevoValor === '') {
+                    continue;
+                }
+                $valorOriginal  = round((float) ($salario->{$campo} ?? 0), 2);
+                $valorCorregido = round((float) $nuevoValor, 2);
+            }
+
+            $diferencia = round($valorCorregido - $valorOriginal, 2);
+
+            if (abs($diferencia) < 0.00001) {
+                continue; // sin cambio real, no guardar
+            }
+
+            $detallesAGuardar[$campo] = [
+                'valor_original'  => $valorOriginal,
+                'valor_corregido' => $valorCorregido,
+                'diferencia'      => $diferencia,
+                'es_salarial'     => in_array($campo, self::CAMPOS_SALARIALES, true),
+                'guardado_por'    => $adminDoc,
+                'aprobado_por'    => null,
+                'aprobado_en'     => null,
+            ];
+        }
+
+        if (empty($detallesAGuardar)) {
+            return redirect()
+                ->route('admin.notas-ajuste.show', $notaAjuste)
+                ->with('warning', 'No se guardaron correcciones porque los valores coinciden con los actuales o están vacíos.');
+        }
+
+        DB::transaction(function () use ($notaAjuste, $detallesAGuardar) {
+            foreach ($detallesAGuardar as $campo => $data) {
+                NotaAjusteDetalle::updateOrCreate(
+                    ['nota_id' => $notaAjuste->id, 'campo' => $campo],
+                    $data
+                );
+            }
+        });
+
+        Log::info('Correcciones guardadas en nota_ajuste_detalles', [
+            'nota_ajuste_id' => $notaAjuste->id,
+            'id_salario'     => $salario->id_salario,
+            'guardado_por'   => $adminDoc,
+            'campos'         => array_keys($detallesAGuardar),
+            'timestamp'      => now()->toDateTimeString(),
+        ]);
+
+        return redirect()
+            ->route('admin.notas-ajuste.show', $notaAjuste)
+            ->with('success', 'Correcciones guardadas correctamente. Revisa el resumen antes de aplicar el ajuste definitivo.');
+    }
+
+    public function previewImpactoNota(Request $request, NotaAjuste $notaAjuste): JsonResponse
+    {
+        $this->authorizeAdminAccess();
+
+        abort_unless($this->canAccessAdminNote($notaAjuste), 403);
+
+        $notaAjuste->loadMissing(['salario.contrato', 'detalles']);
+
+        if (!$notaAjuste->salario) {
+            return response()->json(['sin_impacto' => true, 'mensaje' => 'Sin impacto económico']);
+        }
+
+        $salario          = $notaAjuste->salario;
+        $totalDiferencia  = 0.0;
+        $baseSeguridadSocial = 0.0;
+
+        // ── PATH A: detalles ya guardados ──────────────────────────────────────
+        $detallesGuardados = $notaAjuste->detalles;
+
+        if ($detallesGuardados->isNotEmpty()) {
+            foreach ($detallesGuardados as $detalle) {
+                $diferencia = (float) $detalle->diferencia;
+
+                if (in_array($detalle->campo, self::CAMPOS_DEDUCCION, true)) {
+                    $totalDiferencia -= $diferencia;
+                } else {
+                    $totalDiferencia += $diferencia;
+                    if ($detalle->es_salarial) {
+                        $baseSeguridadSocial += $diferencia;
+                    }
+                }
+            }
+
+            $totalDiferencia     = round($totalDiferencia, 0);
+            $baseSeguridadSocial = max(0.0, round($baseSeguridadSocial, 0));
+
+            return response()->json([
+                'sin_impacto'           => false,
+                'total_diferencia'      => $totalDiferencia,
+                'tipo'                  => $totalDiferencia >= 0 ? 'pago' : 'descuento',
+                'base_seguridad_social' => $baseSeguridadSocial,
+                'salud'                 => round($baseSeguridadSocial * 0.04, 0),
+                'pension'               => round($baseSeguridadSocial * 0.04, 0),
+                'fuente'                => 'guardado',
+            ]);
+        }
+
+        // ── PATH B: sin detalles → usar request (comportamiento original) ──────
+        $camposSeleccionados = array_values(
+            array_unique(
+                array_intersect(
+                    (array) $request->input('campos_a_ajustar', []),
+                    self::CAMPOS_AJUSTABLES_PAGO
+                )
+            )
+        );
+
+        if (empty($camposSeleccionados)) {
+            return response()->json(['sin_impacto' => true, 'mensaje' => 'Sin impacto económico']);
+        }
+
+        $ajusteNormalizado = $this->normalizeAdjustmentValues((array) $request->input('ajuste', []));
+        $detalleHoras      = $this->buildDetalleHorasRecargosFromRequest($request, $salario);
+
+        foreach ($camposSeleccionados as $campo) {
+            if ($campo === 'valor_horas_extras_recargos') {
+                $nuevoValor = $detalleHoras['hasData']
+                    ? (float) $detalleHoras['total']
+                    : (float) ($ajusteNormalizado[$campo] ?? $salario->valor_horas_extras_recargos ?? 0);
+            } else {
+                if (!array_key_exists($campo, $ajusteNormalizado)) {
+                    continue;
+                }
+                $nuevoValor = (float) $ajusteNormalizado[$campo];
+            }
+
+            $valorActual = (float) ($salario->{$campo} ?? 0);
+            $diferencia  = $nuevoValor - $valorActual;
+
+            if (in_array($campo, self::CAMPOS_DEDUCCION, true)) {
+                $totalDiferencia -= $diferencia;
+            } else {
+                $totalDiferencia += $diferencia;
+                if (in_array($campo, self::CAMPOS_SALARIALES, true)) {
+                    $baseSeguridadSocial += $diferencia;
+                }
+            }
+        }
+
+        $totalDiferencia     = round($totalDiferencia, 0);
+        $baseSeguridadSocial = max(0.0, round($baseSeguridadSocial, 0));
+
+        return response()->json([
+            'sin_impacto'           => false,
+            'total_diferencia'      => $totalDiferencia,
+            'tipo'                  => $totalDiferencia >= 0 ? 'pago' : 'descuento',
+            'base_seguridad_social' => $baseSeguridadSocial,
+            'salud'                 => round($baseSeguridadSocial * 0.04, 0),
+            'pension'               => round($baseSeguridadSocial * 0.04, 0),
+            'fuente'                => 'request',
+        ]);
     }
 
     private function normalizeAdjustmentValues(array $values): array

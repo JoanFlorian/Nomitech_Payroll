@@ -221,6 +221,8 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'admin
         Route::get('/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'show'])->name('notas-ajuste.show');
         Route::put('/notas-ajuste/{notaAjuste}', [NotaAjusteController::class, 'adminUpdate'])->name('notas-ajuste.update');
         Route::patch('/notas-ajuste/{notaAjuste}/ajuste-pago', [NotaAjusteController::class, 'adminApplyPaymentAdjustment'])->name('notas-ajuste.apply-payment-adjustment');
+        Route::post('/notas-ajuste/{notaAjuste}/preview-impacto', [NotaAjusteController::class, 'previewImpactoNota'])->name('notas-ajuste.preview-impacto');
+        Route::post('/notas-ajuste/{notaAjuste}/guardar-detalles', [NotaAjusteController::class, 'adminGuardarDetalles'])->name('notas-ajuste.guardar-detalles');
     });
 
 // Superadmin routes protected by auth and role

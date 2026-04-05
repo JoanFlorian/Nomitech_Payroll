@@ -43,4 +43,9 @@ class NotaAjuste extends Model
     {
         return $query->where('estado', self::ESTADO_PENDIENTE);
     }
+
+    public function detalles()
+    {
+        return $this->hasMany(NotaAjusteDetalle::class, 'nota_id');
+    }
 }

@@ -91,6 +91,88 @@
         @endif
     </div>
 
+    {{-- ── Correcciones guardadas (nota_ajuste_detalles) ── --}}
+    @php
+        $etiquetasCampos = [
+            'auxilio_transporte'        => 'Auxilio de transporte',
+            'valor_horas_extras_recargos' => 'Horas extras y recargos',
+            'bonificaciones'            => 'Bonificaciones',
+            'comisiones'                => 'Comisiones',
+            'otros_devengos'            => 'Otros devengos',
+            'eps'                       => 'Salud (EPS)',
+            'afp'                       => 'Pensión (AFP)',
+            'aporte_fp'                 => 'Fondo de pensiones voluntario',
+            'retencion_fuente'          => 'Retención en la fuente',
+            'embargo_fiscal'            => 'Embargo fiscal',
+            'pension_voluntaria'        => 'Pensión voluntaria',
+        ];
+        $detallesGuardados = $nota->detalles ?? collect();
+    @endphp
+
+    @if($detallesGuardados->isNotEmpty())
+    <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm">
+        <div class="mb-4 flex items-center justify-between gap-3">
+            <h3 class="flex items-center gap-2 text-lg font-bold text-indigo-900">
+                <span class="material-icons text-base">playlist_add_check</span>
+                Correcciones guardadas
+            </h3>
+            <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                {{ $detallesGuardados->count() }} concepto(s)
+            </span>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-indigo-200 bg-white">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-indigo-100 bg-indigo-50 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                        <th class="px-4 py-3 text-left">Concepto</th>
+                        <th class="px-4 py-3 text-right">Valor original</th>
+                        <th class="px-4 py-3 text-right">Valor corregido</th>
+                        <th class="px-4 py-3 text-right">Diferencia</th>
+                        <th class="px-4 py-3 text-center">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @foreach($detallesGuardados as $det)
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium text-gray-800">
+                            {{ $etiquetasCampos[$det->campo] ?? $det->campo }}
+                        </td>
+                        <td class="px-4 py-3 text-right text-gray-600">
+                            ${{ number_format($det->valor_original, 0, ',', '.') }}
+                        </td>
+                        <td class="px-4 py-3 text-right font-semibold text-gray-900">
+                            ${{ number_format($det->valor_corregido, 0, ',', '.') }}
+                        </td>
+                        <td class="px-4 py-3 text-right font-semibold {{ $det->diferencia > 0 ? 'text-green-700' : ($det->diferencia < 0 ? 'text-red-700' : 'text-gray-500') }}">
+                            {{ $det->diferencia > 0 ? '+' : '' }}${{ number_format($det->diferencia, 0, ',', '.') }}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            @if($det->aprobado_por)
+                                <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
+                                    <span class="material-icons text-xs">check_circle</span>
+                                    Aplicado
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                                    <span class="material-icons text-xs">pending</span>
+                                    Pendiente
+                                </span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <p class="mt-3 text-xs italic text-indigo-600">
+            * Las correcciones guardadas se usarán automáticamente al aplicar el ajuste.
+            Puedes sobrescribirlas guardando nuevos valores desde el formulario.
+        </p>
+    </div>
+    @endif
+
     <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         <h3 class="text-lg font-bold text-gray-900">Ajuste controlado del pago</h3>
         <p class="mt-2 text-sm text-gray-600">
@@ -144,7 +226,7 @@
                 Esta nota no tiene un desprendible válido asociado para aplicar ajustes.
             </div>
         @else
-            <form action="{{ route('admin.notas-ajuste.apply-payment-adjustment', $nota) }}" method="POST" class="mt-5 space-y-5">
+            <form id="js-ajuste-form" action="{{ route('admin.notas-ajuste.apply-payment-adjustment', $nota) }}" method="POST" class="mt-5 space-y-5">
                 @csrf
                 @method('PATCH')
 
@@ -252,8 +334,59 @@
                     @endif
                 </div>
 
-                <div class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
+                {{-- ── Previsualización de impacto económico ── --}}
+                <div id="js-impacto-preview" class="hidden rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                    <h4 class="mb-3 flex items-center gap-2 text-sm font-bold text-blue-900">
+                        <span class="material-icons text-base">preview</span>
+                        Impacto de la Nota (Previsualización)
+                    </h4>
+
+                    <div id="js-impacto-loading" class="hidden py-2 text-center text-sm text-blue-700">
+                        Calculando impacto…
+                    </div>
+
+                    <div id="js-impacto-sin-impacto" class="hidden rounded-xl bg-blue-100 px-4 py-3 text-sm text-blue-700">
+                        Sin impacto económico
+                    </div>
+
+                    <div id="js-impacto-detalle" class="hidden space-y-3">
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div class="rounded-xl border border-blue-200 bg-white p-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">💰 Total ajuste</p>
+                                <p id="js-impacto-total" class="mt-1 text-base font-bold text-gray-900">$0</p>
+                                <p id="js-impacto-tipo" class="mt-1 text-xs text-gray-500"></p>
+                            </div>
+                            <div class="rounded-xl border border-blue-200 bg-white p-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">📊 Base Seg. Social estimada</p>
+                                <p id="js-impacto-base-ss" class="mt-1 text-base font-bold text-gray-900">$0</p>
+                            </div>
+                            <div class="rounded-xl border border-blue-200 bg-white p-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Salud empleado (4%)</p>
+                                <p id="js-impacto-salud" class="mt-1 text-base font-bold text-blue-700">$0</p>
+                            </div>
+                            <div class="rounded-xl border border-blue-200 bg-white p-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Pensión empleado (4%)</p>
+                                <p id="js-impacto-pension" class="mt-1 text-base font-bold text-blue-700">$0</p>
+                            </div>
+                        </div>
+                        <p class="text-xs italic text-blue-600">* Estimación informativa. No modifica la nómina real.</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                    <button
+                        type="button"
+                        data-draft-submit
+                        data-draft-action="{{ route('admin.notas-ajuste.guardar-detalles', $nota) }}"
+                        class="inline-flex items-center rounded-xl border border-indigo-400 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100"
+                        title="Guarda las correcciones sin aplicarlas al desprendible todavía"
+                    >
+                        <span class="material-icons mr-2 text-base">save</span>
+                        Guardar correcciones (borrador)
+                    </button>
+
                     <button type="submit" class="inline-flex items-center rounded-xl bg-[#1565C0] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0D47A1]">
+                        <span class="material-icons mr-2 text-base">check_circle</span>
                         Aplicar ajuste al desprendible
                     </button>
                 </div>
@@ -402,6 +535,170 @@
         });
 
         syncTotal();
+    })();
+</script>
+
+<script>
+    (function () {
+        'use strict';
+
+        const previewUrl    = @json(route('admin.notas-ajuste.preview-impacto', $nota));
+        const csrfToken     = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+        const form          = document.getElementById('js-ajuste-form');
+        const previewSection = document.getElementById('js-impacto-preview');
+        const loadingEl     = document.getElementById('js-impacto-loading');
+        const sinImpactoEl  = document.getElementById('js-impacto-sin-impacto');
+        const detalleEl     = document.getElementById('js-impacto-detalle');
+
+        if (!form || !previewSection) return;
+
+        const fmtCOP = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+        function formatAbs(value) {
+            return '$' + fmtCOP.format(Math.abs(value));
+        }
+
+        function formatSigned(value) {
+            return (value >= 0 ? '+$' : '-$') + fmtCOP.format(Math.abs(value));
+        }
+
+        function showLoading() {
+            previewSection.classList.remove('hidden');
+            loadingEl.classList.remove('hidden');
+            sinImpactoEl.classList.add('hidden');
+            detalleEl.classList.add('hidden');
+        }
+
+        function showSinImpacto(msg) {
+            loadingEl.classList.add('hidden');
+            sinImpactoEl.textContent = msg ?? 'Sin impacto económico';
+            sinImpactoEl.classList.remove('hidden');
+            detalleEl.classList.add('hidden');
+        }
+
+        function showDetalle(data) {
+            loadingEl.classList.add('hidden');
+            sinImpactoEl.classList.add('hidden');
+            detalleEl.classList.remove('hidden');
+
+            const totalEl = document.getElementById('js-impacto-total');
+            const tipoEl  = document.getElementById('js-impacto-tipo');
+
+            totalEl.textContent = formatSigned(data.total_diferencia);
+            totalEl.className   = data.tipo === 'pago'
+                ? 'mt-1 text-base font-bold text-green-700'
+                : 'mt-1 text-base font-bold text-red-700';
+
+            tipoEl.textContent = data.tipo === 'pago'
+                ? 'Se pagará al empleado'
+                : 'Se descontará al empleado';
+            tipoEl.className = data.tipo === 'pago'
+                ? 'mt-1 text-xs text-green-600'
+                : 'mt-1 text-xs text-red-600';
+
+            document.getElementById('js-impacto-base-ss').textContent  = formatAbs(data.base_seguridad_social);
+            document.getElementById('js-impacto-salud').textContent    = formatAbs(data.salud);
+            document.getElementById('js-impacto-pension').textContent  = formatAbs(data.pension);
+        }
+
+        let debounceTimer = null;
+
+        function schedulePreview() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fetchPreview, 500);
+        }
+
+        async function fetchPreview() {
+            const hasChecked = form.querySelector('input[name="campos_a_ajustar[]"]:checked') !== null;
+
+            if (!hasChecked) {
+                previewSection.classList.add('hidden');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const formData = new FormData(form);
+                // Remove the PATCH method override so we POST to the preview endpoint
+                formData.delete('_method');
+
+                const response = await fetch(previewUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                });
+
+                if (response.status === 401 || response.status === 419) {
+                    showSinImpacto('Sesión expirada. Recarga la página.');
+                    return;
+                }
+
+                if (!response.ok) {
+                    showSinImpacto('No se pudo calcular el impacto.');
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.sin_impacto) {
+                    showSinImpacto(data.mensaje ?? 'Sin impacto económico');
+                } else {
+                    showDetalle(data);
+                }
+            } catch (_) {
+                showSinImpacto('Error al calcular el impacto.');
+            }
+        }
+
+        // Trigger preview on any form input change
+        form.addEventListener('change', schedulePreview);
+        form.addEventListener('input', schedulePreview);
+
+        // Trigger immediately if checkboxes were pre-checked (e.g. after validation failure)
+        if (form.querySelector('input[name="campos_a_ajustar[]"]:checked')) {
+            fetchPreview();
+        }
+
+        @if($detallesGuardados->isNotEmpty())
+        // Detalles pre-guardados → mostrar preview automáticamente al cargar
+        fetchPreview();
+        @endif
+    })();
+</script>
+
+<script>
+    // Manejo del botón "Guardar correcciones (borrador)":
+    // El formulario usa method=POST + _method=PATCH para la ruta de PATCH.
+    // El botón de borrador apunta a una ruta POST pura → eliminamos _method temporalmente.
+    (function () {
+        const draftBtn = document.querySelector('[data-draft-submit]');
+        if (!draftBtn) return;
+        const ajusteForm = document.getElementById('js-ajuste-form');
+        if (!ajusteForm) return;
+
+        draftBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const methodInput = ajusteForm.querySelector('input[name="_method"]');
+            const originalValue = methodInput ? methodInput.value : null;
+            if (methodInput) methodInput.value = '';
+
+            const url = draftBtn.dataset.draftAction;
+            const savedAction = ajusteForm.action;
+            ajusteForm.action = url;
+            ajusteForm.method = 'POST';
+
+            ajusteForm.submit();
+
+            // Restore in case browser keeps page
+            ajusteForm.action = savedAction;
+            if (methodInput && originalValue !== null) {
+                methodInput.value = originalValue;
+            }
+        });
     })();
 </script>
 @endpush

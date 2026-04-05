@@ -217,7 +217,11 @@
             @if($stepGenerada)
                 <div class="alert alert-success border-0 py-2 px-3 small mb-3 mt-3 d-flex align-items-center gap-2">
                     <i class="bi bi-lock-fill"></i>
-                    <span>Planilla generada y bloqueada. No se puede volver a generar para este periodo.</span>
+                    <div>
+                        <span>Planilla generada y bloqueada. No se puede volver a generar para este periodo.</span>
+                        <br>
+                        <span class="text-muted" style="font-size: 0.85rem;">Si editas datos en nómina o información de seguridad social, podrás regenerarla.</span>
+                    </div>
                 </div>
             @endif
 

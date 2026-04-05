@@ -47,7 +47,7 @@ class PilaController extends Controller
 
         $periodos = PeriodoLiquidacion::query()
             ->when($selectedEmpresaId > 0, fn($q) => $q->where('id_empresa', $selectedEmpresaId))
-            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
+            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO, PeriodoLiquidacion::ESTADO_CERRADO])
             ->orderByDesc('fecha_inicio')
             ->limit(36)
             ->get(['id_periodo', 'id_empresa', 'fecha_inicio', 'fecha_fin', 'estado']);

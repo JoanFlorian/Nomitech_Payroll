@@ -50,10 +50,17 @@
                                     <td class="px-4 py-3 text-center text-slate-700 font-medium">{{ (int) $item->total_empleados }}</td>
                                     <td class="px-4 py-3 text-slate-600 text-xs">{{ \Carbon\Carbon::parse($item->created_at)->format('Y-m-d H:i') }}</td>
                                     <td class="px-4 py-3 text-center">
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium">
-                                            <i class="bi bi-check-circle text-sm"></i>
-                                            Disponible
-                                        </span>
+                                        @if($item->tiene_cambios ?? false)
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium">
+                                                <i class="bi bi-exclamation-circle text-sm"></i>
+                                                Pendiente de Regenerar
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium">
+                                                <i class="bi bi-check-circle text-sm"></i>
+                                                Disponible
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">

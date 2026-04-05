@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\{Ciudad, TipoDoc, Banco, TipoContrato, Eps, Arl, Empresa, Departamento, Estado, FormaPago, MetodoPago, Pais, Rol, TipoHoraRecargo};
+use App\Models\{Ciudad, TipoDoc, Banco, TipoContrato, Eps, Arl, Empresa, Departamento, Estado, FormaPago, MetodoPago, Pais, Rol, TipoHoraRecargo, PayrollParameter};
 
 return [
 
@@ -206,6 +206,34 @@ return [
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'simple'],
             ],
             'colores' => ['icono' => 'from-amber-400 to-amber-600', 'boton' => 'from-amber-500 to-amber-600'],
+        ],
+        'payroll_parameters' => [
+            'modelo' => PayrollParameter::class, 'campoId' => 'id', 'tabla' => 'payroll_parameters',
+            'titulo' => 'Parámetros de Nómina', 'desc' => 'Gestiona parámetros dinámicos de nómina.', 'icono' => 'bi-sliders',
+            'campos' => [
+                ['clave' => 'parametro', 'label' => 'Parámetro', 'tipo' => 'text', 'icono' => 'bi-tag', 'requerido' => true],
+                ['clave' => 'valor', 'label' => 'Valor', 'tipo' => 'number', 'icono' => 'bi-calculator', 'requerido' => true],
+                ['clave' => 'descripcion', 'label' => 'Descripción', 'tipo' => 'textarea', 'icono' => 'bi-file-text'],
+                ['clave' => 'tipo', 'label' => 'Tipo', 'tipo' => 'select', 'icono' => 'bi-list', 'opciones' => [
+                    ['id' => 'decimal', 'nombre' => 'Decimal'],
+                    ['id' => 'entero', 'nombre' => 'Entero'],
+                    ['id' => 'porcentaje', 'nombre' => 'Porcentaje'],
+                    ['id' => 'texto', 'nombre' => 'Texto'],
+                ]],
+                ['clave' => 'vigencia_desde', 'label' => 'Vigencia Desde', 'tipo' => 'datetime', 'icono' => 'bi-calendar'],
+                ['clave' => 'vigencia_hasta', 'label' => 'Vigencia Hasta', 'tipo' => 'datetime', 'icono' => 'bi-calendar'],
+                ['clave' => 'activo', 'label' => 'Activo', 'tipo' => 'select', 'icono' => 'bi-toggle-on', 'opciones' => [
+                    ['id' => 1, 'nombre' => 'Sí'],
+                    ['id' => 0, 'nombre' => 'No'],
+                ]],
+            ],
+            'columnas' => [
+                ['clave' => 'parametro', 'label' => 'Parámetro', 'tipo' => 'simple'],
+                ['clave' => 'valor', 'label' => 'Valor', 'tipo' => 'simple'],
+                ['clave' => 'descripcion', 'label' => 'Descripción', 'tipo' => 'simple'],
+                ['clave' => 'tipo', 'label' => 'Tipo', 'tipo' => 'simple'],
+            ],
+            'colores' => ['icono' => 'from-indigo-400 to-indigo-600', 'boton' => 'from-indigo-500 to-indigo-600'],
         ],
     ],
 ];

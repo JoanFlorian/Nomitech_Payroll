@@ -126,6 +126,10 @@ class PilaController extends Controller
 
             $historialPila = DB::table('pila_archivos as pa')
                 ->leftJoin('periodo_liquidacion as pl', 'pl.id_periodo', '=', 'pa.periodo_id')
+                ->leftJoin('planilla_pila as pp', function($join) {
+                    $join->on('pp.id_periodo', '=', 'pa.periodo_id')
+                         ->on('pp.id_empresa', '=', 'pa.empresa_id');
+                })
                 ->when($selectedEmpresaId > 0, fn($q) => $q->where('pa.empresa_id', $selectedEmpresaId))
                 ->when($selectedPeriodoId > 0, fn($q) => $q->where('pa.periodo_id', $selectedPeriodoId))
                 ->orderByDesc('pa.id')
@@ -140,7 +144,32 @@ class PilaController extends Controller
                     'pa.created_at',
                     'pl.fecha_inicio',
                     'pl.fecha_fin',
+                    'pp.datos_hash',
+                    'pp.updated_at as planilla_updated_at',
                 ]);
+
+            // Agregar información de cambios pendientes a cada registro
+            $historialPila = $historialPila->map(function($item) {
+                $tieneChange = false;
+                
+                // Verificar si hash es null (invalidado)
+                if ($item->datos_hash === null) {
+                    $tieneChange = true;
+                } else {
+                    // Verificar si hay cambios en salarios posteriores a la planilla
+                    $cambiosPosteriores = DB::table('salario as s')
+                        ->where('s.id_periodo', $item->periodo_id)
+                        ->where('s.updated_at', '>', $item->planilla_updated_at ?? $item->created_at)
+                        ->exists();
+                    
+                    if ($cambiosPosteriores) {
+                        $tieneChange = true;
+                    }
+                }
+                
+                $item->tiene_cambios = $tieneChange;
+                return $item;
+            });
         }
 
         return view('pila.index', [

@@ -13,7 +13,7 @@ class TipoContrato extends Model
     protected $primaryKey = 'id_tipo_contrato';
     protected $fillable = ['nombre', 'seguridad_social'];
     
-    // Tipos de contrato que no generan prestaciones sociales bajo norma colombiana
+    // El contrato de aprendizaje ahora se incluye en la causación de prestaciones por solicitud
     public const TIPO_APRENDIZAJE = 4;
     public const TIPO_PRESTACION_SERVICIOS = 6;
     

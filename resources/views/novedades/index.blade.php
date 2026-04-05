@@ -138,6 +138,7 @@
 					'VCT' => 'VCT - Variación centro de trabajo',
 					'INC' => 'INC - Incapacidad',
 					'LIC' => 'LIC - Licencia',
+					'RET' => 'RET - Retiro (Liquidación final)',
 					default => $tipoNombre,
 				};
 				$iniciales = strtoupper(mb_substr($empleado->primer_nombre ?? 'N', 0, 1) . mb_substr($empleado->primer_apellido ?? 'N', 0, 1));
@@ -150,6 +151,7 @@
 					'LMAT', 'LPAT', 'LIC', 'VAC' => 'bg-blue-100 text-blue-700',
 					'SLN' => 'bg-amber-100 text-amber-700',
 					'VSP', 'VST', 'VCT' => 'bg-cyan-100 text-cyan-700',
+					'RET' => 'bg-red-100 text-red-700',
 					default => 'bg-gray-100 text-gray-700',
 				};
 
@@ -652,7 +654,7 @@
 			return mapped[normalized] || normalized;
 		};
 
-		const automaticNoveltyTypes = ['TDE', 'TAE', 'TDP', 'TAP', 'SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'VCT', 'INC', 'LIC'];
+		const automaticNoveltyTypes = ['TDE', 'TAE', 'TDP', 'TAP', 'SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'VCT', 'INC', 'LIC', 'RET'];
 
 		const isAutomaticNoveltyType = (tipo) => automaticNoveltyTypes.includes(normalizeNoveltyType(tipo));
 		const isManualNoveltyType = (tipo) => ['VSP', 'VST'].includes(normalizeNoveltyType(tipo));
@@ -674,7 +676,7 @@
 			return ['VST', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'INC'].includes(tipoNormalizado);
 		};
 
-		const isNeutralType = (tipo) => ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VCT'].includes(normalizeNoveltyType(tipo));
+		const isNeutralType = (tipo) => ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VCT', 'RET'].includes(normalizeNoveltyType(tipo));
 
 		const updateNatureBadge = (badgeElement, tipo, esRemunerado = false) => {
 			if (!badgeElement) return;
@@ -1427,9 +1429,53 @@
 			}
 		};
 
+		const updateDateInputLimits = (tipoInput, quantityInput, startDateInput, endDateInput, isEdit = false) => {
+			const type = normalizeNoveltyType(tipoInput?.value || '');
+			const tiposFlexibles = ['VAC', 'SLN', 'LIC', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC'];
+			
+			if (!tiposFlexibles.includes(type) || !activePeriodStart || !activePeriodEnd) return;
+
+			if (startDateInput) {
+				startDateInput.setAttribute('max', activePeriodEnd);
+			}
+
+			const quantity = Number(quantityInput?.value || 0);
+			if (quantity <= 0) {
+				// Por defecto, permitir desde inicios del mes anterior (según requerimiento)
+				const sSplit = activePeriodStart.split('-');
+				const pSM = new Date(sSplit[0], sSplit[1] - 2, 1);
+				const prevMM = String(pSM.getMonth() + 1).padStart(2, '0');
+				const prevDD = String(pSM.getDate()).padStart(2, '0');
+				startDateInput?.setAttribute('min', `${pSM.getFullYear()}-${prevMM}-${prevDD}`);
+				return;
+			}
+
+			try {
+				// Para fecha_inicio: min = activePeriodStart - (N - 1), max = activePeriodEnd
+				const [sYear, sMonth, sDay] = activePeriodStart.split('-');
+				const dStartMin = new Date(sYear, sMonth - 1, sDay);
+				dStartMin.setDate(dStartMin.getDate() - (quantity - 1));
+				
+				const minS = dStartMin.toISOString().split('T')[0];
+				startDateInput?.setAttribute('min', minS);
+				startDateInput?.setAttribute('max', activePeriodEnd);
+
+				// Para fecha_fin: min = activePeriodStart, max = activePeriodEnd + (N - 1)
+				const [eYear, eMonth, eDay] = activePeriodEnd.split('-');
+				const dEndMax = new Date(eYear, eMonth - 1, eDay);
+				dEndMax.setDate(dEndMax.getDate() + (quantity - 1));
+
+				const maxF = dEndMax.toISOString().split('T')[0];
+				endDateInput?.setAttribute('min', activePeriodStart);
+				endDateInput?.setAttribute('max', maxF);
+			} catch (e) {
+				console.warn('Error updating date limits:', e);
+			}
+		};
+
 		const updateCreateQuantityMode = () => {
 			const type = normalizeNoveltyType(noveltyType.value || '');
-			const isTraslado = ['TDE', 'TAE', 'TDP', 'TAP'].includes(type);
+			const isTraslado = ['TDE', 'TAE', 'TDP', 'TAP', 'RET'].includes(type);
 			const noCantidad = isTraslado || ['VSP', 'VST', 'VCT'].includes(type);
 			const allowsHours = ['IGE', 'IRL', 'INC'].includes(type);
 			const fixedDays = type === 'LMAT' ? 126 : (type === 'LPAT' ? 14 : null);
@@ -1450,8 +1496,8 @@
 				
 				// Restringir Fecha Inicio al periodo activo sin permitir días anteriores a hoy
 				if (startDateInput && activePeriodStart && activePeriodEnd) {
-					const minAllowedDate = activePeriodStart > todayDate ? activePeriodStart : todayDate;
-					startDateInput.setAttribute('min', minAllowedDate);
+					// Permitir cualquier fecha dentro del periodo de liquidación activo para traslados y retiro
+					startDateInput.setAttribute('min', activePeriodStart);
 					startDateInput.setAttribute('max', activePeriodEnd);
 				}
 
@@ -1465,7 +1511,8 @@
 				if (unitWrap) unitWrap.classList.remove('hidden');
 				
 				if (startDateInput) {
-					startDateInput.setAttribute('min', todayDate);
+					// Se quita la restricción de fecha mínima para permitir novedades retroactivas (VAC/SLN/INC/etc)
+					startDateInput.removeAttribute('min');
 					startDateInput.removeAttribute('max');
 				}
 			}
@@ -1597,7 +1644,7 @@
 
 		const updateEditQuantityMode = () => {
 			const type = normalizeNoveltyType(editNoveltyTypeInput.value || '');
-			const isTraslado = ['TDE', 'TAE', 'TDP', 'TAP'].includes(type);
+			const isTraslado = ['TDE', 'TAE', 'TDP', 'TAP', 'RET'].includes(type);
 			const noCantidad = isTraslado || ['VSP', 'VST', 'VCT'].includes(type);
 			const allowsHours = ['IGE', 'IRL', 'INC'].includes(type);
 			const fixedDays = type === 'LMAT' ? 126 : (type === 'LPAT' ? 14 : null);
@@ -1618,8 +1665,8 @@
 				
 				// Restringir Fecha Inicio al periodo activo (Edición) sin permitir días anteriores a hoy
 				if (editStartDateInput && activePeriodStart && activePeriodEnd) {
-					const minAllowedDate = activePeriodStart > todayDate ? activePeriodStart : todayDate;
-					editStartDateInput.setAttribute('min', minAllowedDate);
+					// Permitir cualquier fecha dentro del periodo de liquidación activo para traslados y retiro (Edición)
+					editStartDateInput.setAttribute('min', activePeriodStart);
 					editStartDateInput.setAttribute('max', activePeriodEnd);
 				}
 
@@ -1633,7 +1680,8 @@
 				if (unitWrap) unitWrap.classList.remove('hidden');
 				
 				if (editStartDateInput) {
-					editStartDateInput.setAttribute('min', todayDate);
+					// Se quita la restricción de fecha mínima para permitir novedades retroactivas (Edición)
+					editStartDateInput.removeAttribute('min');
 					editStartDateInput.removeAttribute('max');
 				}
 			}
@@ -1681,10 +1729,10 @@
 				return true;
 			}
 
-			if (startDate < todayDate) {
-				showError(errorKey, 'La fecha de inicio no puede ser anterior a la fecha actual');
-				markInvalid(input);
-				return false;
+			// Nota: Se ha flexibilizado para permitir reportar novedades que iniciaron en el pasado
+			// pero afectan el periodo actual. Solo se valida contra el inicio del contrato en el backend.
+			if (startDate < activePeriodStart) {
+				// Permitir si termina en el periodo activo (se valida en validateDateRange)
 			}
 
 			clearError(errorKey);
@@ -1706,7 +1754,9 @@
 				return true;
 			}
 
-			const isValidRange = new Date(endDate) >= new Date(startDate);
+			const startD = new Date(startDate);
+			const endD = new Date(endDate);
+			const isValidRange = endD >= startD;
 
 			if (!isValidRange) {
 				showFieldError('endDate', 'La fecha de fin no puede ser menor que la fecha de inicio.');
@@ -1714,8 +1764,55 @@
 				return false;
 			}
 
+			// Candado de Coherencia: Días vs Rango de fechas
+			const unit = getSelectedCreateUnit();
+			if (unit === 'dias') {
+				const quantity = Number(quantityDaysInput.value || 0);
+				if (quantity > 0) {
+					const diffTime = Math.abs(endD - startD);
+					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+					
+					if (Math.abs(diffDays - quantity) > 0.01) {
+						showFieldError('endDate', `Discrepancia: El rango de fechas equivale a ${diffDays} día(s), pero se ingresaron ${quantity} día(s).`);
+						markInvalid(endDateInput);
+						markInvalid(quantityDaysInput);
+						return false;
+					}
+				}
+			}
+
+			// Validación: Al menos uno de los extremos (inicio o fin) debe estar en el periodo activo
+			const tiposFlexibles = ['VAC', 'SLN', 'LIC', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC'];
+			const tipo = normalizeNoveltyType(noveltyType.value || '');
+			if (tiposFlexibles.includes(tipo) && activePeriodStart && activePeriodEnd && startDate && endDate) {
+				const inicioEnPeriodo = startDate >= activePeriodStart && startDate <= activePeriodEnd;
+				const finEnPeriodo = endDate >= activePeriodStart && endDate <= activePeriodEnd;
+				
+				if (!inicioEnPeriodo && !finEnPeriodo) {
+					const sParts = activePeriodStart.split('-');
+					const eParts = activePeriodEnd.split('-');
+					const rangeStr = `${sParts[2]}/${sParts[1]}/${sParts[0]} a ${eParts[2]}/${eParts[1]}/${eParts[0]}`;
+					showFieldError('startDate', `Al menos el inicio o el fin de la novedad deben estar dentro del periodo activo (${rangeStr}).`);
+					markInvalid(startDateInput);
+					markInvalid(endDateInput);
+					return false;
+				}
+			}
+
+			// Validación: Traslados deben estar dentro del periodo activo
+			if (['TDE', 'TAE', 'TDP', 'TAP'].includes(tipo) && activePeriodStart && activePeriodEnd) {
+				const f = startDate || endDate;
+				if (f && (f < activePeriodStart || f > activePeriodEnd)) {
+					showFieldError('startDate', 'La fecha de traslado debe estar dentro del periodo de liquidación activo.');
+					markInvalid(startDateInput);
+					return false;
+				}
+			}
+
 			clearFieldError('endDate');
 			clearInvalid(endDateInput);
+			clearInvalid(quantityDaysInput);
+			clearInvalid(startDateInput);
 			return true;
 		};
 
@@ -1779,6 +1876,7 @@
 			updateLicenciaRemuneradaVisibility();
 			updateCreateQuantityMode();
 			toggleCreateManualPayment();
+			updateDateInputLimits(noveltyType, quantityDaysInput, startDateInput, endDateInput);
 			updateCreateEstimatedValue();
 		});
 
@@ -1792,6 +1890,7 @@
 			updateEditLicenciaRemuneradaVisibility();
 			updateEditQuantityMode();
 			toggleEditManualPayment();
+			updateDateInputLimits(editNoveltyTypeInput, editQuantityDaysInput, editStartDateInput, editEndDateInput, true);
 			updateEditEstimatedValue();
 		});
 
@@ -1803,7 +1902,13 @@
 		epsIdInput?.addEventListener('change', updateCreateEstimatedValue);
 		afpIdInput?.addEventListener('change', updateCreateEstimatedValue);
 		arlIdInput?.addEventListener('change', updateCreateEstimatedValue);
-		editQuantityDaysInput?.addEventListener('input', updateEditEstimatedValue);
+		if (editQuantityDaysInput) {
+			editQuantityDaysInput.addEventListener('input', () => {
+				autoFillFechaFin(editNoveltyTypeInput, editStartDateInput, editEndDateInput, editQuantityDaysInput);
+				updateDateInputLimits(editNoveltyTypeInput, editQuantityDaysInput, editStartDateInput, editEndDateInput, true);
+				updateEditEstimatedValue();
+			});
+		}
 		editQuantityHoursInput?.addEventListener('input', updateEditEstimatedValue);
 		editTipoIncapacidadInput?.addEventListener('change', updateEditEstimatedValue);
 		editTipoLicenciaInput?.addEventListener('change', updateEditEstimatedValue);
@@ -1861,6 +1966,7 @@
 			updateCreateQuantityMode();
 			updateLicenciaRemuneradaVisibility();
 			toggleCreateManualPayment();
+			updateDateInputLimits(noveltyType, quantityDaysInput, startDateInput, endDateInput);
 			updateCreateEstimatedValue();
 		} catch (e) { console.warn('Error during create init:', e); }
 
@@ -1924,6 +2030,7 @@
 		if (quantityDaysInput) {
 			quantityDaysInput.addEventListener('input', () => {
 				autoFillFechaFin(noveltyType, startDateInput, endDateInput, quantityDaysInput);
+				updateDateInputLimits(noveltyType, quantityDaysInput, startDateInput, endDateInput);
 				updateCreateEstimatedValue();
 			});
 		}
@@ -1962,15 +2069,64 @@
 				return true;
 			}
 
-			const isValidRange = new Date(endDate) >= new Date(startDate);
+			const startD = new Date(startDate);
+			const endD = new Date(endDate);
+			const isValidRange = endD >= startD;
 			if (!isValidRange) {
 				showEditFieldError('endDate', 'La fecha de fin no puede ser menor que la fecha de inicio.');
 				markInvalid(editEndDateInput);
 				return false;
 			}
 
+			// Candado de Coherencia: Días vs Rango de fechas (Edición)
+			const unit = getSelectedEditUnit();
+			if (unit === 'dias') {
+				const quantity = Number(editQuantityDaysInput.value || 0);
+				if (quantity > 0) {
+					const diffTime = Math.abs(endD - startD);
+					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+					
+					if (Math.abs(diffDays - quantity) > 0.01) {
+						showEditFieldError('endDate', `Discrepancia: El rango de fechas equivale a ${diffDays} día(s), pero se ingresaron ${quantity} día(s).`);
+						markInvalid(editEndDateInput);
+						markInvalid(editQuantityDaysInput);
+						return false;
+					}
+				}
+			}
+
+			// Validación: Al menos uno de los extremos (inicio o fin) debe estar en el periodo activo (Edición)
+			const tiposFlexibles = ['VAC', 'SLN', 'LIC', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC'];
+			const type = normalizeNoveltyType(editNoveltyTypeInput.value || '');
+			if (tiposFlexibles.includes(type) && activePeriodStart && activePeriodEnd && startDate && endDate) {
+				const inicioEnPeriodo = startDate >= activePeriodStart && startDate <= activePeriodEnd;
+				const finEnPeriodo = endDate >= activePeriodStart && endDate <= activePeriodEnd;
+				
+				if (!inicioEnPeriodo && !finEnPeriodo) {
+					const sParts = activePeriodStart.split('-');
+					const eParts = activePeriodEnd.split('-');
+					const rangeStr = `${sParts[2]}/${sParts[1]}/${sParts[0]} a ${eParts[2]}/${eParts[1]}/${eParts[0]}`;
+					showEditFieldError('startDate', `Al menos el inicio o el fin de la novedad deben estar dentro del periodo activo (${rangeStr}).`);
+					markInvalid(editStartDateInput);
+					markInvalid(editEndDateInput);
+					return false;
+				}
+			}
+
+			// Validación: Traslados deben estar dentro del periodo activo (Edición)
+			if (['TDE', 'TAE', 'TDP', 'TAP'].includes(type) && activePeriodStart && activePeriodEnd) {
+				const f = startDate || endDate;
+				if (f && (f < activePeriodStart || f > activePeriodEnd)) {
+					showEditFieldError('startDate', 'La fecha de traslado debe estar dentro del periodo de liquidación activo.');
+					markInvalid(editStartDateInput);
+					return false;
+				}
+			}
+
 			clearEditFieldError('endDate');
 			clearInvalid(editEndDateInput);
+			clearInvalid(editQuantityDaysInput);
+			clearInvalid(editStartDateInput);
 			return true;
 		};
 
@@ -2478,7 +2634,7 @@
 			}
 
 			const selectedUnit = getSelectedCreateUnit();
-			const typeWithoutQuantity = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(selectedType);
+			const typeWithoutQuantity = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT', 'RET'].includes(selectedType);
 			if (!typeWithoutQuantity && !selectedUnit) {
 				isValid = false;
 				showFieldError('quantityUnit', 'Debe seleccionar si la cantidad corresponde a días u horas.');
@@ -2566,7 +2722,7 @@
 				markInvalid(startDateInput);
 			} else if (!validateStartDateAgainstToday(startDateInput, 'startDate', showFieldError, clearFieldError)) {
 				isValid = false;
-			} else if (['TDE', 'TAE', 'TDP', 'TAP'].includes(selectedType)) {
+			} else if (['TDE', 'TAE', 'TDP', 'TAP', 'RET'].includes(selectedType)) {
 				// Validar que la fecha esté dentro del periodo activo
 				if (activePeriodStart && activePeriodEnd) {
 					const date = startDateInput.value;
@@ -2705,7 +2861,7 @@
 			}
 
 			const selectedEditUnit = getSelectedEditUnit();
-			const editTypeWithoutQuantity = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'].includes(selectedEditType);
+			const editTypeWithoutQuantity = ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT', 'RET'].includes(selectedEditType);
 			if (!editTypeWithoutQuantity && !selectedEditUnit) {
 				isValid = false;
 				showEditFieldError('quantityUnit', 'Debe seleccionar si la cantidad corresponde a días u horas.');
@@ -2796,7 +2952,7 @@
 				markInvalid(editStartDateInput);
 			} else if (!validateStartDateAgainstToday(editStartDateInput, 'startDate', showEditFieldError, clearEditFieldError)) {
 				isValid = false;
-			} else if (['TDE', 'TAE', 'TDP', 'TAP'].includes(selectedEditType)) {
+			} else if (['TDE', 'TAE', 'TDP', 'TAP', 'RET'].includes(selectedEditType)) {
 				// Validar que la fecha esté dentro del periodo activo (Edición)
 				if (activePeriodStart && activePeriodEnd) {
 					const date = editStartDateInput.value;

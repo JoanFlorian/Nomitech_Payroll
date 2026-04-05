@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use App\Enums\PaymentStatus;
-// use Stripe\Stripe;
-// use Stripe\Checkout\Session;
+use App\Mail\VerifyRegistrationCode;
+use Illuminate\Support\Facades\Mail;
 
 class RegisterController extends Controller
 {
@@ -114,13 +114,33 @@ class RegisterController extends Controller
             // Each user has exactly one company
             $usuario->empresa()->attach($empresa->id_empresa);
 
+            // 7. Generar código de verificación (6 dígitos)
+            $code = rand(100000, 999999);
+
+            // 8. Guardar en password_reset_tokens
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $usuario->correo],
+                [
+                    'token' => $code, // Guardamos el código como token
+                    'created_at' => now()
+                ]
+            );
+
+            // 9. Enviar Correo
+            try {
+                Mail::to($usuario->correo)->send(new VerifyRegistrationCode($code, $usuario->primer_nombre));
+            } catch (\Exception $e) {
+                // Log error but continue for now (could also handle better)
+                \Illuminate\Support\Facades\Log::error("Error enviando correo de verificación: " . $e->getMessage());
+            }
+
             // Login User (Session-based)
             Auth::login($usuario);
 
             // Set Auto-Selected Company in Session
             session(['empresa_id' => $empresa->id_empresa]);
 
-            // 7. Redirigir al flujo de Checkout (Interno)
+            // Redirigir al flujo de Checkout (Interno)
             return redirect()->route('checkout.show', ['pago' => $pago->id]);
         });
     }

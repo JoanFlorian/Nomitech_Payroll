@@ -53,6 +53,7 @@ class Usuario extends Authenticatable
         'fondo_cesantias',
         'is_owner',
         'must_change_password',
+        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -67,6 +68,7 @@ class Usuario extends Authenticatable
             'alto_riesgo'          => 'boolean',
             'is_owner'             => 'boolean',
             'must_change_password' => 'boolean',
+            'email_verified_at'    => 'datetime',
             'created_at'           => 'datetime',
             'updated_at'           => 'datetime',
         ];

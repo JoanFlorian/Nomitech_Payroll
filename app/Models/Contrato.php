@@ -156,6 +156,74 @@ class Contrato extends Model
     }
 
     // ═══════════════════════════════════════════════════════════════════
+    //  QUERIES (SCOPES)
+    // ═══════════════════════════════════════════════════════════════════
+
+    public function scopeConEstadoDinamico($query, $estado)
+    {
+        $hoy = \Carbon\Carbon::today()->toDateString();
+        $hoyMas30 = \Carbon\Carbon::today()->addDays(self::CONTINUIDAD_DIAS_TOLERANCIA)->toDateString();
+
+        switch ($estado) {
+            case self::ESTADO_TERMINADO:
+                $query->where(function($q) use ($hoy) {
+                    $q->where('estado', self::ESTADO_TERMINADO)
+                      ->orWhere(function($sub) use ($hoy) {
+                          $sub->where('estado', '!=', self::ESTADO_TERMINADO)
+                              ->whereNotNull('fecha_fin')
+                              ->whereDate('fecha_fin', '<', $hoy)
+                              ->whereNotNull('salario_final_pagado_at')
+                              ->whereNotNull('prestaciones_liquidadas_at')
+                              ->whereNotNull('cesantias_transferidas_at')
+                              ->whereNotNull('vacaciones_liquidadas_at');
+                      });
+                });
+                break;
+                
+            case self::ESTADO_VENCIDO:
+                $query->where('estado', '!=', self::ESTADO_TERMINADO)
+                      ->whereNotNull('fecha_fin')
+                      ->whereDate('fecha_fin', '<', $hoy)
+                      ->where(function($q) {
+                          $q->whereNull('salario_final_pagado_at')
+                            ->orWhereNull('prestaciones_liquidadas_at')
+                            ->orWhereNull('cesantias_transferidas_at')
+                            ->orWhereNull('vacaciones_liquidadas_at');
+                      });
+                break;
+
+            case self::ESTADO_PROGRAMADO:
+                $query->where('estado', '!=', self::ESTADO_TERMINADO)
+                      ->whereNotNull('fecha_inicio')
+                      ->whereDate('fecha_inicio', '>', $hoy);
+                break;
+
+            case self::ESTADO_POR_VENCER:
+                $query->where('estado', '!=', self::ESTADO_TERMINADO)
+                      ->where(function($q) use ($hoy) {
+                          $q->whereNull('fecha_inicio')->orWhereDate('fecha_inicio', '<=', $hoy);
+                      })
+                      ->whereNotNull('fecha_fin')
+                      ->whereDate('fecha_fin', '>=', $hoy)
+                      ->whereDate('fecha_fin', '<=', $hoyMas30);
+                break;
+
+            case self::ESTADO_ACTIVO:
+                $query->where('estado', '!=', self::ESTADO_TERMINADO)
+                      ->where(function($q) use ($hoy) {
+                          $q->whereNull('fecha_inicio')->orWhereDate('fecha_inicio', '<=', $hoy);
+                      })
+                      ->where(function($q) use ($hoyMas30) {
+                          $q->whereNull('fecha_fin')
+                            ->orWhereDate('fecha_fin', '>', $hoyMas30);
+                      });
+                break;
+        }
+
+        return $query;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     //  HELPERS DE ESTADO
     // ═══════════════════════════════════════════════════════════════════
 

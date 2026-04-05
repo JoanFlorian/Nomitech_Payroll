@@ -38,13 +38,14 @@ class NovedadController extends Controller
         'VCT' => 'VCT - Variación centro de trabajo',
         'INC' => 'INC - Incapacidad',
         'LIC' => 'LIC - Licencia',
+        'RET' => 'RET - Retiro (Liquidación final)',
     ];
 
     /**
      * Tipos de novedad mutuamente exclusivos: no pueden coexistir en las
      * mismas fechas para un mismo empleado.
      */
-    private const TIPOS_EXCLUSIVOS = ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC'];
+    private const TIPOS_EXCLUSIVOS = ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'RET'];
 
     public function __construct(
         private readonly CalculoNovedadService $calculoNovedadService,
@@ -735,6 +736,43 @@ class NovedadController extends Controller
                     'updated_at' => now(),
                 ]);
         }
+
+        if ($tipo === 'RET') {
+            DB::table('contrato')
+                ->where('id_contrato', $contratoId)
+                ->update([
+                    'fecha_fin' => $data['fecha_inicio'],
+                    'activo' => false,
+                    'estado' => 'VENCIDO',
+                    'updated_at' => now(),
+                ]);
+
+            // Disparar liquidación de prestaciones sociales
+            try {
+                $contrato = \App\Models\Contrato::findOrFail($contratoId);
+                $periodo = PeriodoLiquidacion::getActivePeriod();
+                
+                if ($periodo) {
+                    $terminationService = app(\App\Services\ContractTerminationService::class);
+                    $terminationService->autoScheduleAllBenefits($contrato, $periodo);
+
+                    // Recalcular nómina si ya existe para reflejar los nuevos días y beneficios
+                    $salarioExistente = \App\Models\Salario::where('id_contrato', $contratoId)
+                        ->where('id_periodo', $periodo->id_periodo)
+                        ->first();
+
+                    if ($salarioExistente) {
+                        $calculator = app(\App\Services\NominaCalculatorService::class);
+                        $suggestedDays = $terminationService->calculateWorkedDaysInPeriod($contrato, $periodo);
+                        $calculator->guardarNominaEmpleado($contratoId, $periodo->id_periodo, [
+                            'dias_trabajados' => $suggestedDays,
+                        ], true);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Error al procesar beneficios por retiro: " . $e->getMessage());
+            }
+        }
     }
 
     /**
@@ -862,12 +900,19 @@ class NovedadController extends Controller
         // Si no hay nómina creada, no recalculamos (se creará al liquidar masivamente o individualmente)
         if (!($salarioRaw instanceof \stdClass)) return;
 
+        // Calcular días trabajados basados en el contrato (fecha_inicio, fecha_fin) vs el periodo
+        $contratoModel = \App\Models\Contrato::find($contrato->id_contrato);
+        $periodoModel = PeriodoLiquidacion::find($periodoId);
+        $diasBase = 30;
+        if ($contratoModel && $periodoModel) {
+            $terminationService = app(\App\Services\ContractTerminationService::class);
+            $diasBase = $terminationService->calculateWorkedDaysInPeriod($contratoModel, $periodoModel);
+        }
+
         // Extraer valores actuales para no perder entradas manuales
-        // EXCLUIMOS dias_trabajados para que el calculador use el valor base (30 o proporcional al contrato)
-        // y reste las novedades vigentes. Si lo pasamos aquí, estaríamos pasando el RESULTADO anterior
-        // como base del nuevo cálculo, lo que causaría que los días no "volvieran a la normalidad".
         $input = [
             'fecha_pago' => optional($salarioRaw)->fecha_pago ?? now()->toDateString(),
+            'dias_trabajados' => $diasBase,
             'horas_extra' => (float) ($salarioRaw->horas_extra ?? 0),
             'recargos' => max(0, (float) ($salarioRaw->valor_horas_extras_recargos ?? 0) - (float) ($salarioRaw->horas_extra ?? 0)),
             'bonificaciones' => (float) ($salarioRaw->bonificaciones ?? 0),

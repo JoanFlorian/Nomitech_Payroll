@@ -250,6 +250,7 @@ class TestDataSeeder extends Seeder
             $lastName = $lastNames[$i % count($lastNames)];
             $salary = $salaries[$i % count($salaries)];
 
+            $fondos = ['PROTECCION', 'PORVENIR', 'COLFONDOS', 'SKANDIA'];
             $usersBatch[] = [
                 'doc' => $docEmpl,
                 'id_tipo_doc' => $idTipoDoc,
@@ -261,6 +262,7 @@ class TestDataSeeder extends Seeder
                 'activo' => true,
                 'direccion' => 'Calle Empleado ' . $realIndex,
                 'telefono' => '300' . str_pad($realIndex, 7, '0', STR_PAD_LEFT),
+                'fondo_cesantias' => $fondos[$i % count($fondos)],
                 'contrasena' => $password,
                 'updated_at' => now(),
                 'created_at' => now(),

@@ -210,11 +210,9 @@
         form.classList.remove('hidden');
         success.classList.add('hidden');
 
-        window.NomitechLoader.show('Obteniendo vista previa...');
         fetch(`${exportBaseUrl}/${id}/export-preview`)
             .then(res => res.json())
             .then(data => {
-                window.NomitechLoader.hide();
                 if (data.success) {
                     document.getElementById('exp_periodo').textContent = data.periodo;
                     document.getElementById('exp_empleados').textContent = data.empleados;
@@ -228,7 +226,6 @@
                 }
             })
             .catch(err => {
-                window.NomitechLoader.hide();
                 alert('Error de conexión');
                 cerrarModalExportar();
             });
@@ -270,7 +267,6 @@
             exportUrl = `${exportBaseUrl}/${currentPeriodoId}/exportar`;
         }
 
-        window.NomitechLoader.show('Generando archivo de exportación...');
         fetch(exportUrl, {
             method: 'POST',
             headers: {
@@ -280,7 +276,6 @@
         })
             .then(res => res.json())
             .then(data => {
-                window.NomitechLoader.hide();
                 if (data.success) {
                     document.getElementById('formExportarBanco').classList.add('hidden');
                     document.getElementById('success_export').classList.remove('hidden');
@@ -320,7 +315,6 @@
                 }
             })
             .catch(err => {
-                window.NomitechLoader.hide();
                 Swal.fire('Error', 'Error al procesar la exportación.', 'error');
                 btn.disabled = false;
                 btn.innerHTML = '<span>Generar Archivo</span>';

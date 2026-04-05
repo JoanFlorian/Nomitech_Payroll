@@ -88,11 +88,11 @@
             </div>
             <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto mt-4 md:mt-0">
                 @can('manage_provisions')
-                {{-- <button type="button" @click.prevent="consignacionModal = true"
+                <button type="button" @click.prevent="consignacionModal = true"
                     class="bg-emerald-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-md hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                     <i class="bi bi-file-earmark-arrow-down"></i>
                     Consignación Anual
-                </button> --}}
+                </button>
                 <button type="button" @click.prevent="automationModal = true"
                     class="bg-gray-800 text-white font-bold py-2.5 px-6 rounded-lg shadow-md hover:bg-black transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
                     <i class="bi bi-gear-fill"></i>
@@ -392,6 +392,57 @@
                 <div class="mt-6">
                     {{ $balances->links() }}
                 </div>
+
+                {{-- Historial de Consignaciones --}}
+                <div class="mt-12">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <i class="bi bi-journal-text text-emerald-600"></i>
+                        Historial de Consignaciones Anuales
+                    </h3>
+                    
+                    <div class="overflow-x-auto rounded-xl border border-gray-100 shadow-sm bg-white">
+                        <table class="min-w-full divide-y divide-gray-100">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Lote ID</th>
+                                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Año</th>
+                                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Fondo</th>
+                                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Fecha Generación</th>
+                                    <th class="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-widest">Descargas (On-Demand)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-50">
+                                @forelse($batches as $batch)
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-700">#{{ $batch->id }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ $batch->year }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                                            <span class="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-100">{{ $batch->fondo }}</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 italic">{{ $batch->generated_at->format('d/m/Y H:i') }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <a href="{{ route('provisiones.lote.descargar', [$batch->id, 'txt']) }}" 
+                                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all border border-gray-200">
+                                                    <i class="bi bi-filetype-txt text-sm"></i> TXT
+                                                </a>
+                                                <a href="{{ route('provisiones.lote.descargar', [$batch->id, 'xlsx']) }}" 
+                                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-all shadow-sm">
+                                                    <i class="bi bi-file-earmark-excel text-sm"></i> Excel
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">No hay historial de lotes generados.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         @endif
 
             {{-- ═══════════════════════════════════════════════════════════════════ --}}
@@ -744,35 +795,64 @@
                 <div @click.away="consignacionModal = false"
                     class="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative overflow-hidden">
                     <div class="absolute inset-0 pointer-events-none opacity-5">
-                        <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-indigo-500"></div>
+                        <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-emerald-500"></div>
                     </div>
-                    <div class="relative z-10">
+                    <div class="relative z-10" x-data="{ format: 'xlsx', year: '{{ date('Y') }}', isPreview: true }">
                         <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-                            <h2 class="text-xl font-bold text-gray-800">Consignación Anual de Cesantías</h2>
+                            <h2 class="text-xl font-bold text-gray-800">Causación Anual de Cesantías</h2>
                             <button type="button" @click="consignacionModal = false"
                                 class="text-gray-400 hover:text-gray-600 transition-colors">
                                 <i class="bi bi-x-lg text-xl"></i>
                             </button>
                         </div>
-                        <form method="POST" action="{{ route('provisiones.cesantias.consignacion-anual') }}"
-                            class="p-6 space-y-5" data-loader data-loader-text="Generando archivos de cesantías...">
-                            @csrf
-                            <div class="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                        
+                        <div class="p-6 space-y-5">
+                            <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                                 <div class="flex items-start gap-3">
-                                    <i class="bi bi-info-circle-fill text-indigo-500 text-lg mt-0.5"></i>
+                                    <i class="bi bi-info-circle-fill text-amber-500 text-lg mt-0.5"></i>
                                     <div>
-                                        <p class="text-sm font-semibold text-indigo-700">Un archivo TXT por fondo</p>
-                                        <p class="text-sm text-indigo-600 mt-1">Múltiples fondos se descargan como ZIP.</p>
+                                        <p class="text-sm font-semibold text-amber-700">Modo de Operación</p>
+                                        <p class="text-sm text-amber-600 mt-1">
+                                            La <strong>Vista Previa</strong> no afecta balances. La <strong>Liquidación Real</strong> crea el lote histórico y reduce saldos.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Año de Causación</label>
-                                <input type="number" name="year" value="{{ date('Y') - 1 }}" max="{{ date('Y') }}" required
-                                    class="w-full border-gray-200 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 h-11">
-                                <p class="text-xs text-gray-400 mt-1">Normalmente el año anterior (pago antes del 14 de
-                                    Febrero).</p>
+                            <div class="flex gap-4">
+                                <div class="w-1/2">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                                    <input type="number" x-model="year" class="w-full border-gray-200 rounded-lg shadow-sm h-11">
+                                </div>
+                                <div class="w-1/2">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Formato</label>
+                                    <select x-model="format" class="w-full border-gray-200 rounded-lg shadow-sm h-11">
+                                        <option value="xlsx">Excel (.xlsx)</option>
+                                        <option value="txt">Plano TXT</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-3">
+                                <label class="flex items-center gap-3 p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-all"
+                                       :class="isPreview ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                                    <input type="radio" value="true" x-model="isPreview" class="sr-only">
+                                    <i class="bi bi-eye text-xl" :class="isPreview ? 'text-blue-500' : 'text-gray-400'"></i>
+                                    <div>
+                                        <p class="text-sm font-bold" :class="isPreview ? 'text-blue-700' : 'text-gray-700'">Simular / Vista Previa</p>
+                                        <p class="text-[10px] text-gray-400 uppercase font-black">SOLO GENERAR ARCHIVO</p>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-all"
+                                       :class="!isPreview ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'">
+                                    <input type="radio" value="false" x-model="isPreview" class="sr-only">
+                                    <i class="bi bi-check-circle text-xl" :class="!isPreview ? 'text-emerald-500' : 'text-gray-400'"></i>
+                                    <div>
+                                        <p class="text-sm font-bold" :class="!isPreview ? 'text-emerald-700' : 'text-gray-700'">Liquidar y Generar Lote</p>
+                                        <p class="text-[10px] text-gray-400 uppercase font-black">REGISTRAR EN HISTORIAL Y REDUCIR SALDOS</p>
+                                    </div>
+                                </label>
                             </div>
 
                             <div class="flex justify-end gap-3 pt-2">
@@ -780,12 +860,29 @@
                                     class="px-5 py-2.5 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all">
                                     Cancelar
                                 </button>
-                                <button type="submit"
-                                    class="px-5 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-lg shadow-md hover:bg-indigo-700 transition-all">
-                                    <i class="bi bi-download mr-1"></i> Generar y Descargar
-                                </button>
+                                
+                                {{-- Preview Trigger --}}
+                                <template x-if="isPreview">
+                                    <a :href="'{{ route('provisiones.cesantias.preview') }}?year=' + year + '&format=' + format"
+                                       @click="consignacionModal = false"
+                                       class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 transition-all flex items-center gap-2">
+                                        <i class="bi bi-download"></i> Descargar Previa
+                                    </a>
+                                </template>
+
+                                {{-- Real Liquidation Trigger --}}
+                                <template x-if="!isPreview">
+                                    <form method="POST" action="{{ route('provisiones.cesantias.consignacion-anual') }}" data-loader>
+                                        @csrf
+                                        <input type="hidden" name="year" :value="year">
+                                        <button type="submit"
+                                            class="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-lg shadow-md hover:bg-emerald-700 transition-all">
+                                            <i class="bi bi-check2-all mr-1"></i> Confirmar Liquidación Real
+                                        </button>
+                                    </form>
+                                </template>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -234,7 +234,8 @@ class BankExportService
             // Validar banco con código ACH
             $banco = $cuenta->banco;
             if (!$banco || empty($banco->codigo_ach)) {
-                $errores[] = "{$usuario->primer_nombre} {$usuario->primer_apellido} ({$usuario->doc}): banco sin código ACH";
+                $nombreBanco = $banco->nombre ?? 'N/A';
+                $errores[] = "{$usuario->primer_nombre} {$usuario->primer_apellido} ({$usuario->doc}): banco [{$nombreBanco}] sin código ACH (Configurar en SuperAdmin -> Actualizaciones -> Bancos)";
                 continue;
             }
 

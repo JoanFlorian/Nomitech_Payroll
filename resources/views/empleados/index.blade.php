@@ -17,20 +17,27 @@
                     @php
                         $searchParam = request('search');
                         $baseParams = $searchParam ? ['search' => $searchParam] : [];
-                        $exportGeneralParams = [];
+                        
                         $exportGeneralParams = $baseParams;
-                        $exportActivosParams = array_merge($baseParams, ['estado' => 'activos']);
-                        $exportInactivosParams = array_merge($baseParams, ['estado' => 'inactivos']);
-                        $exportSinContratoParams = array_merge($baseParams, ['estado' => 'sin_contrato']);
+                        $exportActivosParams = array_merge($baseParams, ['estado' => 'ACTIVO']);
+                        $exportPorVencerParams = array_merge($baseParams, ['estado' => 'POR_VENCER']);
+                        $exportProgramadosParams = array_merge($baseParams, ['estado' => 'PROGRAMADO']);
+                        $exportVencidosParams = array_merge($baseParams, ['estado' => 'VENCIDO']);
+                        $exportTerminadosParams = array_merge($baseParams, ['estado' => 'TERMINADO']);
+                        
                         $exportOptions = [
-                            'General (todos) - Excel' => route('employees.export.excel', $exportGeneralParams),
-                            'General (todos) - PDF' => route('employees.export.pdf', $exportGeneralParams),
-                            'Solo activos - Excel' => route('employees.export.excel', $exportActivosParams),
-                            'Solo activos - PDF' => route('employees.export.pdf', $exportActivosParams),
-                            'Solo inactivos - Excel' => route('employees.export.excel', $exportInactivosParams),
-                            'Solo inactivos - PDF' => route('employees.export.pdf', $exportInactivosParams),
-                            'Sin contrato - Excel' => route('employees.export.excel', $exportSinContratoParams),
-                            'Sin contrato - PDF' => route('employees.export.pdf', $exportSinContratoParams),
+                            'General (Todos) - Excel' => route('employees.export.excel', $exportGeneralParams),
+                            'General (Todos) - PDF' => route('employees.export.pdf', $exportGeneralParams),
+                            'Activos - Excel' => route('employees.export.excel', $exportActivosParams),
+                            'Activos - PDF' => route('employees.export.pdf', $exportActivosParams),
+                            'Por Vencer - Excel' => route('employees.export.excel', $exportPorVencerParams),
+                            'Por Vencer - PDF' => route('employees.export.pdf', $exportPorVencerParams),
+                            'Programados - Excel' => route('employees.export.excel', $exportProgramadosParams),
+                            'Programados - PDF' => route('employees.export.pdf', $exportProgramadosParams),
+                            'Vencidos - Excel' => route('employees.export.excel', $exportVencidosParams),
+                            'Vencidos - PDF' => route('employees.export.pdf', $exportVencidosParams),
+                            'Terminados - Excel' => route('employees.export.excel', $exportTerminadosParams),
+                            'Terminados - PDF' => route('employees.export.pdf', $exportTerminadosParams),
                         ];
                     @endphp
                     <select id="exportEmployeesSelect"
@@ -74,17 +81,25 @@
                     class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ !request('estado') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
                         <i class="fas fa-list mr-2"></i>Todos ({{ $totalEmpleados }})
                     </a>
-                    <a href="{{ route('empleados.index', ['estado' => 'activos']) }}" 
-                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'activos' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                    <a href="{{ route('empleados.index', ['estado' => 'ACTIVO']) }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'ACTIVO' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
                         <i class="fas fa-check-circle mr-2"></i>Activos ({{ $activosCount }})
                     </a>
-                    <a href="{{ route('empleados.index', ['estado' => 'inactivos']) }}" 
-                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'inactivos' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
-                        <i class="fas fa-times-circle mr-2"></i>Inactivos ({{ $inactivosCount }})
+                    <a href="{{ route('empleados.index', ['estado' => 'POR_VENCER']) }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'POR_VENCER' ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                        <i class="fas fa-clock mr-2"></i>Por Vencer ({{ $porVencerCount }})
                     </a>
-                    <a href="{{ route('empleados.index', ['estado' => 'sin_contrato']) }}" 
-                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'sin_contrato' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
-                        <i class="fas fa-user-slash mr-2"></i>Sin Contrato ({{ $sinContratoCount }})
+                    <a href="{{ route('empleados.index', ['estado' => 'PROGRAMADO']) }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'PROGRAMADO' ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                        <i class="fas fa-calendar-alt mr-2"></i>Programados ({{ $programadosCount }})
+                    </a>
+                    <a href="{{ route('empleados.index', ['estado' => 'VENCIDO']) }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'VENCIDO' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Vencidos ({{ $vencidosCount }})
+                    </a>
+                    <a href="{{ route('empleados.index', ['estado' => 'TERMINADO']) }}" 
+                    class="px-4 py-1.5 rounded-full text-sm font-semibold transition duration-200 {{ request('estado') === 'TERMINADO' ? 'bg-gray-500 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' }}">
+                        <i class="fas fa-ban mr-2"></i>Terminados ({{ $terminadosCount }})
                     </a>
                 </div>
             </div>

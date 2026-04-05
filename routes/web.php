@@ -150,6 +150,9 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::get('/provisiones/cesantias/descargar-consignacion-reciente', [\App\Http\Controllers\ProvisionesController::class, 'descargarConsignacionReciente'])->name('provisiones.cesantias.descargar-consignacion-reciente')->middleware('permission:manage_provisions');
     Route::get('/provisiones/cesantias/certificado/{withdrawal_id}', [\App\Http\Controllers\ProvisionesController::class, 'descargarCertificado'])->name('provisiones.cesantias.certificado')->middleware('permission:view_provisions');
     Route::get('/provisiones/comprobante/{movement_id}', [\App\Http\Controllers\ProvisionesController::class, 'descargarComprobantePrestacion'])->name('provisiones.comprobante')->middleware('permission:view_provisions');
+    Route::get('/provisiones/consignaciones', [\App\Http\Controllers\ProvisionesController::class, 'consignaciones'])->name('provisiones.consignaciones')->middleware('permission:view_provisions');
+    Route::get('/provisiones/lote/{batchId}/{format}', [\App\Http\Controllers\ProvisionesController::class, 'descargarLote'])->name('provisiones.lote.descargar')->middleware('permission:manage_provisions');
+    Route::get('/provisiones/cesantias/preview', [\App\Http\Controllers\ProvisionesController::class, 'previewCesantias'])->name('provisiones.cesantias.preview')->middleware('permission:manage_provisions');
 
     // Nómina Electrónica
     Route::get('/nomina-electronica', [\App\Http\Controllers\NominaElectronicaController::class, 'index'])->name('nomina-electronica.index')->middleware('permission:view_electronic_payroll');

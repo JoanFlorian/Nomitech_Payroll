@@ -11,6 +11,9 @@ use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeSession;
 use App\Enums\PaymentStatus;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class CheckoutController extends Controller
@@ -39,7 +42,7 @@ class CheckoutController extends Controller
     /**
      * Create Stripe Checkout Session.
      */
-    public function createSession(Pago $pago)
+    public function createSession(Request $request, Pago $pago)
     {
         // 1. Strict Security Check
         if ((int) session('empresa_id') !== (int) $pago->empresa_id) {
@@ -54,11 +57,63 @@ class CheckoutController extends Controller
             return redirect()->route('licencia.pending');
         }
 
-        // 3. Load Plan correctly from Licencia
+        // 3. Code Verification & Rate Limiting
+        $user = Auth::user();
+        $throttleKey = 'registration-verify-attempt:' . $user->correo;
+        $blockKey = 'registration-verify-blocked:' . $user->correo;
+
+        // Check if blocked
+        if (Cache::has($blockKey)) {
+            $seconds = max(0, Cache::get($blockKey) - now()->timestamp);
+            $minutes = (int) ceil($seconds / 60);
+            return back()->withErrors(['verification_code' => "Has excedido el número de intentos. Bloqueado por {$minutes} minutos."]);
+        }
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $minutes = (int) ceil($seconds / 60);
+            return back()->withErrors(['verification_code' => "Demasiados intentos. Intenta de nuevo en {$minutes} minutos."]);
+        }
+
+        $request->validate([
+            'verification_code' => 'required|digits:6',
+        ], [
+            'verification_code.required' => 'El código de verificación es obligatorio.',
+            'verification_code.digits' => 'El código debe ser de 6 números.',
+        ]);
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $user->correo)
+            ->first();
+
+        $isValid = $record && $record->token === $request->verification_code;
+
+        if (!$isValid) {
+            RateLimiter::hit($throttleKey, 300); // 5 minutes window
+            $attempts = RateLimiter::attempts($throttleKey);
+            
+            if ($attempts >= 5) {
+                Cache::put($blockKey, now()->addMinutes(5)->timestamp, now()->addMinutes(5));
+                RateLimiter::clear($throttleKey);
+            }
+
+            $remaining = 5 - $attempts;
+            return back()->withErrors(['verification_code' => "Código incorrecto. Te quedan {$remaining} intentos."])->withInput();
+        }
+
+        // Success - Clear throttling
+        RateLimiter::clear($throttleKey);
+        Cache::forget($blockKey);
+
+        // 4. Mark as Verified & Clean up token
+        $user->update(['email_verified_at' => now()]);
+        DB::table('password_reset_tokens')->where('email', $user->correo)->delete();
+
+        // 5. Load Plan correctly from Licencia
         $pago->load('licencia.plan');
         $plan = $pago->licencia->plan;
 
-        // 3. Validate Stripe Configuration
+        // 6. Validate Stripe Configuration
         if (!$plan || !$plan->stripe_price_id) {
             return back()->with('error', 'Plan not configured for Stripe (Missing Price ID)');
         }

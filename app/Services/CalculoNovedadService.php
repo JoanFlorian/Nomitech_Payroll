@@ -28,6 +28,7 @@ class CalculoNovedadService
         'VCT',
         'INC',
         'LIC',
+        'RET',
     ];
 
     public function obtenerSalarioEmpleado(string $empleadoId): ?Salario
@@ -101,6 +102,7 @@ class CalculoNovedadService
                 return $resultado;
 
             case 'VCT':
+            case 'RET':
                 return $resultado;
 
             case 'VST':
@@ -251,6 +253,7 @@ class CalculoNovedadService
             'licencia_remunerada', 'licencia_no_remunerada', 'licencia' => 'LIC',
             'calamidad_domestica', 'permiso_remunerado', 'permiso_no_remunerado', 'permiso', 'cita_medica' => 'LIC',
             'ausencia_injustificada', 'suspension', 'suspension_contrato' => 'SLN',
+            'retiro', 'terminacion', 'terminacion_contrato' => 'RET',
             default => strtoupper($normalized),
         };
     }

@@ -364,7 +364,12 @@ class NominaController extends Controller
             return back()->with('error', 'Empleado no encontrado.');
         }
 
-        if ((int) $empleado->id_contrato !== (int) $data['id_contrato']) {
+        // Validate that the contract belongs to the employee
+        $contratoValido = \App\Models\Contrato::where('doc', $data['doc'])
+            ->where('id_contrato', (int) $data['id_contrato'])
+            ->exists();
+
+        if (!$contratoValido) {
             return back()->withErrors([
                 'empleado_busqueda' => 'El contrato seleccionado no coincide con el empleado.',
             ])->withInput();
@@ -1120,13 +1125,23 @@ class NominaController extends Controller
                         }
                     }
 
-                    // STEP 1: Auto-schedule termination benefits BEFORE saving salary.
+                    // STEP 1: Crear/actualizar el registro de salario PRIMERO
+                    // Esto garantiza que el registro exista para que payBenefit pueda encontrarlo.
+                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo);
+
+                    // STEP 2: Programar beneficios de terminación DESPUÉS de crear el salario.
+                    // handleContractTermination → autoScheduleAllBenefits → payBenefit requiere
+                    // que exista un registro de salario en el periodo activo.
+                    $benefitsScheduled = false;
                     if ($contratoObj) {
-                        $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
+                        $termResult = $this->terminationService->handleContractTermination($contratoObj, $periodoActivo);
+                        $benefitsScheduled = $termResult['benefits_scheduled'] ?? false;
                     }
 
-                    // STEP 2: Create/update the salary record WITH benefits already in the ledger
-                    $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo);
+                    // STEP 3: Si se programaron beneficios, RECALCULAR el salario para incluirlos en el neto
+                    if ($benefitsScheduled) {
+                        $this->calculator->guardarNominaEmpleado((int) $idContrato, (int) $periodoActivo->id_periodo, $inputCalculo, true);
+                    }
 
                     $procesados++;
                 } catch (\App\Exceptions\EmpleadoIncapacitadoException $e) {

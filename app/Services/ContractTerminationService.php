@@ -226,7 +226,7 @@ class ContractTerminationService
     }
 
     /**
-     * Removes auto-scheduled termination benefits for an employee.
+     * Removes auto-scheduled termination benefit PAYMENTS for an employee.
      */
     public function removeScheduledTerminationBenefits(string $doc, int $periodId): int
     {
@@ -234,8 +234,45 @@ class ContractTerminationService
             ->where('payroll_period_id', $periodId)
             ->where('movement_type', BenefitLedger::MOVEMENT_SCHEDULED)
             ->where('status', BenefitLedger::STATUS_PENDING_PAYROLL)
-            ->where('reference', 'like', '%Liquidación automática%')
             ->delete();
+    }
+
+    /**
+     * Reverses the "mini-closure" accrual entries that were created when the system
+     * detected a contract termination. Also subtracts those amounts from the BenefitBalance.
+     *
+     * These accruals have the reference pattern 'Causación parcial por liquidación final'.
+     */
+    public function reverseTerminationAccruals(string $doc, int $tenantId, int $periodId): int
+    {
+        $entries = BenefitLedger::where('employee_id', $doc)
+            ->where('tenant_id', $tenantId)
+            ->where('period_id', $periodId)
+            ->where('movement_type', BenefitLedger::MOVEMENT_ACCRUAL)
+            ->where('reference', 'like', '%Causación parcial por liquidación final%')
+            ->get();
+
+        if ($entries->isEmpty()) {
+            return 0;
+        }
+
+        $balance = BenefitBalance::where('employee_id', $doc)
+            ->where('tenant_id', $tenantId)
+            ->first();
+
+        $reversed = 0;
+        foreach ($entries as $entry) {
+            // Subtract the accrued amount from the balance
+            if ($balance) {
+                $balance->applyMovement($entry->benefit_type, -abs((float) $entry->amount));
+            }
+            $entry->delete();
+            $reversed++;
+        }
+
+        Log::info("Reversed {$reversed} termination accrual entries for employee {$doc}, period {$periodId}.");
+
+        return $reversed;
     }
 
     /**
@@ -248,12 +285,10 @@ class ContractTerminationService
         $doc = $nuevoContrato->doc;
         $fechaInicio = Carbon::parse($nuevoContrato->fecha_inicio);
 
-        // Find the most recent previous contract for this employee
         $contratoPrevio = Contrato::where('doc', $doc)
             ->where('id_empresa', $idEmpresa)
             ->where('id_contrato', '!=', $nuevoContrato->id_contrato)
             ->whereNotNull('fecha_fin')
-            ->where('fecha_fin', '<=', $fechaInicio)
             ->orderByDesc('fecha_fin')
             ->first();
 
@@ -270,14 +305,19 @@ class ContractTerminationService
                     ->first();
 
                 if ($periodoActivo) {
-                    // 1. Remove auto-scheduled termination benefits
-                    $deleted = $this->removeScheduledTerminationBenefits($doc, $periodoActivo->id_periodo);
-                    if ($deleted > 0) {
-                        Log::info("Removed {$deleted} auto-scheduled benefits for {$doc} due to labor continuity.");
+                    // 1. Remove auto-scheduled termination benefit PAYMENTS
+                    $deletedPayments = $this->removeScheduledTerminationBenefits($doc, $periodoActivo->id_periodo);
+                    if ($deletedPayments > 0) {
+                        Log::info("Removed {$deletedPayments} auto-scheduled benefit payments for {$doc} due to labor continuity.");
                     }
 
-                    // 2. CONSOLIDATION AND RECALCULATION
-                    // Search if a payroll record exists for the OLD contract in this period
+                    // 2. Reverse "mini-closure" ACCRUAL entries and their balance impact
+                    $reversedAccruals = $this->reverseTerminationAccruals($doc, $idEmpresa, $periodoActivo->id_periodo);
+                    if ($reversedAccruals > 0) {
+                        Log::info("Reversed {$reversedAccruals} termination accrual entries for {$doc} due to labor continuity.");
+                    }
+
+                    // 3. CONSOLIDATION: Transfer existing payroll record to the new contract
                     $salario = \App\Models\Salario::where('id_contrato', $contratoPrevio->id_contrato)
                         ->where('id_periodo', $periodoActivo->id_periodo)
                         ->first();
@@ -289,7 +329,7 @@ class ContractTerminationService
                         Log::info("Transferred salary record #{$salario->id_salario} from contract #{$contratoPrevio->id_contrato} to #{$nuevoContrato->id_contrato} due to renewal.");
                     }
 
-                    // 3. TRIGGER RECALCULATION WITH SUMMED DAYS
+                    // 4. RECALCULATE WITH SUMMED DAYS
                     try {
                         $calculator = app(\App\Services\NominaCalculatorService::class);
                         
@@ -300,9 +340,10 @@ class ContractTerminationService
 
                         $calculator->guardarNominaEmpleado($nuevoContrato->id_contrato, $periodoActivo->id_periodo, [
                             'dias_trabajados' => $totalDias,
+                            'recalculate_transport_allowance' => true,
                         ], true);
                         
-                        Log::info("Automatic payroll update for {$doc} on renewal. Total days: {$totalDias} (Gap: {$diasDiferencia} days).");
+                        Log::info("Automatic payroll update for {$doc} on renewal. Days: old={$diasAnterior} + new={$diasNuevo} = {$totalDias} (Gap: {$diasDiferencia} days).");
                     } catch (\Exception $e) {
                         Log::error("Failed to auto-recalculate payroll on renewal for {$doc}: " . $e->getMessage());
                     }

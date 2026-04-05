@@ -31,53 +31,6 @@ class EmployeesController extends Controller
 {
     use HandlesExportResponses;
 
-    private function contratoActivoCallback(): \Closure
-    {
-        $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
-        $hasEstado = Schema::hasColumn('contrato', 'estado');
-
-        return function ($q) use ($hasEstadoLaboral, $hasEstado) {
-            if ($hasEstadoLaboral) {
-                $q->where('estado_laboral', Contrato::ESTADO_LABORAL_ACTIVO);
-                return;
-            }
-
-            if ($hasEstado) {
-                $q->whereIn('estado', [
-                    Contrato::ESTADO_ACTIVO,
-                    Contrato::ESTADO_POR_VENCER,
-                    Contrato::ESTADO_PROGRAMADO,
-                ]);
-                return;
-            }
-
-            $q->where('activo', 1);
-        };
-    }
-
-    private function contratoInactivoCallback(): \Closure
-    {
-        $hasEstadoLaboral = Schema::hasColumn('contrato', 'estado_laboral');
-        $hasEstado = Schema::hasColumn('contrato', 'estado');
-
-        return function ($q) use ($hasEstadoLaboral, $hasEstado) {
-            if ($hasEstadoLaboral) {
-                $q->where('estado_laboral', Contrato::ESTADO_LABORAL_TERMINADO);
-                return;
-            }
-
-            if ($hasEstado) {
-                $q->whereIn('estado', [
-                    Contrato::ESTADO_VENCIDO,
-                    Contrato::ESTADO_TERMINADO,
-                ]);
-                return;
-            }
-
-            $q->where('activo', 0);
-        };
-    }
-
     private function construirConsultaEmpleados(Request $request)
     {
         $query = Empleado::with([
@@ -95,13 +48,17 @@ class EmployeesController extends Controller
         }
 
         if ($request->filled('estado')) {
-            $estado = $request->input('estado');
-            if ($estado === 'activos') {
-                $query->whereHas('contratos', $this->contratoActivoCallback());
-            } elseif ($estado === 'inactivos') {
-                $query->whereHas('contratos', $this->contratoInactivoCallback());
-            } elseif ($estado === 'sin_contrato') {
-                $query->doesntHave('contratos');
+            $estado = strtoupper($request->input('estado'));
+            if (in_array($estado, [
+                Contrato::ESTADO_PROGRAMADO,
+                Contrato::ESTADO_ACTIVO,
+                Contrato::ESTADO_POR_VENCER,
+                Contrato::ESTADO_VENCIDO,
+                Contrato::ESTADO_TERMINADO,
+            ])) {
+                $query->whereHas('ultimoContrato', function ($q) use ($estado) {
+                    $q->conEstadoDinamico($estado);
+                });
             }
         }
 
@@ -121,8 +78,10 @@ class EmployeesController extends Controller
             $empleados = collect();
             $totalEmpleados = 0;
             $activosCount = 0;
-            $inactivosCount = 0;
-            $sinContratoCount = 0;
+            $porVencerCount = 0;
+            $programadosCount = 0;
+            $vencidosCount = 0;
+            $terminadosCount = 0;
             $contractAlerts = ['expiring' => ['count' => 0], 'pending_liquidation' => ['count' => 0]];
         } else {
             $query = $this->construirConsultaEmpleados($request);
@@ -150,9 +109,11 @@ class EmployeesController extends Controller
             // Obtener conteos para los filtros usando Empleado para aislamiento
             // Usamos los callbacks que ya manejan la existencia de columnas
             $totalEmpleados = Empleado::with('contratos')->count();
-            $activosCount = Empleado::whereHas('contratos', $this->contratoActivoCallback())->count();
-            $inactivosCount = Empleado::whereHas('contratos', $this->contratoInactivoCallback())->count();
-            $sinContratoCount = Empleado::doesntHave('contratos')->count();
+            $activosCount = Empleado::whereHas('ultimoContrato', function($q) { $q->conEstadoDinamico(Contrato::ESTADO_ACTIVO); })->count();
+            $porVencerCount = Empleado::whereHas('ultimoContrato', function($q) { $q->conEstadoDinamico(Contrato::ESTADO_POR_VENCER); })->count();
+            $programadosCount = Empleado::whereHas('ultimoContrato', function($q) { $q->conEstadoDinamico(Contrato::ESTADO_PROGRAMADO); })->count();
+            $vencidosCount = Empleado::whereHas('ultimoContrato', function($q) { $q->conEstadoDinamico(Contrato::ESTADO_VENCIDO); })->count();
+            $terminadosCount = Empleado::whereHas('ultimoContrato', function($q) { $q->conEstadoDinamico(Contrato::ESTADO_TERMINADO); })->count();
 
             // Alertas de contratos
             $empresaId = (int) session('empresa_id');
@@ -187,8 +148,10 @@ class EmployeesController extends Controller
               'Bancos',
               'totalEmpleados',
               'activosCount',
-              'inactivosCount',
-              'sinContratoCount',
+              'porVencerCount',
+              'programadosCount',
+              'vencidosCount',
+              'terminadosCount',
               'contractAlerts',
               'step',
               'activePeriod'
@@ -304,11 +267,13 @@ class EmployeesController extends Controller
     {
         $usuarios = $this->construirConsultaEmpleados($request)->get();
 
-        $estado = $request->query('estado');
+        $estado = strtoupper($request->query('estado'));
         $estadoTexto = match ($estado) {
-            'activos' => 'Solo activos',
-            'inactivos' => 'Solo inactivos',
-            'sin_contrato' => 'Sin contrato',
+            'ACTIVO' => 'Activos',
+            'POR_VENCER' => 'Por Vencer',
+            'PROGRAMADO' => 'Programados',
+            'VENCIDO' => 'Vencidos',
+            'TERMINADO' => 'Terminados',
             default => 'General (todos)',
         };
 

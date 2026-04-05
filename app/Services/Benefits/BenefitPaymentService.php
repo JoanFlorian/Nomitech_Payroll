@@ -318,135 +318,178 @@ class BenefitPaymentService
     //  ANNUAL SEVERANCE FUND DEPOSIT
     // ═══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Calculates the consignment data for all employees with a positive severance balance.
+     * Does NOT persist anything to the database.
+     */
+    public function calculateConsignmentData(int $companyId, int $year): array
+    {
+        $balances = BenefitBalance::where('tenant_id', $companyId)
+            ->where('cesantias_balance', '>', 0)
+            ->with(['usuario', 'usuario.contratos' => function($q) use ($companyId) {
+                $q->where('id_empresa', $companyId)->orderByDesc('id_contrato');
+            }])
+            ->get();
+
+        if ($balances->isEmpty()) {
+            return [];
+        }
+
+        $groupedByFund = $balances->groupBy(function ($balance) {
+            return $balance->usuario->fondo_cesantias ?? 'NO_ASIGNADO';
+        });
+
+        $data = [];
+        foreach ($groupedByFund as $fondo => $employeeBalances) {
+            $employees = [];
+            foreach ($employeeBalances as $balance) {
+                $employees[] = $this->mapBalanceToConsignmentData($balance, $companyId, $year);
+            }
+
+            $data[] = [
+                'fund' => $fondo,
+                'count' => count($employees),
+                'total_amount' => array_sum(array_column($employees, 'amount')),
+                'employees' => $employees,
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Maps a single balance record to the standard consignment data format.
+     */
+    private function mapBalanceToConsignmentData(BenefitBalance $balance, int $companyId, int $year): array
+    {
+        $usuario = $balance->usuario;
+        $contrato = $usuario->contratos->first(); // Loaded in calculateConsignmentData
+        
+        $docTypes = [1 => 'CC', 2 => 'CE', 3 => 'NIT', 4 => 'TI', 5 => 'PAS', 6 => 'RC', 7 => 'NIT_EXT'];
+        $tipoDocName = $usuario && isset($docTypes[$usuario->id_tipo_doc]) ? $docTypes[$usuario->id_tipo_doc] : 'CC';
+
+        // Compute Worked Days (Base 360)
+        $diasTrabajados = 360;
+        if ($contrato && $contrato->fecha_inicio) {
+            $inicio = \Carbon\Carbon::parse($contrato->fecha_inicio);
+            $fin = $contrato->fecha_fin ? \Carbon\Carbon::parse($contrato->fecha_fin) : \Carbon\Carbon::create($year, 12, 30);
+
+            if ($inicio->year < $year) $inicio = \Carbon\Carbon::create($year, 1, 1);
+            if ($fin->year > $year) $fin = \Carbon\Carbon::create($year, 12, 30);
+
+            if ($inicio->year == $year && $inicio->lte($fin)) {
+                $months = max(0, $fin->month - $inicio->month);
+                $daysStart = min(30, $inicio->day);
+                $daysEnd = min(30, $fin->day);
+                $diasTrabajados = ($months * 30) + ($daysEnd - $daysStart) + 1;
+                if ($inicio->month == 1 && $inicio->day == 1 && $fin->month == 12 && $fin->day >= 30) $diasTrabajados = 360;
+            }
+        }
+
+        return [
+            'tipo_doc' => $tipoDocName,
+            'document_number' => $usuario->numero_documento ?? $balance->employee_id,
+            'primer_apellido' => $usuario->primer_apellido ?? '',
+            'segundo_apellido' => $usuario->segundo_apellido ?? '',
+            'primer_nombre' => $usuario->primer_nombre ?? '',
+            'otros_nombres' => $usuario->otros_nombres ?? '',
+            'fecha_ingreso' => $contrato && $contrato->fecha_inicio ? \Carbon\Carbon::parse($contrato->fecha_inicio)->format('Y-m-d') : '',
+            'fecha_retiro' => $contrato && $contrato->fecha_fin ? \Carbon\Carbon::parse($contrato->fecha_fin)->format('Y-m-d') : '',
+            'tipo_trabajador' => $contrato && $contrato->tipoTrabajador ? $contrato->tipoTrabajador->nombre : 'DEPENDIENTE',
+            'salario_base' => $contrato ? $contrato->salario_base : 0,
+            'dias_trabajados' => max(1, min(360, $diasTrabajados)),
+            'periodo_liquidacion' => "01-01-{$year} a 31-12-{$year}",
+            'amount' => (float) $balance->cesantias_balance,
+            'fund' => $usuario->fondo_cesantias ?? 'NO_ASIGNADO',
+        ];
+    }
+
+    /**
+     * Finalizes the annual consignment: creates batches, ledgers, and reduces balances.
+     */
     public function generarConsignacionAnual(int $companyId, int $year): array
     {
         return DB::transaction(function () use ($companyId, $year) {
-            /** @var \Illuminate\Database\Eloquent\Collection|BenefitBalance[] $balances */
-            $balances = BenefitBalance::where('tenant_id', $companyId)
-                ->where('cesantias_balance', '>', 0)
-                ->with('usuario')
-                ->lockForUpdate()
-                ->get();
-
-            if ($balances->isEmpty()) {
-                return [];
-            }
-
-            $groupedByFund = $balances->groupBy(function ($balance) {
-                return $balance->usuario->fondo_cesantias ?? 'NO_ASIGNADO';
-            });
-
-            $generatedBatchesData = [];
-
-            foreach ($groupedByFund as $fondo => $employeeBalances) {
-                /** @var \Illuminate\Database\Eloquent\Collection|BenefitBalance[] $employeeBalances */
+            $data = $this->calculateConsignmentData($companyId, $year);
+            
+            foreach ($data as &$batchData) {
                 $batch = SeveranceBatch::create([
                     'empresa_id' => $companyId,
                     'year' => $year,
-                    'fondo' => $fondo,
+                    'fondo' => $batchData['fund'],
                     'generated_at' => now(),
                 ]);
+                $batchData['batch_id'] = $batch->id;
 
-                $batchEmployees = [];
+                foreach ($batchData['employees'] as $empData) {
+                    $balance = BenefitBalance::where('employee_id', $empData['document_number'])
+                        ->where('tenant_id', $companyId)
+                        ->lockForUpdate()
+                        ->first();
 
-                foreach ($employeeBalances as $balance) {
-                    $amount = (float) $balance->cesantias_balance;
-                    $paymentAmount = -$amount;
-
-                    $contractId = $this->getContractId($balance->employee_id, $companyId);
-                    $contrato = $contractId ? Contrato::with('tipoTrabajador')->find($contractId) : null;
-                    $usuario = $balance->usuario;
-
-                    BenefitLedger::create([
-                        'tenant_id' => $companyId,
-                        'employee_id' => $balance->employee_id,
-                        'contract_id' => $contractId,
-                        'benefit_type' => BenefitLedger::TYPE_CESANTIAS,
-                        'movement_type' => BenefitLedger::MOVEMENT_PAYMENT,
-                        'destination' => BenefitLedger::DESTINATION_FUND,
-                        'status' => BenefitLedger::STATUS_REPORTED,
-                        'payment_method' => BenefitLedger::PAYMENT_DIRECT,
-                        'amount' => $paymentAmount,
-                        'source' => BenefitLedger::SOURCE_LIQUIDATION,
-                        'reference' => "Consignación Cesantías Año {$year}",
-                        'batch_id' => $batch->id,
-                    ]);
-
-                    $balance->applyMovement(BenefitLedger::TYPE_CESANTIAS, $paymentAmount);
-
-                    // Map Document Types
-                    $docTypes = [
-                        1 => 'CC',
-                        2 => 'CE',
-                        3 => 'NIT',
-                        4 => 'TI',
-                        5 => 'PAS',
-                        6 => 'RC',
-                        7 => 'NIT_EXT'
-                    ];
-                    $tipoDocName = $usuario && isset($docTypes[$usuario->id_tipo_doc]) ? $docTypes[$usuario->id_tipo_doc] : 'CC';
-
-                    // Compute Worked Days (Base 360) in the given year
-                    $diasTrabajados = 360; // Default to full year
-                    if ($contrato && $contrato->fecha_inicio) {
-                        $inicio = \Carbon\Carbon::parse($contrato->fecha_inicio);
-                        $fin = $contrato->fecha_fin ? \Carbon\Carbon::parse($contrato->fecha_fin) : \Carbon\Carbon::create($year, 12, 30);
-
-                        // Limit bounds to the processed year
-                        if ($inicio->year < $year) {
-                            $inicio = \Carbon\Carbon::create($year, 1, 1);
-                        }
-                        if ($fin->year > $year) {
-                            $fin = \Carbon\Carbon::create($year, 12, 30);
-                        }
-
-                        if ($inicio->year == $year && $inicio->lte($fin)) {
-                            // Simple 360-day year calculation (months * 30 + days)
-                            $months = $fin->month - $inicio->month;
-                            // Ensure months don't go negative if same month
-                            $months = max(0, $months);
-
-                            $daysStart = min(30, $inicio->day);
-                            $daysEnd = min(30, $fin->day);
-
-                            $diasTrabajados = ($months * 30) + ($daysEnd - $daysStart) + 1;
-
-                            // Adjust for full 360 year manually
-                            if ($inicio->month == 1 && $inicio->day == 1 && $fin->month == 12 && $fin->day >= 30) {
-                                $diasTrabajados = 360;
-                            }
-                        }
+                    if ($balance) {
+                        $amount = (float) $balance->cesantias_balance;
+                        BenefitLedger::create([
+                            'tenant_id' => $companyId,
+                            'employee_id' => $balance->employee_id,
+                            'contract_id' => $this->getContractId($balance->employee_id, $companyId),
+                            'benefit_type' => BenefitLedger::TYPE_CESANTIAS,
+                            'movement_type' => BenefitLedger::MOVEMENT_PAYMENT,
+                            'destination' => BenefitLedger::DESTINATION_FUND,
+                            'status' => BenefitLedger::STATUS_REPORTED,
+                            'payment_method' => BenefitLedger::PAYMENT_DIRECT,
+                            'amount' => -$amount,
+                            'source' => BenefitLedger::SOURCE_LIQUIDATION,
+                            'reference' => "Consignación Cesantías Año {$year}",
+                            'batch_id' => $batch->id,
+                        ]);
+                        $balance->applyMovement(BenefitLedger::TYPE_CESANTIAS, -$amount);
                     }
-
-                    $batchEmployees[] = [
-                        'tipo_doc' => $tipoDocName,
-                        'document_number' => $usuario->numero_documento ?? $balance->employee_id,
-                        'primer_apellido' => $usuario->primer_apellido ?? '',
-                        'segundo_apellido' => $usuario->segundo_apellido ?? '',
-                        'primer_nombre' => $usuario->primer_nombre ?? '',
-                        'otros_nombres' => $usuario->otros_nombres ?? '',
-                        'fecha_ingreso' => $contrato && $contrato->fecha_inicio ? \Carbon\Carbon::parse($contrato->fecha_inicio)->format('Y-m-d') : '',
-                        'fecha_retiro' => $contrato && $contrato->fecha_fin ? \Carbon\Carbon::parse($contrato->fecha_fin)->format('Y-m-d') : '',
-                        'tipo_trabajador' => $contrato && $contrato->tipoTrabajador ? $contrato->tipoTrabajador->nombre : 'DEPENDIENTE',
-                        'salario_base' => $contrato ? $contrato->salario_base : 0,
-                        'dias_trabajados' => max(1, min(360, $diasTrabajados)),
-                        'periodo_liquidacion' => "01-01-{$year} a 31-12-{$year}",
-                        'amount' => $amount,
-                        'fund' => $fondo,
-                    ];
                 }
-
-                $generatedBatchesData[] = [
-                    'batch_id' => $batch->id,
-                    'fund' => $fondo,
-                    'count' => count($batchEmployees),
-                    'total_amount' => array_sum(array_column($batchEmployees, 'amount')),
-                    'employees' => $batchEmployees,
-                ];
             }
-
-            return $generatedBatchesData;
+            return $data;
         });
+    }
+
+    /**
+     * Retrieves the employee data associated with a previously generated batch.
+     */
+    public function getBatchEmployees(int $batchId): array
+    {
+        $batch = SeveranceBatch::findOrFail($batchId);
+        $ledgers = BenefitLedger::where('batch_id', $batchId)
+            ->with(['usuario', 'contrato.tipoTrabajador'])
+            ->get();
+
+        $employees = [];
+        $docTypes = [1 => 'CC', 2 => 'CE', 3 => 'NIT', 4 => 'TI', 5 => 'PAS', 6 => 'RC', 7 => 'NIT_EXT'];
+
+        foreach ($ledgers as $ledger) {
+            $usuario = $ledger->usuario;
+            $contrato = $ledger->contrato;
+            
+            $employees[] = [
+                'tipo_doc' => $usuario && isset($docTypes[$usuario->id_tipo_doc]) ? $docTypes[$usuario->id_tipo_doc] : 'CC',
+                'document_number' => $ledger->employee_id,
+                'primer_apellido' => $usuario->primer_apellido ?? '',
+                'segundo_apellido' => $usuario->segundo_apellido ?? '',
+                'primer_nombre' => $usuario->primer_nombre ?? '',
+                'otros_nombres' => $usuario->otros_nombres ?? '',
+                'fecha_ingreso' => $contrato && $contrato->fecha_inicio ? \Carbon\Carbon::parse($contrato->fecha_inicio)->format('Y-m-d') : '',
+                'fecha_retiro' => $contrato && $contrato->fecha_fin ? \Carbon\Carbon::parse($contrato->fecha_fin)->format('Y-m-d') : '',
+                'tipo_trabajador' => $contrato && $contrato->tipoTrabajador ? $contrato->tipoTrabajador->nombre : 'DEPENDIENTE',
+                'salario_base' => $contrato ? $contrato->salario_base : 0,
+                // We use the absolute value of the ledger amount (stored as negative for payments)
+                'amount' => abs((float)$ledger->amount),
+                'fund' => $batch->fondo,
+                'year' => $batch->year,
+                // Estimated days (since we don't store them in ledger, we approximate for the report)
+                'dias_trabajados' => 360, 
+                'periodo_liquidacion' => "01-01-{$batch->year} a 31-12-{$batch->year}",
+            ];
+        }
+
+        return $employees;
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

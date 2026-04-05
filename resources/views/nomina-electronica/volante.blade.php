@@ -147,7 +147,7 @@
                 </tr>
                 <tr>
                     <td class="label">Cargo:</td>
-                    <td>{{ $salario->contrato->cargo ?? 'N/A' }}</td>
+                    <td>{{ mb_strtoupper($salario->contrato->cargo ?? ($salario->contrato->usuario->rol->nombre ?? 'Empleado')) }}</td>
                     <td class="label">Sueldo Básico:</td>
                     <td>${{ number_format($salario->contrato->salario_base, 0, ',', '.') }}</td>
                 </tr>

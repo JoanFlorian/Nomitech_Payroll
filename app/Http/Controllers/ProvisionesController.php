@@ -9,9 +9,12 @@ use App\Models\Contrato;
 use App\Models\PeriodoLiquidacion;
 use App\Models\ProvisionAutomation;
 use App\Services\Benefits\BenefitPaymentService;
+use App\Models\SeveranceBatch;
+use App\Services\Benefits\CesantiasExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProvisionesController extends Controller
 {
@@ -79,7 +82,11 @@ class ProvisionesController extends Controller
         // Automation settings
         $automations = ProvisionAutomation::where('id_empresa', $empresaId)->get()->keyBy('benefit_type');
 
-        return view('provisiones.index', compact('balances', 'totals', 'activePeriod', 'warnings', 'automations'));
+        $batches = SeveranceBatch::where('empresa_id', $empresaId)
+            ->orderByDesc('generated_at')
+            ->get();
+
+        return view('provisiones.index', compact('balances', 'totals', 'activePeriod', 'warnings', 'automations', 'batches'));
     }
 
     /**
@@ -363,7 +370,8 @@ class ProvisionesController extends Controller
             return back()->with('error', 'El archivo ya no está disponible o ha expirado.');
         }
 
-        return Storage::disk('local')->download($path)->deleteFileAfterSend(true);
+        if (ob_get_length()) ob_end_clean();
+        return response()->download(storage_path('app/' . $path))->deleteFileAfterSend(true);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -447,5 +455,140 @@ class ProvisionesController extends Controller
             ->update(['last_execution_year' => null]);
 
         return redirect()->back()->with('success', 'Automatización reiniciada. Lista para nueva prueba.');
+    }
+
+    /**
+     * Preview or download the benefit payment slip.
+     * Route: /provisiones/comprobante/{movement_id}
+     */
+    public function descargarComprobantePrestacion(int $movementId, Request $request)
+    {
+        $empresaId = session('empresa_id');
+
+        // Retrieve movement with necessary relations for the view
+        $movement = BenefitLedger::with(['empresa', 'usuario'])
+            ->where('tenant_id', $empresaId)
+            ->findOrFail($movementId);
+
+        // Handle PDF generation if requested
+        if ($request->input('format') === 'pdf') {
+            $pdf = Pdf::loadView('provisiones.comprobante_pdf', compact('movement'));
+            $fileName = "comprobante_prestacion_{$movement->id}.pdf";
+
+            if ($request->input('mode') === 'attachment') {
+                return $pdf->download($fileName);
+            }
+            return $pdf->stream($fileName);
+        }
+
+        // Default: HTML preview (e.g. for modal)
+        return view('provisiones.comprobante', compact('movement'));
+    }
+
+    /**
+     * View history of annual severance consignments.
+     */
+    public function consignaciones()
+    {
+        $batches = SeveranceBatch::where('empresa_id', session('empresa_id'))
+            ->orderByDesc('generated_at')
+            ->get();
+        return view('provisiones.consignaciones', compact('batches'));
+    }
+
+    /**
+     * Download a specific batch in the requested format (txt or excel).
+     */
+    public function descargarLote(int $batchId, string $format, BenefitPaymentService $benefitService, CesantiasExportService $exportService)
+    {
+        $batch = SeveranceBatch::findOrFail($batchId);
+        $employees = $benefitService->getBatchEmployees($batchId);
+        $empresa = \App\Models\Empresa::find(session('empresa_id'));
+
+        if ($format === 'txt') {
+            $content = $exportService->generateTxt($employees, $batch->year);
+            $fileName = "cesantias_{$batch->fondo}_{$batch->year}.txt";
+            return response($content)
+                ->header('Content-Type', 'text/plain')
+                ->header('Content-Disposition', "attachment; filename=\"{$fileName}\"");
+        }
+
+        if ($format === 'xlsx') {
+            $spreadsheet = $exportService->generateExcel($employees, $batch->year, $batch->fondo, $empresa->nombre ?? 'NOMITECH');
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $tempFile = tempnam(sys_get_temp_dir(), 'xlsx_');
+            $writer->save($tempFile);
+            
+            $safeFund = preg_replace('/[^A-Za-z0-9_-]/', '_', $batch->fondo);
+            if (ob_get_length()) ob_end_clean();
+            return response()->download($tempFile, "cesantias_{$safeFund}_{$batch->year}.xlsx")
+                ->deleteFileAfterSend(true);
+        }
+
+        return back()->with('error', 'Formato no soportado.');
+    }
+
+    /**
+     * Preview (Download) without persisting the batch.
+     */
+    public function previewCesantias(Request $request, BenefitPaymentService $benefitService, CesantiasExportService $exportService)
+    {
+        $empresaId = session('empresa_id');
+        $year = $request->input('year', date('Y'));
+        $format = $request->input('format', 'xlsx');
+        $fund = $request->input('fund'); // Optional filter
+
+        $data = $benefitService->calculateConsignmentData($empresaId, $year);
+        
+        if (empty($data)) {
+            return back()->with('error', 'No hay empleados con saldo acumulado de cesantías para previsualizar.');
+        }
+
+        // For simplicity in preview, if multiple funds exist, we return a ZIP
+        if (!$fund && count($data) > 1) {
+            $tempZip = tempnam(sys_get_temp_dir(), 'prev_') . '.zip';
+            $zip = new \ZipArchive();
+            $zip->open($tempZip, \ZipArchive::CREATE);
+            
+            $empresa = \App\Models\Empresa::find($empresaId);
+            
+            foreach ($data as $batchData) {
+                $fundName = $batchData['fund'];
+                if ($format === 'txt') {
+                    $content = $exportService->generateTxt($batchData['employees'], $year);
+                    $zip->addFromString("cesantias_{$fundName}_{$year}.txt", $content);
+                } else {
+                    $spreadsheet = $exportService->generateExcel($batchData['employees'], $year, $fundName, $empresa->nombre ?? 'NOMITECH');
+                    $tempXlsx = tempnam(sys_get_temp_dir(), 'xlsx_');
+                    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+                    $writer->save($tempXlsx);
+                    $zip->addFile($tempXlsx, "cesantias_{$fundName}_{$year}.xlsx");
+                }
+            }
+            $zip->close();
+            if (ob_get_length()) ob_end_clean();
+            return response()->download($tempZip, "previsualizacion_cesantias_{$year}.zip")->deleteFileAfterSend(true);
+        }
+
+        // Single fund or filtered fund
+        $batchData = $fund ? collect($data)->firstWhere('fund', $fund) : $data[0];
+        if (!$batchData) return back()->with('error', 'Fondo no encontrado.');
+
+        $empresa = \App\Models\Empresa::find($empresaId);
+        if ($format === 'txt') {
+            $content = $exportService->generateTxt($batchData['employees'], $year);
+            return response($content)->header('Content-Type', 'text/plain')
+                ->header('Content-Disposition', "attachment; filename=\"cesantias_{$batchData['fund']}_{$year}.txt\"");
+        } else {
+            $spreadsheet = $exportService->generateExcel($batchData['employees'], $year, $batchData['fund'], $empresa->nombre ?? 'NOMITECH');
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $tempFile = tempnam(sys_get_temp_dir(), 'xlsx_');
+            $writer->save($tempFile);
+
+            $safeFund = preg_replace('/[^A-Za-z0-9_-]/', '_', $batchData['fund']);
+            if (ob_get_length()) ob_end_clean();
+            return response()->download($tempFile, "cesantias_{$safeFund}_{$year}.xlsx")
+                ->deleteFileAfterSend(true);
+        }
     }
 }

@@ -80,7 +80,7 @@ class NominaElectronicaController extends Controller
         $empresaId = session('empresa_id');
 
         // Obtener el salario con todas las relaciones necesarias
-        $salario = Salario::with(['contrato.usuario', 'periodo', 'novedades.tipoNovedad', 'contrato.empresa.ciudad'])
+        $salario = Salario::with(['contrato.usuario.rol', 'periodo', 'novedades.tipoNovedad', 'contrato.empresa.ciudad'])
             ->whereHas('contrato', function ($query) use ($empresaId) {
                 $query->where('id_empresa', $empresaId);
             })

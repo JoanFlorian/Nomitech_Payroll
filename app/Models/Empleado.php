@@ -16,4 +16,12 @@ class Empleado extends Usuario
      * Ensure the model uses the correct table but behaves as an Empleado.
      */
     protected $table = 'usuario';
+
+    /**
+     * Relación para obtener el contrato más reciente.
+     */
+    public function ultimoContrato()
+    {
+        return $this->hasOne(Contrato::class, 'doc', 'doc')->latestOfMany('id_contrato');
+    }
 }

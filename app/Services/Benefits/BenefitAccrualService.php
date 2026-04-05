@@ -29,11 +29,8 @@ class BenefitAccrualService
                 continue;
             }
 
-            // EXCLUSIÓN: Contratos de aprendizaje y prestación de servicios no generan prestaciones sociales
-            if (in_array($contrato->id_tipo_contrato, [
-                TipoContrato::TIPO_APRENDIZAJE,
-                TipoContrato::TIPO_PRESTACION_SERVICIOS
-            ])) {
+            // EXCLUSIÓN: Solo prestación de servicios no genera prestaciones sociales bajo este flujo
+            if ($contrato->id_tipo_contrato === TipoContrato::TIPO_PRESTACION_SERVICIOS) {
                 Log::info("Saltando causación de beneficios para contrato ID: {$contrato->id_contrato} (Tipo: {$contrato->id_tipo_contrato})");
                 continue;
             }

@@ -14,6 +14,8 @@ class StoreNovedadEmpleadoRequest extends FormRequest
     private const DIAS_MAXIMO_MATERNIDAD = 126;
     private const DIAS_MAXIMO_PATERNIDAD = 14;
 
+    private const TIPOS_EXCLUSIVOS = ['SLN', 'IGE', 'IRL', 'LMAT', 'LPAT', 'VAC', 'INC', 'LIC'];
+
     private const TIPOS_NOVEDAD = [
         'TDE',
         'TAE',
@@ -30,6 +32,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
         'VCT',
         'INC',
         'LIC',
+        'RET',
     ];
 
     private const TIPOS_REQUIEREN_SOPORTE_MEDICO = ['INC', 'IGE', 'IRL'];
@@ -60,7 +63,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'cantidad_horas' => 'bail|nullable|numeric|min:0.01|max:240',
             'dias' => 'bail|nullable|numeric|min:0.01|max:126',
             'horas' => 'bail|nullable|numeric|min:0.01|max:240',
-            'fecha_inicio' => 'bail|required|date|after_or_equal:' . $today,
+            'fecha_inicio' => 'bail|required|date',
             'fecha_fin' => 'bail|nullable|date|after_or_equal:fecha_inicio',
             'observaciones' => 'bail|nullable|string|max:500',
             'pago_manual' => 'bail|nullable|numeric|min:0|max:999999999.99',
@@ -131,12 +134,12 @@ class StoreNovedadEmpleadoRequest extends FormRequest
 
         $unidadCantidad = $this->input('unidad_cantidad', ($horas > 0 ? 'horas' : 'dias'));
 
-        if (in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'], true)) {
-            $dias = in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP'], true) ? 1 : null;
+        if (in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT', 'RET'], true)) {
+            $dias = in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP', 'RET'], true) ? 1 : null;
             $horas = null;
             
-            // Para traslados (TDE, TAE, TDP, TAP), sincronizar fecha_fin con fecha_inicio
-            if (in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP'], true)) {
+            // Para traslados y retiro, sincronizar fecha_fin con fecha_inicio
+            if (in_array($tipoNovedad, ['TDE', 'TAE', 'TDP', 'TAP', 'RET'], true)) {
                 $this->merge(['fecha_fin' => $this->input('fecha_inicio')]);
             }
         }
@@ -177,6 +180,9 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             $unidad = $this->input('unidad_cantidad');
             $dias = (float) ($this->input('dias') ?? 0);
             $horas = (float) ($this->input('horas') ?? 0);
+            $fechaInicio = $this->input('fecha_inicio');
+            $fechaFin = $this->input('fecha_fin');
+            $empleadoDoc = $this->input('empleado_id');
             $pagoManual = $this->input('valor_manual', $this->input('pago_manual'));
             $tipoLicencia = strtolower(trim((string) $this->input('tipo_licencia')));
             $certificadoMedico = filter_var($this->input('certificado_medico', false), FILTER_VALIDATE_BOOLEAN);
@@ -185,7 +191,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             $tieneSoportePersistido = $this->hasExistingMedicalSupport();
             $esPreview = $this->routeIs('novedades.calculo.preview');
 
-            $requiereCantidad = !in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT'], true);
+            $requiereCantidad = !in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP', 'VSP', 'VST', 'VCT', 'RET'], true);
 
             // Validación: cantidad requerida según tipo
             if ($requiereCantidad) {
@@ -315,66 +321,174 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             }
 
             // Validación: fechas coherentes
-            $fechaInicio = $this->input('fecha_inicio');
-            $fechaFin = $this->input('fecha_fin');
-            
             if ($fechaInicio && $fechaFin && strtotime($fechaFin) < strtotime($fechaInicio)) {
                 $validator->errors()->add('fecha_fin', 'La fecha fin debe ser igual o posterior a la fecha de inicio.');
             }
 
-            // Validación: la novedad no puede ser anterior a la fecha de ingreso del empleado.
-            $empleadoDoc = $this->input('empleado_id');
+            // Validación: fechas coherentes con la cantidad de días (Candado de Coherencia)
+            if ($unidad === 'dias' && $dias > 0 && $fechaInicio && $fechaFin) {
+                $fInicio = \Carbon\Carbon::parse($fechaInicio);
+                $fFin = \Carbon\Carbon::parse($fechaFin);
+                $diasCalculados = $fInicio->diffInDays($fFin) + 1;
+
+                if (abs($diasCalculados - $dias) > 0.01) {
+                    $validator->errors()->add(
+                        'fecha_fin',
+                        "Discrepancia detectada: El rango de fechas seleccionado equivale a {$diasCalculados} días, pero se ingresaron {$dias} días. Por favor ajuste las fechas o la cantidad."
+                    );
+                }
+            }
+
+            // Validación: la novedad no puede ser anterior a la fecha de ingreso ni posterior a la de retiro (si aplica)
             if ($fechaInicio && $empleadoDoc) {
                 $contrato = DB::table('contrato')
                     ->where('doc', $empleadoDoc)
-                    ->whereNotNull('fecha_inicio')
                     ->orderByDesc('id_contrato')
-                    ->first(['fecha_inicio']);
+                    ->first(['fecha_inicio', 'fecha_fin']);
 
-                if ($contrato && $contrato->fecha_inicio) {
-                    $fechaIngreso = \Carbon\Carbon::parse($contrato->fecha_inicio);
-                    $fechaNov    = \Carbon\Carbon::parse($fechaInicio);
+                if ($contrato) {
+                    if ($contrato->fecha_inicio) {
+                        $fechaIngreso = \Carbon\Carbon::parse($contrato->fecha_inicio);
+                        $fInicio    = \Carbon\Carbon::parse($fechaInicio);
+                        if ($fInicio->lt($fechaIngreso)) {
+                            $validator->errors()->add(
+                                'fecha_inicio',
+                                'La fecha de inicio de la novedad no puede ser anterior a la fecha de ingreso del empleado (' . $fechaIngreso->format('d/m/Y') . ').'
+                            );
+                        }
+                    }
 
-                    if ($fechaNov->lt($fechaIngreso)) {
-                        $validator->errors()->add(
-                            'fecha_inicio',
-                            'La fecha de inicio de la novedad no puede ser anterior a la fecha de ingreso del empleado ('
-                            . $fechaIngreso->format('d/m/Y') . ').'
-                        );
+                    if ($contrato->fecha_fin && $fechaFin) {
+                        $fechaRetiro = \Carbon\Carbon::parse($contrato->fecha_fin);
+                        $fFin = \Carbon\Carbon::parse($fechaFin);
+                        if ($fFin->gt($fechaRetiro)) {
+                            $validator->errors()->add(
+                                'fecha_fin',
+                                'La novedad no puede terminar después de la fecha de terminación del contrato (' . $fechaRetiro->format('d/m/Y') . ').'
+                            );
+                        }
                     }
                 }
             }
 
-            // Nueva validación: La fecha_fin no puede ser anterior al inicio del periodo activo
-            // para novedades de tipo VAC o SLN (según requerimiento).
-            if (in_array($tipo, ['VAC', 'SLN'], true) && $fechaFin) {
-                $periodoActivo = PeriodoLiquidacion::getActivePeriod();
+            // Validación: solo permitir novedades en periodos Abiertos o Pendientes
+            $periodoActivo = PeriodoLiquidacion::getActivePeriod();
+            if (!$periodoActivo || !in_array($periodoActivo->estado, [PeriodoLiquidacion::ESTADO_ABIERTO, PeriodoLiquidacion::ESTADO_PENDIENTE])) {
+                $validator->errors()->add(
+                    'tipo_novedad',
+                    'No se pueden registrar novedades porque el periodo de liquidación actual no existe o ya está cerrado/liquidado.'
+                );
+            }
+
+            // Nueva validación: Al menos uno de los extremos (inicio o fin) debe estar en el periodo activo
+            // para novedades que afectan la nómina (según requerimiento de flexibilidad).
+            $tiposFlexibles = ['VAC', 'SLN', 'LIC', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC'];
+            if (in_array($tipo, $tiposFlexibles, true) && $fechaInicio && $fechaFin) {
                 if ($periodoActivo) {
-                    $fechaInicioPeriodo = $periodoActivo->fecha_inicio;
-                    if (\Carbon\Carbon::parse($fechaFin)->lt($fechaInicioPeriodo)) {
+                    $pI = \Carbon\Carbon::parse($periodoActivo->fecha_inicio);
+                    $pF = \Carbon\Carbon::parse($periodoActivo->fecha_fin);
+                    $fI = \Carbon\Carbon::parse($fechaInicio);
+                    $fF = \Carbon\Carbon::parse($fechaFin);
+
+                    $inicioEnPeriodo = $fI->between($pI, $pF);
+                    $finEnPeriodo    = $fF->between($pI, $pF);
+
+                    if (!$inicioEnPeriodo && !$finEnPeriodo) {
                         $validator->errors()->add(
-                            'fecha_fin',
-                            'La fecha de fin de la novedad debe estar dentro o después del periodo de liquidación actual ('
-                            . \Carbon\Carbon::parse($fechaInicioPeriodo)->format('d/m/Y') . ').'
+                            'fecha_inicio',
+                            'Al menos la fecha de inicio o la fecha de fin deben estar dentro del periodo de liquidación activo (' 
+                            . $pI->format('d/m/Y') . ' a ' . $pF->format('d/m/Y') . ') para registrar esta novedad.'
                         );
                     }
                 }
             }
             
-            // Nueva validación para traslados: La fecha debe estar dentro del periodo activo
-            if (in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP'], true) && ($fechaInicio || $fechaFin)) {
-                $periodoActivo = PeriodoLiquidacion::getActivePeriod();
+            // Nueva validación para traslados y retiro: La fecha debe estar dentro del periodo activo
+            if (in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP', 'RET'], true) && ($fechaInicio || $fechaFin)) {
                 if ($periodoActivo) {
                     $fecha = $fechaInicio ?: $fechaFin;
                     $f = \Carbon\Carbon::parse($fecha);
                     if ($f->lt($periodoActivo->fecha_inicio) || $f->gt($periodoActivo->fecha_fin)) {
                         $validator->errors()->add(
                             'fecha_inicio',
-                            'La fecha de traslado debe estar dentro del periodo de liquidación actual ('
+                            'La fecha de ' . ($tipo === 'RET' ? 'retiro' : 'traslado') . ' debe estar dentro del periodo de liquidación actual ('
                             . \Carbon\Carbon::parse($periodoActivo->fecha_inicio)->format('d/m/Y') . ' a '
                             . \Carbon\Carbon::parse($periodoActivo->fecha_fin)->format('d/m/Y') . ').'
                         );
                     }
+                }
+            }
+
+            // Validación: Coexistencia con otras novedades exclusivas (Traslapes)
+            if (in_array($tipo, self::TIPOS_EXCLUSIVOS, true) && $fechaInicio && $fechaFin && $empleadoDoc) {
+                $excludeId = $this->input('edit_novedad_id');
+                
+                $conflicto = DB::table('novedad')
+                    ->where('empleado_id', $empleadoDoc)
+                    ->whereIn('tipo_novedad_codigo', self::TIPOS_EXCLUSIVOS)
+                    ->where(function ($q) {
+                        $q->where('estado', '!=', 'cerrada')->orWhereNull('estado');
+                    })
+                    ->whereDate('fecha_inicio', '<=', $fechaFin)
+                    ->whereDate('fecha_fin', '>=', $fechaInicio)
+                    ->when($excludeId, function ($q, $id) {
+                        $q->where('id_novedad', '!=', $id);
+                    })
+                    ->first();
+
+                if ($conflicto) {
+                    $fInicioC = \Carbon\Carbon::parse($conflicto->fecha_inicio)->format('d/m/Y');
+                    $fFinC = \Carbon\Carbon::parse($conflicto->fecha_fin)->format('d/m/Y');
+                    $validator->errors()->add(
+                        'fecha_inicio',
+                        "Conflicto de fechas: Ya existe una novedad de tipo {$conflicto->tipo_novedad_codigo} registrada del {$fInicioC} al {$fFinC}. No se admiten traslapes."
+                    );
+                }
+            }
+
+            // Validación: Saldo de Vacaciones
+            if ($tipo === 'VAC' && $unidad === 'dias' && $dias > 0 && $empleadoDoc) {
+                $balance = DB::table('benefit_balance')
+                    ->where('employee_id', $empleadoDoc)
+                    ->value('vacaciones_balance') ?? 0;
+                
+                // Si es edición, debemos sumar los días originales de la novedad al balance actual para comparar correctamente
+                $originalDays = 0;
+                $excludeId = $this->input('edit_novedad_id');
+                if ($excludeId) {
+                    $originalDays = DB::table('novedad')->where('id_novedad', $excludeId)->value('cantidad_dias') ?? 0;
+                }
+
+                if ($dias > ($balance + $originalDays)) {
+                    $disponible = $balance + $originalDays;
+                    $validator->errors()->add(
+                        'dias',
+                        "Saldo insuficiente: El empleado solo tiene {$disponible} días de vacaciones disponibles."
+                    );
+                }
+            }
+
+            // Validación: Conflictos de Traslado (No coexistir con SLN)
+            if (in_array($tipo, ['TDE', 'TAE', 'TDP', 'TAP'], true) && $fechaInicio && $fechaFin && $empleadoDoc) {
+                $excludeId = $this->input('edit_novedad_id');
+                $conflictoSLN = DB::table('novedad')
+                    ->where('empleado_id', $empleadoDoc)
+                    ->where('tipo_novedad_codigo', 'SLN')
+                    ->where(function ($q) {
+                        $q->where('estado', '!=', 'cerrada')->orWhereNull('estado');
+                    })
+                    ->whereDate('fecha_inicio', '<=', $fechaFin)
+                    ->whereDate('fecha_fin', '>=', $fechaInicio)
+                    ->when($excludeId, function ($q, $id) {
+                        $q->where('id_novedad', '!=', $id);
+                    })
+                    ->exists();
+
+                if ($conflictoSLN) {
+                    $validator->errors()->add(
+                        'tipo_novedad',
+                        "No se puede registrar este traslado porque coincide con un periodo de Suspensión (SLN) activo para el empleado."
+                    );
                 }
             }
 
@@ -421,6 +535,7 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             'vac', 'vacaciones' => 'VAC',
             'vct' => 'VCT',
             'inc' => 'INC',
+            'ret', 'retiro', 'terminacion', 'terminacion_contrato' => 'RET',
             'lic', 'licencia_por_luto', 'licencia_luto', 'licencia_remunerada', 'licencia_no_remunerada', 'licencia', 'calamidad_domestica', 'permiso_remunerado', 'permiso_no_remunerado', 'permiso', 'cita_medica' => 'LIC',
             default => strtoupper($slug),
         };

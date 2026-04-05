@@ -46,12 +46,14 @@ return [
             'campos' => [
                 ['clave' => 'id_banco', 'label' => 'Código', 'tipo' => 'text', 'icono' => 'bi-hash', 'requerido' => true],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'text', 'icono' => 'bi-bank', 'requerido' => true],
+                ['clave' => 'codigo_ach', 'label' => 'Código ACH', 'tipo' => 'text', 'icono' => 'bi-qr-code-scan'],
                 ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'text', 'icono' => 'bi-telephone'],
                 ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'text', 'icono' => 'bi-geo-alt'],
             ],
             'columnas' => [
                 ['clave' => 'id_banco', 'label' => 'ID', 'tipo' => 'simple'],
                 ['clave' => 'nombre', 'label' => 'Nombre', 'tipo' => 'simple'],
+                ['clave' => 'codigo_ach', 'label' => 'ACH', 'tipo' => 'simple'],
                 ['clave' => 'telefono', 'label' => 'Teléfono', 'tipo' => 'simple'],
                 ['clave' => 'direccion', 'label' => 'Dirección', 'tipo' => 'simple'],
             ],

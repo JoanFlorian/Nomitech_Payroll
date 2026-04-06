@@ -100,13 +100,47 @@ Route::get('/debug-correo', function (\Illuminate\Http\Request $request) {
 // Logout Route
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
-Route::get('/debug-env', function () {
-    return response()->json([
-        'driver' => config('session.driver'),
-        'domain' => config('session.domain'),
-        'secure' => config('session.secure'),
-        'app_url' => config('app.url'),
-    ]);
+Route::get('/debug-env', function (Request $request) {
+    $results = [
+        'app_url_config' => config('app.url'),
+        'current_url' => $request->fullUrl(),
+        'method' => $request->method(),
+        'secure_request' => $request->secure(),
+        'headers' => [
+            'host' => $request->header('host'),
+            'x-forwarded-proto' => $request->header('x-forwarded-proto'),
+            'origin' => $request->header('origin'),
+            'referer' => $request->header('referer'),
+        ],
+        'session_config' => [
+            'driver' => config('session.driver'),
+            'domain' => config('session.domain'),
+            'secure' => config('session.secure'),
+            'path' => config('session.path'),
+            'same_site' => config('session.same_site'),
+        ],
+        'cookies_received' => $request->cookies->all(),
+    ];
+
+    // Check DB
+    try {
+        \DB::connection()->getPdo();
+        $results['db_connection'] = 'OK';
+        
+        $results['sessions_table'] = [
+            'exists' => \Schema::hasTable('sessions'),
+            'column_listing' => \Schema::hasTable('sessions') ? \Schema::getColumnListing('sessions') : [],
+        ];
+        
+        if ($results['sessions_table']['exists']) {
+             $results['sessions_table']['user_id_type'] = \DB::select("SHOW COLUMNS FROM sessions WHERE Field = 'user_id'")[0]->Type ?? 'unknown';
+        }
+
+    } catch (\Exception $e) {
+        $results['db_error'] = $e->getMessage();
+    }
+
+    return response()->json($results);
 });
 
 Route::get('/clear-cache', function () {

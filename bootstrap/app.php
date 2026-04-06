@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             '/stripe/webhook',
         ]);
+        
+        $middleware->trustProxies(at: '*');
+
 
         $middleware->alias([
             'ensure_active_license' => \App\Http\Middleware\EnsureActiveLicense::class,

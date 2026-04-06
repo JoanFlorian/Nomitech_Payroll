@@ -19,6 +19,9 @@
                                             resultadoModal: {{ session('mass_liquidation_results') ? 'true' : 'false' }},
                                             automationModal: false,
                                             demoUnlock: false,
+                                            year: '{{ date('Y') }}',
+                                            format: 'xlsx',
+                                            isPreview: true,
                                             config: {
                                                 automations: {
                                                     @foreach(['prima_1', 'prima_2', 'cesantias', 'intereses_cesantias'] as $t)
@@ -474,10 +477,10 @@
 
                             {{-- 1. Benefit Type --}}
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo de Prestación</label>
+                                <label class="block text-sm font-extrabold text-gray-700 uppercase tracking-widest mb-3">Tipo de Prestación</label>
                                 <select name="benefit_type" x-model="selectedBenefit" required
                                     @change="cesantiasMode = 'retiro_empresa'; retiroReason = 'housing'"
-                                    class="w-full border-gray-200 rounded-lg shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-11">
+                                    class="w-full border-gray-200 rounded-xl shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-12 text-base px-4">
                                     <option value="" disabled>Seleccionar prestación...</option>
                                     <option value="prima">Prima de Servicios</option>
                                     <option value="cesantias">Cesantías</option>
@@ -540,9 +543,9 @@
                             <template
                                 x-if="selectedBenefit === 'cesantias' && (cesantiasMode === 'retiro_empresa' || cesantiasMode === 'autorizacion_fondo')">
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Motivo del Retiro</label>
+                                    <label class="block text-sm font-extrabold text-gray-700 uppercase tracking-widest mb-3">Motivo del Retiro</label>
                                     <select name="reason" x-model="retiroReason" required
-                                        class="w-full border-gray-200 rounded-lg shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-11">
+                                        class="w-full border-gray-200 rounded-xl shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-12 text-base px-4">
                                         <option value="housing">Vivienda (Compra, mejora o liberación)</option>
                                         <option value="education">Educación (Matrícula superior, Icetex)</option>
                                     </select>
@@ -551,13 +554,13 @@
 
                             {{-- 4. Amount --}}
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <label class="block text-sm font-extrabold text-gray-700 uppercase tracking-widest mb-3">
                                     <span
                                         x-text="selectedBenefit === 'cesantias' && cesantiasMode === 'autorizacion_fondo' ? 'Monto Autorizado' : 'Monto a Pagar'"></span>
                                 </label>
                                 <input type="number" name="amount" x-model="selectedAmount" step="0.01" min="0.01" required
-                                    class="w-full border-gray-200 rounded-lg shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-11"
-                                    placeholder="Ej: 500000">
+                                    class="w-full border-gray-200 rounded-xl shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-12 text-base px-4"
+                                    placeholder="Ej: 500.000">
                             </div>
 
                             {{-- 5. Payment Mode (hidden for autorizacion_fondo since it's always direct) --}}
@@ -703,9 +706,9 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo de Prestación</label>
+                                <label class="block text-sm font-extrabold text-gray-700 uppercase tracking-widest mb-3">Tipo de Prestación</label>
                                 <select name="benefit_type" x-model="masivoBenefit" required
-                                    class="w-full border-gray-200 rounded-lg shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-11">
+                                    class="w-full border-gray-200 rounded-xl shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] h-12 text-base px-4">
                                     <option value="" disabled>Seleccionar...</option>
                                     <option value="prima">Prima</option>
                                     <option value="cesantias">Cesantías</option>
@@ -797,7 +800,7 @@
                     <div class="absolute inset-0 pointer-events-none opacity-5">
                         <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-emerald-500"></div>
                     </div>
-                    <div class="relative z-10" x-data="{ format: 'xlsx', year: '{{ date('Y') }}', isPreview: true }">
+                    <div class="relative z-10">
                         <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                             <h2 class="text-xl font-bold text-gray-800">Causación Anual de Cesantías</h2>
                             <button type="button" @click="consignacionModal = false"
@@ -821,12 +824,12 @@
 
                             <div class="flex gap-4">
                                 <div class="w-1/2">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Año</label>
-                                    <input type="number" x-model="year" class="w-full border-gray-200 rounded-lg shadow-sm h-11">
+                                    <label class="block text-sm font-extrabold text-gray-700 uppercase tracking-widest mb-3">Año</label>
+                                    <input type="number" x-model="year" class="w-full border-gray-200 rounded-xl shadow-sm h-12 text-base px-4">
                                 </div>
                                 <div class="w-1/2">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Formato</label>
-                                    <select x-model="format" class="w-full border-gray-200 rounded-lg shadow-sm h-11">
+                                    <label class="block text-sm font-extrabold text-gray-700 uppercase tracking-widest mb-3">Formato</label>
+                                    <select x-model="format" class="w-full border-gray-200 rounded-xl shadow-sm h-12 text-base px-4">
                                         <option value="xlsx">Excel (.xlsx)</option>
                                         <option value="txt">Plano TXT</option>
                                     </select>
@@ -1123,7 +1126,7 @@
                                                 {{-- Mode --}}
                                                 <div class="flex flex-col gap-1">
                                                     <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Modo</label>
-                                                    <select name="automations[{{ $type }}][payment_mode]" class="text-sm border-gray-200 rounded-lg h-9 py-1 focus:ring-blue-500 w-full">
+                                                    <select name="automations[{{ $type }}][payment_mode]" class="text-xs font-bold border-gray-200 rounded-lg h-11 py-1 px-3 focus:ring-blue-500 w-full bg-white">
                                                         <option value="direct" {{ $mode === 'direct' ? 'selected' : '' }}>Pago Directo</option>
                                                         <option value="payroll" {{ $mode === 'payroll' ? 'selected' : '' }}>En Nómina</option>
                                                     </select>
@@ -1138,7 +1141,7 @@
                                                         min="1" 
                                                         :max="(!demoUnlock && '{{ $type }}' === 'cesantias' && config.automations.{{ $type }}.month == 2) ? 14 : 31"
                                                         @input="if(!demoUnlock && '{{ $type }}' === 'cesantias' && config.automations.{{ $type }}.month == 2 && config.automations.{{ $type }}.day > 14) config.automations.{{ $type }}.day = 14"
-                                                        class="text-sm border-gray-200 rounded-lg h-9 py-1 focus:ring-blue-500 w-full">
+                                                        class="text-xs font-bold border-gray-200 rounded-lg h-11 py-1 px-3 focus:ring-blue-500 w-full bg-white">
                                                 </div>
 
                                                 {{-- Month --}}
@@ -1160,7 +1163,7 @@
                                                     <select name="automations[{{ $type }}][execution_month]" 
                                                         x-model="config.automations.{{ $type }}.month"
                                                         @change="if(!demoUnlock && '{{ $type }}' === 'cesantias' && config.automations.{{ $type }}.month == 2 && config.automations.{{ $type }}.day > 14) config.automations.{{ $type }}.day = 14"
-                                                        class="text-sm border-gray-200 rounded-lg h-9 py-1 focus:ring-blue-500 w-full">
+                                                        class="text-xs font-bold border-gray-200 rounded-lg h-11 py-1 px-2 focus:ring-blue-500 w-full bg-white">
                                                         @foreach($months as $mIdx => $mName)
                                                             @php $isLegal = in_array($mIdx, $allowedMonths); @endphp
                                                             <option value="{{ $mIdx }}" 
@@ -1176,8 +1179,8 @@
                                                 <div class="flex flex-col gap-1">
                                                     <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-amber-600">Reset Demo</label>
                                                     <button type="button" @click="$refs.resetType.value = '{{ $type }}'; $refs.resetForm.submit()" title="Reiniciar para repetir prueba automática"
-                                                        class="h-9 w-full bg-amber-50 text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center">
-                                                        <i class="bi bi-arrow-clockwise mr-1"></i> <span class="text-[10px] uppercase font-bold md:hidden lg:inline">Reiniciar</span>
+                                                        class="h-11 w-full bg-amber-50 text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center">
+                                                        <i class="bi bi-arrow-clockwise mr-1"></i> <span class="text-[10px] uppercase font-black md:hidden lg:inline">Reiniciar</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -1207,7 +1210,6 @@
                 <input type="hidden" name="benefit_type" x-ref="resetType">
             </form>
         </div>
-    </div>
         
         {{-- Hidden logic to handle the second Prima if needed? 
              Actually, mapping suggests "prima" is one entry. 

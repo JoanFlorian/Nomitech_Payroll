@@ -15,16 +15,21 @@ Route::get('/cron/run-schedule', function (\Illuminate\Http\Request $request) {
         return response()->json(['error' => 'Unauthorized'], 401);
     }
     
-    // Ejecutamos el scheduler
-    \Illuminate\Support\Facades\Artisan::call('schedule:run');
+    // Ejecutamos los comandos directamente para asegurar que se ejecuten 
+    // independientemente de si el minuto coincide con el scheduler (frecuencia)
+    \Illuminate\Support\Facades\Artisan::call('periods:auto-close');
+    $outputPeriods = \Illuminate\Support\Facades\Artisan::output();
     
-    // Capturamos el resultado para depuración
-    $output = \Illuminate\Support\Facades\Artisan::output();
+    \Illuminate\Support\Facades\Artisan::call('provisions:auto-liquidate');
+    $outputProvisions = \Illuminate\Support\Facades\Artisan::output();
     
     return response()->json([
         'success' => true,
-        'message' => 'Scheduler executed',
+        'message' => 'Commands executed',
         'server_time' => now('America/Bogota')->toDateTimeString(),
-        'output' => $output // Aquí verás si el comando dijo "No hay periodos", "Cerrando periodo...", etc.
+        'details' => [
+            'periods' => $outputPeriods,
+            'provisions' => $outputProvisions
+        ]
     ]);
 });

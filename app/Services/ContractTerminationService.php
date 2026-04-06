@@ -127,11 +127,9 @@ class ContractTerminationService
         if (!$balance) return false;
 
         // 2. CORRECCIÓN DE INTERESES: Recalcular globalmente desde el balance de cesantías.
-        // La acumulación mensual produce errores de compounding. En terminación, usamos la fórmula legal exacta:
-        // Intereses = Cesantías_Acumuladas × Días_Contrato × 0.12 / 360
+        // Intereses = Cesantías_Acumuladas × 0.12 (Directo sobre el acumulado)
         $cesantiasBalance = (float) $balance->cesantias_balance;
-        $diasContrato = $this->accrualService->calculateDiasAcumuladosContrato($contrato);
-        $interesesCorrectos = round($cesantiasBalance * $diasContrato * 0.12 / 360, 2);
+        $interesesCorrectos = round($cesantiasBalance * 0.12, 2);
         
         // Ajustar el balance de intereses al valor legal correcto
         $balance->intereses_balance = $interesesCorrectos;
@@ -209,8 +207,7 @@ class ContractTerminationService
         // Intereses: Recalcular GLOBALMENTE sobre cesantías acumuladas + nuevas del periodo
         $balance = BenefitBalance::findOrCreateFor($employeeId, $tenantId);
         $cesantiasAcumuladas = (float) $balance->cesantias_balance + $cesantias;
-        $diasAcumulados = $this->accrualService->calculateDiasAcumuladosContrato($contrato);
-        $interesesGlobal = $this->accrualService->calculateInteresesCesantias($cesantiasAcumuladas, $diasAcumulados);
+        $interesesGlobal = $this->accrualService->calculateInteresesCesantias($cesantiasAcumuladas);
         $intereses = max(0, round($interesesGlobal - (float) $balance->intereses_balance, 2));
 
         $reference = sprintf(

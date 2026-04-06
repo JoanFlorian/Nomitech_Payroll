@@ -240,6 +240,6 @@ class CheckoutController extends Controller
 
     public function cancel()
     {
-        return redirect('/#pricing');
+        return redirect()->to(url('/#pricing'));
     }
 }

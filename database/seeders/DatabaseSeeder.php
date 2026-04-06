@@ -42,7 +42,7 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class ,
             PermissionProfileSeeder::class ,
             NivelesRiesgoSeeder::class ,
-            //TestDataSeeder::class ,
+            TestDataSeeder::class ,
 
         ]);
     }

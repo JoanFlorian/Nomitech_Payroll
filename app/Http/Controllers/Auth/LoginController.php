@@ -158,7 +158,7 @@ class LoginController extends Controller
                     return redirect()->route('cambiar-password');
                 }
 
-                return redirect('/'); // Redirect to landing page
+                return redirect()->route('index'); // Redirect to landing page
             }
 
             // License is active, proceed normally
@@ -171,7 +171,7 @@ class LoginController extends Controller
 
             // Redirect based on sub-role
             if ((int) $usuario->id_rol === 3) {
-                return redirect('/trabajador'); // Empleado
+                return redirect()->route('trabajador.dashboard'); // Empleado
             } else {
                 $safeRoute = $usuario->getFirstAccessibleRoute();
                 return redirect()->route($safeRoute);
@@ -185,6 +185,6 @@ class LoginController extends Controller
             return redirect()->route('cambiar-password');
         }
 
-        return redirect('/');
+        return redirect()->route('index');
     }
 }

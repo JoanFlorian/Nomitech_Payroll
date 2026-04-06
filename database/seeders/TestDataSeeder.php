@@ -46,6 +46,7 @@ class TestDataSeeder extends Seeder
         $this->command->info('2. Getting dynamic IDs...');
         $idTipoDoc = TipoDoc::where('nombre', 'LIKE', 'Cedula%')->first()?->id_tipo_doc ?? 1;
         $idRolRep = Rol::where('nombre', 'Representante Legal')->first()?->id_rol ?? 1;
+        $idRolAdmin = Rol::where('nombre', 'Administrador')->first()?->id_rol ?? 2;
         $idRolEmp = Rol::where('nombre', 'Empleado')->first()?->id_rol ?? 3;
         $idRolAux = Rol::where('nombre', 'Auxiliar de Nómina')->first()?->id_rol ?? 5;
         $idCiudadBCS = Ciudad::where('nombre', 'BOGOTÁ, D.C.')->first()?->id_ciudad ?? 11001;
@@ -65,7 +66,7 @@ class TestDataSeeder extends Seeder
             'id_ciudad' => $idCiudadBCS,
             'id_rol' => $idRolRep,
             'activo' => true,
-            'contrasena' => Hash::make('password'),
+            'contrasena' => Hash::make('reptest299$'),
             'is_owner' => true,
             'updated_at' => now(),
             'created_at' => now(),
@@ -146,7 +147,7 @@ class TestDataSeeder extends Seeder
         $employeeDocs = DB::table('usuario_empresa')
             ->join('usuario', 'usuario_empresa.doc', '=', 'usuario.doc')
             ->where('usuario_empresa.id_empresa', $empresa->id_empresa)
-            ->where('usuario.id_rol', $idRolEmp)
+            ->whereIn('usuario.id_rol', [$idRolEmp, $idRolAdmin, $idRolAux])
             ->pluck('usuario.doc');
 
         // Clean up contracts and employee relationships for this company
@@ -200,12 +201,31 @@ class TestDataSeeder extends Seeder
             DB::table('pago')->insert($pagoData);
         }
 
-        // 7. Create Auxiliaries (SKIPPED AS PER USER REQUEST - MANUAL CREATION)
-        $this->command->info('7. Skipping Auxiliary creation (will be created manually)...');
-        /*
-        $maxAux = $plan->max_auxiliares ?: 0;
-        ... (rest of the loop)
-        */
+        // 7. Prepare Administrator and Auxiliar de Nómina (to be included in batches)
+        $this->command->info('7. Preparing Administrator and Auxiliar de Nómina data...');
+        
+        $extraUsersMeta = [
+            [
+                'doc' => '2000000001',
+                'primer_nombre' => 'Carlos',
+                'primer_apellido' => 'Perez',
+                'correo' => 'admin@test.com',
+                'id_rol' => $idRolAdmin,
+                'direccion' => 'Calle Admin 1',
+                'telefono' => '3009990001',
+                'salario' => 5000000,
+            ],
+            [
+                'doc' => '2000000002',
+                'primer_nombre' => 'Laura',
+                'primer_apellido' => 'Gomez',
+                'correo' => 'aux@test.com',
+                'id_rol' => $idRolAux,
+                'direccion' => 'Calle Aux 1',
+                'telefono' => '3009990002',
+                'salario' => 2500000,
+            ]
+        ];
 
         // 8. Create Employees and Contracts (BATCHED)
         $this->command->info('8. Creating Employees and Contracts (BATCHED)...');
@@ -241,7 +261,54 @@ class TestDataSeeder extends Seeder
         $idBancosDiversos = $bancosColeccion->pluck('id_banco')->toArray();
         if (empty($idBancosDiversos)) $idBancosDiversos = [$idBancoBancolombia];
 
-        $password = Hash::make('password');
+        $passwordAdminAux = Hash::make('reptest299$');
+        $passwordEmp = Hash::make('password');
+
+        // Add extra users to batches first
+        foreach ($extraUsersMeta as $meta) {
+            $usersBatch[] = [
+                'doc' => $meta['doc'],
+                'id_tipo_doc' => $idTipoDoc,
+                'primer_nombre' => $meta['primer_nombre'],
+                'primer_apellido' => $meta['primer_apellido'],
+                'correo' => $meta['correo'],
+                'id_rol' => $meta['id_rol'],
+                'id_ciudad' => $idCiudadBCS,
+                'activo' => true,
+                'direccion' => $meta['direccion'],
+                'telefono' => $meta['telefono'],
+                'fondo_cesantias' => 'PROTECCION', // Added for consistency in batch
+                'contrasena' => $passwordAdminAux,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ];
+
+            $userEmpBatch[] = ['doc' => $meta['doc'], 'id_empresa' => $empresa->id_empresa];
+
+            $contractsBatch[] = [
+                'doc' => $meta['doc'],
+                'id_empresa' => $empresa->id_empresa,
+                'id_tipo_contrato' => 1, // Término Indefinido
+                'id_tipo_trabajador' => 1,
+                'id_sub_tipo_trabajador' => 1,
+                'id_forma_pago' => 1,
+                'id_metodo_pago' => 1, // Transferencia
+                'id_arl' => $idArl,
+                'id_eps' => $idEps,
+                'id_afp' => $idAfp,
+                'id_caja' => $idCaja,
+                'nivel_riesgo_id' => $idNivelRiesgo,
+                'fecha_inicio' => '2026-03-01',
+                'fecha_fin' => null,
+                'salario_base' => $meta['salario'],
+                'salario' => $meta['salario'],
+                'activo' => true,
+                'horas_diarias' => 8,
+                'estado' => Contrato::ESTADO_ACTIVO,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ];
+        }
 
         for ($i = 0; $i < $numEmpl; $i++) {
             $realIndex = $i + 1;
@@ -263,7 +330,7 @@ class TestDataSeeder extends Seeder
                 'direccion' => 'Calle Empleado ' . $realIndex,
                 'telefono' => '300' . str_pad($realIndex, 7, '0', STR_PAD_LEFT),
                 'fondo_cesantias' => $fondos[$i % count($fondos)],
-                'contrasena' => $password,
+                'contrasena' => $passwordEmp,
                 'updated_at' => now(),
                 'created_at' => now(),
             ];
@@ -379,8 +446,8 @@ class TestDataSeeder extends Seeder
         $this->command->info('9. Creating Liquidation Period...');
         $automationService = app(PeriodoAutomationService::class);
         
-        // Forzamos que sea en Marzo para las pruebas de auto-cierre
-        $fechaPruebas = \Carbon\Carbon::create(2026, 3, 1);
+        // Forzamos que sea en Abril para las pruebas
+        $fechaPruebas = \Carbon\Carbon::create(2026, 4, 1);
         $automationService->handleLicenseActivation($empresa, $fechaPruebas);
 
         $this->command->info('Test data seeded successfully!');

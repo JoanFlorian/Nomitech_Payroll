@@ -556,12 +556,9 @@ class NominaCalculatorService
                     continue;
                 }
 
-                // IRL: la empresa cubre solo 1 día. El resto lo cubre la ARL.
-                // Además, solo aplica en el periodo de registro (no en periodos futuros).
+                // IRL: la empresa no asume pago, la ARL cubre desde el día 1.
+                // Los días ya se restan en dias_ausencia_total arriba.
                 if ($codigo === 'IRL') {
-                    $valorDia = $valorHora * 8;
-                    $diasPagadosIrl = min(1, $diasEnPeriodo);
-                    $resumen['otros_devengos'] += round($valorDia * $diasPagadosIrl, 2);
                     continue;
                 }
 

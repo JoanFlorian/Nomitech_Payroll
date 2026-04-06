@@ -88,10 +88,10 @@ class BenefitAccrualService
         return round($salarioBase * $diasTrabajados / 360, 2);
     }
 
-    public function calculateInteresesCesantias(float $cesantias, int $diasTrabajados): float
+    public function calculateInteresesCesantias(float $cesantias, int $diasTrabajados = 0): float
     {
-        // Fórmula Legal Colombiana: (Cesantías × Días × 0.12) / 360
-        return round(($cesantias * $diasTrabajados * 0.12) / 360, 2);
+        // Nueva Fórmula: 12% directo sobre el acumulado total de cesantías
+        return round($cesantias * 0.12, 2);
     }
 
     public function calculateVacaciones(float $salarioBase, int $diasTrabajados): float

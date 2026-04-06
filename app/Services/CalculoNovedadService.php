@@ -134,15 +134,14 @@ class CalculoNovedadService
 
             case 'IRL':
                 // Regla de negocio: para incapacidad por accidente laboral (ARL),
-                // la empresa solo cubre 1 día. El restante lo cubre la ARL.
-                $diasPagados = min(1.0, max(0.0, $dias));
-                // En modo horas: 1 día = 8 horas máximo pagadas por el empleador.
-                $horasPagadas = ($dias > 0 || $horas <= 0) ? 0.0 : min(8.0, max(0.0, $horas));
-                $resultado['valor_calculado'] = ($valorDia * $diasPagados) + ($valorHora * $horasPagadas);
-                $resultado['tipo_movimiento'] = self::OPERACION_DEVENGADO;
+                // la ARL cubre desde el día 1. El empleador no asume pago.
+                $diasPagados = 0.0;
+                $horasPagadas = 0.0;
+                $resultado['valor_calculado'] = 0.0;
+                $resultado['tipo_movimiento'] = self::OPERACION_SIN_MOVIMIENTO;
                 $resultado['afecta_ibc'] = true;
                 $resultado['descuento_salario'] = ($valorDia * $dias) + ($valorHora * $horas);
-                $resultado['dias_pagados_empleador'] = $diasPagados;
+                $resultado['dias_pagados_empleador'] = 0.0;
                 return $resultado;
 
             case 'LMAT':
@@ -155,12 +154,12 @@ class CalculoNovedadService
 
             case 'INC':
                 if (in_array($tipoIncapacidad, ['irl', 'riesgo_laboral'], true)) {
-                    // INC tipo ARL: la empresa solo cubre 1 día.
-                    $diasPagadosInc = min(1.0, max(0.0, $dias));
-                    $horasPagadasInc = ($dias > 0 || $horas <= 0) ? 0.0 : min(8.0, max(0.0, $horas));
-                    $resultado['valor_calculado'] = ($valorDia * $diasPagadosInc) + ($valorHora * $horasPagadasInc);
+                    // INC tipo ARL: la ARL cubre desde el día 1.
+                    $diasPagadosInc = 0.0;
+                    $horasPagadasInc = 0.0;
+                    $resultado['valor_calculado'] = 0.0;
                     $resultado['descuento_salario'] = ($valorDia * $dias) + ($valorHora * $horas);
-                    $resultado['dias_pagados_empleador'] = $diasPagadosInc;
+                    $resultado['dias_pagados_empleador'] = 0.0;
                 } else {
                     // INC tipo EG: mismo tratamiento que IGE — solo 2 días al 66.67%.
                     $diasPagadosInc = min(2.0, max(0.0, $dias));

@@ -217,7 +217,7 @@
                 <a class="text-sm font-bold hover:text-primary transition-colors" href="#pricing">Precios</a>
             </nav>
             <div class="flex items-center gap-4">
-                <a href="/login"
+                <a href="{{ route('login') }}"
                     class="px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
                     Iniciar sesión
                 </a>
@@ -261,7 +261,7 @@
                             class="px-8 py-4 bg-white text-primary text-base font-extrabold rounded-lg shadow-xl shadow-black/10 hover:bg-gray-50 transition-all">
                             Iniciar prueba gratuita
                         </a>
-                        <a href="/demo"
+                        <a href="{{ url('demo') }}"
                             class="px-8 py-4 bg-white/10 backdrop-blur-md text-white text-base font-extrabold rounded-lg border border-white/30 hover:bg-white/20 transition-all flex items-center justify-center gap-2">
                             <span class="material-symbols-outlined">play_circle</span> Ver demo
                         </a>

@@ -309,21 +309,30 @@
                             @php
                                 $totalNovedadesVal = (float) ($salario->total_novedades ?? 0);
                                 $resumenNov = $salario->resumen_novedades ?? [];
+                                $estadoLmat = $salario->estado_lmat ?? null;
                             @endphp
                             <td class="whitespace-nowrap px-4 py-3 text-right font-semibold {{ $totalNovedadesVal > 0 ? 'text-emerald-700' : ($totalNovedadesVal < 0 ? 'text-red-600' : 'text-slate-400') }}">
-                                <div class="inline-flex items-center justify-end gap-1 novedad-cell" data-novedad-breakdown="{{ json_encode($resumenNov) }}">
-                                    <span>
-                                        @if($totalNovedadesVal > 0)
-                                            +${{ number_format($totalNovedadesVal, 0, ',', '.') }}
-                                        @elseif($totalNovedadesVal < 0)
-                                            -${{ number_format(abs($totalNovedadesVal), 0, ',', '.') }}
-                                        @else
-                                            $0
-                                        @endif
-                                    </span>
-                                    @if(!empty($resumenNov) && ($resumenNov['horas_extra'] ?? 0) + ($resumenNov['recargos'] ?? 0) + ($resumenNov['bonificaciones'] ?? 0) + ($resumenNov['otros_devengos'] ?? 0) + ($resumenNov['deducciones'] ?? 0) > 0)
-                                        <i class="bi bi-info-circle text-blue-600 cursor-help text-sm"></i>
+                                <div class="flex flex-col items-end gap-2">
+                                    @if($estadoLmat !== null && isset($estadoLmat['activa']) && $estadoLmat['activa'])
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-pink-100 px-2.5 py-1 text-[10px] font-bold uppercase text-pink-800 border border-pink-200 whitespace-nowrap" title="Licencia de {{ ($estadoLmat['es_maternidad'] ?? false) ? 'Maternidad' : 'Paternidad' }} activa - {{ $estadoLmat['dias_restantes'] ?? 0 }} días restantes">
+                                            <i class="bi bi-heart-fill text-[9px]"></i>
+                                            {{ ($estadoLmat['es_maternidad'] ?? false) ? 'LMAT' : 'LPAT' }}
+                                        </span>
                                     @endif
+                                    <div class="inline-flex items-center justify-end gap-1 novedad-cell" data-novedad-breakdown="{{ json_encode($resumenNov) }}">
+                                        <span>
+                                            @if($totalNovedadesVal > 0)
+                                                +${{ number_format($totalNovedadesVal, 0, ',', '.') }}
+                                            @elseif($totalNovedadesVal < 0)
+                                                -${{ number_format(abs($totalNovedadesVal), 0, ',', '.') }}
+                                            @else
+                                                $0
+                                            @endif
+                                        </span>
+                                        @if(!empty($resumenNov) && ($resumenNov['horas_extra'] ?? 0) + ($resumenNov['recargos'] ?? 0) + ($resumenNov['bonificaciones'] ?? 0) + ($resumenNov['otros_devengos'] ?? 0) + ($resumenNov['deducciones'] ?? 0) > 0)
+                                            <i class="bi bi-info-circle text-blue-600 cursor-help text-sm"></i>
+                                        @endif
+                                    </div>
                                 </div>
                             </td>
 

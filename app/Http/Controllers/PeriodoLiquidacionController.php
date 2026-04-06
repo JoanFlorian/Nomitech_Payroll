@@ -333,20 +333,19 @@ class PeriodoLiquidacionController extends Controller
 
                 $periodosEmpresaIds = \App\Models\PeriodoLiquidacion::where('id_empresa', $periodo->id_empresa)->pluck('id_periodo');
 
-                // Cerrar novedades activas que TERMINAN en este periodo o en fechas pasadas
-                // Esto incluye las novedades arrastradas de periodos de liquidacion anteriores
-                // EXCEPTO: Las novedades LMAT/LPAT que ya fueron procesadas por el rollover
-                // Las novedades que se extienden al futuro (fecha_fin > periodo->fecha_fin) deben seguir activas
+                // ✅ MODIFICADO: Cerrar novedades SOLO si su fecha_fin ya terminó (es <= fecha_fin del período)
+                // Las novedades con fecha_fin > período->fecha_fin deben permanecer activas para el próximo período
+                // Las novedades sin fecha_fin (fecha_fin IS NULL) nunca se cierran automáticamente
+                // EXCEPTO: Las novedades LMAT/LPAT se manejan por rollover y NO se cierran aquí
                 \App\Models\Novedad::where(function ($query) use ($periodosEmpresaIds) {
                         $query->whereIn('id_periodo', $periodosEmpresaIds)
                               ->orWhereNull('id_periodo');
                     })
                     ->where('estado', \App\Models\Novedad::ESTADO_ACTIVA)
                     ->whereNotIn('tipo_novedad_codigo', ['LMAT', 'LPAT'])
-                    ->where(function($q) use ($periodo) {
-                        $q->whereNull('fecha_fin')
-                          ->orWhere('fecha_fin', '<=', $periodo->fecha_fin->toDateString());
-                    })
+                    // Solo cerrar si la fecha_fin está definida Y ya terminó en este período
+                    ->whereNotNull('fecha_fin')
+                    ->where('fecha_fin', '<=', $periodo->fecha_fin ? $periodo->fecha_fin->format('Y-m-d') : null)
                     ->update(['estado' => \App\Models\Novedad::ESTADO_CERRADA, 'updated_at' => now()]);
 
                 // 🔹 NUEVO: Detectar y registrar automáticamente Variación Transitoria de Salario (VST)

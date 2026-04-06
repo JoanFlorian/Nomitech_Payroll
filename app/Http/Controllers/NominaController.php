@@ -180,11 +180,15 @@ class NominaController extends Controller
 
                 $totalDedNovedades = (float) ($resumenNovedades['deducciones'] ?? 0);
 
+                // Obtener estado de licencia de maternidad/paternidad activa
+                $estadoLmat = \App\Models\Novedad::obtenerEstadoLmat((int) $salario->id_contrato);
+
                 // Estos atributos son usados por el grid y por los accessors de Salario.
                 $salario->setAttribute('total_novedades', $totalDevNovedades - $totalDedNovedades);
                 $salario->setAttribute('total_novedades_devengado', $totalDevNovedades);
                 $salario->setAttribute('total_novedades_deduccion', $totalDedNovedades);
                 $salario->setAttribute('resumen_novedades', $resumenNovedades);
+                $salario->setAttribute('estado_lmat', $estadoLmat);
 
                 return $salario;
             })
@@ -726,7 +730,7 @@ class NominaController extends Controller
                 ->where('status', BenefitLedger::STATUS_PENDING_PAYROLL)
                 ->get()
                 ->map(function ($bp) use ($s1) {
-                    $amount = abs($bp->amount);
+                    $amount = abs((float) $bp->amount);
                     if (trim(strtolower($bp->benefit_type)) === 'vacaciones') {
                         $salarioMensualFull = (float) ($s1['salario_base'] ?? 0);
                         $bp->display_amount = round(($salarioMensualFull / 30) * $amount, 2);

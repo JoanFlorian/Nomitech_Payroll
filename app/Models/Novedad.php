@@ -122,4 +122,155 @@ class Novedad extends Model
             })
             ->exists();
     }
+
+    /**
+     * Obtiene la novedad de LMAT/LPAT activa para un contrato (si existe).
+     * Busca la novedad más reciente que aún está activa.
+     * 
+     * @param  int $idContrato ID del contrato
+     * @return Novedad|null
+     */
+    public static function obtenerLmatActivaParaContrato(int $idContrato): ?Novedad
+    {
+        return self::query()
+            ->join('salario as s', 's.id_salario', '=', 'novedad.id_salario')
+            ->where('s.id_contrato', $idContrato)
+            ->whereIn('novedad.tipo_novedad_codigo', ['LMAT', 'LPAT'])
+            ->where('novedad.estado', self::ESTADO_ACTIVA)
+            ->where(function ($q) {
+                // Incluir si fecha_fin es NULL o si es posterior a hoy
+                $q->whereNull('novedad.fecha_fin')
+                  ->orWhere('novedad.fecha_fin', '>=', now()->toDateString());
+            })
+            ->select('novedad.*')
+            ->orderByDesc('novedad.fecha_inicio')
+            ->first();
+    }
+
+    /**
+     * Obtiene el estado detallado de la LMAT activa para un contrato.
+     * Calcula dinámicamente los días restantes sin modificar la BD.
+     * 
+     * Incluye: tipo, días totales, días ya pagados, días restantes, fechas, etc.
+     * 
+     * @param  int $idContrato ID del contrato
+     * @return array|null
+     */
+    public static function obtenerEstadoLmat(int $idContrato): ?array
+    {
+        $lmat = self::obtenerLmatActivaParaContrato($idContrato);
+        
+        if (!$lmat) {
+            return null;
+        }
+
+        // Obtener el total de días a pagar
+        $diasTotales = (int) ($lmat->dias ?? 0);
+        
+        // Calcular dinámicamente cuántos días ya han sido liquidados
+        // (buscando en salarios ya procesados, no modificando la BD)
+        $diasYaLiquidados = self::obtenerDiasYaPagados($idContrato, $lmat->id_novedad);
+        
+        // Calcular días restantes
+        $diasRestantes = max(0, $diasTotales - $diasYaLiquidados);
+
+        $tipo = strtoupper(trim((string) ($lmat->tipo_novedad_codigo ?? '')));
+        $esMaternidad = $tipo === 'LMAT';
+
+        return [
+            'activa' => true,
+            'id_novedad' => $lmat->id_novedad,
+            'tipo' => $tipo,
+            'es_maternidad' => $esMaternidad,
+            'dias_totales' => $diasTotales,
+            'dias_ya_liquidados' => $diasYaLiquidados,
+            'dias_restantes' => $diasRestantes,
+            'fecha_inicio' => $lmat->fecha_inicio ? $lmat->fecha_inicio->format('Y-m-d') : null,
+            'fecha_fin' => $lmat->fecha_fin ? $lmat->fecha_fin->format('Y-m-d') : null,
+            'estado' => $lmat->estado,
+        ];
+    }
+
+    /**
+     * Calcula cuántos días de una LMAT/LPAT ya han sido liquidados en períodos cerrados.
+     * 
+     * Busca todas las novedades LMAT/LPAT del contrato en salarios ya pagados/liquidados
+     * y suma los días registrados.
+     * 
+     * @param  int $idContrato ID del contrato
+     * @param  int $idNovedadActual ID de la novedad actual (para excluir)
+     * @return int Días ya liquidados en períodos anteriores
+     */
+    private static function obtenerDiasYaPagados(int $idContrato, int $idNovedadActual): int
+    {
+        // Buscar todas las novedades LMAT/LPAT del contrato que ya fueron pagadas
+        $diasPagados = DB::table('novedad as n')
+            ->join('salario as s', 's.id_salario', '=', 'n.id_salario')
+            ->join('periodo_liquidacion as p', 'p.id_periodo', '=', 's.id_periodo')
+            ->where('s.id_contrato', $idContrato)
+            ->where('n.id_novedad', '!=', $idNovedadActual)
+            ->whereIn('n.tipo_novedad_codigo', ['LMAT', 'LPAT'])
+            ->where('p.estado', PeriodoLiquidacion::ESTADO_CERRADO)
+            ->where('s.estado', \App\Models\Salario::ESTADO_PAGADO)
+            ->selectRaw('COALESCE(SUM(n.dias), 0) as dias_totales')
+            ->first();
+
+        return (int) ($diasPagados->dias_totales ?? 0);
+    }
+
+    /**
+     * Verifica si hay una licencia de maternidad/paternidad activa en el periodo.
+     * Retorna información sobre si está activa y cuántos días se aplicarían.
+     * 
+     * @param  int $idContrato ID del contrato
+     * @param  int $idPeriodo ID del periodo
+     * @param  string $fechaInicioPeriodo Fecha inicio del periodo
+     * @param  string $fechaFinPeriodo Fecha fin del periodo
+     * @return array ['activa' => bool, 'tipo' => string|null, 'dias_en_periodo' => int]
+     */
+    public static function obtenerEstadoLmatEnPeriodo(
+        int $idContrato,
+        int $idPeriodo,
+        string $fechaInicioPeriodo,
+        string $fechaFinPeriodo
+    ): array {
+        $lmat = self::obtenerLmatActivaParaContrato($idContrato);
+
+        if (!$lmat) {
+            return ['activa' => false, 'tipo' => null, 'dias_en_periodo' => 0];
+        }
+
+        // Calcular días de LMAT que caen en este período
+        $fechaInicio = \Carbon\Carbon::parse($lmat->fecha_inicio);
+        $fechaFin = $lmat->fecha_fin ? \Carbon\Carbon::parse($lmat->fecha_fin) : null;
+        
+        if (!$fechaFin && $lmat->dias > 0) {
+            // Calcular fecha fin desde días
+            $fechaFin = $fechaInicio->copy()->addDays($lmat->dias - 1);
+        }
+
+        $periodoInicio = \Carbon\Carbon::parse($fechaInicioPeriodo);
+        $periodoFin = \Carbon\Carbon::parse($fechaFinPeriodo);
+
+        if (!$fechaFin) {
+            return ['activa' => false, 'tipo' => null, 'dias_en_periodo' => 0];
+        }
+
+        // Calcular intersección
+        if ($fechaFin->lessThan($periodoInicio) || $fechaInicio->greaterThan($periodoFin)) {
+            return ['activa' => false, 'tipo' => null, 'dias_en_periodo' => 0];
+        }
+
+        $efectivoInicio = $fechaInicio->greaterThan($periodoInicio) ? $fechaInicio : $periodoInicio;
+        $efectivoFin = $fechaFin->lessThan($periodoFin) ? $fechaFin : $periodoFin;
+        $diasEnPeriodo = max(0, $efectivoInicio->diffInDays($efectivoFin) + 1);
+
+        return [
+            'activa' => true,
+            'tipo' => strtoupper(trim((string) ($lmat->tipo_novedad_codigo ?? ''))),
+            'dias_en_periodo' => $diasEnPeriodo,
+            'dias_totales' => (int) ($lmat->dias ?? 0),
+            'dias_restantes_rollover' => (int) ($lmat->dias_restantes_rollover ?? 0),
+        ];
+    }
 }

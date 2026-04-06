@@ -372,8 +372,9 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             }
 
             // Validación: solo permitir novedades en periodos Abiertos o Pendientes
-            // Excepción: VSP, traslados (TDE/TAE/TDP/TAP) y VCT pueden registrarse sin periodo activo
-            $tiposSinPeriodo = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT'];
+            // Excepción: variaciones de estructura (VSP/VCT), traslados y novedades de licencia/vacaciones/ausencia
+            // pueden registrarse aunque no haya periodo activo (se asociarán al último periodo o quedan sin periodo)
+            $tiposSinPeriodo = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT', 'LIC', 'LMAT', 'LPAT', 'SLN', 'VAC', 'IGE', 'IRL', 'INC'];
             $periodoActivo = PeriodoLiquidacion::getActivePeriod();
             if (!in_array($tipo, $tiposSinPeriodo, true) && (!$periodoActivo || !in_array($periodoActivo->estado, [PeriodoLiquidacion::ESTADO_ABIERTO, PeriodoLiquidacion::ESTADO_PENDIENTE]))) {
                 $validator->errors()->add(

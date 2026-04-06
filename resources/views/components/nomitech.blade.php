@@ -60,11 +60,14 @@
 
     <!-- FOOTER -->
     <div class="p-6 border-t border-blue-800">
-        <a href="{{ route('logout') }}"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg text-red-300 hover:bg-red-900/30 hover:text-red-200 transition">
-            <i class="bi bi-box-arrow-right text-lg"></i>
-            Cerrar sesión
-        </a>
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg text-red-300 hover:bg-red-900/30 hover:text-red-200 transition w-full text-left">
+                <i class="bi bi-box-arrow-right text-lg"></i>
+                Cerrar sesión
+            </button>
+        </form>
     </div>
 
 </aside>

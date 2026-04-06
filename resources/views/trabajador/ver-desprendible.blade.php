@@ -69,7 +69,7 @@
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Fecha de pago</p>
                     <p class="mt-1 font-semibold text-gray-800">
-                        {{ optional($desprendible->fecha_pago ?? $desprendible->created_at)->format('d/m/Y') ?? 'N/A' }}
+                        {{ \Carbon\Carbon::parse($desprendible->fecha_pago ?? $desprendible->created_at)->format('d/m/Y') }}
                     </p>
                 </div>
                 <div>

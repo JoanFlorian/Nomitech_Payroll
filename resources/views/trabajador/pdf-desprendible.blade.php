@@ -96,7 +96,7 @@
             <div class="info-cell">
                 <div class="info-label">Fecha de pago</div>
                 <div class="info-value">
-                    {{ optional($desprendible->fecha_pago ?? $desprendible->created_at)->format('d/m/Y') ?? 'N/A' }}
+                    {{ \Carbon\Carbon::parse($desprendible->fecha_pago ?? $desprendible->created_at)->format('d/m/Y') }}
                 </div>
             </div>
         </div>

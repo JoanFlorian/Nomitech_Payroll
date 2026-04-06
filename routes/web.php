@@ -59,6 +59,41 @@ Route::get('/api/cities/{department}', [App\Http\Controllers\Auth\RegisterContro
 // Stripe Webhook
 Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::class , 'handleWebhook']);
 
+// Diagnostic route for Brevo Mail in Production
+Route::get('/debug-correo', function (\Illuminate\Http\Request $request) {
+    if (!Auth::check() || (int)Auth::user()->id_rol !== 4) {
+        // Optional security measure: change to 'return "No autorizado";' if you only want superadmins to see it,
+        // or just leave it open for a few minutes while you test.
+    }
+    
+    try {
+        // Obtenemos el correo desde parametro ?to=correo@ejemplo.com, o usamos uno por defecto
+        $to = $request->query('to', 'tu-correo-personal@gmail.com');
+        
+        \Illuminate\Support\Facades\Mail::raw('Prueba de diagnóstico Brevo', function ($msg) use ($to) {
+            $msg->to($to)->subject('Diagnóstico de Correo Nomitech');
+        });
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Correo de prueba enviado con éxito a: ' . $to,
+            'mailer' => config('mail.default'),
+            'from_address' => config('mail.from.address'),
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Error al intentar enviar correo',
+            'error_detail' => $e->getMessage(),
+            'error_class' => get_class($e),
+            'mailer_used' => config('mail.default'),
+            'from_address' => config('mail.from.address'),
+            'hint' => 'Revisa en Brevo si tu dominio/correo "from_address" está verificado y si la API Key es correcta.'
+        ]);
+    }
+});
+
 // Logout Route
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 

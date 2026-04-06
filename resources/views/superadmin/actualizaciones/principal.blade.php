@@ -349,15 +349,18 @@
             payroll_parameters: {
                 tipo: 'payroll_parameters',
                 campos: [
-                    { clave: 'parametro', label: 'Parámetro', tipo: 'text', icono: 'bi-tag', requerido: true },
-                    { clave: 'valor', label: 'Valor', tipo: 'number', icono: 'bi-calculator', requerido: true },
-                    { clave: 'descripcion', label: 'Descripción', tipo: 'textarea', icono: 'bi-file-text', requerido: false },
-                    { clave: 'tipo', label: 'Tipo', tipo: 'select', icono: 'bi-list', requerido: true, opciones: [
-                        { id: 'decimal', nombre: 'Decimal' },
-                        { id: 'entero', nombre: 'Entero' },
-                        { id: 'porcentaje', nombre: 'Porcentaje' },
-                        { id: 'texto', nombre: 'Texto' }
-                    ]}
+                    { clave: 'smmlv', label: 'SMMLV', tipo: 'number', icono: 'bi-cash-coin', requerido: true },
+                    { clave: 'auxilio_transporte', label: 'Auxilio Transporte', tipo: 'number', icono: 'bi-truck', requerido: true },
+                    { clave: 'auxilio_transporte_tope', label: 'Auxilio Transporte Tope', tipo: 'number', icono: 'bi-arrow-up', requerido: true },
+                    { clave: 'eps_employee', label: 'EPS Empleado (%)', tipo: 'number', icono: 'bi-percent', requerido: true },
+                    { clave: 'pension_employee', label: 'Pensión Empleado (%)', tipo: 'number', icono: 'bi-percent', requerido: true },
+                    { clave: 'fondo_solidaridad', label: 'Fondo Solidaridad (%)', tipo: 'number', icono: 'bi-percent', requerido: true },
+                    { clave: 'eps_employer', label: 'EPS Empleador (%)', tipo: 'number', icono: 'bi-percent', requerido: true },
+                    { clave: 'pension_employer', label: 'Pensión Empleador (%)', tipo: 'number', icono: 'bi-percent', requerido: true },
+                    { clave: 'arl_riesgo_1', label: 'ARL Riesgo 1 (%)', tipo: 'number', icono: 'bi-percent', requerido: true },
+                    { clave: 'caja_compensacion', label: 'Caja Compensación (%)', tipo: 'number', icono: 'bi-percent', requerido: true },
+                    { clave: 'fondo_solidaridad_threshold', label: 'Umbral Fondo Solidaridad', tipo: 'number', icono: 'bi-door-closed', requerido: true },
+                    { clave: 'horas_mes', label: 'Horas por Mes', tipo: 'number', icono: 'bi-clock', requerido: true }
                 ],
                 campoId: 'id',
                 ruta: '/superadmin/actualizar/:id',

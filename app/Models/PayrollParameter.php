@@ -9,49 +9,32 @@ class PayrollParameter extends Model
     protected $table = 'payroll_parameters';
 
     protected $fillable = [
-        'parametro',
-        'valor',
-        'descripcion',
-        'tipo',
-        'vigencia_desde',
-        'vigencia_hasta',
-        'activo',
+        'smmlv',
+        'auxilio_transporte',
+        'auxilio_transporte_tope',
+        'eps_employee',
+        'pension_employee',
+        'fondo_solidaridad',
+        'eps_employer',
+        'pension_employer',
+        'arl_riesgo_1',
+        'caja_compensacion',
+        'fondo_solidaridad_threshold',
+        'horas_mes',
     ];
 
     protected $casts = [
-        'valor' => 'decimal:4',
-        'vigencia_desde' => 'datetime',
-        'vigencia_hasta' => 'datetime',
-        'activo' => 'boolean',
+        'smmlv' => 'decimal:2',
+        'auxilio_transporte' => 'decimal:2',
+        'auxilio_transporte_tope' => 'integer',
+        'eps_employee' => 'decimal:4',
+        'pension_employee' => 'decimal:4',
+        'fondo_solidaridad' => 'decimal:4',
+        'eps_employer' => 'decimal:4',
+        'pension_employer' => 'decimal:4',
+        'arl_riesgo_1' => 'decimal:4',
+        'caja_compensacion' => 'decimal:4',
+        'fondo_solidaridad_threshold' => 'integer',
+        'horas_mes' => 'integer',
     ];
-
-    /**
-     * Obtener un parámetro activo por nombre
-     */
-    public static function obtener(string $parametro, $default = null)
-    {
-        $param = self::where('parametro', $parametro)
-            ->where('activo', true)
-            ->first();
-
-        return $param ? $param->valor : $default;
-    }
-
-    /**
-     * Scope para parámetros vigentes
-     */
-    public function scopeVigentes($query)
-    {
-        return $query->where('activo', true)
-            ->where(function ($q) {
-                $now = now();
-                $q->whereNull('vigencia_desde')
-                  ->orWhere('vigencia_desde', '<=', $now);
-            })
-            ->where(function ($q) {
-                $now = now();
-                $q->whereNull('vigencia_hasta')
-                  ->orWhere('vigencia_hasta', '>=', $now);
-            });
-    }
 }

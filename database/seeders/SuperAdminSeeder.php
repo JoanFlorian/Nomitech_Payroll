@@ -30,8 +30,8 @@ class SuperAdminSeeder extends Seeder
             'abreviatura' => 'CC'
         ]);
 
-        $email = env('SUPERADMIN_EMAIL');
-        $password = env('SUPERADMIN_PASSWORD');
+        $email = config('app.superadmin.email');
+        $password = config('app.superadmin.password');
 
         if (!$email || !$password) {
             $this->command->error('SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be set in .env');

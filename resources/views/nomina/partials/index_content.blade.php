@@ -89,11 +89,11 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
-                    <a href="{{ route('periodos.index') }}"
+                    {{-- <a href="{{ route('periodos.index') }}"
                         class="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-blue-700 transition hover:border-blue-400 hover:text-blue-900">
                         <i class="bi bi-arrow-repeat"></i>
                         Cambiar Periodo
-                    </a>
+                    </a> --}}
 
                     {{-- DEBUG: canClose={{ auth()->user()->can('close_period') ? 'true' : 'false' }} status={{ $periodoActivo->estado }} canBeClosed={{ $periodoActivo->canBeClosed() ? 'true' : 'false' }} --}}
                     @if(($periodoActivo->estado === 'abierto' || $periodoActivo->estado === 'pendiente') && $periodoActivo->canBeClosed())

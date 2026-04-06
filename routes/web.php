@@ -1,4 +1,4 @@
-
+﻿
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -195,23 +195,25 @@ Route::get('/test-mail-live', function () {
 
     try {
         \Illuminate\Support\Facades\Mail::raw('Este es un correo de prueba de Nomitech.', function ($message) {
-            $message->to('esquivel7809@gmail.com')
-                    ->subject('Prueba de Correo Nomitech Live');
-        });
-        
-        $results['status'] = 'success';
-        $results['message'] = 'Correo enviado correctamente a esquivel7809@gmail.com';
-    } catch (\Exception $e) {
-        $results['status'] = 'error';
-        $results['exception'] = [
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-        ];
-    }
+                    $message->to('esquivel7809@gmail.com')
+                        ->subject('Prueba de Correo Nomitech Live');
+                }
+                );
 
-    return response()->json($results);
-});
+                $results['status'] = 'success';
+                $results['message'] = 'Correo enviado correctamente a esquivel7809@gmail.com';
+            }
+            catch (\Exception $e) {
+                $results['status'] = 'error';
+                $results['exception'] = [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ];
+            }
+
+            return response()->json($results);
+        });
 
 // License Status Routes (Protected by auth, but handled by middleware redirection)
 Route::middleware(['auth', 'prevent_back_history'])->group(function () {

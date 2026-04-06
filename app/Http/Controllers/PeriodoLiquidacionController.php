@@ -370,7 +370,7 @@ class PeriodoLiquidacionController extends Controller
                 $mensaje .= ' El siguiente periodo ha sido generado y seleccionado automáticamente.';
             }
 
-            return redirect()->route('periodos.index')->with('success', $mensaje);
+            return redirect()->route('nomina.index')->with('success', $mensaje);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("Error Fatal al cerrar periodo: " . $e->getMessage(), [
                 'exception' => $e,

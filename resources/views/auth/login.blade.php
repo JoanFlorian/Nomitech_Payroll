@@ -15,8 +15,16 @@
 </head>
 
 <body>
-    <div class="flex items-center justify-center min-h-screen bg-[#F7F9FC] p-4 sm:p-6 md:p-8">
-        <div class="w-full max-w-4xl mx-auto shadow-2xl rounded-2xl overflow-hidden">
+    <div class="relative flex items-center justify-center min-h-screen bg-[#F7F9FC] p-4 sm:p-6 md:p-8 font-['Inter']">
+        <!-- Floating Home Link -->
+        <a href="{{ route('index') }}" class="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 text-gray-500 hover:text-[#1565C0] transition group duration-300">
+            <div class="p-1 px-2.5 bg-white shadow-sm rounded-full border border-gray-100 group-hover:bg-[#1565C0]/5">
+                <i class="material-icons text-xl sm:text-2xl mt-1">arrow_back</i>
+            </div>
+            <span class="text-sm font-medium hidden sm:block">Regresar al inicio</span>
+        </a>
+
+        <div class="w-full max-w-4xl mx-auto shadow-2xl rounded-2xl overflow-hidden mt-8 md:mt-0">
             <div class="grid grid-cols-1 md:grid-cols-2">
 
                 <x-auth.left-panel />

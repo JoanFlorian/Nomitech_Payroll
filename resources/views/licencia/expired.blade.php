@@ -139,12 +139,15 @@
             <p class="text-slate-400 text-sm font-medium mb-6 italic">¿Necesitas ayuda con tu renovación? Contacta a
                 nuestro equipo de soporte.</p>
             <div class="flex flex-col sm:flex-row items-center justify-center gap-6">
-                <a href="{{ route('logout') }}"
-                    class="flex items-center gap-2 px-6 py-2 text-slate-500 hover:text-[#1564C0] font-bold transition-all group">
-                    <span
-                        class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">logout</span>
-                    Cerrar Sesión
-                </a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit"
+                        class="flex items-center gap-2 px-6 py-2 text-slate-500 hover:text-[#1564C0] font-bold transition-all group">
+                        <span
+                            class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">logout</span>
+                        Cerrar Sesión
+                    </button>
+                </form>
                 <span class="hidden sm:block w-px h-6 bg-slate-200"></span>
                 <a href="mailto:soporte@nomitech.com"
                     class="flex items-center gap-2 px-6 py-2 text-slate-500 hover:text-[#1564C0] font-bold transition-all group">

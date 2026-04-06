@@ -305,6 +305,22 @@
 						<p class="leading-relaxed whitespace-pre-line">{{ $novedad->observaciones }}</p>
 					</div>
 					@endif
+
+					@if(!empty($novedad->soporte_medico_path))
+					<div class="mt-3 pt-3 border-t border-gray-100/60 flex flex-wrap items-center gap-2">
+						<span class="material-icons text-[15px] text-emerald-600">attach_file</span>
+						<span class="text-xs text-gray-500 font-medium">{{ $novedad->soporte_medico_original_name ?? 'Certificado adjunto' }}</span>
+						<a href="{{ route('novedades.certificado', $novedad->id_novedad) }}"
+							target="_blank"
+							class="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full hover:bg-emerald-100 transition">
+							<span class="material-icons text-[13px]">visibility</span> Ver
+						</a>
+						<a href="{{ route('novedades.certificado', $novedad->id_novedad) }}?download=1"
+							class="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-full hover:bg-blue-100 transition">
+							<span class="material-icons text-[13px]">download</span> Descargar
+						</a>
+					</div>
+					@endif
 				</div>
 			</article>
 		@empty

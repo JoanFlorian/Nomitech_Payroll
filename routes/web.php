@@ -38,6 +38,9 @@ Route::get('/login', function () {
 // Login POST
 Route::post('/login', [LoginController::class , 'store'])->name('login.perform');
 
+// Logout
+Route::post('/logout', [LoginController::class , 'logout'])->name('logout');
+
 // Auth Routes
 Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class , 'create'])->name('register.create');
 Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class , 'store'])->name('register');
@@ -172,6 +175,7 @@ Route::middleware(['auth', 'ensure_active_license', 'contractual_access', 'preve
     Route::post('/novedades', [NovedadController::class , 'store'])->name('novedades.store')->middleware('permission:create_novedad');
     Route::put('/novedades/{id_novedad}', [NovedadController::class , 'update'])->name('novedades.update')->middleware('permission:edit_novedad');
     Route::delete('/novedades/{id_novedad}', [NovedadController::class , 'destroy'])->name('novedades.destroy')->middleware('permission:delete_novedad');
+    Route::get('/novedades/{id_novedad}/certificado', [NovedadController::class , 'descargarCertificado'])->name('novedades.certificado')->middleware('permission:view_novedades');
 
     Route::get('/reportes', [ReportesController::class , 'index'])->name('reportes.index')->middleware('permission:view_reports');
     Route::get('/reportes/exportar/pdf', [ReportesController::class , 'exportarPdf'])->name('reportes.export.pdf')->middleware('permission:export_reports');

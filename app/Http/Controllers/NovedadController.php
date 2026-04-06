@@ -305,8 +305,8 @@ class NovedadController extends Controller
         $tipoNov = strtoupper((string) ($data['tipo_novedad'] ?? ''));
         $salario = $this->resolveEmpleadoSalario((string) $data['empleado_id']);
 
-        // VSP y traslados/VCT no necesitan periodo activo
-        $noNecesitaPeriodo = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT'];
+        // Todas las novedades pueden registrarse sin periodo activo
+        $noNecesitaPeriodo = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT', 'LIC', 'LMAT', 'LPAT', 'SLN', 'VAC', 'IGE', 'IRL', 'INC'];
         if (!$salario && in_array($tipoNov, $noNecesitaPeriodo, true)) {
             $salario = $this->resolveLatestSalarioForEmployee((string) $data['empleado_id']);
         }
@@ -315,13 +315,8 @@ class NovedadController extends Controller
             return $this->buildEmpleadoSalarioErrorResponse(true);
         }
 
-        // IGE e IRL requieren periodo activo para garantizar el aislamiento por periodo.
+        // Obtener el periodo activo si existe (puede ser null)
         $periodo = PeriodoLiquidacion::getActivePeriod();
-        if (in_array($tipoNov, ['IGE', 'IRL'], true) && !$periodo) {
-            $msg = 'No se puede registrar una incapacidad sin un periodo de liquidación activo. Active un periodo primero.';
-            session()->flash('error', $msg);
-            return back()->withErrors(['tipo_novedad' => $msg])->withInput()->with('open_novedad_modal', true);
-        }
 
         // Validar coexistencia de novedades exclusivas
         $coexistenciaError = $this->verificarCoexistencia(
@@ -402,8 +397,8 @@ class NovedadController extends Controller
         $tipoNovEdit = strtoupper((string) ($data['tipo_novedad'] ?? ''));
 
         $salario = $this->resolveEmpleadoSalario((string) $data['empleado_id']);
-        // VSP y traslados/VCT no necesitan periodo activo
-        $noNecesitaPeriodoEdit = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT'];
+        // Todas las novedades pueden registrarse sin periodo activo
+        $noNecesitaPeriodoEdit = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT', 'LIC', 'LMAT', 'LPAT', 'SLN', 'VAC', 'IGE', 'IRL', 'INC'];
         if (!$salario && in_array($tipoNovEdit, $noNecesitaPeriodoEdit, true)) {
             $salario = $this->resolveLatestSalarioForEmployee((string) $data['empleado_id']);
         }
@@ -512,6 +507,44 @@ class NovedadController extends Controller
         $this->refreshPayrollRecalculation((string) $data['empleado_id']);
 
         return redirect()->route('novedades.index')->with('success', 'La novedad se actualizó correctamente.');
+    }
+
+    public function descargarCertificado(int $id_novedad)
+    {
+        $novedad = Novedad::query()->findOrFail($id_novedad);
+
+        // Restrict access: the file must belong to an employee of the current company
+        $empresaId = (int) session('empresa_id');
+        if ($empresaId > 0) {
+            $perteneceEmpresa = $novedad->salario()?->whereHas('contrato', function ($q) use ($empresaId) {
+                $q->where('id_empresa', $empresaId);
+            })->exists();
+
+            if (!$perteneceEmpresa) {
+                abort(403, 'No tiene permiso para acceder a este certificado.');
+            }
+        }
+
+        if (empty($novedad->soporte_medico_path)) {
+            abort(404, 'Esta novedad no tiene un certificado adjunto.');
+        }
+
+        $disk = Storage::disk('public');
+
+        if (!$disk->exists($novedad->soporte_medico_path)) {
+            abort(404, 'El archivo del certificado no se encontró en el servidor.');
+        }
+
+        $fullPath = $disk->path($novedad->soporte_medico_path);
+        $fileName = $novedad->soporte_medico_original_name ?: basename($novedad->soporte_medico_path);
+        $mimeType = $novedad->soporte_medico_mime ?: mime_content_type($fullPath) ?: 'application/octet-stream';
+
+        $disposition = request()->query('download') ? 'attachment' : 'inline';
+
+        return response()->file($fullPath, [
+            'Content-Type'        => $mimeType,
+            'Content-Disposition' => $disposition . '; filename="' . $fileName . '"',
+        ]);
     }
 
     public function destroy(int $id_novedad)

@@ -15,6 +15,8 @@ use App\Http\Controllers\Auth\CodeVerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
 use App\Http\Controllers\Admin\CatalogosEmpresaController;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 
 
@@ -161,6 +163,14 @@ Route::get('/clear-cache', function () {
             'message' => 'Error al limpiar la caché: ' . $e->getMessage()
         ], 500);
     }
+});
+
+Route::get('/test-cookie', function () {
+    return response()->json([
+        'message' => 'Test cookie set! Look for "manual_test_cookie" in your DevTools',
+        'app_env' => config('app.env'),
+        'secure_config' => config('session.secure'),
+    ])->cookie('manual_test_cookie', 'sticking', 60, '/', null, true, true, false, 'Lax');
 });
 
 // License Status Routes (Protected by auth, but handled by middleware redirection)

@@ -100,7 +100,7 @@ Route::get('/debug-correo', function (\Illuminate\Http\Request $request) {
 });
 
 // Logout Route
-Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::get('/logout', [LoginController::class, 'logout'])->name('logout.get');
 
 Route::get('/debug-env', function (Request $request) {
     $results = [

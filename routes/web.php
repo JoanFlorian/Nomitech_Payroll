@@ -126,16 +126,16 @@ Route::get('/debug-env', function (Request $request) {
 
     // Check DB
     try {
-        \DB::connection()->getPdo();
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
         $results['db_connection'] = 'OK';
         
         $results['sessions_table'] = [
-            'exists' => \Schema::hasTable('sessions'),
-            'column_listing' => \Schema::hasTable('sessions') ? \Schema::getColumnListing('sessions') : [],
+            'exists' => \Illuminate\Support\Facades\Schema::hasTable('sessions'),
+            'column_listing' => \Illuminate\Support\Facades\Schema::hasTable('sessions') ? \Illuminate\Support\Facades\Schema::getColumnListing('sessions') : [],
         ];
         
         if ($results['sessions_table']['exists']) {
-             $results['sessions_table']['user_id_type'] = \DB::select("SHOW COLUMNS FROM sessions WHERE Field = 'user_id'")[0]->Type ?? 'unknown';
+             $results['sessions_table']['user_id_type'] = \Illuminate\Support\Facades\DB::select("SHOW COLUMNS FROM sessions WHERE Field = 'user_id'")[0]->Type ?? 'unknown';
         }
 
     } catch (\Exception $e) {
@@ -171,6 +171,15 @@ Route::get('/test-cookie', function () {
         'app_env' => config('app.env'),
         'secure_config' => config('session.secure'),
     ])->cookie('manual_test_cookie', 'sticking', 60, '/', null, true, true, false, 'Lax');
+});
+
+Route::get('/test-cookie-all', function () {
+    return response()->json([
+        'message' => 'Setting multiple cookies with different policies. Check DevTools -> Network -> Headers -> Set-Cookie',
+    ])
+    ->cookie('cookie_lax', 'val_lax', 60, '/', null, true, true, false, 'Lax')
+    ->cookie('cookie_none', 'val_none', 60, '/', null, true, true, false, 'None')
+    ->cookie('cookie_strict', 'val_strict', 60, '/', null, true, true, false, 'Strict');
 });
 
 // License Status Routes (Protected by auth, but handled by middleware redirection)

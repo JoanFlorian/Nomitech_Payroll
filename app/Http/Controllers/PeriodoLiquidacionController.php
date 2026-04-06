@@ -480,12 +480,14 @@ class PeriodoLiquidacionController extends Controller
 
             $nuevaFecha = $request->input('fecha_cierre_automatico');
             
-            // Validar que la fecha esté en un rango razonable (max 15 días después de fecha_fin)
+            // Validar que la fecha esté en un rango razonable (max 15 días tras fin periodo)
             if ($nuevaFecha) {
                 $fechaCierre = \Carbon\Carbon::parse($nuevaFecha);
                 $fechaFin = \Carbon\Carbon::parse($periodo->fecha_fin);
                 
-                if ($fechaCierre->diffInDays($fechaFin, false) > 15) {
+                // Solo arrojar error if fechaCierre es posterior a fechaFin + 15 días
+                // diffInDays con false retorna positivo si la fecha de cierre es después de fecha fin
+                if ($fechaFin->diffInDays($fechaCierre, false) > 15) {
                     throw new \Exception('La fecha de cierre automático no puede ser superior a 15 días después del fin del periodo.');
                 }
             }

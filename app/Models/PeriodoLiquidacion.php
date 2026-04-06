@@ -143,24 +143,15 @@ class PeriodoLiquidacion extends Model
 
     /**
      * Determina si el periodo puede ser cerrado basado en la fecha actual.
-     * El cierre se permite desde el día fin hasta 10 días después.
+     * El cierre se permite en cualquier momento (según solicitud del usuario).
      */
     public function canBeClosed(): bool
     {
-        // TEMPORAL: Habilitado para pruebas de provisiones
-        return true;
-
-        /*
         if ($this->estado === self::ESTADO_CERRADO) {
             return false;
         }
 
-        $now = now()->startOfDay();
-        $fechaFin = \Carbon\Carbon::parse($this->fecha_fin)->startOfDay();
-        $limiteCierre = $fechaFin->copy()->addDays(10);
-
-        return $now->greaterThanOrEqualTo($fechaFin) && $now->lessThanOrEqualTo($limiteCierre);
-        */
+        return true; 
     }
     /**
      * Obtiene el periodo activo de la empresa validando que no esté cerrado.

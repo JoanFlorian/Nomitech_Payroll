@@ -249,10 +249,18 @@
                                 $pensionEmpresa = (float) ($detalle['aporte_pension'] ?? 0);
                                 $valorArl    = (float) ($detalle['valor_arl']    ?? $detalle['aporte_arl'] ?? 0);
                                 $caja        = (float) ($detalle['aporte_caja']  ?? 0);
+                                $tieneLmat   = (bool) ($detalle['tiene_lmat'] ?? false);
                             @endphp
                             <tr>
                                 <td class="fw-semibold text-primary">{{ $detalle['doc_empleado'] }}</td>
-                                <td class="fw-semibold" style="text-transform: uppercase;">{{ $detalle['empleado_nombre'] }}</td>
+                                <td class="fw-semibold" style="text-transform: uppercase;">
+                                    {{ $detalle['empleado_nombre'] }}
+                                    @if($tieneLmat)
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle ms-2">
+                                            <i class="bi bi-heart-pulse me-1"></i>Licencia Maternidad
+                                        </span>
+                                    @endif
+                                </td>
                                 <td class="text-end fw-bold text-primary" style="background: rgba(13, 110, 253, 0.08); border-left: 3px solid #0d6efd;">${{ number_format($ibc, 0, ',', '.') }}</td>
                                 <td class="text-center">
                                     <span class="badge bg-warning-subtle text-warning border border-warning-subtle">

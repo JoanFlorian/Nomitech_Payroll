@@ -47,31 +47,10 @@ class PilaController extends Controller
 
         $periodos = PeriodoLiquidacion::query()
             ->when($selectedEmpresaId > 0, fn($q) => $q->where('id_empresa', $selectedEmpresaId))
-            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO])
+            ->whereIn('estado', [PeriodoLiquidacion::ESTADO_PENDIENTE, PeriodoLiquidacion::ESTADO_ABIERTO, PeriodoLiquidacion::ESTADO_CERRADO])
             ->orderByDesc('fecha_inicio')
             ->limit(36)
             ->get(['id_periodo', 'id_empresa', 'fecha_inicio', 'fecha_fin', 'estado']);
-
-        // Agregar períodos CERRADOS que tengan cambios (hash null o salarios más recientes)
-        if ($selectedEmpresaId > 0 && Schema::hasTable('planilla_pila')) {
-            $periodoCerradosConCambios = DB::table('planilla_pila as pp')
-                ->join('periodo_liquidacion as pl', 'pl.id_periodo', '=', 'pp.id_periodo')
-                ->where('pp.id_empresa', $selectedEmpresaId)
-                ->where('pl.estado', PeriodoLiquidacion::ESTADO_CERRADO)
-                ->where(function($q) {
-                    // Hash null (invalidado por cambio de entidades) O salarios más recientes que la planilla
-                    $q->whereNull('pp.datos_hash')
-                      ->orWhereRaw('EXISTS (
-                        SELECT 1 FROM salario s 
-                        WHERE s.id_periodo = pp.id_periodo 
-                        AND s.updated_at > pp.updated_at
-                      )');
-                })
-                ->orderByDesc('pl.fecha_inicio')
-                ->get(['pl.id_periodo', 'pl.id_empresa', 'pl.fecha_inicio', 'pl.fecha_fin', 'pl.estado']);
-
-            $periodos = $periodos->merge($periodoCerradosConCambios);
-        }
 
         $requestedPeriodoId = (int) $request->input('id_periodo');
         $selectedPeriodoId = ($request->filled('id_periodo') && $periodos->contains('id_periodo', $requestedPeriodoId))

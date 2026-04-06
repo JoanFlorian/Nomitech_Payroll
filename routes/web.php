@@ -109,6 +109,26 @@ Route::get('/debug-env', function () {
     ]);
 });
 
+Route::get('/clear-cache', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+        \Illuminate\Support\Facades\Artisan::call('view:clear');
+        \Illuminate\Support\Facades\Artisan::call('route:clear');
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Caché de configuración, aplicación, vistas y rutas limpiada correctamente.',
+            'timestamp' => now()->toDateTimeString()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Error al limpiar la caché: ' . $e->getMessage()
+        ], 500);
+    }
+});
+
 // License Status Routes (Protected by auth, but handled by middleware redirection)
 Route::middleware(['auth', 'prevent_back_history'])->group(function () {
     Route::get('/checkout/{pago}', [App\Http\Controllers\CheckoutController::class , 'show'])->name('checkout.show');

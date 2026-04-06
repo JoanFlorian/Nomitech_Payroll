@@ -67,40 +67,42 @@ Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::cl
 // Diagnostic route for Brevo Mail in Production
 Route::get('/debug-correo', function (\Illuminate\Http\Request $request) {
     if (!Auth::check() || (int)Auth::user()->id_rol !== 4) {
-        // Optional security measure: change to 'return "No autorizado";' if you only want superadmins to see it,
-        // or just leave it open for a few minutes while you test.
+    // Optional security measure: change to 'return "No autorizado";' if you only want superadmins to see it,
+    // or just leave it open for a few minutes while you test.
     }
-    
+
     try {
         // Obtenemos el correo desde parametro ?to=correo@ejemplo.com, o usamos uno por defecto
         $to = $request->query('to', 'tu-correo-personal@gmail.com');
-        
+
         \Illuminate\Support\Facades\Mail::raw('Prueba de diagnóstico Brevo', function ($msg) use ($to) {
-            $msg->to($to)->subject('Diagnóstico de Correo Nomitech');
+                    $msg->to($to)->subject('Diagnóstico de Correo Nomitech');
+                }
+                );
+
+                return response()->json([
+                'status' => 'success',
+                'message' => 'Correo de prueba enviado con éxito a: ' . $to,
+                'mailer' => config('mail.default'),
+                'from_address' => config('mail.from.address'),
+                ]);
+
+            }
+            catch (\Exception $e) {
+                return response()->json([
+                'status' => 'error',
+                'message' => 'Error al intentar enviar correo',
+                'error_detail' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'mailer_used' => config('mail.default'),
+                'from_address' => config('mail.from.address'),
+                'hint' => 'Revisa en Brevo si tu dominio/correo "from_address" está verificado y si la API Key es correcta.'
+                ]);
+            }
         });
-        
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Correo de prueba enviado con éxito a: ' . $to,
-            'mailer' => config('mail.default'),
-            'from_address' => config('mail.from.address'),
-        ]);
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Error al intentar enviar correo',
-            'error_detail' => $e->getMessage(),
-            'error_class' => get_class($e),
-            'mailer_used' => config('mail.default'),
-            'from_address' => config('mail.from.address'),
-            'hint' => 'Revisa en Brevo si tu dominio/correo "from_address" está verificado y si la API Key es correcta.'
-        ]);
-    }
-});
 
 // Logout Route
-Route::get('/logout', [LoginController::class, 'logout'])->name('logout.get');
+Route::get('/logout', [LoginController::class , 'logout'])->name('logout.get');
 
 Route::get('/debug-env', function (Request $request) {
     $results = [
@@ -128,17 +130,18 @@ Route::get('/debug-env', function (Request $request) {
     try {
         \Illuminate\Support\Facades\DB::connection()->getPdo();
         $results['db_connection'] = 'OK';
-        
+
         $results['sessions_table'] = [
             'exists' => \Illuminate\Support\Facades\Schema::hasTable('sessions'),
-            'column_listing' => \Illuminate\Support\Facades\Schema::hasTable('sessions') ? \Illuminate\Support\Facades\Schema::getColumnListing('sessions') : [],
+            'column_listing' => \Illuminate\Support\Facades\Schema::hasTable('sessions') ?\Illuminate\Support\Facades\Schema::getColumnListing('sessions') : [],
         ];
-        
+
         if ($results['sessions_table']['exists']) {
-             $results['sessions_table']['user_id_type'] = \Illuminate\Support\Facades\DB::select("SHOW COLUMNS FROM sessions WHERE Field = 'user_id'")[0]->Type ?? 'unknown';
+            $results['sessions_table']['user_id_type'] = \Illuminate\Support\Facades\DB::select("SHOW COLUMNS FROM sessions WHERE Field = 'user_id'")[0]->Type ?? 'unknown';
         }
 
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
         $results['db_error'] = $e->getMessage();
     }
 
@@ -151,35 +154,63 @@ Route::get('/clear-cache', function () {
         \Illuminate\Support\Facades\Artisan::call('cache:clear');
         \Illuminate\Support\Facades\Artisan::call('view:clear');
         \Illuminate\Support\Facades\Artisan::call('route:clear');
-        
+
         return response()->json([
-            'status' => 'success',
-            'message' => 'Caché de configuración, aplicación, vistas y rutas limpiada correctamente.',
-            'timestamp' => now()->toDateTimeString()
+        'status' => 'success',
+        'message' => 'Caché de configuración, aplicación, vistas y rutas limpiada correctamente.',
+        'timestamp' => now()->toDateTimeString()
         ]);
-    } catch (\Exception $e) {
+    }
+    catch (\Exception $e) {
         return response()->json([
-            'status' => 'error',
-            'message' => 'Error al limpiar la caché: ' . $e->getMessage()
+        'status' => 'error',
+        'message' => 'Error al limpiar la caché: ' . $e->getMessage()
         ], 500);
     }
 });
 
 Route::get('/test-cookie', function () {
     return response()->json([
-        'message' => 'Test cookie set! Look for "manual_test_cookie" in your DevTools',
-        'app_env' => config('app.env'),
-        'secure_config' => config('session.secure'),
+    'message' => 'Test cookie set! Look for "manual_test_cookie" in your DevTools',
+    'app_env' => config('app.env'),
+    'secure_config' => config('session.secure'),
     ])->cookie('manual_test_cookie', 'sticking', 60, '/', null, true, true, false, 'Lax');
 });
 
 Route::get('/test-cookie-all', function () {
     return response()->json([
-        'message' => 'Setting multiple cookies with different policies. Check DevTools -> Network -> Headers -> Set-Cookie',
+    'message' => 'Setting multiple cookies with different policies. Check DevTools -> Network -> Headers -> Set-Cookie',
     ])
     ->cookie('cookie_lax', 'val_lax', 60, '/', null, true, true, false, 'Lax')
     ->cookie('cookie_none', 'val_none', 60, '/', null, true, true, false, 'None')
     ->cookie('cookie_strict', 'val_strict', 60, '/', null, true, true, false, 'Strict');
+});
+
+Route::get('/test-mail-live', function () {
+    $results = [
+        'mailer' => config('mail.default'),
+        'brevo_key_set' => !empty(config('mail.mailers.brevo.key')),
+        'from_address' => config('mail.from.address'),
+    ];
+
+    try {
+        \Illuminate\Support\Facades\Mail::raw('Este es un correo de prueba de Nomitech.', function ($message) {
+            $message->to('esquivel7809@gmail.com')
+                    ->subject('Prueba de Correo Nomitech Live');
+        });
+        
+        $results['status'] = 'success';
+        $results['message'] = 'Correo enviado correctamente a esquivel7809@gmail.com';
+    } catch (\Exception $e) {
+        $results['status'] = 'error';
+        $results['exception'] = [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ];
+    }
+
+    return response()->json($results);
 });
 
 // License Status Routes (Protected by auth, but handled by middleware redirection)

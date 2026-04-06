@@ -310,6 +310,7 @@ class TestDataSeeder extends Seeder
             ];
         }
 
+        $mayCount = 0;
         for ($i = 0; $i < $numEmpl; $i++) {
             $realIndex = $i + 1;
             $docEmpl = "30000000" . str_pad($realIndex, 2, '0', STR_PAD_LEFT);
@@ -358,9 +359,13 @@ class TestDataSeeder extends Seeder
             $idTipoContrato = ($i % 6) + 1; 
             $fechaFin = null;
             if ($idTipoContrato > 1) {
-                // Even index → ends April 15 (termination in April period)
-                // Odd index  → ends June 30 (no termination in April period)
-                $fechaFin = ($i % 2 === 0) ? '2026-04-15' : '2026-06-30';
+                if ($mayCount < 3) {
+                    $fechaFin = '2026-05-15';
+                    $mayCount++;
+                } else {
+                    // Even index was April 15, now August 29
+                    $fechaFin = ($i % 2 === 0) ? '2026-08-29' : '2026-06-30';
+                }
             }
 
             $contractsBatch[] = [

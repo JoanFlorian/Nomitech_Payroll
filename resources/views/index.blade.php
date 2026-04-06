@@ -257,11 +257,11 @@
                         Colombia.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="{{ route('register.create') }}"
+                        <a href="#pricing"
                             class="px-8 py-4 bg-white text-primary text-base font-extrabold rounded-lg shadow-xl shadow-black/10 hover:bg-gray-50 transition-all">
-                            Iniciar prueba gratuita
+                            Ver planes
                         </a>
-                        <a href="{{ url('demo') }}"
+                        <a href="https://www.youtube.com/watch?v=pg-sHV_NnLE" target="_blank"
                             class="px-8 py-4 bg-white/10 backdrop-blur-md text-white text-base font-extrabold rounded-lg border border-white/30 hover:bg-white/20 transition-all flex items-center justify-center gap-2">
                             <span class="material-symbols-outlined">play_circle</span> Ver demo
                         </a>

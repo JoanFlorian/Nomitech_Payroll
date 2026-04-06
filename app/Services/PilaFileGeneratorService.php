@@ -55,6 +55,11 @@ class PilaFileGeneratorService
                 $join->on('pde.planilla_id', '=', 'n.id_periodo')
                      ->on('pde.doc_empleado', '=', 'u.doc');
             })
+            ->leftJoin('novedad as nov', function($join) {
+                $join->on('nov.id_salario', '=', 'n.id_salario')
+                     ->whereIn('nov.tipo_novedad_codigo', ['LMAT', 'LPAT'])
+                     ->where('nov.estado', 'activa');
+            })
             ->where('c.id_empresa', $empresaId)
             ->where('n.id_periodo', $periodoId)
             ->whereIn('c.id_tipo_contrato', [1, 2, 3, 4, 5])
@@ -78,6 +83,8 @@ class PilaFileGeneratorService
                 'ar.codigo_pila as codigo_arl',
                 'cc.codigo_pila as codigo_caja',
                 'pde.valor_arl',
+                'nov.tipo_novedad_codigo as tipo_novedad',
+                'nov.valor_calculado as valor_lmat',
             ]);
 
         $detalles = [];
@@ -87,8 +94,17 @@ class PilaFileGeneratorService
             $diasTrabajados = max(0, (int) ($row->dias_trabajados ?? 0));
             $idTipoContrato = (int) ($row->id_tipo_contrato ?? 0);
             
-            // IBC proporcional a los días trabajados, sin mínimo forzado
-            $ibc = (int) round(($salarioBase / 30) * $diasTrabajados);
+            // Detectar si tiene Licencia de Maternidad/Paternidad activa
+            $tieneLmat = in_array($row->tipo_novedad ?? null, ['LMAT', 'LPAT']);
+            $valorLmat = (float) ($row->valor_lmat ?? 0);
+            
+            // IBC: usar valor de LMAT si aplica, sino calcular proporcionalmente
+            if ($tieneLmat && $valorLmat > 0) {
+                $ibc = (int) round($valorLmat);
+            } else {
+                // IBC proporcional a los días trabajados, sin mínimo forzado
+                $ibc = (int) round(($salarioBase / 30) * $diasTrabajados);
+            }
 
             if ($ibc <= 0) {
                 continue;
@@ -107,13 +123,19 @@ class PilaFileGeneratorService
             $pension_total_rate = $this->pensionEmployeeRate + $this->pensionEmployerRate;
             $aportePension = (int) round($ibc * $pension_total_rate);
             
-            // Caja de compensación: TODOS pagan (incluyendo aprendices y practicantes) desde 2026
-            $aporteCaja = (int) round($ibc * $this->cajaRate);
+            // ARL y Caja: NO se pagan si está en Licencia de Maternidad/Paternidad
+            $aporteCaja = 0;
+            $aporteArl = 0;
             
-            // ARL: presente en todos los tipos de contrato (1, 2, 3, 4, 5)
-            // usar valor real de BD, o calcular con tasa si no existe
-            $valorArlBd = (float) ($row->valor_arl ?? 0);
-            $aporteArl = $valorArlBd > 0 ? (int) round($valorArlBd) : (int) round($ibc * self::TASA_ARL[$nivelRiesgo]);
+            if (!$tieneLmat) {
+                // Caja de compensación: TODOS pagan (incluyendo aprendices y practicantes) desde 2026
+                $aporteCaja = (int) round($ibc * $this->cajaRate);
+                
+                // ARL: presente en todos los tipos de contrato (1, 2, 3, 4, 5)
+                // usar valor real de BD, o calcular con tasa si no existe
+                $valorArlBd = (float) ($row->valor_arl ?? 0);
+                $aporteArl = $valorArlBd > 0 ? (int) round($valorArlBd) : (int) round($ibc * self::TASA_ARL[$nivelRiesgo]);
+            }
 
             $detalles[] = [
                 'id_nomina' => (int) ($row->id_salario ?? 0),
@@ -141,6 +163,8 @@ class PilaFileGeneratorService
                 'codigo_afp' => (string) ($row->codigo_afp ?? ''),
                 'codigo_arl' => (string) ($row->codigo_arl ?? ''),
                 'codigo_caja' => (string) ($row->codigo_caja ?? ''),
+                'tiene_lmat' => $tieneLmat,
+                'tipo_licencia' => $tieneLmat ? $row->tipo_novedad : null,
             ];
         }
 

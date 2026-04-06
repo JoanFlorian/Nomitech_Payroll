@@ -101,8 +101,9 @@
 								<input type="radio" name="unidad_cantidad" value="dias" id="unit-days" {{ old('unidad_cantidad', 'dias') === 'dias' ? 'checked' : '' }}>
 								Días
 							</label>
-							<label class="inline-flex items-center gap-2 text-sm text-gray-700">
-								<input type="radio" name="unidad_cantidad" value="horas" id="unit-hours" {{ old('unidad_cantidad') === 'horas' ? 'checked' : '' }}>
+							{{-- Opción Horas ocultada --}}
+						<label class="inline-flex items-center gap-2 text-sm text-gray-700" style="display:none">
+								<input type="radio" name="unidad_cantidad" value="horas" id="unit-hours">
 								Horas
 							</label>
 						</div>
@@ -129,7 +130,8 @@
 						@enderror
 					</div>
 
-					<div>
+					{{-- Campo Cantidad en horas ocultado --}}
+					<div style="display:none">
 						<label for="quantity-hours" class="block text-sm font-medium text-gray-700 mb-1">Cantidad en horas</label>
 						<input id="quantity-hours" name="cantidad_horas" type="number" step="0.01" value="{{ old('cantidad_hours') }}" class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-[#1565C0] focus:border-[#1565C0] transition" placeholder="Ej: 8">
 						<p id="quantity-hours-error" class="mt-1 text-xs text-red-600 hidden"></p>

@@ -317,6 +317,15 @@
                     </div>
                 @endif
 
+                @if($errors->guardarDetalles->any())
+                    <div class="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+                        <p class="mb-1 font-semibold">Error al guardar correcciones (borrador):</p>
+                        @foreach($errors->guardarDetalles->all() as $err)
+                            <p>{{ $err }}</p>
+                        @endforeach
+                    </div>
+                @endif
+
                 <div>
                     <label for="motivo_ajuste" class="text-sm font-semibold text-gray-700">Motivo del ajuste aplicado</label>
                     <textarea

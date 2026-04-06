@@ -238,6 +238,17 @@ class NotaAjusteController extends Controller
                     ->update(['aprobado_por' => $adminDoc, 'aprobado_en' => $ahora]);
             });
 
+            // PATH A stores only the aggregate for valor_horas_extras_recargos;
+            // individual HoraRecargoExtra breakdown rows are NOT updated here because
+            // adminGuardarDetalles does not persist the per-type breakdown.
+            // The aggregate on salario is correct; the breakdown table may be stale.
+            if (array_key_exists('valor_horas_extras_recargos', $updates)) {
+                Log::warning('PATH A ajuste-pago: HoraRecargoExtra breakdown rows were NOT updated (only aggregate on salario was patched). Breakdown may be stale.', [
+                    'nota_ajuste_id' => $notaAjuste->id,
+                    'id_salario'     => $salario->id_salario,
+                ]);
+            }
+
             Log::info('Ajuste aplicado desde nota_ajuste_detalles pre-guardados', [
                 'nota_ajuste_id'     => $notaAjuste->id,
                 'id_salario'         => $salario->id_salario,

@@ -81,8 +81,15 @@ class TrabajadorController extends Controller
         $contratos = Contrato::where('doc', $usuario->doc)->get();
         $contratoIds = $contratos->pluck('id_contrato');
         
-        // Buscar el desprendible
-        $desprendible = Salario::with(['contrato.usuario', 'periodo', 'novedades'])
+        // Buscar el desprendible con relaciones extendidas
+        $desprendible = Salario::with([
+            'contrato.usuario',
+            'contrato.tipoContrato',
+            'contrato.metodoPago',
+            'contrato.formaPago',
+            'periodo',
+            'novedades.tipoNovedad',
+        ])
             ->whereIn('id_contrato', $contratoIds)
             ->where('id_salario', $id)
             ->first();
@@ -91,6 +98,13 @@ class TrabajadorController extends Controller
         if (!$desprendible) {
             abort(403, 'No tienes permiso para ver este desprendible');
         }
+
+        // Cargar desglose de horas extras y recargos
+        $horasExtras = \App\Models\HoraRecargoExtra::with('tipoHoraRecargo')
+            ->where('id_salario', $desprendible->id_salario)
+            ->get()
+            ->filter(fn($h) => $h->tipoHoraRecargo !== null && (float) $h->cantidad > 0)
+            ->values();
         
         // Organizar devengos y deducciones
         $devengos = [
@@ -114,13 +128,13 @@ class TrabajadorController extends Controller
         // Agregar novedades a devengos/deducciones
         foreach ($desprendible->novedades as $novedad) {
             if ($novedad->pago > 0) {
-                $devengos[$novedad->concepto ?? 'Novedad'] = $novedad->pago;
+                $devengos[$novedad->tipo_novedad_nombre ?? $novedad->concepto ?? 'Novedad'] = $novedad->pago;
             } elseif ($novedad->pago < 0) {
-                $deducciones[$novedad->concepto ?? 'Novedad'] = abs($novedad->pago);
+                $deducciones[$novedad->tipo_novedad_nombre ?? $novedad->concepto ?? 'Novedad'] = abs($novedad->pago);
             }
         }
         
-        return view('trabajador.ver-desprendible', compact('desprendible', 'devengos', 'deducciones'));
+        return view('trabajador.ver-desprendible', compact('desprendible', 'devengos', 'deducciones', 'horasExtras'));
     }
     
     /**
@@ -134,8 +148,15 @@ class TrabajadorController extends Controller
         $contratos = Contrato::where('doc', $usuario->doc)->get();
         $contratoIds = $contratos->pluck('id_contrato');
         
-        // Buscar el desprendible
-        $desprendible = Salario::with(['contrato.usuario', 'periodo', 'novedades'])
+        // Buscar el desprendible con relaciones extendidas
+        $desprendible = Salario::with([
+            'contrato.usuario',
+            'contrato.tipoContrato',
+            'contrato.metodoPago',
+            'contrato.formaPago',
+            'periodo',
+            'novedades.tipoNovedad',
+        ])
             ->whereIn('id_contrato', $contratoIds)
             ->where('id_salario', $id)
             ->first();
@@ -144,6 +165,13 @@ class TrabajadorController extends Controller
         if (!$desprendible) {
             abort(403, 'No tienes permiso para descargar este desprendible');
         }
+
+        // Cargar desglose de horas extras y recargos
+        $horasExtras = \App\Models\HoraRecargoExtra::with('tipoHoraRecargo')
+            ->where('id_salario', $desprendible->id_salario)
+            ->get()
+            ->filter(fn($h) => $h->tipoHoraRecargo !== null && (float) $h->cantidad > 0)
+            ->values();
         
         // Organizar devengos y deducciones
         $devengos = [
@@ -167,14 +195,14 @@ class TrabajadorController extends Controller
         // Agregar novedades
         foreach ($desprendible->novedades as $novedad) {
             if ($novedad->pago > 0) {
-                $devengos[$novedad->concepto ?? 'Novedad'] = $novedad->pago;
+                $devengos[$novedad->tipo_novedad_nombre ?? $novedad->concepto ?? 'Novedad'] = $novedad->pago;
             } elseif ($novedad->pago < 0) {
-                $deducciones[$novedad->concepto ?? 'Novedad'] = abs($novedad->pago);
+                $deducciones[$novedad->tipo_novedad_nombre ?? $novedad->concepto ?? 'Novedad'] = abs($novedad->pago);
             }
         }
         
         // Generar PDF
-        $pdf = Pdf::loadView('trabajador.pdf-desprendible', compact('desprendible', 'devengos', 'deducciones'));
+        $pdf = Pdf::loadView('trabajador.pdf-desprendible', compact('desprendible', 'devengos', 'deducciones', 'horasExtras'));
 
         $periodoNombre = $desprendible->periodo->nombre ?? 'periodo';
         $periodoNombre = preg_replace('/[^A-Za-z0-9_-]+/u', '_', $periodoNombre) ?: 'periodo';

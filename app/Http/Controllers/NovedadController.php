@@ -87,6 +87,7 @@ class NovedadController extends Controller
                 })
                 ->leftJoin('eps', 'eps.id_eps', '=', 'contrato.id_eps')
                 ->leftJoin('afp', 'afp.id_afp', '=', 'contrato.id_afp')
+                ->leftJoin('arl', 'arl.id_arl', '=', 'contrato.id_arl')
                 ->where('contrato.id_empresa', $empresaFilterId)
                 ->where(function ($query) {
                     $query->where('contrato.activo', true)
@@ -102,6 +103,8 @@ class NovedadController extends Controller
                 ->selectRaw('eps.nombre as eps_nombre')
                 ->selectRaw('contrato.id_afp')
                 ->selectRaw('afp.nombre as afp_nombre')
+                ->selectRaw('contrato.id_arl')
+                ->selectRaw('arl.nombre as arl_nombre')
                 ->selectRaw('(SELECT COALESCE(SUM(n.dias), 0) FROM novedad n WHERE n.empleado_id = usuario.doc AND n.tipo_novedad_codigo = "VAC" AND n.id_periodo = ?) as vacaciones_registradas', [$periodoId])
                 ->orderBy('usuario.primer_nombre')
                 ->orderBy('usuario.primer_apellido')
@@ -123,6 +126,8 @@ class NovedadController extends Controller
                 'eps_nombre' => (string) ($row->eps_nombre ?? ''),
                 'id_afp' => isset($row->id_afp) ? (int) $row->id_afp : null,
                 'afp_nombre' => (string) ($row->afp_nombre ?? ''),
+                'id_arl' => isset($row->id_arl) ? (int) $row->id_arl : null,
+                'arl_nombre' => (string) ($row->arl_nombre ?? ''),
             ])
             ->values();
 
@@ -297,14 +302,20 @@ class NovedadController extends Controller
     public function store(StoreNovedadEmpleadoRequest $request)
     {
         $data = $request->validated();
+        $tipoNov = strtoupper((string) ($data['tipo_novedad'] ?? ''));
         $salario = $this->resolveEmpleadoSalario((string) $data['empleado_id']);
+
+        // VSP y traslados/VCT no necesitan periodo activo
+        $noNecesitaPeriodo = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT'];
+        if (!$salario && in_array($tipoNov, $noNecesitaPeriodo, true)) {
+            $salario = $this->resolveLatestSalarioForEmployee((string) $data['empleado_id']);
+        }
 
         if (!$salario) {
             return $this->buildEmpleadoSalarioErrorResponse(true);
         }
 
         // IGE e IRL requieren periodo activo para garantizar el aislamiento por periodo.
-        $tipoNov = strtoupper((string) ($data['tipo_novedad'] ?? ''));
         $periodo = PeriodoLiquidacion::getActivePeriod();
         if (in_array($tipoNov, ['IGE', 'IRL'], true) && !$periodo) {
             $msg = 'No se puede registrar una incapacidad sin un periodo de liquidación activo. Active un periodo primero.';
@@ -388,8 +399,14 @@ class NovedadController extends Controller
     {
         $novedad = Novedad::query()->findOrFail($id_novedad);
         $data = $request->validated();
+        $tipoNovEdit = strtoupper((string) ($data['tipo_novedad'] ?? ''));
 
         $salario = $this->resolveEmpleadoSalario((string) $data['empleado_id']);
+        // VSP y traslados/VCT no necesitan periodo activo
+        $noNecesitaPeriodoEdit = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT'];
+        if (!$salario && in_array($tipoNovEdit, $noNecesitaPeriodoEdit, true)) {
+            $salario = $this->resolveLatestSalarioForEmployee((string) $data['empleado_id']);
+        }
         if (!$salario) {
             return $this->buildEmpleadoSalarioErrorResponse(false);
         }
@@ -557,6 +574,27 @@ class NovedadController extends Controller
             }
         }
 
+        if (strtoupper($novedad->tipo_novedad_codigo) === 'VCT') {
+            $contrato = DB::table('contrato')->where('doc', $novedad->empleado_id)->orderByDesc('id_contrato')->first();
+
+            if ($contrato) {
+                $ultimoHistorial = DB::table('historial_contrato')
+                    ->where('id_contrato', $contrato->id_contrato)
+                    ->where('tipo_novedad', 'ARL')
+                    ->orderByDesc('fecha_cambio')
+                    ->orderByDesc('id_historial')
+                    ->first();
+
+                if ($ultimoHistorial && $ultimoHistorial->dato_anterior !== null) {
+                    DB::table('contrato')->where('id_contrato', $contrato->id_contrato)->update([
+                        'id_arl' => $ultimoHistorial->dato_anterior,
+                        'updated_at' => now(),
+                    ]);
+                    DB::table('historial_contrato')->where('id_historial', $ultimoHistorial->id_historial)->delete();
+                }
+            }
+        }
+
         $doc = $novedad->empleado_id;
         $this->deleteMedicalSupportFile($novedad->soporte_medico_path ?? null);
         $novedad->delete();
@@ -576,6 +614,23 @@ class NovedadController extends Controller
     private function resolveEmpleadoSalario(string $empleadoId): ?Salario
     {
         return $this->calculoNovedadService->obtenerSalarioEmpleado($empleadoId);
+    }
+
+    /**
+     * Fallback para VSP: obtiene el salario más reciente del empleado
+     * independientemente del estado del periodo (activo, cerrado o sin periodo).
+     */
+    private function resolveLatestSalarioForEmployee(string $empleadoId): ?Salario
+    {
+        $empresaId = (int) session('empresa_id');
+
+        return Salario::query()
+            ->join('contrato', 'contrato.id_contrato', '=', 'salario.id_contrato')
+            ->where('contrato.doc', $empleadoId)
+            ->where('contrato.id_empresa', $empresaId)
+            ->select('salario.*', 'contrato.salario_base as contrato_salario_base')
+            ->orderByDesc('salario.created_at')
+            ->first();
     }
 
     private function buildEmpleadoSalarioErrorResponse(bool $openModal)

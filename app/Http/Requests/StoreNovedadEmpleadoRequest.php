@@ -372,8 +372,10 @@ class StoreNovedadEmpleadoRequest extends FormRequest
             }
 
             // Validación: solo permitir novedades en periodos Abiertos o Pendientes
+            // Excepción: VSP, traslados (TDE/TAE/TDP/TAP) y VCT pueden registrarse sin periodo activo
+            $tiposSinPeriodo = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT'];
             $periodoActivo = PeriodoLiquidacion::getActivePeriod();
-            if (!$periodoActivo || !in_array($periodoActivo->estado, [PeriodoLiquidacion::ESTADO_ABIERTO, PeriodoLiquidacion::ESTADO_PENDIENTE])) {
+            if (!in_array($tipo, $tiposSinPeriodo, true) && (!$periodoActivo || !in_array($periodoActivo->estado, [PeriodoLiquidacion::ESTADO_ABIERTO, PeriodoLiquidacion::ESTADO_PENDIENTE]))) {
                 $validator->errors()->add(
                     'tipo_novedad',
                     'No se pueden registrar novedades porque el periodo de liquidación actual no existe o ya está cerrado/liquidado.'

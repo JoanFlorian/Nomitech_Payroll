@@ -1425,7 +1425,28 @@
 				}
 			}
 			if (arlWrap) {
-				arlWrap.classList.toggle('hidden', tipo !== 'VCT');
+				const isVct = tipo === 'VCT';
+				arlWrap.classList.toggle('hidden', !isVct);
+
+				const arlLabel = arlWrap.querySelector('label');
+				if (arlLabel) {
+					arlLabel.textContent = isVct ? 'Nueva ARL (Destino)' : 'ARL';
+				}
+
+				let arlHint = document.getElementById('arl-origen-hint');
+				if (!arlHint) {
+					arlHint = document.createElement('p');
+					arlHint.id = 'arl-origen-hint';
+					arlHint.className = 'text-[10.5px] text-indigo-600 mt-1.5 font-medium flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded w-fit';
+					arlWrap.appendChild(arlHint);
+				}
+
+				if (isVct && selectedEmployee && selectedEmployee.id_arl) {
+					arlHint.innerHTML = `<span class="material-icons text-[12px]">info</span> <b>ARL Actual:</b> ${selectedEmployee.arl_nombre || 'N/A'}`;
+					arlHint.classList.remove('hidden');
+				} else {
+					arlHint.classList.add('hidden');
+				}
 			}
 		};
 
@@ -1476,6 +1497,7 @@
 		const updateCreateQuantityMode = () => {
 			const type = normalizeNoveltyType(noveltyType.value || '');
 			const isTraslado = ['TDE', 'TAE', 'TDP', 'TAP', 'RET'].includes(type);
+			const isVSP = type === 'VSP';
 			const noCantidad = isTraslado || ['VSP', 'VST', 'VCT'].includes(type);
 			const allowsHours = ['IGE', 'IRL', 'INC'].includes(type);
 			const fixedDays = type === 'LMAT' ? 126 : (type === 'LPAT' ? 14 : null);
@@ -1503,6 +1525,16 @@
 
 				if (endDateInput && startDateInput && startDateInput.value) {
 					endDateInput.value = startDateInput.value;
+				}
+			} else if (isVSP) {
+				// VSP: mantener fechas visibles, ocultar solo campos de cantidad/unidad
+				if (endWrap) endWrap.classList.remove('hidden');
+				if (daysWrap) daysWrap.classList.add('hidden');
+				if (hoursWrap) hoursWrap.classList.add('hidden');
+				if (unitWrap) unitWrap.classList.add('hidden');
+				if (startDateInput) {
+					startDateInput.removeAttribute('min');
+					startDateInput.removeAttribute('max');
 				}
 			} else {
 				if (endWrap) endWrap.classList.remove('hidden');
@@ -1631,20 +1663,81 @@
 					? Boolean(editCertificadoMedicoInput.checked || editMedicalSupportFileInput?.files?.length || hasExistingMedicalSupport)
 					: false;
 			}
+			const editEmpData = employees.find(e => String(e.doc) === String(editDocEmpleadoInput?.value));
+
 			if (editEpsWrap) {
-				editEpsWrap.classList.toggle('hidden', !['TDE', 'TAE'].includes(tipo));
+				const isTransferEps = ['TDE', 'TAE'].includes(tipo);
+				editEpsWrap.classList.toggle('hidden', !isTransferEps);
+
+				const editEpsLabel = editEpsWrap.querySelector('label');
+				if (editEpsLabel) {
+					editEpsLabel.textContent = isTransferEps ? 'Nueva EPS (Destino)' : 'EPS';
+				}
+
+				let editEpsHint = document.getElementById('edit-eps-origen-hint');
+				if (!editEpsHint) {
+					editEpsHint = document.createElement('p');
+					editEpsHint.id = 'edit-eps-origen-hint';
+					editEpsHint.className = 'text-[10.5px] text-indigo-600 mt-1.5 font-medium flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded w-fit';
+					editEpsWrap.appendChild(editEpsHint);
+				}
+
+				if (isTransferEps && editEmpData && editEmpData.id_eps) {
+					editEpsHint.innerHTML = `<span class="material-icons text-[12px]">info</span> <b>EPS Actual:</b> ${editEmpData.eps_nombre || 'N/A'}`;
+					editEpsHint.classList.remove('hidden');
+				} else {
+					editEpsHint.classList.add('hidden');
+				}
 			}
 			if (editAfpWrap) {
-				editAfpWrap.classList.toggle('hidden', !['TDP', 'TAP'].includes(tipo));
+				const isTransferAfp = ['TDP', 'TAP'].includes(tipo);
+				editAfpWrap.classList.toggle('hidden', !isTransferAfp);
+
+				const editAfpLabel = editAfpWrap.querySelector('label');
+				if (editAfpLabel) {
+					editAfpLabel.textContent = isTransferAfp ? 'Nueva AFP (Destino)' : 'AFP';
+				}
+
+				let editAfpHint = document.getElementById('edit-afp-origen-hint');
+				if (!editAfpHint) {
+					editAfpHint = document.createElement('p');
+					editAfpHint.id = 'edit-afp-origen-hint';
+					editAfpHint.className = 'text-[10.5px] text-indigo-600 mt-1.5 font-medium flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded w-fit';
+					editAfpWrap.appendChild(editAfpHint);
+				}
+
+				if (isTransferAfp && editEmpData && editEmpData.id_afp) {
+					editAfpHint.innerHTML = `<span class="material-icons text-[12px]">info</span> <b>AFP Actual:</b> ${editEmpData.afp_nombre || 'N/A'}`;
+					editAfpHint.classList.remove('hidden');
+				} else {
+					editAfpHint.classList.add('hidden');
+				}
 			}
 			if (editArlWrap) {
-				editArlWrap.classList.toggle('hidden', tipo !== 'VCT');
+				const isVct = tipo === 'VCT';
+				editArlWrap.classList.toggle('hidden', !isVct);
+
+				let editArlHint = document.getElementById('edit-arl-origen-hint');
+				if (!editArlHint) {
+					editArlHint = document.createElement('p');
+					editArlHint.id = 'edit-arl-origen-hint';
+					editArlHint.className = 'text-[10.5px] text-indigo-600 mt-1.5 font-medium flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded w-fit';
+					editArlWrap.appendChild(editArlHint);
+				}
+
+				if (isVct && editEmpData && editEmpData.id_arl) {
+					editArlHint.innerHTML = `<span class="material-icons text-[12px]">info</span> <b>ARL Actual:</b> ${editEmpData.arl_nombre || 'N/A'}`;
+					editArlHint.classList.remove('hidden');
+				} else {
+					editArlHint.classList.add('hidden');
+				}
 			}
 		};
 
 		const updateEditQuantityMode = () => {
 			const type = normalizeNoveltyType(editNoveltyTypeInput.value || '');
 			const isTraslado = ['TDE', 'TAE', 'TDP', 'TAP', 'RET'].includes(type);
+			const isVSP = type === 'VSP';
 			const noCantidad = isTraslado || ['VSP', 'VST', 'VCT'].includes(type);
 			const allowsHours = ['IGE', 'IRL', 'INC'].includes(type);
 			const fixedDays = type === 'LMAT' ? 126 : (type === 'LPAT' ? 14 : null);
@@ -1672,6 +1765,16 @@
 
 				if (editEndDateInput && editStartDateInput && editStartDateInput.value) {
 					editEndDateInput.value = editStartDateInput.value;
+				}
+			} else if (isVSP) {
+				// VSP: mantener fechas visibles, ocultar solo campos de cantidad/unidad
+				if (endWrap) endWrap.classList.remove('hidden');
+				if (daysWrap) daysWrap.classList.add('hidden');
+				if (hoursWrap) hoursWrap.classList.add('hidden');
+				if (unitWrap) unitWrap.classList.add('hidden');
+				if (editStartDateInput) {
+					editStartDateInput.removeAttribute('min');
+					editStartDateInput.removeAttribute('max');
 				}
 			} else {
 				if (endWrap) endWrap.classList.remove('hidden');

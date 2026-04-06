@@ -16,6 +16,8 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\SuperAdmin\ActualizacionesController;
 use App\Http\Controllers\Admin\CatalogosEmpresaController;
 
+
+
 use App\Http\Controllers\NovedadController;
 use App\Http\Controllers\NovedadCalculoController;
 use App\Http\Controllers\PilaController;
@@ -296,44 +298,7 @@ Route::middleware(['auth', 'ensure_active_license', 'prevent_back_history', 'mus
     Route::post('/perfil', [TrabajadorController::class , 'actualizarPerfil'])->name('perfil.actualizar');
 });
 
-
-
-// RedirecciÃ³n raÃ­z del portal del trabajador
+// Redirección raíz del portal del trabajador
 Route::middleware(['auth'])->get('/trabajador', function () {
     return redirect()->route('trabajador.dashboard');
-});
-
-// Logout robusto (GET por compatibilidad con sidebar actual)
-Route::get('/logout', function (Request $request) {
-    Auth::logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-    return redirect('/');
-})->name('logout');
-
-// Ruta de diagnóstico para verificar puertos de correo en Render
-Route::get('/test-email-port', function () {
-    $results = [];
-    $tests = [
-        ['host' => 'smtp.gmail.com', 'port' => 587, 'name' => 'Gmail TLS'],
-        ['host' => 'smtp.gmail.com', 'port' => 465, 'name' => 'Gmail SSL'],
-        ['host' => 'smtp.resend.com', 'port' => 587, 'name' => 'Resend SMTP TLS'],
-        ['host' => 'api.resend.com', 'port' => 443, 'name' => 'Resend HTTP API (HTTPS)'],
-    ];
-
-    foreach ($tests as $test) {
-        $fp = @fsockopen($test['host'], $test['port'], $errCode, $errStr, 2);
-        if ($fp) {
-            $results[] = "✅ {$test['name']} ({$test['host']}:{$test['port']}): ABIERTO";
-            fclose($fp);
-        } else {
-            $results[] = "❌ {$test['name']} ({$test['host']}:{$test['port']}): BLOQUEADO ($errStr)";
-        }
-    }
-
-    return response()->json([
-        'message' => 'Diagnóstico de conectividad de correo',
-        'results' => $results,
-        'note' => 'Si el puerto 443 está abierto pero los demás no, significa que debes usar Resend vía API en lugar de SMTP.'
-    ]);
 });

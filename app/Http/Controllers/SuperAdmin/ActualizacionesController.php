@@ -165,7 +165,7 @@ class ActualizacionesController extends Controller
         }
 
         $config['tipo'] = $tipo;
-        $config['ruta'] = route('superadmin.actualizar', [':id']);
+        $config['ruta'] = route('actualizar', ['id' => ':id']);
         $config['q'] = $q;
         return view('superadmin.actualizaciones.partials.tabla-generica', compact('items', 'config'));
     }

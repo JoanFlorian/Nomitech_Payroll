@@ -176,7 +176,8 @@
             'métodos de pago': 'metodos_de_pago',
             'países': 'paises',
             'roles de sistema': 'roles',
-            'tipos hora recargo': 'tipos_hora_recargo'
+            'tipos hora recargo': 'tipos_hora_recargo',
+            'parámetros de nómina': 'payroll_parameters'
         };
 
         const departamentosJS = @json($departamentos->map(fn($d) => ['id' => $d->id_departamento, 'nombre' => $d->nombre]));
@@ -344,6 +345,23 @@
                 campoId: 'id_tipo_hora_recargo',
                 ruta: '/superadmin/actualizar/:id',
                 colores: { icono: 'from-amber-400 to-amber-600', boton: 'from-amber-500 to-amber-600' }
+            },
+            payroll_parameters: {
+                tipo: 'payroll_parameters',
+                campos: [
+                    { clave: 'parametro', label: 'Parámetro', tipo: 'text', icono: 'bi-tag', requerido: true },
+                    { clave: 'valor', label: 'Valor', tipo: 'number', icono: 'bi-calculator', requerido: true },
+                    { clave: 'descripcion', label: 'Descripción', tipo: 'textarea', icono: 'bi-file-text', requerido: false },
+                    { clave: 'tipo', label: 'Tipo', tipo: 'select', icono: 'bi-list', requerido: true, opciones: [
+                        { id: 'decimal', nombre: 'Decimal' },
+                        { id: 'entero', nombre: 'Entero' },
+                        { id: 'porcentaje', nombre: 'Porcentaje' },
+                        { id: 'texto', nombre: 'Texto' }
+                    ]}
+                ],
+                campoId: 'id',
+                ruta: '/superadmin/actualizar/:id',
+                colores: { icono: 'from-indigo-400 to-indigo-600', boton: 'from-indigo-500 to-indigo-600' }
             }
         };
 

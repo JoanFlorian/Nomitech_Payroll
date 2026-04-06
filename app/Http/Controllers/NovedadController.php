@@ -135,8 +135,18 @@ class NovedadController extends Controller
         $novedades = Novedad::query()
             ->with(['tipoNovedad', 'salario.contrato.usuario'])
             ->when($empresaId > 0, function ($query) use ($empresaId) {
-                $query->whereHas('salario.contrato', function ($q) use ($empresaId) {
-                    $q->where('id_empresa', $empresaId);
+                $query->where(function ($q) use ($empresaId) {
+                    // Novedades con nómina asociada
+                    $q->whereHas('salario.contrato', function ($inner) use ($empresaId) {
+                        $inner->where('id_empresa', $empresaId);
+                    })
+                    // Novedades sin nómina (id_salario null) — filtrar por empleado_id
+                    ->orWhere(function ($inner) use ($empresaId) {
+                        $inner->whereNull('id_salario')
+                            ->whereIn('empleado_id', function ($sub) use ($empresaId) {
+                                $sub->select('doc')->from('contrato')->where('id_empresa', $empresaId);
+                            });
+                    });
                 });
             })
             ->where(function ($main) use ($periodoActivo, $hoy) {
@@ -188,8 +198,16 @@ class NovedadController extends Controller
         $novedadesQuery = Novedad::query()
             ->with(['tipoNovedad', 'salario.contrato.usuario', 'periodoLiquidacion'])
             ->when($empresaId > 0, function ($query) use ($empresaId) {
-                $query->whereHas('salario.contrato', function ($q) use ($empresaId) {
-                    $q->where('id_empresa', $empresaId);
+                $query->where(function ($q) use ($empresaId) {
+                    $q->whereHas('salario.contrato', function ($inner) use ($empresaId) {
+                        $inner->where('id_empresa', $empresaId);
+                    })
+                    ->orWhere(function ($inner) use ($empresaId) {
+                        $inner->whereNull('id_salario')
+                            ->whereIn('empleado_id', function ($sub) use ($empresaId) {
+                                $sub->select('doc')->from('contrato')->where('id_empresa', $empresaId);
+                            });
+                    });
                 });
             });
 
@@ -311,6 +329,11 @@ class NovedadController extends Controller
             $salario = $this->resolveLatestSalarioForEmployee((string) $data['empleado_id']);
         }
 
+        // Tercer fallback: empleado sin nómina liquidada — usar salario_base del contrato
+        if (!$salario && in_array($tipoNov, $noNecesitaPeriodo, true)) {
+            $salario = $this->resolveContratoSalario((string) $data['empleado_id']);
+        }
+
         if (!$salario) {
             return $this->buildEmpleadoSalarioErrorResponse(true);
         }
@@ -401,6 +424,10 @@ class NovedadController extends Controller
         $noNecesitaPeriodoEdit = ['VSP', 'TDE', 'TAE', 'TDP', 'TAP', 'VCT', 'LIC', 'LMAT', 'LPAT', 'SLN', 'VAC', 'IGE', 'IRL', 'INC'];
         if (!$salario && in_array($tipoNovEdit, $noNecesitaPeriodoEdit, true)) {
             $salario = $this->resolveLatestSalarioForEmployee((string) $data['empleado_id']);
+        }
+        // Tercer fallback: empleado sin nómina liquidada — usar salario_base del contrato
+        if (!$salario && in_array($tipoNovEdit, $noNecesitaPeriodoEdit, true)) {
+            $salario = $this->resolveContratoSalario((string) $data['empleado_id']);
         }
         if (!$salario) {
             return $this->buildEmpleadoSalarioErrorResponse(false);
@@ -650,8 +677,7 @@ class NovedadController extends Controller
     }
 
     /**
-     * Fallback para VSP: obtiene el salario más reciente del empleado
-     * independientemente del estado del periodo (activo, cerrado o sin periodo).
+     * Fallback para novedades sin periodo: obtiene el salario más reciente del empleado.
      */
     private function resolveLatestSalarioForEmployee(string $empleadoId): ?Salario
     {
@@ -664,6 +690,34 @@ class NovedadController extends Controller
             ->select('salario.*', 'contrato.salario_base as contrato_salario_base')
             ->orderByDesc('salario.created_at')
             ->first();
+    }
+
+    /**
+     * Tercer fallback: el empleado nunca tuvo nómina liquidada.
+     * Construye un Salario transitorio (no persistido) usando el salario_base del contrato.
+     * Solo se usa para novedades que no requieren periodo (IGE, IRL, INC, LMAT, LPAT, etc.).
+     */
+    private function resolveContratoSalario(string $empleadoId): ?Salario
+    {
+        $empresaId = (int) session('empresa_id');
+
+        $contrato = \Illuminate\Support\Facades\DB::table('contrato')
+            ->where('doc', $empleadoId)
+            ->where('id_empresa', $empresaId)
+            ->orderByDesc('id_contrato')
+            ->first(['id_contrato', 'salario_base']);
+
+        if (!$contrato) {
+            return null;
+        }
+
+        $salario = new Salario();
+        $salario->id_salario = null; // sin registro de nómina — id_salario ya es nullable
+        $salario->id_contrato = $contrato->id_contrato;
+        $salario->id_periodo = null;
+        $salario->setAttribute('contrato_salario_base', $contrato->salario_base);
+
+        return $salario;
     }
 
     private function buildEmpleadoSalarioErrorResponse(bool $openModal)

@@ -67,7 +67,7 @@
                 <td class="px-5 py-3.5 text-center">
                     <button 
                         type="button"
-                        onclick="abrirEdicionModal('{{ $config['tipo'] }}', {{ $item->{$config['campoId']} }}, {{ json_encode($item->toArray()) }}, {{ json_encode($config) }})"
+                        onclick="abrirEdicionModal('{{ $config['tipo'] }}', {{ $item->{$config['campoId']} }}, {!! json_encode($item->toArray()) !!}, {!! json_encode($config) !!})"
                         class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-150 shadow-sm hover:shadow-md"
                     >
                         <i class="bi bi-pencil-square"></i> Editar

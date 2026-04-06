@@ -100,6 +100,15 @@ Route::get('/debug-correo', function (\Illuminate\Http\Request $request) {
 // Logout Route
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
+Route::get('/debug-env', function () {
+    return response()->json([
+        'driver' => config('session.driver'),
+        'domain' => config('session.domain'),
+        'secure' => config('session.secure'),
+        'app_url' => config('app.url'),
+    ]);
+});
+
 // License Status Routes (Protected by auth, but handled by middleware redirection)
 Route::middleware(['auth', 'prevent_back_history'])->group(function () {
     Route::get('/checkout/{pago}', [App\Http\Controllers\CheckoutController::class , 'show'])->name('checkout.show');

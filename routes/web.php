@@ -59,6 +59,9 @@ Route::get('/api/cities/{department}', [App\Http\Controllers\Auth\RegisterContro
 // Stripe Webhook
 Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::class , 'handleWebhook']);
 
+// Logout Route
+Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+
 // License Status Routes (Protected by auth, but handled by middleware redirection)
 Route::middleware(['auth', 'prevent_back_history'])->group(function () {
     Route::get('/checkout/{pago}', [App\Http\Controllers\CheckoutController::class , 'show'])->name('checkout.show');

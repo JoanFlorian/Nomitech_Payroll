@@ -385,7 +385,8 @@ class StoreNovedadEmpleadoRequest extends FormRequest
 
             // Nueva validación: Al menos uno de los extremos (inicio o fin) debe estar en el periodo activo
             // para novedades que afectan la nómina (según requerimiento de flexibilidad).
-            $tiposFlexibles = ['VAC', 'SLN', 'LIC', 'IGE', 'IRL', 'LMAT', 'LPAT', 'INC'];
+            // IGE/IRL/INC/LMAT/LPAT se excluyen: pueden registrarse en cualquier fecha independiente del periodo activo.
+            $tiposFlexibles = ['VAC', 'SLN', 'LIC'];
             if (in_array($tipo, $tiposFlexibles, true) && $fechaInicio && $fechaFin) {
                 if ($periodoActivo) {
                     $pI = \Carbon\Carbon::parse($periodoActivo->fecha_inicio);

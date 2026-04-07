@@ -202,7 +202,8 @@
 
     <!-- HEADER -->
     <header
-        class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+        class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200"
+        x-data="{ mobileOpen: false }">
         <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <div class="size-9 bg-primary rounded-lg flex items-center justify-center text-white">
@@ -216,16 +217,37 @@
                 <a class="text-sm font-bold hover:text-primary transition-colors" href="#compliance">Cumplimiento</a>
                 <a class="text-sm font-bold hover:text-primary transition-colors" href="#pricing">Precios</a>
             </nav>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 sm:gap-4">
                 <a href="{{ route('login') }}"
-                    class="px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
+                    class="hidden sm:block px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
                     Iniciar sesión
                 </a>
                 <a href="#pricing"
-                    class="px-6 py-2.5 bg-accent text-white text-sm font-bold rounded-lg shadow-lg shadow-accent/20 hover:opacity-90 transition-all">
+                    class="px-4 sm:px-6 py-2.5 bg-accent text-white text-sm font-bold rounded-lg shadow-lg shadow-accent/20 hover:opacity-90 transition-all">
                     Ver planes
                 </a>
+                <!-- Hamburger mobile -->
+                <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2 rounded-lg hover:bg-slate-100 transition" aria-label="Abrir menú">
+                    <svg x-show="!mobileOpen" class="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                    <svg x-show="mobileOpen" x-cloak class="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>
+        </div>
+
+        <!-- Mobile menu -->
+        <div x-show="mobileOpen" x-cloak x-transition
+             class="md:hidden bg-white border-t border-slate-100 px-6 py-4 flex flex-col gap-4">
+            <a @click="mobileOpen=false" class="text-sm font-bold text-slate-700 hover:text-primary transition-colors py-2 border-b border-slate-100" href="#features">Funciones</a>
+            <a @click="mobileOpen=false" class="text-sm font-bold text-slate-700 hover:text-primary transition-colors py-2 border-b border-slate-100" href="#workflow">Flujo de trabajo</a>
+            <a @click="mobileOpen=false" class="text-sm font-bold text-slate-700 hover:text-primary transition-colors py-2 border-b border-slate-100" href="#compliance">Cumplimiento</a>
+            <a @click="mobileOpen=false" class="text-sm font-bold text-slate-700 hover:text-primary transition-colors py-2 border-b border-slate-100" href="#pricing">Precios</a>
+            <a href="{{ route('login') }}" class="text-sm font-bold text-slate-700 hover:text-primary transition-colors py-2">
+                Iniciar sesión
+            </a>
         </div>
     </header>
 

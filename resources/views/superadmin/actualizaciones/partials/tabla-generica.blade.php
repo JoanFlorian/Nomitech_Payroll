@@ -16,7 +16,7 @@
 </div>
 
 <!-- Tabla mejorada -->
-<div class="overflow-y-auto max-h-[28rem] rounded-xl border border-gray-200 shadow-sm">
+<div class="overflow-x-auto overflow-y-auto max-h-[28rem] rounded-xl border border-gray-200 shadow-sm">
     <table class="w-full text-sm">
         <thead class="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10">
             <tr>

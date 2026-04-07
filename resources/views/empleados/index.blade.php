@@ -10,10 +10,10 @@
     <div class="employee-index-compact p-6">
         {{-- ENCABEZADO --}}
         <div class="mb-8">
-            <div class="flex justify-between items-center mb-5">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
                 <h1 class="text-3xl font-bold text-gray-900">Gestor de Empleados</h1>
                 @can('export_employees')
-                <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 w-full sm:w-auto">
                     @php
                         $searchParam = request('search');
                         $baseParams = $searchParam ? ['search' => $searchParam] : [];
@@ -41,14 +41,14 @@
                         ];
                     @endphp
                     <select id="exportEmployeesSelect"
-                        class="min-w-[260px] border border-gray-300 rounded-md pl-3 pr-10 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="w-full sm:min-w-[260px] border border-gray-300 rounded-md pl-3 pr-10 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         @foreach ($exportOptions as $label => $url)
                             <option value="{{ $url }}">{{ $label }}</option>
                         @endforeach
                     </select>
                     <button type="button"
                         onclick="window.location.href = document.getElementById('exportEmployeesSelect').value"
-                        class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition">
+                        class="inline-flex items-center justify-center w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition">
                         <i class="fas fa-download mr-2"></i>Exportar
                     </button>
                 </div>

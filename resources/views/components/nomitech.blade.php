@@ -1,4 +1,4 @@
-<aside class="w-64 bg-blue-900 border-r border-blue-800 h-screen flex flex-col shadow-lg overflow-y-auto">
+<aside id="nomitech-sidebar" class="w-64 bg-blue-900 border-r border-blue-800 h-screen flex flex-col shadow-lg overflow-y-auto flex-shrink-0">
 
     <!-- HEADER -->
     <div class="flex items-center gap-3 p-6 border-b border-blue-800">

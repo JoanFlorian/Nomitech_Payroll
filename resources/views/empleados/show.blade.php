@@ -17,8 +17,8 @@
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
 
         {{-- HEADER --}}
-        <div class="bg-gradient-to-r from-[#1565C0] to-[#1976D2] px-8 py-6 text-white">
-            <div class="flex items-center gap-5">
+        <div class="bg-gradient-to-r from-[#1565C0] to-[#1976D2] px-5 sm:px-8 py-5 sm:py-6 text-white">
+            <div class="flex flex-wrap items-center gap-4">
                 <img id="avatar-preview"
                      src="{{ $usuario->avatar_url }}"
                      alt="Foto de {{ \Illuminate\Support\Str::title(trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? ''))) }}"
@@ -50,7 +50,7 @@
         </div>
 
         {{-- BODY --}}
-        <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div class="p-4 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
 
             {{-- DATOS PERSONALES --}}
             <section>

@@ -104,7 +104,7 @@
                 </div>
             </div>
 
-            <div>
+            <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="border-b-2 border-gray-200">

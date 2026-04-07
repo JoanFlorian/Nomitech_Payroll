@@ -3,12 +3,12 @@
 @section('content')
 
     <div class="mb-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Facturación y Transacciones</h1>
                 <p class="text-gray-600 text-sm mt-1">Gestión integral de pagos y vigencia de licencias</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 @php
                     $sharedExportParams = array_filter([
                         'q' => request('q'),
@@ -23,9 +23,9 @@
                         'Solo pagados - PDF' => route('superadmin.facturacion.exportar.pdf', $exportPagadosParams),
                     ];
                 @endphp
-                <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1">
                     <select id="exportSelect"
-                        class="min-w-[260px] border border-gray-300 rounded-md pl-3 pr-10 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="w-full sm:min-w-[260px] border border-gray-300 rounded-md pl-3 pr-10 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         @foreach ($exportOptions as $label => $url)
                             <option value="{{ $url }}">{{ $label }}</option>
                         @endforeach

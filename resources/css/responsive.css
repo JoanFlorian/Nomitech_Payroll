@@ -1,0 +1,387 @@
+/* ============================================================
+   NOMITECH — GLOBAL RESPONSIVE STYLESHEET
+   Applies across all layouts / roles without touching logic
+   ============================================================ */
+
+/* ── 1. BOX-SIZING & OVERFLOW SAFETY ── */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+img, video, iframe {
+    max-width: 100%;
+}
+
+/* Prevent full-page horizontal scroll */
+body {
+    overflow-x: hidden;
+}
+
+/* ── 2. TABLES — horizontal scroll ── */
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Touch-friendly scrolling on all overflow-x-auto containers */
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Tables inside scroll wrappers: expand to natural content width.
+   Prevents columns from compressing to near-zero width (vertical letter-by-letter text). */
+.overflow-x-auto > table,
+.overflow-x-auto table {
+    min-width: max-content;
+}
+
+/* Table headers: always stay on one line */
+.overflow-x-auto table th {
+    white-space: nowrap;
+}
+
+/* ── 3. CARDS — prevent text overflow ── */
+.metric-card,
+.catalog-card {
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* ── 4. MODALS — guaranteed to center & scroll ── */
+.modal-responsive {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+/* Modals sized for all viewports */
+@media (max-width: 639px) {
+    .fixed.inset-0.z-\[90\] > div:last-child,
+    .fixed.inset-0.z-50    > div,
+    .fixed.inset-0.z-40    > div {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    /* Modal inner panels */
+    [class*="max-w-"][class*="rounded-"] {
+        margin: 0 !important;
+        width: 100% !important;
+    }
+}
+
+/* ── 5. FORMS — mobile-friendly inputs ── */
+@media (max-width: 639px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    input[type="tel"],
+    textarea,
+    select {
+        font-size: 16px; /* prevents iOS zoom */
+    }
+
+    /* Stack button groups vertically */
+    .btn-group-responsive {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-group-responsive .btn,
+    .btn-group-responsive button,
+    .btn-group-responsive a {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ── 6. TYPOGRAPHY — fluid sizes ── */
+@media (max-width: 639px) {
+    h1 { font-size: clamp(1.4rem, 5vw, 2rem); }
+    h2 { font-size: clamp(1.2rem, 4vw, 1.6rem); }
+    h3 { font-size: clamp(1rem, 3.5vw, 1.3rem); }
+}
+
+/* ── 7. FLEX ROW → COLUMN on mobile ── */
+@media (max-width: 639px) {
+    .flex-mobile-col {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .flex-mobile-col > * {
+        width: 100% !important;
+    }
+}
+
+/* ── 8. PADDING REDUCTION on small screens ── */
+@media (max-width: 639px) {
+    .p-8  { padding: 1rem !important; }
+    .p-6  { padding: 0.875rem !important; }
+    .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+    .px-6 { padding-left: 0.875rem !important; padding-right: 0.875rem !important; }
+}
+
+/* ── 9. EMPLOYEE INDEX — header action bar ── */
+@media (max-width: 639px) {
+    .employee-index-compact .flex.justify-between.items-center {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .employee-index-compact .flex.items-center.gap-2.bg-gray-50 {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+    .employee-index-compact #exportEmployeesSelect {
+        min-width: unset;
+        width: 100%;
+    }
+    .employee-index-compact [onclick*="exportEmployeesSelect"] {
+        width: 100%;
+    }
+}
+
+/* ── 10. STEPPER/PROGRESS BAR — keep visible on mobile ── */
+@media (max-width: 639px) {
+    .step-progress-bar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.25rem;
+    }
+    .step-progress-bar .step-label {
+        font-size: 0.65rem;
+    }
+}
+
+/* ── 11. NOTIFICATION DROPDOWN — full width on mobile ── */
+@media (max-width: 639px) {
+    .w-80 {
+        width: calc(100vw - 2rem) !important;
+        right: -4rem !important;
+    }
+}
+
+/* ── 12. SUPERADMIN SIDEBAR (nomitech component) ── */
+#nomitech-sidebar {
+    transition: transform 0.3s ease-in-out;
+}
+
+@media (max-width: 1023px) {
+    #nomitech-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 40;
+        transform: translateX(-100%);
+        width: 260px !important;
+    }
+
+    #nomitech-sidebar.open {
+        transform: translateX(0);
+    }
+
+    #nomitech-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 39;
+    }
+
+    #nomitech-overlay.open {
+        display: block;
+    }
+
+    #nomitech-hamburger {
+        display: flex !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    #nomitech-sidebar {
+        transform: none !important;
+        position: sticky;
+        height: 100vh;
+    }
+
+    #nomitech-hamburger {
+        display: none !important;
+    }
+}
+
+/* ── 13. NOMINA LAYOUT SIDEBAR ── */
+#nomina-sidebar {
+    transition: transform 0.3s ease-in-out;
+}
+
+@media (max-width: 1023px) {
+    #nomina-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 40;
+        transform: translateX(-100%);
+        width: 260px !important;
+    }
+
+    #nomina-sidebar.open {
+        transform: translateX(0);
+    }
+
+    #nomina-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 39;
+    }
+
+    #nomina-overlay.open {
+        display: block;
+    }
+
+    #nomina-hamburger {
+        display: flex !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    #nomina-sidebar {
+        transform: none !important;
+        position: relative;
+        height: 100vh;
+    }
+
+    #nomina-hamburger {
+        display: none !important;
+    }
+}
+
+/* ── 14. PROVISIONES / BIG FORMS on mobile ── */
+@media (max-width: 639px) {
+    .grid.grid-cols-1.md\:grid-cols-2 {
+        grid-template-columns: 1fr !important;
+    }
+    .grid.grid-cols-1.lg\:grid-cols-5 {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ── 15. PAGINATION on mobile ── */
+@media (max-width: 639px) {
+    .pagination {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+}
+
+/* ── 16. REPORTES SHELL ── */
+@media (max-width: 639px) {
+    .reportes-shell {
+        padding: 0.75rem !important;
+    }
+    .filters-panel {
+        flex-direction: column !important;
+    }
+}
+
+/* ── 17. STEPPER MODAL (nomina steps) ── */
+@media (max-width: 767px) {
+    .fixed.inset-0.z-50 .max-w-\[1120px\] {
+        max-height: 95vh;
+        border-radius: 1rem;
+        padding: 1rem !important;
+    }
+}
+
+/* ── 18. CATALOG HERO — responsive padding ── */
+@media (max-width: 639px) {
+    .catalog-hero {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.75rem;
+    }
+}
+
+/* ── 19. DASHBOARD CARDS — no overflow text ── */
+.dashboard-card-value {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* ── 20. GENERAL BUTTON — full width on xs ── */
+@media (max-width: 479px) {
+    .btn-full-mobile {
+        width: 100% !important;
+        text-align: center;
+        justify-content: center;
+    }
+}
+
+/* ── 21. APP LAYOUT SIDEBAR — Admin / RL / Trabajador (#sidebar) ──
+   The component has both Tailwind `fixed` and `lg:sticky` classes.
+   We force `position: fixed` on mobile and `position: sticky` on desktop
+   using !important so neither class conflicts with our offcanvas logic.
+   Hiding is via transform instead of `left: -250px` (more reliable).
+   ─────────────────────────────────────────────────────────────────── */
+
+#sidebar {
+    transition: transform 0.3s ease-in-out !important;
+}
+
+@media (max-width: 1023px) {
+    /* Force correct position so transform works */
+    #sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        z-index: 50 !important;
+        width: 260px !important;
+        transform: translateX(-100%);
+    }
+
+    /* Slide in when JS adds .mobile-open */
+    #sidebar.mobile-open {
+        transform: translateX(0) !important;
+    }
+
+    /* Hamburger: always show on mobile (overrides any inline style) */
+    #mobile-menu-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Overlay: raise it above content but below sidebar */
+    #sidebar-overlay {
+        z-index: 45 !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    /* Back to sticky (icon-only collapse) on desktop */
+    #sidebar {
+        position: sticky !important;
+        transform: none !important;
+        left: auto !important;
+        top: 0 !important;
+        z-index: 40 !important;
+        height: 100vh;
+    }
+
+    #mobile-menu-btn {
+        display: none !important;
+    }
+}

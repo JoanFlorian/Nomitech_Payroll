@@ -30,7 +30,7 @@
             </div>
 
             {{-- NÚMERO Y FECHA --}}
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                     <p class="text-xs text-gray-500 font-semibold">NÚMERO DE FACTURA</p>
                     <h4 id="numeroFactura" class="text-lg font-bold text-blue-600"></h4>
